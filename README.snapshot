@@ -1,0 +1,12 @@
+This is a snapshot of the current development version of INN, pulled
+automatically from the Subversion repository.  It was made on:
+
+    November 14, 2020 @ 10:14 AM UTC
+
+This code should be considered experimental.  Only a default compile and
+automated testing is done before it is made available.  If it breaks, we'd
+like to know at <inn-workers@lists.isc.org>, but if it causes your system to
+explode, don't blame us.
+
+If you are using this code, it's highly recommended that you be on the
+<inn-workers@lists.isc.org> mailing list.  See README for more information.
