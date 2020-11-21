@@ -1,6 +1,14 @@
-Welcome to INN 2.6!
+Welcome to INN 2.6++!
 
-    This work is sponsored by Internet Systems Consortium.
+
+    This work is shamelessly forked from the original INN2 project as
+    an experiment in converting large projects in C to C++. At present,
+    only the library has been converted with ongoing effort into the backend.
+    This effort is in two phases. First, to get a functional C++ program
+    up and working, and next to look into opportunities for advancing the
+    state of the code. The end goal is to dramatically reduce the amount
+    of code under human management while not affecting the performance of
+    the original product.
 
     Please see INSTALL for installation instructions, NEWS for what's
     changed from the previous release, and LICENSE for the copyright,
