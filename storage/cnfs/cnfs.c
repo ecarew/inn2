@@ -99,7 +99,7 @@ cnfs_explaintoken(const TOKEN token)
     memcpy(&block, &token.token[8], sizeof(block));
     memcpy(&cycnum, &token.token[12], sizeof(cycnum));
     xasprintf(&text, "method=cnfs class=%u buffer=%s block=%lu blocksize=%u cycnum=%lu file=%s",
-              (unsigned int) token.class, cycbuffname, (unsigned long) ntohl(block),
+              (unsigned int) token._class, cycbuffname, (unsigned long) ntohl(block),
               blksz, (unsigned long) ntohl(cycnum), cycbuff ? cycbuff->path : "");
 
     return text;
@@ -107,12 +107,12 @@ cnfs_explaintoken(const TOKEN token)
 
 
 static TOKEN CNFSMakeToken(char *cycbuffname, off_t offset,
-			   int blksz, uint32_t cycnum, STORAGECLASS class) {
+			   int blksz, uint32_t cycnum, STORAGECLASS _class) {
     TOKEN               token;
     uint32_t		uint32;
 
     token.type = TOKEN_CNFS;
-    token.class = class;
+    token._class = _class;
     memcpy(token.token, cycbuffname, CNFSMAXCYCBUFFNAME);
     uint32 = htonl(offset / blksz);
     memcpy(&token.token[8], &uint32, sizeof(uint32));
@@ -558,7 +558,7 @@ static bool CNFSparse_groups_line(void) {
       return false;
     }
     metaexprule = xmalloc(sizeof(CNFSEXPIRERULES));
-    metaexprule->class = sub->class;
+    metaexprule->_class = sub->_class;
     metaexprule->dest = mrp;
     metaexprule->next = (CNFSEXPIRERULES *)NULL;
     if (metaexprulestab == (CNFSEXPIRERULES *)NULL)
@@ -1145,7 +1145,7 @@ bool cnfs_init(SMATTRIBUTE *attr) {
     return true;
 }
 
-TOKEN cnfs_store(const ARTHANDLE article, const STORAGECLASS class) {
+TOKEN cnfs_store(const ARTHANDLE article, const STORAGECLASS _class) {
     TOKEN               token;
     CYCBUFF		*cycbuff = NULL;
     METACYCBUFF		*metacycbuff = NULL;
@@ -1164,7 +1164,7 @@ TOKEN cnfs_store(const ARTHANDLE article, const STORAGECLASS class) {
     size_t		totlen;
 
     for (metaexprule = metaexprulestab; metaexprule != (CNFSEXPIRERULES *)NULL; metaexprule = metaexprule->next) {
-	if (metaexprule->class == class)
+	if (metaexprule->_class == _class)
 	    break;
     }
     if (metaexprule == (CNFSEXPIRERULES *)NULL) {
@@ -1254,7 +1254,7 @@ TOKEN cnfs_store(const ARTHANDLE article, const STORAGECLASS class) {
 	cah.arrived = htonl(time(NULL));
     else
 	cah.arrived = htonl(article.arrived);
-    cah.class = class;
+    cah._class = _class;
 
     if (lseek(cycbuff->fd, artoffset, SEEK_SET) < 0) {
 	SMseterror(SMERR_INTERNAL, "lseek failed");
@@ -1321,7 +1321,7 @@ TOKEN cnfs_store(const ARTHANDLE article, const STORAGECLASS class) {
     }
     if (!SMpreopen) CNFSshutdowncycbuff(cycbuff);
     return CNFSMakeToken(artcycbuffname, artoffset,
-			cycbuff->blksz, artcyclenum, class);
+			cycbuff->blksz, artcyclenum, _class);
 }
 
 ARTHANDLE *cnfs_retrieve(const TOKEN token, const RETRTYPE amount) {
@@ -1332,7 +1332,7 @@ ARTHANDLE *cnfs_retrieve(const TOKEN token, const RETRTYPE amount) {
     CYCBUFF		*cycbuff;
     ARTHANDLE   	*art;
     CNFSARTHEADER	cah;
-    PRIV_CNFS		*private;
+    PRIV_CNFS		*_private;
     char		*p;
     long		pagefudge;
     off_t               cycsize, mmapoffset;
@@ -1375,7 +1375,7 @@ ARTHANDLE *cnfs_retrieve(const TOKEN token, const RETRTYPE amount) {
     if (amount == RETR_STAT) {
 	art->data = NULL;
 	art->len = 0;
-	art->private = NULL;
+	art->_private = NULL;
 	ret_token = token;
 	art->token = &ret_token;
 	if (!SMpreopen) CNFSshutdowncycbuff(cycbuff);
@@ -1450,40 +1450,40 @@ ARTHANDLE *cnfs_retrieve(const TOKEN token, const RETRTYPE amount) {
 	free(art);
 	return NULL;
     }
-    private = xmalloc(sizeof(PRIV_CNFS));
-    art->private = (void *)private;
+    _private = xmalloc(sizeof(PRIV_CNFS));
+    art->_private = (void *)_private;
     art->arrived = ntohl(cah.arrived);
     offset += sizeof(cah) + plusoffset;
     if (innconf->articlemmap) {
 	pagefudge = offset % pagesize;
 	mmapoffset = offset - pagefudge;
-	private->len = pagefudge + ntohl(cah.size);
-	if ((private->base = mmap(NULL, private->len, PROT_READ,
+	_private->len = pagefudge + ntohl(cah.size);
+	if ((_private->base = mmap(NULL, _private->len, PROT_READ,
 		MAP_SHARED, cycbuff->fd, mmapoffset)) == MAP_FAILED) {
 	    SMseterror(SMERR_UNDEFINED, "mmap failed");
             syswarn("CNFS: could not mmap token %s %s:0x%s:%d",
                     TokenToText(token), cycbuffname,
                     CNFSofft2hex(offset, false), cycnum);
-	    free(art->private);
+	    free(art->_private);
 	    free(art);
 	    if (!SMpreopen) CNFSshutdowncycbuff(cycbuff);
 	    return NULL;
 	}
-	mmap_invalidate(private->base, private->len);
+	mmap_invalidate(_private->base, _private->len);
         if (amount == RETR_ALL)
-	    madvise(private->base, private->len, MADV_WILLNEED);
+	    madvise(_private->base, _private->len, MADV_WILLNEED);
         else
-	    madvise(private->base, private->len, MADV_SEQUENTIAL);
+	    madvise(_private->base, _private->len, MADV_SEQUENTIAL);
     } else {
-	private->base = xmalloc(ntohl(cah.size));
+	_private->base = xmalloc(ntohl(cah.size));
 	pagefudge = 0;
-	if (pread(cycbuff->fd, private->base, ntohl(cah.size), offset) < 0) {
+	if (pread(cycbuff->fd, _private->base, ntohl(cah.size), offset) < 0) {
 	    SMseterror(SMERR_UNDEFINED, "read failed");
             syswarn("CNFS: could not read token %s %s:0x%s:%d",
                     TokenToText(token), cycbuffname,
                     CNFSofft2hex(offset, false), cycnum);
-	    free(private->base);
-	    free(art->private);
+	    free(_private->base);
+	    free(art->_private);
 	    free(art);
 	    if (!SMpreopen) CNFSshutdowncycbuff(cycbuff);
 	    return NULL;
@@ -1493,28 +1493,28 @@ ARTHANDLE *cnfs_retrieve(const TOKEN token, const RETRTYPE amount) {
     art->token = &ret_token;
     art->len = ntohl(cah.size);
     if (amount == RETR_ALL) {
-	art->data = innconf->articlemmap ? private->base + pagefudge : private->base;
+	art->data = innconf->articlemmap ? _private->base + pagefudge : _private->base;
 	if (!SMpreopen) CNFSshutdowncycbuff(cycbuff);
 	return art;
     }
-    if ((p = wire_findbody(innconf->articlemmap ? private->base + pagefudge : private->base, art->len)) == NULL) {
+    if ((p = wire_findbody(innconf->articlemmap ? _private->base + pagefudge : _private->base, art->len)) == NULL) {
         SMseterror(SMERR_NOBODY, NULL);
 	if (innconf->articlemmap)
-	    munmap(private->base, private->len);
+	    munmap(_private->base, _private->len);
 	else
-	    free(private->base);
-        free(art->private);
+	    free(_private->base);
+        free(art->_private);
         free(art);
 	if (!SMpreopen) CNFSshutdowncycbuff(cycbuff);
         return NULL;
     }
     if (amount == RETR_HEAD) {
 	if (innconf->articlemmap) {
-	    art->data = private->base + pagefudge;
-            art->len = p - private->base - pagefudge;
+	    art->data = _private->base + pagefudge;
+            art->len = p - _private->base - pagefudge;
 	} else {
-	    art->data = private->base;
-            art->len = p - private->base;
+	    art->data = _private->base;
+            art->len = p - _private->base;
 	}
         /* Headers end just before the first empty line (\r\n). */
         art->len = art->len - 2;
@@ -1524,36 +1524,36 @@ ARTHANDLE *cnfs_retrieve(const TOKEN token, const RETRTYPE amount) {
     if (amount == RETR_BODY) {
         art->data = p;
 	if (innconf->articlemmap)
-	    art->len = art->len - (p - private->base - pagefudge);
+	    art->len = art->len - (p - _private->base - pagefudge);
 	else
-	    art->len = art->len - (p - private->base);
+	    art->len = art->len - (p - _private->base);
 	if (!SMpreopen) CNFSshutdowncycbuff(cycbuff);
         return art;
     }
     SMseterror(SMERR_UNDEFINED, "Invalid retrieve request");
     if (innconf->articlemmap)
-	munmap(private->base, private->len);
+	munmap(_private->base,_private->len);
     else
-	free(private->base);
-    free(art->private);
+	free(_private->base);
+    free(art->_private);
     free(art);
     if (!SMpreopen) CNFSshutdowncycbuff(cycbuff);
     return NULL;
 }
 
 void cnfs_freearticle(ARTHANDLE *article) {
-    PRIV_CNFS	*private;
+    PRIV_CNFS	*_private;
 
     if (!article)
 	return;
 
-    if (article->private) {
-	private = (PRIV_CNFS *)article->private;
+    if (article->_private) {
+	_private = (PRIV_CNFS *)article->_private;
 	if (innconf->articlemmap)
-	    munmap(private->base, private->len);
+	    munmap(_private->base, _private->len);
 	else
-	    free(private->base);
-	free(private);
+	    free(_private->base);
+	free(_private);
     }
     free(article);
 }
@@ -1609,7 +1609,7 @@ cnfs_next(ARTHANDLE *article, const RETRTYPE amount)
 {
     ARTHANDLE           *art;
     CYCBUFF		*cycbuff;
-    PRIV_CNFS		priv, *private;
+    PRIV_CNFS		priv, *_private;
     off_t               middle = 0, limit;
     CNFSARTHEADER	cah;
     off_t               offset;
@@ -1629,8 +1629,8 @@ cnfs_next(ARTHANDLE *article, const RETRTYPE amount)
         priv.base = NULL;
         priv.cycbuff = NULL;
     } else {
-	priv = *(PRIV_CNFS *)article->private;
-	free(article->private);
+	priv = *(PRIV_CNFS *)article->_private;
+	free(article->_private);
 	free(article);
 	if (innconf->articlemmap)
 	    munmap(priv.base, priv.len);
@@ -1717,14 +1717,14 @@ cnfs_next(ARTHANDLE *article, const RETRTYPE amount)
     }
 #endif /* OLD_CNFS */
     art = xmalloc(sizeof(ARTHANDLE));
-    private = xmalloc(sizeof(PRIV_CNFS));
-    art->private = (void *)private;
+    _private = xmalloc(sizeof(PRIV_CNFS));
+    art->_private = (void *)_private;
     art->type = TOKEN_CNFS;
-    *private = priv;
-    private->cycbuff = cycbuff;
-    private->offset = middle;
+    *_private = priv;
+    _private->cycbuff = cycbuff;
+    _private->offset = middle;
     if (cycbuff->len - cycbuff->free < (off_t) ntohl(cah.size) + cycbuff->blksz + 1) {
-	private->offset += cycbuff->blksz;
+	_private->offset += cycbuff->blksz;
 	art->data = NULL;
 	art->len = 0;
 	art->token = NULL;
@@ -1733,7 +1733,7 @@ cnfs_next(ARTHANDLE *article, const RETRTYPE amount)
     }
     /* check the bitmap to ensure cah.size is not broken */
     blockfudge = (sizeof(cah) + plusoffset + ntohl(cah.size)) % cycbuff->blksz;
-    limit = private->offset + sizeof(cah) + plusoffset + ntohl(cah.size) - blockfudge + cycbuff->blksz;
+    limit = _private->offset + sizeof(cah) + plusoffset + ntohl(cah.size) - blockfudge + cycbuff->blksz;
     if (offset < cycbuff->free) {
 	for (middle = offset + cycbuff->blksz; (middle < cycbuff->free) && (middle < limit);
 	    middle += cycbuff->blksz) {
@@ -1742,7 +1742,7 @@ cnfs_next(ARTHANDLE *article, const RETRTYPE amount)
 		break;
 	}
 	if ((middle > cycbuff->free) || (middle != limit)) {
-	    private->offset = middle;
+	    _private->offset = middle;
 	    art->data = NULL;
 	    art->len = 0;
 	    art->token = NULL;
@@ -1757,7 +1757,7 @@ cnfs_next(ARTHANDLE *article, const RETRTYPE amount)
 		break;
 	}
 	if ((middle >= cycbuff->len) || (middle != limit)) {
-	    private->offset = middle;
+	    _private->offset = middle;
 	    art->data = NULL;
 	    art->len = 0;
 	    art->token = NULL;
@@ -1770,25 +1770,25 @@ cnfs_next(ARTHANDLE *article, const RETRTYPE amount)
 	art->data = NULL;
 	art->len = 0;
 	art->token = NULL;
-	private->base = 0;
+	_private->base = 0;
 	if (!SMpreopen) CNFSshutdowncycbuff(cycbuff);
 	return art;
     }
 
-    private->offset += (off_t) ntohl(cah.size) + sizeof(cah) + plusoffset;
-    tonextblock = cycbuff->blksz - (private->offset & (cycbuff->blksz - 1));
-    private->offset += (off_t) tonextblock;
+    _private->offset += (off_t) ntohl(cah.size) + sizeof(cah) + plusoffset;
+    tonextblock = cycbuff->blksz - (_private->offset & (cycbuff->blksz - 1));
+    _private->offset += (off_t) tonextblock;
     art->arrived = ntohl(cah.arrived);
     token = CNFSMakeToken(cycbuff->name, offset, cycbuff->blksz,
 	(offset > cycbuff->free) ? cycbuff->cyclenum - 1 : cycbuff->cyclenum,
-	cah.class);
+	cah._class);
     art->token = &token;
     offset += sizeof(cah) + plusoffset;
     if (innconf->articlemmap) {
 	pagefudge = offset % pagesize;
 	mmapoffset = offset - pagefudge;
-	private->len = pagefudge + ntohl(cah.size);
-	if ((private->base = mmap(0, private->len, PROT_READ,
+	_private->len = pagefudge + ntohl(cah.size);
+	if ((_private->base = mmap(0, _private->len, PROT_READ,
 	    MAP_SHARED, cycbuff->fd, mmapoffset)) == MAP_FAILED) {
 	    art->data = NULL;
 	    art->len = 0;
@@ -1796,28 +1796,28 @@ cnfs_next(ARTHANDLE *article, const RETRTYPE amount)
 	    if (!SMpreopen) CNFSshutdowncycbuff(cycbuff);
 	    return art;
 	}
-	mmap_invalidate(private->base, private->len);
-	madvise(private->base, private->len, MADV_SEQUENTIAL);
+	mmap_invalidate(_private->base, _private->len);
+	madvise(_private->base, _private->len, MADV_SEQUENTIAL);
     } else {
-	private->base = xmalloc(ntohl(cah.size));
+	_private->base = xmalloc(ntohl(cah.size));
 	pagefudge = 0;
-	if (pread(cycbuff->fd, private->base, ntohl(cah.size), offset) < 0) {
+	if (pread(cycbuff->fd, _private->base, ntohl(cah.size), offset) < 0) {
 	    art->data = NULL;
 	    art->len = 0;
 	    art->token = NULL;
 	    if (!SMpreopen) CNFSshutdowncycbuff(cycbuff);
-	    free(private->base);
-	    private->base = 0;
+	    free(_private->base);
+	    _private->base = 0;
 	    return art;
 	}
     }
     art->len = ntohl(cah.size);
     if (amount == RETR_ALL) {
-	art->data = innconf->articlemmap ? private->base + pagefudge : private->base;
+	art->data = innconf->articlemmap ? _private->base + pagefudge : _private->base;
 	if (!SMpreopen) CNFSshutdowncycbuff(cycbuff);
 	return art;
     }
-    if ((p = wire_findbody(innconf->articlemmap ? private->base + pagefudge : private->base, art->len)) == NULL) {
+    if ((p = wire_findbody(innconf->articlemmap ? _private->base + pagefudge : _private->base, art->len)) == NULL) {
 	art->data = NULL;
 	art->len = 0;
 	art->token = NULL;
@@ -1826,11 +1826,11 @@ cnfs_next(ARTHANDLE *article, const RETRTYPE amount)
     }
     if (amount == RETR_HEAD) {
 	if (innconf->articlemmap) {
-	    art->data = private->base + pagefudge;
-	    art->len = p - private->base - pagefudge;
+	    art->data = _private->base + pagefudge;
+	    art->len = p - _private->base - pagefudge;
 	} else {
-	    art->data = private->base;
-	    art->len = p - private->base;
+	    art->data = _private->base;
+	    art->len = p - _private->base;
 	}
         /* Headers end just before the first empty line (\r\n). */
         art->len = art->len - 2;
@@ -1840,9 +1840,9 @@ cnfs_next(ARTHANDLE *article, const RETRTYPE amount)
     if (amount == RETR_BODY) {
 	art->data = p;
 	if (innconf->articlemmap)
-	    art->len = art->len - (p - private->base - pagefudge);
+	    art->len = art->len - (p - _private->base - pagefudge);
 	else
-	    art->len = art->len - (p - private->base);
+	    art->len = art->len - (p - _private->base);
 	if (!SMpreopen) CNFSshutdowncycbuff(cycbuff);
 	return art;
     }

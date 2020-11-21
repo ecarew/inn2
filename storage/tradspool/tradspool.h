@@ -10,7 +10,7 @@
 #include "interface.h"
 
 bool tradspool_init(SMATTRIBUTE *attr);
-TOKEN tradspool_store(const ARTHANDLE article, const STORAGECLASS class);
+TOKEN tradspool_store(const ARTHANDLE article, const STORAGECLASS _class);
 ARTHANDLE *tradspool_retrieve(const TOKEN token, const RETRTYPE amount);
 ARTHANDLE *tradspool_next(ARTHANDLE *article, const RETRTYPE amount);
 void tradspool_freearticle(ARTHANDLE *article);

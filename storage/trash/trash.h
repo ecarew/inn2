@@ -10,7 +10,7 @@
 #include "interface.h"
 
 bool trash_init(SMATTRIBUTE *attr);
-TOKEN trash_store(const ARTHANDLE article, const STORAGECLASS class);
+TOKEN trash_store(const ARTHANDLE article, const STORAGECLASS _class);
 ARTHANDLE *trash_retrieve(const TOKEN token, const RETRTYPE amount);
 ARTHANDLE *trash_next(ARTHANDLE *article, const RETRTYPE amount);
 void trash_freearticle(ARTHANDLE *article);

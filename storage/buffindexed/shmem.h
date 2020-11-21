@@ -15,12 +15,12 @@ typedef struct {
     int     locktype;	/* current lock type */
 } smcd_t;
 
-int smcGetExclusiveLock(smcd_t *this);
-int smcGetSharedLock(smcd_t *this);
-int smcReleaseSharedLock(smcd_t *this);
-int smcReleaseExclusiveLock(smcd_t *this);
+int smcGetExclusiveLock(smcd_t *_this);
+int smcGetSharedLock(smcd_t *_this);
+int smcReleaseSharedLock(smcd_t *_this);
+int smcReleaseExclusiveLock(smcd_t *_this);
 smcd_t* smcGetShmemBuffer(const char *name, int mapSize);
 smcd_t* smcCreateShmemBuffer(const char *name, int mapSize);
-void smcClose( smcd_t *this );
+void smcClose( smcd_t *_this );
 
 #endif	/* SHMEM_H */

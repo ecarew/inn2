@@ -272,7 +272,7 @@ SMreadconfig(void)
     size_t              maxsize = 0;
     time_t		minexpire = 0;
     time_t		maxexpire = 0;
-    int                 class = 0;
+    int                 _class = 0;
     STORAGE_SUB         *sub = NULL;
     STORAGE_SUB         *prev = NULL;
     char		*options = 0;
@@ -324,7 +324,7 @@ SMreadconfig(void)
 	    /* initialize various params to defaults. */
 	    minsize = 0;
 	    maxsize = 0; /* zero means no limit */
-	    class = 0;
+	    _class = 0;
             pattern = NULL;
 	    options = NULL;
 	    minexpire = 0;
@@ -356,8 +356,8 @@ SMreadconfig(void)
 		    }
 		    break;
 		  case SMclass:
-		    class = atoi(p);
-                    if (class > NUM_STORAGE_CLASSES) {
+		    _class = atoi(p);
+                    if (_class > NUM_STORAGE_CLASSES) {
                         SMseterror(SMERR_CONFIG, "Storage class too large");
                         warn("SM: storage class larger than %d, line %d",
                              NUM_STORAGE_CLASSES, f->lineno);
@@ -423,7 +423,7 @@ SMreadconfig(void)
             sub->pattern = pattern;
 	    sub->minsize = minsize;
 	    sub->maxsize = maxsize;
-	    sub->class = class;
+	    sub->_class = _class;
 	    sub->options = options;
 	    sub->minexpire = minexpire;
 	    sub->maxexpire = maxexpire;
@@ -637,7 +637,7 @@ TOKEN SMstore(const ARTHANDLE article) {
     if ((sub = SMgetsub(article)) == NULL) {
 	return result;
     }
-    return storage_methods[typetoindex[sub->type]].store(article, sub->class);
+    return storage_methods[typetoindex[sub->type]].store(article, sub->_class);
 }
 
 ARTHANDLE *SMretrieve(const TOKEN token, const RETRTYPE amount) {

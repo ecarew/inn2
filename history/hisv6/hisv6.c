@@ -937,9 +937,9 @@ hisv6_replace(void *history, const char *key, time_t arrived,
     hash = HashMessageID(key);
     r = hisv6_fetchline(h, &hash, old, &offset);
     if (r == true) {
-	char new[HISV6_MAXLINE + 1];
+	char _new[HISV6_MAXLINE + 1];
 
-	if (hisv6_formatline(new, &hash, arrived, posted, expires,
+	if (hisv6_formatline(_new, &hash, arrived, posted, expires,
                              token) == 0) {
  	    hisv6_seterror(h, concat("error formatting history line ",
 				      h->histpath, NULL));
@@ -948,8 +948,8 @@ hisv6_replace(void *history, const char *key, time_t arrived,
 	    size_t oldlen, newlen;
 
 	    oldlen = strlen(old);
-	    newlen = strlen(new);
-	    if (new[newlen - 1] == '\n')
+	    newlen = strlen(_new);
+	    if (_new[newlen - 1] == '\n')
                 newlen--;
 	    if (newlen > oldlen) {
 		hisv6_seterror(h, concat("new history line too long ",
@@ -959,10 +959,10 @@ hisv6_replace(void *history, const char *key, time_t arrived,
 		ssize_t n;
 
 		/* space fill any excess in the tail of new */
-		memset(new + newlen, ' ', oldlen - newlen);
+		memset(_new + newlen, ' ', oldlen - newlen);
 
 		do {
-		    n = pwrite(fileno(h->writefp), new, oldlen, offset);
+		    n = pwrite(fileno(h->writefp), _new, oldlen, offset);
 		} while (n == -1 && errno == EINTR);
 		if ((size_t) n != oldlen) {
 		    char location[HISV6_MAX_LOCATION];
@@ -1111,7 +1111,7 @@ hisv6_walk(void *history, const char *reason, void *cookie,
        wrapper */
     hiscookie.cb.walk = callback;
     hiscookie.cookie = cookie;
-    hiscookie.new = NULL;
+    hiscookie._new = NULL;
     hiscookie.paused = false;
     hiscookie.ignore = false;
 
@@ -1133,11 +1133,11 @@ hisv6_expirecb(struct hisv6 *h, void *cookie, const HASH *hash,
     bool r = true;
 
     /* check if we've seen this message id already */
-    if (hiscookie->new && dbzexists(*hash)) {
+    if (hiscookie->_new && dbzexists(*hash)) {
 	/* continue after duplicates, it's serious, but not fatal */
 	hisv6_seterror(h, concat("duplicate message-id [",
 				 HashToText(*hash), "] in history ",
-				 hiscookie->new->histpath, NULL));
+				 hiscookie->_new->histpath, NULL));
     } else {
 	struct hisv6_walkstate *hiscookie = cookie;
 	TOKEN ltoken, *t;
@@ -1168,10 +1168,10 @@ hisv6_expirecb(struct hisv6 *h, void *cookie, const HASH *hash,
          * threshold, as set by the /remember/ line in expire.ctl.
          * We keep the check for the arrival time because some entries
          * might not have one. */
-	if (hiscookie->new &&
+	if (hiscookie->_new &&
 	    (t != NULL || posted >= hiscookie->threshold
              || (posted <= 0 && arrived >= hiscookie->threshold))) {
-	    r = hisv6_writeline(hiscookie->new, hash,
+	    r = hisv6_writeline(hiscookie->_new, hash,
 				 arrived, posted, expires, t);
 	}
     }
@@ -1218,33 +1218,33 @@ static bool
 hisv6_rename(struct hisv6 *hold, struct hisv6 *hnew)
 {
     bool r = true;
-    char *old, *new;
+    char *old, *_new;
 
 #ifdef DO_TAGGED_HASH
     old = concat(hold->histpath, ".pag", NULL);
-    new = concat(hnew->histpath, ".pag", NULL);
-    r = (rename(old, new) == 0) && r;
+    _new = concat(hnew->histpath, ".pag", NULL);
+    r = (rename(old, _new) == 0) && r;
     free(old);
-    free(new);
+    free(_new);
 #else
     old = concat(hold->histpath, ".index", NULL);
-    new = concat(hnew->histpath, ".index", NULL);
-    r = (rename(old, new) == 0) && r;
+    _new = concat(hnew->histpath, ".index", NULL);
+    r = (rename(old, _new) == 0) && r;
     free(old);
-    free(new);
+    free(_new);
 
     old = concat(hold->histpath, ".hash", NULL);
-    new = concat(hnew->histpath, ".hash", NULL);
-    r = (rename(old, new) == 0) && r;
+    _new = concat(hnew->histpath, ".hash", NULL);
+    r = (rename(old, _new) == 0) && r;
     free(old);
-    free(new);
+    free(_new);
 #endif
     
     old = concat(hold->histpath, ".dir", NULL);
-    new = concat(hnew->histpath, ".dir", NULL);
-    r = (rename(old, new) == 0) && r;
+    _new = concat(hnew->histpath, ".dir", NULL);
+    r = (rename(old, _new) == 0) && r;
     free(old);
-    free(new);
+    free(_new);
 
     r = (rename(hold->histpath, hnew->histpath) == 0) && r;
     return r;
@@ -1340,7 +1340,7 @@ hisv6_expire(void *history, const char *path, const char *reason,
     /* set up the callback handler */
     hiscookie.cb.expire = exists;
     hiscookie.cookie = cookie;
-    hiscookie.new = hnew;
+    hiscookie._new = hnew;
     hiscookie.threshold = threshold;
     r = hisv6_traverse(h, &hiscookie, reason, hisv6_expirecb);
 

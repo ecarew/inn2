@@ -12,7 +12,7 @@
 #include "interface.h"
 
 bool timecaf_init(SMATTRIBUTE *attr);
-TOKEN timecaf_store(const ARTHANDLE article, const STORAGECLASS class);
+TOKEN timecaf_store(const ARTHANDLE article, const STORAGECLASS _class);
 ARTHANDLE *timecaf_retrieve(const TOKEN token, const RETRTYPE amount);
 ARTHANDLE *timecaf_next(ARTHANDLE *article, const RETRTYPE amount);
 void timecaf_freearticle(ARTHANDLE *article);

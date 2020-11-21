@@ -71,7 +71,7 @@ struct hisv6_walkstate {
     bool ignore;
     /* the next two fields are only used during expire... they should
      * probably be linked off of cookie, but I've been lazy */
-    struct hisv6 *new;
+    struct hisv6 *_new;
     time_t threshold;
 };
 

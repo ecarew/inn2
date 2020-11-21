@@ -94,7 +94,7 @@ typedef struct metacycbuff {
 } METACYCBUFF;
 
 typedef struct _CNFSEXPIRERULES {
-  STORAGECLASS		class;
+  STORAGECLASS		_class;
   METACYCBUFF		*dest;
   struct _CNFSEXPIRERULES	*next;
 } CNFSEXPIRERULES;
@@ -102,7 +102,7 @@ typedef struct _CNFSEXPIRERULES {
 typedef struct {
   long		size;		/* Size of the article */
   time_t	arrived;	/* This is the time when article arrived */
-  STORAGECLASS	class;		/* storage class */
+  STORAGECLASS	_class;		/* storage class */
 } CNFSARTHEADER;
 
 /* uncomment below for old cnfs spool */

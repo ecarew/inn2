@@ -684,7 +684,7 @@ OVgroupbasedexpire(TOKEN token, const char *group, const char *data,
     time_t              when;
     bool                poisoned;
     bool                keeper;
-    bool                delete;
+    bool                _delete;
     bool                purge;
     char                *Xref;
 
@@ -747,7 +747,7 @@ OVgroupbasedexpire(TOKEN token, const char *group, const char *data,
     /* First check all postings */
     poisoned = false;
     keeper = false;
-    delete = false;
+    _delete = false;
     purge = true;
     for (i = 0; i < count; ++i) {
         if ((krps[i] = EXPkeepit(arts[i], when, expires)) == Poison)
@@ -755,14 +755,14 @@ OVgroupbasedexpire(TOKEN token, const char *group, const char *data,
         if (OVkeep && (krps[i] == Keep))
             keeper = true;
         if ((krps[i] == Remove) && strcmp(group, arts[i]) == 0)
-            delete = true;
+            _delete = true;
         if (krps[i] == Keep)
             purge = false;
     }
     EXPprocessed++;
 
     if (OVearliest) {
-        if (delete || poisoned || token.type == TOKEN_EMPTY) {
+        if (_delete || poisoned || token.type == TOKEN_EMPTY) {
             /* delete article if this is first entry */
             if (strcmp(group, arts[0]) == 0) {
                 for (i = 0; i < count; i++)
@@ -773,7 +773,7 @@ OVgroupbasedexpire(TOKEN token, const char *group, const char *data,
             return true;
         }
     } else { /* not earliest mode */
-        if ((!keeper && delete) || token.type == TOKEN_EMPTY) {
+        if ((!keeper && _delete) || token.type == TOKEN_EMPTY) {
             /* delete article if purge is set, indicating that it has
                expired out of every group to which it was posted */
             if (purge) {

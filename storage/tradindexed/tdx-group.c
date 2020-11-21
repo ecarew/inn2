@@ -895,16 +895,16 @@ tdx_index_rebuild_start(struct group_index *index, struct group_entry *entry)
 */
 bool
 tdx_index_rebuild_finish(struct group_index *index, struct group_entry *entry,
-                         struct group_entry *new)
+                         struct group_entry *_new)
 {
     ptrdiff_t offset;
     ino_t new_inode;
 
-    new_inode = new->indexinode;
-    new->indexinode = entry->indexinode;
-    *entry = *new;
+    new_inode = _new->indexinode;
+    _new->indexinode = entry->indexinode;
+    *entry = *_new;
     entry->indexinode = new_inode;
-    new->indexinode = new_inode;
+    _new->indexinode = new_inode;
     inn_msync_page(entry, sizeof(*entry), MS_ASYNC);
     offset = entry - index->entries;
     index_lock_group(index->fd, offset, INN_LOCK_UNLOCK);

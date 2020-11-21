@@ -22,7 +22,7 @@ trash_init(SMATTRIBUTE *attr)
 }
 
 TOKEN
-trash_store(const ARTHANDLE article, const STORAGECLASS class)
+trash_store(const ARTHANDLE article, const STORAGECLASS _class)
 {
     TOKEN               token;
 
@@ -33,7 +33,7 @@ trash_store(const ARTHANDLE article, const STORAGECLASS class)
         memset(&token.token, '\0', STORAGE_TOKEN_LENGTH);
     }
     token.type = TOKEN_TRASH;
-    token.class = class;
+    token._class = _class;
     return token;
 }
 

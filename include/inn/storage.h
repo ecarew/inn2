@@ -26,7 +26,7 @@ typedef unsigned char STORAGETYPE;
 
 typedef struct token {
     STORAGETYPE         type;
-    STORAGECLASS        class;
+    STORAGECLASS        _class;
     char                token[STORAGE_TOKEN_LENGTH];
 } TOKEN;
 
@@ -38,7 +38,7 @@ typedef struct {
   size_t         len;        /* Length of the requested data */
   unsigned char  nextmethod; /* Next method to try when iterating over the
 				spool */
-  void           *private;   /* A pointer to method specific data */
+  void           *_private;   /* A pointer to method specific data */
   time_t         arrived;    /* The time when the article arrived */
   time_t         expires;    /* The time when the article will be expired */
   char           *groups;    /* Where Newsgroups header starts */
