@@ -406,3 +406,4 @@ tst_cleanup(struct tst *tst)
 
     free(tst);
 }
+}

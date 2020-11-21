@@ -122,7 +122,7 @@ static const struct {
    and find that string in the provided table (with size elements).  For
    DELIM, just make sure that we see the character stored in delimiter. */
 struct rule {
-    enum {
+    enum type{
         TYPE_NUMBER,
         TYPE_LOOKUP,
         TYPE_OBS_MONTH,
@@ -524,18 +524,18 @@ parse_by_rule(const char *p, const struct rule rules[], size_t count,
         rule = &rules[i];
 
         switch (rule->type) {
-        case TYPE_DELIM:
+		case rule::type::TYPE_DELIM:
             if (*p != rule->delimiter)
                 return NULL;
             p++;
             break;
-        case TYPE_LOOKUP:
+		case rule::type::TYPE_LOOKUP:
             p = parse_lookup(p, rule, &values[i]);
             break;
-        case TYPE_OBS_MONTH:
+		case rule::type::TYPE_OBS_MONTH:
             p = parse_legacy_month(p, rule, &values[i]);
             break;
-        case TYPE_NUMBER:
+		case rule::type::TYPE_NUMBER:
             p = parse_number(p, rule, &values[i]);
             break;
         }
@@ -608,26 +608,26 @@ parsedate_rfc5322(const char *date)
     /* The basic rules.  Note that we don't bother to check whether the day of
        the week is accurate or not. */
     static const struct rule base_rule[] = {
-        { TYPE_LOOKUP, 0,   WEEKDAY,  7, 3, 3 },
-        { TYPE_DELIM,  ',', NULL,     0, 1, 1 },
-        { TYPE_NUMBER, 0,   NULL,     0, 1, 2 },
-        { TYPE_LOOKUP, 0,   MONTH,   12, 3, 3 },
-        { TYPE_NUMBER, 0,   NULL,     0, 2, 4 },
-        { TYPE_NUMBER, 0,   NULL,     0, 2, 2 },
-        { TYPE_DELIM,  ':', NULL,     0, 1, 1 },
-        { TYPE_NUMBER, 0,   NULL,     0, 2, 2 }
+        { rule::type::TYPE_LOOKUP, 0,   WEEKDAY,  7, 3, 3 },
+        { rule::type::TYPE_DELIM,  ',', NULL,     0, 1, 1 },
+        { rule::type::TYPE_NUMBER, 0,   NULL,     0, 1, 2 },
+        { rule::type::TYPE_LOOKUP, 0,   MONTH,   12, 3, 3 },
+        { rule::type::TYPE_NUMBER, 0,   NULL,     0, 2, 4 },
+        { rule::type::TYPE_NUMBER, 0,   NULL,     0, 2, 2 },
+        { rule::type::TYPE_DELIM,  ':', NULL,     0, 1, 1 },
+        { rule::type::TYPE_NUMBER, 0,   NULL,     0, 2, 2 }
     };
 
     /* Optional seconds at the end of the time. */
     static const struct rule seconds_rule[] = {
-        { TYPE_DELIM,  ':', NULL,     0, 1, 1 },
-        { TYPE_NUMBER, 0,   NULL,     0, 2, 2 }
+        { rule::type::TYPE_DELIM,  ':', NULL,     0, 1, 1 },
+        { rule::type::TYPE_NUMBER, 0,   NULL,     0, 2, 2 }
     };
 
     /* Numeric time zone.  Keep the hours and minutes separate. */
     static const struct rule zone_rule[] = {
-        { TYPE_NUMBER, 0,   NULL,     0, 2, 2 },
-        { TYPE_NUMBER, 0,   NULL,     0, 2, 2 }
+        { rule::type::TYPE_NUMBER, 0,   NULL,     0, 2, 2 },
+        { rule::type::TYPE_NUMBER, 0,   NULL,     0, 2, 2 }
     };
 
     /* Start with a clean slate. */
@@ -718,26 +718,26 @@ parsedate_rfc5322_lax(const char *date)
        some broken software omits the leading zero and parsedate didn't
        care. */
     static const struct rule base_rule[] = {
-        { TYPE_NUMBER,    0,   NULL,  0, 1, 2 },
-        { TYPE_OBS_MONTH, 0,   NULL, 12, 3, 3 },
-        { TYPE_NUMBER,    0,   NULL,  0, 2, 4 },
-        { TYPE_NUMBER,    0,   NULL,  0, 1, 2 },
-        { TYPE_DELIM,     ':', NULL,  0, 1, 1 },
-        { TYPE_NUMBER,    0,   NULL,  0, 1, 2 }
+        { rule::type::TYPE_NUMBER,    0,   NULL,  0, 1, 2 },
+        { rule::type::TYPE_OBS_MONTH, 0,   NULL, 12, 3, 3 },
+        { rule::type::TYPE_NUMBER,    0,   NULL,  0, 2, 4 },
+        { rule::type::TYPE_NUMBER,    0,   NULL,  0, 1, 2 },
+        { rule::type::TYPE_DELIM,     ':', NULL,  0, 1, 1 },
+        { rule::type::TYPE_NUMBER,    0,   NULL,  0, 1, 2 }
     };
 
     /* Optional seconds at the end of the time.  Similarly, don't require the
        leading zero. */
     static const struct rule seconds_rule[] = {
-        { TYPE_DELIM,     ':', NULL,  0, 1, 1 },
-        { TYPE_NUMBER,    0,   NULL,  0, 1, 2 }
+        { rule::type::TYPE_DELIM,     ':', NULL,  0, 1, 1 },
+        { rule::type::TYPE_NUMBER,    0,   NULL,  0, 1, 2 }
     };
 
     /* Numeric time zone.  Allow the hour portion to omit the leading zero.
        Unfortunately, our parser is greedy, so we have to parse this as one
        number and then patch it up later. */
     static const struct rule zone_rule[] = {
-        { TYPE_NUMBER,    0,   NULL,  0, 1, 5 }
+        { rule::type::TYPE_NUMBER,    0,   NULL,  0, 1, 5 }
     };
 
     /* Start with a clean slate. */

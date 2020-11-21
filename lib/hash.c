@@ -60,7 +60,7 @@ Hash(const void *value, const size_t len)
 HASH
 HashMessageID(const char *MessageID)
 {
-    char                *new = NULL;
+    char                *_new = NULL;
     const char          *cip, *p = NULL;
     char                *q;
     int                 len;
@@ -71,17 +71,17 @@ HashMessageID(const char *MessageID)
     if (cip != NULL) {
         for (p = cip + 1; *p != '\0'; p++) {
             if (!islower((unsigned char) *p)) {
-                new = xstrdup(MessageID);
+                _new = xstrdup(MessageID);
                 break;
             }
         }
     }
-    if (new != NULL)
-        for (q = new + (p - MessageID); *q != '\0'; q++)
+    if (_new != NULL)
+        for (q = _new + (p - MessageID); *q != '\0'; q++)
             *q = tolower((unsigned char) *q);
-    hash = Hash(new ? new : MessageID, len);
-    if (new != NULL)
-	free(new);
+    hash = Hash(_new ? _new : MessageID, len);
+    if (_new != NULL)
+	free(_new);
     return hash;
 }
 

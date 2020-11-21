@@ -64,10 +64,10 @@ libinn.a: $(OBJECTS)
 	$(RANLIB) libinn.a
 
 .c.o .c.lo:
-	$(LIBCC) $(CFLAGS) -c $*.c
+	$(LIBCC) $(CXXFLAGS) -c $*.c
 
 perl.o: perl.c
-	$(CC) $(CFLAGS) $(PERL_CPPFLAGS) $(LDFLAGS) -c perl.c
+	$(CXX) $(CXXFLAGS) $(PERL_CPPFLAGS) $(LDFLAGS) -c perl.c
 
 ../include/inn/system.h:
 	(cd ../include && $(MAKE))

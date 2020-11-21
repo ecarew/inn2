@@ -64,8 +64,8 @@ void
 ensure_news_user(bool may_setuid)
 {
     uid_t uid;
-
-    get_news_uid_gid(&uid, false, true);
+    unsigned int _false = 0;
+    get_news_uid_gid(&uid, _false, true);
     if (geteuid() == 0) {
         if (! may_setuid) {
             /* NB:  mustn't be run as root, unless "may_setuid" is true. */
@@ -89,8 +89,8 @@ void
 ensure_news_grp(bool may_setgid)
 {
     gid_t gid;
-
-    get_news_uid_gid(false, &gid, true);
+    unsigned int _false = 0;
+    get_news_uid_gid(_false, &gid, true);
     if (may_setgid && geteuid() == 0) {
         if (setgid(gid) < 0) {
             sysdie("failed to setgid");

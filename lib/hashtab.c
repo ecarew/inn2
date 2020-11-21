@@ -37,7 +37,7 @@ struct hash {
     hash_func hash;             /* Return hash of a key. */
     hash_key_func key;          /* Given an element, returns its key. */
     hash_equal_func equal;      /* Whether a key matches an element. */
-    hash_delete_func delete;    /* Called when a hash element is deleted. */
+    hash_delete_func _delete;    /* Called when a hash element is deleted. */
 
     void **table;               /* The actual elements. */
 };
@@ -83,7 +83,7 @@ hash_create(size_t size, hash_func hash_f, hash_key_func key_f,
     hash->hash = hash_f;
     hash->key = key_f;
     hash->equal = equal_f;
-    hash->delete = delete_f;
+    hash->_delete = delete_f;
     hash->size = hash_size(size);
     hash->mask = hash->size - 1;
     hash->table = xcalloc(hash->size, sizeof(void *));
@@ -104,7 +104,7 @@ hash_free(struct hash *hash)
     for (i = 0; i < hash->size; i++) {
         entry = hash->table[i];
         if (entry != HASH_EMPTY && entry != HASH_DELETED)
-            (*hash->delete)(entry);
+            (*hash->_delete)(entry);
     }
     free(hash->table);
     free(hash);
@@ -265,7 +265,7 @@ hash_replace(struct hash *hash, const void *key, void *datum)
     slot = hash_find_slot(hash, key, false);
     if (slot == NULL)
         return false;
-    (*hash->delete)(*slot);
+    (*hash->_delete)(*slot);
     *slot = datum;
     return true;
 }
