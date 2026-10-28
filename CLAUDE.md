@@ -74,6 +74,46 @@ Add the relevant INN tests when converting a new area (e.g. storage tests for
 `storage/`). Commits before this rule have retroactive `git notes`
 (`git log --notes`) recording checks run after the fact.
 
+## Open items
+
+Deferred work, newest first within each group.  When an item is done, move
+it to "Resolved" below with the date and commit rather than deleting it.
+
+**Deferred modernization (on hold by decision, 2026-10-28)**
+- C-style casts: 323 `cppcoreguidelines-pro-type-cstyle-cast` hits in the
+  `.cc` files.  Needs case-by-case judgment (static/const/reinterpret_cast).
+- Uninitialized variables: 2430 `cppcoreguidelines-init-variables` hits.
+  Mostly C-style declarations; noisy, and fixes can change behavior.
+- Implicit bool conversions: 786 `readability-implicit-bool-conversion`
+  hits (`if (ptr)`, `while (n)`).  Style; low priority.
+
+**Other known gaps (2026-10-28)**
+- 49 struct/enum `typedef`s with bodies left by `modernize-use-using`; convert
+  to `struct X { ... };` during struct/class modernization.  Do not use
+  clang-tidy 23.1.4's `-fix` for this check: it corrupts anonymous struct
+  typedefs (see commit 085d0741d).
+- Code never compiled as C++ because its feature is off in this build:
+  `innd/perl.cc`, `innd/python.cc`, `lib/perl.cc` (DO_PERL/DO_PYTHON),
+  `storage/ovdb/ovdb.cc` (HAVE_BDB), `lib/canlock.cc` (libcanlock).  Also
+  where `NULL` still remains in compiled-out code.
+- Generated sources still C: `storage/methods.c`, `storage/ovmethods.c`,
+  `storage/ovsqlite/sql-*.c`, `history/hismethods.c`,
+  `history/hissqlite/hissqlite-{init,main,read}.c`.  CMake also does not run
+  their generators yet; it relies on `./configure` plus one Make pass.
+- `lib/` replacement functions not used on macOS (`asprintf`, `inet_*`,
+  `snprintf`, `strlc*`, `setenv`, `mkstemp`, `pread`, `pwrite`,
+  `getaddrinfo`, `getnameinfo`, `daemon`) are still C.
+- The Autoconf/Make build can no longer build libinn, libinnhist or
+  libinnstorage (their Makefiles list `.c` files that are now `.cc`), so INN's
+  other programs (nnrpd, innfeed, expire, backends, frontends, ...) cannot be
+  built until they get CMake files.
+- Shell-driven tests not yet run: `overview/ovsqlite-integ`,
+  `overview/overchan`, `storage/sm`, `storage/archive`, `storage/makehistory`,
+  `lib/hissqlite-util`, `lib/xmalloc` (need the programs above).
+
+**Resolved**
+- (none yet)
+
 ## void* allocations
 
 Use `inn_void_ptr` (defined in `include/inn/xmalloc.h`) — `xmalloc`, `xcalloc`,
