@@ -1,0 +1,6 @@
+Correction to the commit message (2026-10-28): NULL also remains in
+compiled code where it is passed as a variadic argument, e.g. the
+terminating NULL of concat(..., NULL).  clang-tidy's
+modernize-use-nullptr deliberately leaves those alone because no pointer
+conversion takes place there.  After these commits, clang-tidy reports 0
+remaining modernize-use-nullptr warnings across all 105 .cc files.
