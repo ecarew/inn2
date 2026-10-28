@@ -2,6 +2,15 @@ cmake_minimum_required(VERSION 4.3)
 
 project(INN VERSION 2.8.0 LANGUAGES C CXX)
 
+# INN keeps assert() enabled in all builds, as configure's "-g -O2" does, but
+# CMake's Release-type defaults add -DNDEBUG.  Strip it.
+foreach(lang C CXX)
+    foreach(cfg RELEASE RELWITHDEBINFO MINSIZEREL)
+        string(REPLACE "-DNDEBUG" "" CMAKE_${lang}_FLAGS_${cfg}
+               "${CMAKE_${lang}_FLAGS_${cfg}}")
+    endforeach()
+endforeach()
+
 # Phase 1: reuse the headers and method tables produced by ./configure and the
 # Perl generators (storage/buildconfig, history/buildconfig, sqlite-helper-gen)
 # instead of reproducing configure.ac's checks in CMake.
@@ -73,7 +82,64 @@ set(INN_CANLOCK_LIBS inn_canlock)
 set(INN_REGEX_LIBS "")
 set(INN_EXTRA_LIBS "")
 
+# Optional libraries that config.h (from ./configure) enabled.  Phase 1
+# mirrors configure's choices rather than re-detecting features.
+file(READ ${CMAKE_SOURCE_DIR}/include/config.h INN_CONFIG_H)
+macro(inn_config_has var)
+    string(REGEX MATCH "#define ${var} 1" _m "${INN_CONFIG_H}")
+    if(_m)
+        set(${var} TRUE)
+    else()
+        set(${var} FALSE)
+    endif()
+endmacro()
+inn_config_has(HAVE_PAM)
+inn_config_has(HAVE_SASL)
+inn_config_has(HAVE_KRB5)
+
+if(HAVE_PAM)
+    find_library(INN_PAM_LIB pam REQUIRED)
+endif()
+if(HAVE_SASL)
+    find_library(INN_SASL_LIB sasl2 REQUIRED)
+endif()
+if(HAVE_KRB5)
+    # configure used krb5-config; use the same one so flags match config.h.
+    find_program(INN_KRB5_CONFIG krb5-config REQUIRED)
+    execute_process(COMMAND ${INN_KRB5_CONFIG} --cflags krb5
+                    OUTPUT_VARIABLE INN_KRB5_CFLAGS
+                    OUTPUT_STRIP_TRAILING_WHITESPACE)
+    execute_process(COMMAND ${INN_KRB5_CONFIG} --libs krb5
+                    OUTPUT_VARIABLE INN_KRB5_LIBS
+                    OUTPUT_STRIP_TRAILING_WHITESPACE)
+    separate_arguments(INN_KRB5_CFLAGS)
+    separate_arguments(INN_KRB5_LIBS)
+endif()
+
+# inn_program(name SOURCES src... [LIBS lib...] [NOLIBS])
+# A program linked against all three INN libraries (or only LIBS / none).
+function(inn_program name)
+    cmake_parse_arguments(P "NOLIBS;INNONLY" "" "SOURCES;LIBS" ${ARGN})
+    add_executable(${name} ${P_SOURCES})
+    target_include_directories(${name} PRIVATE ${CMAKE_CURRENT_SOURCE_DIR})
+    if(P_INNONLY)
+        target_link_libraries(${name} PRIVATE INN::inn ${P_LIBS})
+    elseif(NOT P_NOLIBS)
+        target_link_libraries(${name} PRIVATE INN::storage INN::hist INN::inn
+                              ${P_LIBS})
+    else()
+        target_link_libraries(${name} PRIVATE ${P_LIBS})
+    endif()
+endfunction()
+
 add_subdirectory(lib)
 add_subdirectory(history)
 add_subdirectory(storage)
 add_subdirectory(innd)
+add_subdirectory(authprogs)
+add_subdirectory(backends)
+add_subdirectory(control)
+add_subdirectory(expire)
+add_subdirectory(frontends)
+add_subdirectory(innfeed)
+add_subdirectory(nnrpd)

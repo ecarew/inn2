@@ -23,3 +23,14 @@ add_library(INN::storage ALIAS innstorage)
 add_library(storage_deps INTERFACE)
 target_link_libraries(storage_deps INTERFACE ZLIB::ZLIB SQLite3::SQLite3)
 add_library(INN::storage_deps ALIAS storage_deps)
+
+# Storage tools (storage/Make.methods).  ovsqlite-util is a script generated
+# from ovsqlite-util.in and is not built here yet.
+inn_program(tdx-util SOURCES tradindexed/tdx-util.c)
+inn_program(ovsqlite-server
+    SOURCES ovsqlite/ovsqlite-server.c ovsqlite/sql-main.c ovsqlite/sql-init.c
+            ovsqlite/ovsqlite-private.cc)
+# buffindexed.cc again, with its BUFF_DEBUG main().
+inn_program(buffindexed_d SOURCES buffindexed/buffindexed.cc)
+target_compile_definitions(buffindexed_d PRIVATE BUFF_DEBUG)
+target_compile_features(buffindexed_d PRIVATE cxx_std_20)

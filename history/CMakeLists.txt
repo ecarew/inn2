@@ -10,3 +10,7 @@ add_library(innhist STATIC
 target_include_directories(innhist PRIVATE ${CMAKE_CURRENT_SOURCE_DIR})
 target_link_libraries(innhist PUBLIC INN::inn SQLite3::SQLite3)
 add_library(INN::hist ALIAS innhist)
+
+# History tools (history/Make.methods).  hissqlite-util is a script generated
+# from hissqlite-util.in and is not built here yet.
+inn_program(hissqlite-convert SOURCES hissqlite/hissqlite-convert.c)

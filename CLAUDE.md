@@ -127,9 +127,17 @@ it to "Resolved" below with the date and commit rather than deleting it.
   `snprintf`, `strlc*`, `setenv`, `mkstemp`, `pread`, `pwrite`,
   `getaddrinfo`, `getnameinfo`, `daemon`) are still C.
 - The Autoconf/Make build can no longer build libinn, libinnhist or
-  libinnstorage (their Makefiles list `.c` files that are now `.cc`), so INN's
-  other programs (nnrpd, innfeed, expire, backends, frontends, ...) cannot be
-  built until they get CMake files.
+  libinnstorage (their Makefiles list `.c` files that are now `.cc`).  CMake
+  now builds all 49 C programs (2026-10-28), but only innd, tinyleaf,
+  encode/decode and convdate have been run; the rest are untested.
+- CMake does not yet generate INN's scripts from their `.in` files
+  (controlchan, pgpverify, nntpsend, mailpost, expirerm, ...), and has no
+  install rules for the programs (setuid/permissions, paths).
+- Kerberos (auth_krb5) is found through `krb5-config`, which on this Mac is
+  Anaconda's (`/opt/anaconda3`), matching what configure picked.
+- Upstream bug, innfeed/article.c:37: `#define VALIDATE_HASH_TABLE() (void(0))`
+  is C++ syntax and does not compile as C when NDEBUG is defined.  Latent,
+  since NDEBUG is no longer defined; fix when innfeed is converted.
 - Shell-driven tests not yet run: `overview/ovsqlite-integ`,
   `overview/overchan`, `storage/sm`, `storage/archive`, `storage/makehistory`,
   `lib/hissqlite-util`, `lib/xmalloc` (need the programs above).
