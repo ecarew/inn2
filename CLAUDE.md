@@ -30,6 +30,25 @@ directory's `CMakeLists.txt`, build, fix only what the compiler reports, then
 commit. Modernization (classes, containers, RAII) goes in separate commits
 after the file compiles as C++.
 
+## Testing before commit
+
+Run the full verification set *before* every commit and record it in the
+commit message as a `Tested:` section listing each check and its result.
+Only list checks that actually ran on the exact tree being committed.
+
+Current verification set:
+- CMake build of lib, history, storage and innd succeeds
+- `innd` exports every symbol the Makefile-built `innd` does (169)
+- No C++-mangled exported symbols in `innd` or `libinnhist.a` (C linkage kept)
+- `innd -h` starts and reaches the news-group check
+- `tinyleaf` smoke test: HELP, IHAVE, duplicate IHAVE, unknown command, QUIT
+- INN tap tests built against the CMake libraries: `lib/hissqlite`,
+  `lib/bloom-hiswalk`, `expire/tombstone-hisexpire`
+
+Add the relevant INN tests when converting a new area (e.g. storage tests for
+`storage/`). Commits before this rule have retroactive `git notes`
+(`git log --notes`) recording checks run after the fact.
+
 ## void* allocations
 
 Use `inn_void_ptr` (defined in `include/inn/xmalloc.h`) — `xmalloc`, `xcalloc`,
