@@ -102,7 +102,7 @@ QIOread(QIOSTATE *qp)
 
     /* Loop until we get a result or fill the buffer. */
     qp->_flag = QIO_ok;
-    while (1) {
+    while (true) {
         nleft = qp->_end - qp->_start;
 
         /* If (unsigned) nleft = 0, the buffer currently contains no data that

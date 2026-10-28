@@ -122,7 +122,7 @@ hash_find_empty(struct hash *hash, const void *key)
     size_t slot;
 
     slot = (*hash->hash)(key) &hash->mask;
-    while (1) {
+    while (true) {
         if (hash->table[slot] == HASH_EMPTY)
             return &hash->table[slot];
 
@@ -190,7 +190,7 @@ hash_find_slot(struct hash *hash, const void *key, bool insert)
     hash->searches++;
 
     slot = (*hash->hash)(key) &hash->mask;
-    while (1) {
+    while (true) {
         entry = hash->table[slot];
         if (entry == HASH_EMPTY) {
             if (!insert)

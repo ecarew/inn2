@@ -1193,7 +1193,7 @@ CHANreadloop(void)
     gettimeofday(&Now, nullptr);
     last_sync = Now.tv_sec;
 
-    while (1) {
+    while (true) {
         /* See if any processes died. */
         PROCscan();
 

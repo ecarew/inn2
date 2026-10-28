@@ -929,7 +929,7 @@ CNFSread_config()
             ctab = xrealloc(ctab, (ctab_free + 1) * sizeof(char *));
         /* If we're here, we've got the beginning of a real entry */
         ctab[ctab_free++] = to = from;
-        while (1) {
+        while (true) {
             if (*from && *from == '\\' && *(from + 1) == '\n') {
                 from += 2; /* Skip past backslash+newline */
                 while (*from && isspace((unsigned char) *from))

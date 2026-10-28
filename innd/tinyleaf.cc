@@ -250,7 +250,7 @@ main(int argc, char *argv[])
     state.nntp = nntp_new(STDIN_FILENO, STDOUT_FILENO, 1024 * 1024, 10 * 60);
     nntp_respond(state.nntp, NNTP_OK_BANNER_NOPOST, "tinyfeed ready");
     command = cvector_new();
-    while (1) {
+    while (true) {
         status = nntp_read_command(state.nntp, command);
         switch (status) {
         case NNTP_READ_OK:
