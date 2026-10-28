@@ -1180,7 +1180,7 @@ buffindexed_open(int mode)
             return false;
         }
         GROUPmapsize = (size_t) groupsize;
-        GROUPheader = mmap(0, GROUPmapsize, flag, MAP_SHARED, GROUPfd, 0);
+        GROUPheader = static_cast<GROUPHEADER *>(mmap(0, GROUPmapsize, flag, MAP_SHARED, GROUPfd, 0));
         if (GROUPheader == MAP_FAILED) {
             syswarn("buffindexed: Could not mmap %s in buffindexed_open",
                     groupfn);
@@ -1191,7 +1191,7 @@ buffindexed_open(int mode)
             close(GROUPfd);
             return false;
         }
-        GROUPentries = (void *) &GROUPheader[1];
+        GROUPentries = reinterpret_cast<GROUPENTRY *>(&GROUPheader[1]);
     } else {
         GROUPcount = 0;
         GROUPmapsize = 0;
@@ -1469,8 +1469,8 @@ GROUPremapifneeded(GROUPLOC loc, bool hash_locked)
         return false;
     }
 
-    newheader = mmap(0, (size_t) groupsize, GROUPmappingprot(ovbuffmode),
-                     MAP_SHARED, GROUPfd, 0);
+    newheader = static_cast<GROUPHEADER *>(mmap(0, (size_t) groupsize, GROUPmappingprot(ovbuffmode),
+                     MAP_SHARED, GROUPfd, 0));
     if (newheader == MAP_FAILED) {
         syswarn(
             "buffindexed: Could not mmap group.index in GROUPremapifneeded");
@@ -1493,7 +1493,7 @@ GROUPremapifneeded(GROUPLOC loc, bool hash_locked)
     GROUPcount = count;
     GROUPmapsize = (size_t) groupsize;
     GROUPheader = newheader;
-    GROUPentries = (void *) &GROUPheader[1];
+    GROUPentries = reinterpret_cast<GROUPENTRY *>(&GROUPheader[1]);
     if (locked)
         GROUPlockhash(INN_LOCK_UNLOCK);
     return true;
@@ -1529,8 +1529,8 @@ GROUPexpand(int mode)
         syswarn("buffindexed: Could not extend group.index");
         return false;
     }
-    newheader = mmap(0, (size_t) groupsize, GROUPmappingprot(mode), MAP_SHARED,
-                     GROUPfd, 0);
+    newheader = static_cast<GROUPHEADER *>(mmap(0, (size_t) groupsize, GROUPmappingprot(mode), MAP_SHARED,
+                     GROUPfd, 0));
     if (newheader == MAP_FAILED) {
         syswarn("buffindexed: Could not mmap group.index in GROUPexpand");
         /* If this is initial creation, restore the header-only file.  For an
@@ -1550,7 +1550,7 @@ GROUPexpand(int mode)
     GROUPcount = newcount;
     GROUPmapsize = (size_t) groupsize;
     GROUPheader = newheader;
-    GROUPentries = (void *) &GROUPheader[1];
+    GROUPentries = reinterpret_cast<GROUPENTRY *>(&GROUPheader[1]);
     if (GROUPheader->magic != GROUPHEADERMAGIC) {
         GROUPheader->magic = GROUPHEADERMAGIC;
         GROUPLOCclear(&GROUPheader->freelist);
@@ -2030,8 +2030,8 @@ searchgdb(OV *ov)
 static int
 INDEXcompare(const void *p1, const void *p2)
 {
-    const OVINDEX *oi1 = p1;
-    const OVINDEX *oi2 = p2;
+    const OVINDEX *oi1 = static_cast<const OVINDEX *>(p1);
+    const OVINDEX *oi2 = static_cast<const OVINDEX *>(p2);
 
     return oi1->artnum - oi2->artnum;
 }
@@ -2089,7 +2089,7 @@ ovgroupmmap(GROUPENTRY *ge, ARTNUM low, ARTNUM high, bool needov)
             ovgroupunmap_failed();
             return false;
         }
-        ovblock = (void *) ((char *) addr + pagefudge);
+        ovblock = reinterpret_cast<OVBLOCK *>(static_cast<char *>(addr) + pagefudge);
         if (ov.index == ge->curindex.index
             && ov.blocknum == ge->curindex.blocknum) {
             limit = ge->curindexoffset;
