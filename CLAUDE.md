@@ -82,6 +82,13 @@ Add the relevant INN tests when converting a new area (e.g. storage tests for
 `storage/`). Commits before this rule have retroactive `git notes`
 (`git log --notes`) recording checks run after the fact.
 
+## Conversion notes
+
+Record every design decision, with its reasoning and the alternatives
+considered, in `CONVERSION_NOTES.md`, and reference the commits.  It is the
+reviewer-facing record of why the C++ differs from upstream INN; keep it
+current in the same commit as the change it describes.
+
 ## Open items
 
 Deferred work, newest first within each group.  When an item is done, move
@@ -110,6 +117,14 @@ Everything below must be done before the Autoconf/Make build is deleted.
    Berkeley DB (ovdb), OpenSSL/TLS, libcanlock, systemd, blocklist.
 9. Tests: run them through CTest instead of only support/verify-cxx.sh.
 10. Portability: build and test on Linux and a BSD, not just macOS.
+
+**Documentation (2026-10-28)**
+- Convert `readme.pod` to Markdown (`README.md`), next to `CONVERSION_NOTES.md`.
+
+**Design follow-ups (2026-10-28)**
+- Benchmark the current header tree against the planned sorted-array
+  `HeaderTable` with the 76 real header names (see CONVERSION_NOTES.md); keep
+  it as the first test of `HeaderTable`.
 
 **Test coverage (2026-10-28, support/coverage-report.sh)**
 - innd/ is 2.0% line-covered: every file except innd.cc startup is 0%
