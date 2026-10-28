@@ -18,13 +18,13 @@ set(INND_C_SOURCES
     python.c
     rc.c
     site.c
-    status.c
 )
 
 set(INND_CXX_SOURCES
     art.cc
     wip.cc
     util.cc
+    status.cc
 )
 
 add_executable(innd ${INND_C_SOURCES} ${INND_CXX_SOURCES})
