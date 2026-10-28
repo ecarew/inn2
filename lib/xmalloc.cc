@@ -212,10 +212,10 @@ x_strdup(const char *s, const char *file, int line)
     size_t len;
 
     len = strlen(s) + 1;
-    p = malloc(len);
+    p = static_cast<char *>(malloc(len));
     while (p == NULL) {
         xmalloc_error_handler("strdup", len, file, line);
-        p = malloc(len);
+        p = static_cast<char *>(malloc(len));
     }
     memcpy(p, s, len);
     return p;
@@ -238,10 +238,10 @@ x_strndup(const char *s, size_t size, const char *file, int line)
     for (p = s; (size_t) (p - s) < size && *p != '\0'; p++)
         ;
     length = p - s;
-    copy = malloc(length + 1);
+    copy = static_cast<char *>(malloc(length + 1));
     while (copy == NULL) {
         xmalloc_error_handler("strndup", length + 1, file, line);
-        copy = malloc(length + 1);
+        copy = static_cast<char *>(malloc(length + 1));
     }
     memcpy(copy, s, length);
     copy[length] = '\0';
