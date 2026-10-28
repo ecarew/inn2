@@ -138,7 +138,7 @@ OVadd(TOKEN token, char *data, int len, time_t arrived, time_t expires)
 
     for (next = data;
          ((len - (next - data)) > 6)
-         && ((next = memchr(next, 'X', len - (next - data))) != NULL);) {
+         && ((next = static_cast<char *>(memchr(next, 'X', len - (next - data)))) != NULL);) {
         /* Check that the Xref header field is at the beginning of an overview
          * field. */
         if (memcmp(next, "Xref: ", 6) == 0 && next != data
@@ -154,7 +154,7 @@ OVadd(TOKEN token, char *data, int len, time_t arrived, time_t expires)
 
     next = xrefstart;
     for (i = 0; (i < 2) && (next < (data + len)); i++) {
-        if ((next = memchr(next, ' ', len - (next - data))) == NULL)
+        if ((next = static_cast<char *>(memchr(next, ' ', len - (next - data)))) == NULL)
             return OVADDFAILED;
         next++;
     }
@@ -165,7 +165,7 @@ OVadd(TOKEN token, char *data, int len, time_t arrived, time_t expires)
      * then we must find the end of the Xref header field body, or data
      * following is misinterpreted.
      */
-    if ((xrefend = memchr(next, '\t', xreflen)) != NULL)
+    if ((xrefend = static_cast<char *>(memchr(next, '\t', xreflen))) != NULL)
         xreflen = xrefend - next;
 
     if (xrefdatalen == 0) {
@@ -196,10 +196,10 @@ OVadd(TOKEN token, char *data, int len, time_t arrived, time_t expires)
         patcheck[xreflen] = '\0';
         for (group = patcheck; group && *group;
              group =
-                 memchr(nextcheck, ' ', xreflen - (nextcheck - patcheck))) {
+                 static_cast<char *>(memchr(nextcheck, ' ', xreflen - (nextcheck - patcheck)))) {
             while (isspace((unsigned char) *group))
                 group++;
-            if ((nextcheck = memchr(group, ':', xreflen - (group - patcheck)))
+            if ((nextcheck = static_cast<char *>(memchr(group, ':', xreflen - (group - patcheck))))
                 == NULL)
                 return OVADDFAILED;
             *nextcheck++ = '\0';
@@ -221,12 +221,12 @@ OVadd(TOKEN token, char *data, int len, time_t arrived, time_t expires)
     memcpy(xrefdata, next, xreflen);
     xrefdata[xreflen] = '\0';
     for (group = xrefdata; group && *group;
-         group = memchr(next, ' ', xreflen - (next - xrefdata))) {
+         group = static_cast<char *>(memchr(next, ' ', xreflen - (next - xrefdata)))) {
         /* Parse the Xref header field body into group name and article
          * number. */
         while (isspace((unsigned char) *group))
             group++;
-        if ((next = memchr(group, ':', xreflen - (group - xrefdata))) == NULL)
+        if ((next = static_cast<char *>(memchr(group, ':', xreflen - (group - xrefdata)))) == NULL)
             return OVADDFAILED;
         *next++ = '\0';
         if (!isdigit((unsigned char) *next))
