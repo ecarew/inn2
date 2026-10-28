@@ -50,6 +50,9 @@ Code coverage: `cmake -S . -B build-cov -DINN_COVERAGE=ON -DCMAKE_BUILD_TYPE=Deb
 (add `--html` for a line-by-line report in `build-cov/coverage/html/`).  Uses
 Xcode's `llvm-profdata`/`llvm-cov` via `xcrun`, matching Apple clang.
 
+Source browser with call/caller graphs: `doxygen support/Doxyfile` (Doxygen +
+Graphviz), output in `build-doxygen/html/index.html` (about 8 s, 320 MB).
+
 Current verification set:
 - CMake build of lib, history, storage and innd succeeds
 - `innd` exports every symbol the Makefile-built `innd` does (169)
