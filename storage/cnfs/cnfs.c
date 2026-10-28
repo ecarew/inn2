@@ -635,7 +635,7 @@ CNFSparse_groups_line(void)
             return false;
         }
         metaexprule = xmalloc(sizeof(CNFSEXPIRERULES));
-        metaexprule->class = sub->class;
+        metaexprule->storageclass = sub->storageclass;
         metaexprule->dest = mrp;
         metaexprule->next = (CNFSEXPIRERULES *) NULL;
         if (metaexprulestab == (CNFSEXPIRERULES *) NULL)
@@ -1273,7 +1273,7 @@ cnfs_store(const ARTHANDLE article, const STORAGECLASS class)
     for (metaexprule = metaexprulestab;
          metaexprule != (CNFSEXPIRERULES *) NULL;
          metaexprule = metaexprule->next) {
-        if (metaexprule->class == class)
+        if (metaexprule->storageclass == class)
             break;
     }
     if (metaexprule == (CNFSEXPIRERULES *) NULL) {
@@ -1366,7 +1366,7 @@ cnfs_store(const ARTHANDLE article, const STORAGECLASS class)
         cah.arrived = htonl(time(NULL));
     else
         cah.arrived = htonl(article.arrived);
-    cah.class = class;
+    cah.storageclass = class;
 
     if (lseek(cycbuff->fd, artoffset, SEEK_SET) < 0) {
         SMseterror(SMERR_INTERNAL, "lseek failed");
@@ -1538,7 +1538,7 @@ cnfs_retrieve(const TOKEN token, const RETRTYPE amount)
         }
         cah.size = cahh.size;
         cah.arrived = htonl(time(NULL));
-        cah.class = 0;
+        cah.storageclass = 0;
         plusoffset = sizeof(oldCNFSARTHEADER) - sizeof(CNFSARTHEADER);
     }
 #endif /* OLD_CNFS */
@@ -1900,7 +1900,7 @@ cnfs_next(ARTHANDLE *article, const RETRTYPE amount)
         }
         cah.size = cahh.size;
         cah.arrived = htonl(time(NULL));
-        cah.class = 0;
+        cah.storageclass = 0;
         plusoffset = sizeof(oldCNFSARTHEADER) - sizeof(CNFSARTHEADER);
     }
 #endif /* OLD_CNFS */
@@ -1981,7 +1981,7 @@ cnfs_next(ARTHANDLE *article, const RETRTYPE amount)
     token = CNFSMakeToken(cycbuff->name, offset, cycbuff->blksz,
                           (offset >= cycbuff->free) ? cycbuff->cyclenum - 1
                                                     : cycbuff->cyclenum,
-                          cah.class);
+                          cah.storageclass);
     art->token = &token;
     offset += sizeof(cah) + plusoffset;
     if (innconf->articlemmap) {

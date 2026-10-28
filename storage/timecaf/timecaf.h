@@ -10,8 +10,10 @@
 #include "config.h"
 #include "interface.h"
 
+BEGIN_DECLS
+
 bool timecaf_init(SMATTRIBUTE *attr);
-TOKEN timecaf_store(const ARTHANDLE article, const STORAGECLASS class);
+TOKEN timecaf_store(const ARTHANDLE article, const STORAGECLASS storageclass);
 ARTHANDLE *timecaf_retrieve(const TOKEN token, const RETRTYPE amount);
 ARTHANDLE *timecaf_next(ARTHANDLE *article, const RETRTYPE amount);
 void timecaf_freearticle(ARTHANDLE *article);
@@ -21,5 +23,7 @@ bool timecaf_flushcacheddata(FLUSHTYPE type);
 void timecaf_printfiles(FILE *file, TOKEN token, char **xref, int ngroups);
 char *timecaf_explaintoken(const TOKEN token);
 void timecaf_shutdown(void);
+
+END_DECLS
 
 #endif

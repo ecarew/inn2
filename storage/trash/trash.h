@@ -8,8 +8,10 @@
 #include "config.h"
 #include "interface.h"
 
+BEGIN_DECLS
+
 bool trash_init(SMATTRIBUTE *attr);
-TOKEN trash_store(const ARTHANDLE article, const STORAGECLASS class);
+TOKEN trash_store(const ARTHANDLE article, const STORAGECLASS storageclass);
 ARTHANDLE *trash_retrieve(const TOKEN token, const RETRTYPE amount);
 ARTHANDLE *trash_next(ARTHANDLE *article, const RETRTYPE amount);
 void trash_freearticle(ARTHANDLE *article);
@@ -19,5 +21,7 @@ bool trash_flushcacheddata(FLUSHTYPE type);
 void trash_printfiles(FILE *file, TOKEN token, char **xref, int ngroups);
 char *trash_explaintoken(const TOKEN token);
 void trash_shutdown(void);
+
+END_DECLS
 
 #endif

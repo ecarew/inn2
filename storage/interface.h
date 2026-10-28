@@ -9,6 +9,8 @@
 #include "inn/storage.h"
 #include <stdio.h>
 
+BEGIN_DECLS
+
 typedef struct {
     bool selfexpire;
     bool expensivestat;
@@ -37,7 +39,7 @@ typedef struct __S_SUB__ {
     time_t minexpire;   /* Minimum expire offset to send method */
     time_t maxexpire;   /* Maximum expire offset to send method */
     int numpatterns;    /* Number of patterns in patterns */
-    int class;          /* Number of the storage class for this subscription */
+    int storageclass;        /* Number of the storage class for this subscription */
     char *pattern;      /* Wildmat pattern to check against the groups to
                            determine if the article should go to this method */
     char *options;      /* Additional options specific to the method */
@@ -56,5 +58,7 @@ char *SMFindBody(char *article, int len);
 STORAGE_SUB *SMGetConfig(STORAGETYPE type, STORAGE_SUB *sub);
 STORAGE_SUB *SMgetsub(const ARTHANDLE article);
 void SMseterror(int errorno, const char *error);
+
+END_DECLS
 
 #endif /* __INTERFACE_H__ */

@@ -5,8 +5,10 @@
 #ifndef CNFS_H
 #define CNFS_H
 
+BEGIN_DECLS
+
 bool cnfs_init(SMATTRIBUTE *attr);
-TOKEN cnfs_store(const ARTHANDLE article, const STORAGECLASS class);
+TOKEN cnfs_store(const ARTHANDLE article, const STORAGECLASS storageclass);
 ARTHANDLE *cnfs_retrieve(const TOKEN token, const RETRTYPE amount);
 ARTHANDLE *cnfs_next(ARTHANDLE *article, const RETRTYPE amount);
 void cnfs_freearticle(ARTHANDLE *article);
@@ -16,5 +18,7 @@ bool cnfs_flushcacheddata(FLUSHTYPE type);
 void cnfs_printfiles(FILE *file, TOKEN token, char **xref, int ngroups);
 char *cnfs_explaintoken(const TOKEN token);
 void cnfs_shutdown(void);
+
+END_DECLS
 
 #endif

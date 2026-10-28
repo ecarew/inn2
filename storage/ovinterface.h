@@ -17,6 +17,8 @@
 #include "inn/ov.h"
 #include "inn/storage.h"
 
+BEGIN_DECLS
+
 struct buffer;
 struct vector;
 
@@ -72,5 +74,7 @@ extern long EXPunlinked;
 extern long EXPoverindexdrop;
 
 #define DEFAULT_MAX_XREF_LEN 8192
+
+END_DECLS
 
 #endif /* OVINTERFACE_H */

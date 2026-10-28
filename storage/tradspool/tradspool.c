@@ -1313,7 +1313,7 @@ tradspool_next(ARTHANDLE *article, const RETRTYPE amount)
             warn("tradspool: can't determine class of %s: %s",
                  TokenToText(token), SMerrorstr);
     } else {
-        token = MakeToken(priv.ngtp->ngname, artnum, sub->class);
+        token = MakeToken(priv.ngtp->ngname, artnum, sub->storageclass);
     }
     art->token = &token;
     free(path);

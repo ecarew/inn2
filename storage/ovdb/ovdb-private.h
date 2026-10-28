@@ -6,6 +6,8 @@
 #        error "Need Berkeley DB 4.4 or higher"
 #    endif
 
+BEGIN_DECLS
+
 /*
  * How data is stored:
  *
@@ -195,5 +197,7 @@ struct rs_artinfo {
 #    define TXN_COMMIT(label, tid) (tid)->commit(tid, 0)
 
 #    define TRYAGAIN               DB_LOCK_DEADLOCK
+
+END_DECLS
 
 #endif /* HAVE_BDB */

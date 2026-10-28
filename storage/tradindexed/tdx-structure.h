@@ -52,6 +52,8 @@
 #include "inn/libinn.h"
 #include "inn/storage.h"
 
+BEGIN_DECLS
+
 /* A location in group.index (this many records past the end of the header of
    the file).  There's no reason for this to be a struct, but that can't be
    changed until the format of the group.index file is changed to be
@@ -124,5 +126,7 @@ struct index_entry {
     time_t expires; /* Expiration time from Expires header field body. */
     TOKEN token;
 };
+
+END_DECLS
 
 #endif /* INN_TDX_STRUCTURE_H */

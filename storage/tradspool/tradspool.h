@@ -8,8 +8,10 @@
 #include "config.h"
 #include "interface.h"
 
+BEGIN_DECLS
+
 bool tradspool_init(SMATTRIBUTE *attr);
-TOKEN tradspool_store(const ARTHANDLE article, const STORAGECLASS class);
+TOKEN tradspool_store(const ARTHANDLE article, const STORAGECLASS storageclass);
 ARTHANDLE *tradspool_retrieve(const TOKEN token, const RETRTYPE amount);
 ARTHANDLE *tradspool_next(ARTHANDLE *article, const RETRTYPE amount);
 void tradspool_freearticle(ARTHANDLE *article);
@@ -19,5 +21,7 @@ bool tradspool_flushcacheddata(FLUSHTYPE type);
 void tradspool_printfiles(FILE *file, TOKEN token, char **xref, int ngroups);
 char *tradspool_explaintoken(const TOKEN token);
 void tradspool_shutdown(void);
+
+END_DECLS
 
 #endif

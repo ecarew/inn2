@@ -8,8 +8,10 @@
 #include "config.h"
 #include "interface.h"
 
+BEGIN_DECLS
+
 bool timehash_init(SMATTRIBUTE *attr);
-TOKEN timehash_store(const ARTHANDLE article, const STORAGECLASS class);
+TOKEN timehash_store(const ARTHANDLE article, const STORAGECLASS storageclass);
 ARTHANDLE *timehash_retrieve(const TOKEN token, const RETRTYPE amount);
 ARTHANDLE *timehash_next(ARTHANDLE *article, const RETRTYPE amount);
 void timehash_freearticle(ARTHANDLE *article);
@@ -19,5 +21,7 @@ bool timehash_flushcacheddata(FLUSHTYPE type);
 void timehash_printfiles(FILE *file, TOKEN token, char **xref, int ngroups);
 char *timehash_explaintoken(const TOKEN token);
 void timehash_shutdown(void);
+
+END_DECLS
 
 #endif

@@ -10,6 +10,8 @@
 #    include <unistd.h>
 #endif
 
+BEGIN_DECLS
+
 #define _PATH_CYCBUFFCONFIG "cycbuff.conf"
 
 /* Page boundary on which to mmap() the CNFS article usage header.  Should be
@@ -94,7 +96,7 @@ typedef struct metacycbuff {
 } METACYCBUFF;
 
 typedef struct _CNFSEXPIRERULES {
-    STORAGECLASS class;
+    STORAGECLASS storageclass;
     METACYCBUFF *dest;
     struct _CNFSEXPIRERULES *next;
 } CNFSEXPIRERULES;
@@ -102,7 +104,7 @@ typedef struct _CNFSEXPIRERULES {
 typedef struct {
     long size;          /* Size of the article */
     time_t arrived;     /* This is the time when article arrived */
-    STORAGECLASS class; /* storage class */
+    STORAGECLASS storageclass; /* storage class */
 } CNFSARTHEADER;
 
 /* uncomment below for old cnfs spool */
@@ -113,5 +115,7 @@ typedef struct {
     char m_id[64]; /* We'll only store up to 63 bytes of the
                           Message-ID, that should be good enough */
 } oldCNFSARTHEADER;
+
+END_DECLS
 
 #endif /* !CNFS_PRIVATE_H */

@@ -156,7 +156,11 @@ EOE
     write_constants(\*H, $storage, 'TOKEN');
     print H unquote(<<'EOE');
 :
+:       BEGIN_DECLS
+:
 :       extern STORAGE_METHOD storage_methods[NUM_STORAGE_METHODS];
+:
+:       END_DECLS
 :
 :       #endif /* METHODS_H */
 EOE
@@ -198,7 +202,11 @@ EOE
       scalar(keys %{ $$overview{method} }), "\n";
     print H unquote(<<'EOE');
 :
+:       BEGIN_DECLS
+:
 :       extern OV_METHOD ov_methods[NUM_OV_METHODS];
+:
+:       END_DECLS
 :
 :       #endif /* OVMETHODS_H */
 EOE

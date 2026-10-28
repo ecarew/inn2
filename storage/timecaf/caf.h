@@ -6,6 +6,7 @@
 ** in 1998-2000, 2002, 2004, 2009, 2021, 2022, 2024, 2026.
 */
 
+BEGIN_DECLS
 
 /*
 ** Format of a crunched article file:
@@ -165,3 +166,5 @@ extern int caf_errno; /* saved value of errno here if I/O error hit by lib. */
 #define CAF_ERR_ARTWONTFIT     6 /* outside the range in the TOC */
 #define CAF_ERR_ARTALREADYHERE 7 /* try to create an article already here */
 #define CAF_ERR_BOGUSPATH      8 /* pathname not parseable */
+
+END_DECLS
