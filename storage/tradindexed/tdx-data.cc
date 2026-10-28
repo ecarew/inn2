@@ -295,7 +295,7 @@ map_file(int fd, off_t length, const char *base, const char *suffix)
             return NULL;
         }
     } else {
-        data = mmap(NULL, size, PROT_READ, MAP_SHARED, fd, 0);
+        data = static_cast<char *>(mmap(NULL, size, PROT_READ, MAP_SHARED, fd, 0));
         if (data == MAP_FAILED) {
             syswarn("tradindexed: cannot mmap %s.%s", base, suffix);
             return NULL;
@@ -330,7 +330,8 @@ map_index(struct group_data *data)
     if (r == -1)
         return false;
     data->indexlen = st.st_size;
-    data->index = map_file(data->indexfd, data->indexlen, data->path, "IDX");
+    data->index = static_cast<struct index_entry *>(
+        map_file(data->indexfd, data->indexlen, data->path, "IDX"));
     return data->index != NULL || data->indexlen == 0;
 }
 
@@ -360,7 +361,7 @@ map_data(struct group_data *data)
     if (r == -1)
         return false;
     data->datalen = st.st_size;
-    data->data = map_file(data->datafd, data->datalen, data->path, "DAT");
+    data->data = static_cast<char *>(map_file(data->datafd, data->datalen, data->path, "DAT"));
     return data->data != NULL || data->datalen == 0;
 }
 
@@ -664,7 +665,7 @@ tdx_data_store(struct group_data *data, const struct article *article)
 bool
 tdx_data_cancel(struct group_data *data, ARTNUM artnum)
 {
-    static const struct index_entry empty;
+    static const struct index_entry empty = {};
     off_t offset;
 
     if (!data->writable)
