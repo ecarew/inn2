@@ -87,4 +87,6 @@ void *tst_delete(struct tst *, const unsigned char *key);
 /* Free the given ternary search trie and all resources it uses. */
 void tst_cleanup(struct tst *);
 
+END_DECLS
+
 #endif /* !INN_TST_H */

@@ -200,7 +200,7 @@ tst_insert(struct tst *tst, const unsigned char *key, void *data, int option,
                 if (exist_ptr != NULL)
                     *exist_ptr = current_node->middle;
                 if (option == TST_REPLACE) {
-                    current_node->middle = data;
+                    current_node->middle = static_cast<struct node *>(data);
                     return TST_OK;
                 } else
                     return TST_DUPLICATE_KEY;
@@ -233,7 +233,7 @@ tst_insert(struct tst *tst, const unsigned char *key, void *data, int option,
         current_node = current_node->middle;
     }
 
-    current_node->middle = data;
+    current_node->middle = static_cast<struct node *>(data);
     return TST_OK;
 }
 
