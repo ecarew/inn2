@@ -120,13 +120,15 @@ static const struct {
    characters and convert to a number.  For LOOKUP, look for max characters
    and find that string in the provided table (with size elements).  For
    DELIM, just make sure that we see the character stored in delimiter. */
+enum rule_type {
+    TYPE_NUMBER,
+    TYPE_LOOKUP,
+    TYPE_OBS_MONTH,
+    TYPE_DELIM
+};
+
 struct rule {
-    enum {
-        TYPE_NUMBER,
-        TYPE_LOOKUP,
-        TYPE_OBS_MONTH,
-        TYPE_DELIM
-    } type;
+    enum rule_type type;
     char delimiter;
     const char (*table)[4];
     size_t size;
