@@ -538,7 +538,7 @@ hisv6_open(const char *path, int flags, struct history *history)
 bool
 hisv6_close(void *history)
 {
-    struct hisv6 *h = history;
+    struct hisv6 *h = static_cast<struct hisv6 *>(history);
     bool r;
 
     his_logger("HISclose begin", S_HISclose);
@@ -554,7 +554,7 @@ hisv6_close(void *history)
 bool
 hisv6_sync(void *history)
 {
-    struct hisv6 *h = history;
+    struct hisv6 *h = static_cast<struct hisv6 *>(history);
     bool r = true;
 
     if (h->writefp != NULL) {
@@ -684,7 +684,7 @@ bool
 hisv6_lookup(void *history, const char *key, time_t *arrived, time_t *posted,
              time_t *expires, TOKEN *token)
 {
-    struct hisv6 *h = history;
+    struct hisv6 *h = static_cast<struct hisv6 *>(history);
     HASH messageid;
     bool r;
     off_t offset;
@@ -723,7 +723,7 @@ hisv6_lookup(void *history, const char *key, time_t *arrived, time_t *posted,
 bool
 hisv6_check(void *history, const char *key)
 {
-    struct hisv6 *h = history;
+    struct hisv6 *h = static_cast<struct hisv6 *>(history);
     bool r;
     HASH hash;
 
@@ -894,7 +894,7 @@ bool
 hisv6_write(void *history, const char *key, time_t arrived, time_t posted,
             time_t expires, const TOKEN *token)
 {
-    struct hisv6 *h = history;
+    struct hisv6 *h = static_cast<struct hisv6 *>(history);
     HASH hash;
     bool r;
 
@@ -913,7 +913,7 @@ hisv6_write(void *history, const char *key, time_t arrived, time_t posted,
 bool
 hisv6_remember(void *history, const char *key, time_t arrived, time_t posted)
 {
-    struct hisv6 *h = history;
+    struct hisv6 *h = static_cast<struct hisv6 *>(history);
     HASH hash;
     bool r;
 
@@ -936,7 +936,7 @@ bool
 hisv6_replace(void *history, const char *key, time_t arrived, time_t posted,
               time_t expires, const TOKEN *token)
 {
-    struct hisv6 *h = history;
+    struct hisv6 *h = static_cast<struct hisv6 *>(history);
     HASH hash;
     bool r;
     off_t offset;
@@ -951,9 +951,9 @@ hisv6_replace(void *history, const char *key, time_t arrived, time_t posted,
     hash = HashMessageID(key);
     r = hisv6_fetchline(h, &hash, old, &offset);
     if (r == true) {
-        char new[HISV6_MAXLINE + 1];
+        char newline[HISV6_MAXLINE + 1];
 
-        if (hisv6_formatline(new, &hash, arrived, posted, expires, token)
+        if (hisv6_formatline(newline, &hash, arrived, posted, expires, token)
             == 0) {
             hisv6_seterror(h, concat("error formatting history line ",
                                      h->histpath, NULL));
@@ -962,21 +962,21 @@ hisv6_replace(void *history, const char *key, time_t arrived, time_t posted,
             size_t oldlen, newlen;
 
             oldlen = strlen(old);
-            newlen = strlen(new);
-            if (new[newlen - 1] == '\n')
+            newlen = strlen(newline);
+            if (newline[newlen - 1] == '\n')
                 newlen--;
             if (newlen > oldlen) {
-                hisv6_seterror(h, concat("new history line too long ",
+                hisv6_seterror(h, concat("newline history line too long ",
                                          h->histpath, NULL));
                 r = false;
             } else {
                 ssize_t n;
 
-                /* space fill any excess in the tail of new */
-                memset(new + newlen, ' ', oldlen - newlen);
+                /* space fill any excess in the tail of newline */
+                memset(newline + newlen, ' ', oldlen - newlen);
 
                 do {
-                    n = pwrite(fileno(h->writefp), new, oldlen, offset);
+                    n = pwrite(fileno(h->writefp), newline, oldlen, offset);
                 } while (n == -1 && errno == EINTR);
                 if ((size_t) n != oldlen) {
                     char location[HISV6_MAX_LOCATION];
@@ -1009,7 +1009,7 @@ hisv6_traverse(struct hisv6 *h, struct hisv6_walkstate *cookie,
 {
     bool r = false;
     QIOSTATE *qp;
-    void *p;
+    char *p;
     size_t line;
     char location[HISV6_MAX_LOCATION];
 
@@ -1099,7 +1099,7 @@ hisv6_traversecb(struct hisv6 *h UNUSED, void *cookie, const HASH *hash,
                  time_t arrived, time_t posted, time_t expires,
                  const TOKEN *token)
 {
-    struct hisv6_walkstate *hiscookie = cookie;
+    struct hisv6_walkstate *hiscookie = static_cast<struct hisv6_walkstate *>(cookie);
 
     return (*hiscookie->cb.walk)(hiscookie->cookie, hash, arrived, posted,
                                  expires, token);
@@ -1114,7 +1114,7 @@ hisv6_walk(void *history, const char *reason, void *cookie,
            bool (*callback)(void *, const HASH *, time_t, time_t, time_t,
                             const TOKEN *))
 {
-    struct hisv6 *h = history;
+    struct hisv6 *h = static_cast<struct hisv6 *>(history);
     struct hisv6_walkstate hiscookie;
     bool r;
 
@@ -1122,7 +1122,7 @@ hisv6_walk(void *history, const char *reason, void *cookie,
        wrapper */
     hiscookie.cb.walk = callback;
     hiscookie.cookie = cookie;
-    hiscookie.new = NULL;
+    hiscookie.newhis = NULL;
     hiscookie.paused = false;
     /* Ignore malformed history lines during walk.  The walk is a read-only
        operation (e.g., building a Bloom filter for expireover); aborting
@@ -1143,14 +1143,14 @@ static bool
 hisv6_expirecb(struct hisv6 *h, void *cookie, const HASH *hash, time_t arrived,
                time_t posted, time_t expires, const TOKEN *token)
 {
-    struct hisv6_walkstate *hiscookie = cookie;
+    struct hisv6_walkstate *hiscookie = static_cast<struct hisv6_walkstate *>(cookie);
     bool r = true;
 
     /* check if we've seen this message id already */
-    if (hiscookie->new && dbzexists(*hash)) {
+    if (hiscookie->newhis && dbzexists(*hash)) {
         /* continue after duplicates, it's serious, but not fatal */
         hisv6_seterror(h, concat("duplicate message-id [", HashToText(*hash),
-                                 "] in history ", hiscookie->new->histpath,
+                                 "] in history ", hiscookie->newhis->histpath,
                                  NULL));
     } else {
         TOKEN ltoken, *t;
@@ -1180,10 +1180,10 @@ hisv6_expirecb(struct hisv6 *h, void *cookie, const HASH *hash, time_t arrived,
          * threshold, as set by the /remember/ line in expire.ctl.
          * We keep the check for the arrival time because some entries
          * might not have one. */
-        if (hiscookie->new
+        if (hiscookie->newhis
             && (t != NULL || posted >= hiscookie->threshold
                 || (posted <= 0 && arrived >= hiscookie->threshold))) {
-            r = hisv6_writeline(hiscookie->new, hash, arrived, posted, expires,
+            r = hisv6_writeline(hiscookie->newhis, hash, arrived, posted, expires,
                                 t);
         }
     }
@@ -1230,33 +1230,33 @@ static bool
 hisv6_rename(struct hisv6 *hold, struct hisv6 *hnew)
 {
     bool r = true;
-    char *old, *new;
+    char *old, *newpath;
 
 #ifdef DO_TAGGED_HASH
     old = concat(hold->histpath, ".pag", NULL);
-    new = concat(hnew->histpath, ".pag", NULL);
-    r = (rename(old, new) == 0) && r;
+    newpath = concat(hnew->histpath, ".pag", NULL);
+    r = (rename(old, newpath) == 0) && r;
     free(old);
-    free(new);
+    free(newpath);
 #else
     old = concat(hold->histpath, ".index", NULL);
-    new = concat(hnew->histpath, ".index", NULL);
-    r = (rename(old, new) == 0) && r;
+    newpath = concat(hnew->histpath, ".index", NULL);
+    r = (rename(old, newpath) == 0) && r;
     free(old);
-    free(new);
+    free(newpath);
 
     old = concat(hold->histpath, ".hash", NULL);
-    new = concat(hnew->histpath, ".hash", NULL);
-    r = (rename(old, new) == 0) && r;
+    newpath = concat(hnew->histpath, ".hash", NULL);
+    r = (rename(old, newpath) == 0) && r;
     free(old);
-    free(new);
+    free(newpath);
 #endif
 
     old = concat(hold->histpath, ".dir", NULL);
-    new = concat(hnew->histpath, ".dir", NULL);
-    r = (rename(old, new) == 0) && r;
+    newpath = concat(hnew->histpath, ".dir", NULL);
+    r = (rename(old, newpath) == 0) && r;
     free(old);
-    free(new);
+    free(newpath);
 
     r = (rename(hold->histpath, hnew->histpath) == 0) && r;
     return r;
@@ -1271,7 +1271,7 @@ hisv6_expire(void *history, const char *path, const char *reason, bool writing,
              void *cookie, time_t threshold,
              bool (*exists)(void *, time_t, time_t, time_t, TOKEN *))
 {
-    struct hisv6 *h = history, *hnew = NULL;
+    struct hisv6 *h = static_cast<struct hisv6 *>(history), *hnew = NULL;
     char *nhistory = NULL;
     dbzoptions opt;
     bool r;
@@ -1352,7 +1352,7 @@ hisv6_expire(void *history, const char *path, const char *reason, bool writing,
     /* set up the callback handler */
     hiscookie.cb.expire = exists;
     hiscookie.cookie = cookie;
-    hiscookie.new = hnew;
+    hiscookie.newhis = hnew;
     hiscookie.threshold = threshold;
     r = hisv6_traverse(h, &hiscookie, reason, hisv6_expirecb);
 
@@ -1408,7 +1408,7 @@ fail:
 bool
 hisv6_ctl(void *history, int selector, void *val)
 {
-    struct hisv6 *h = history;
+    struct hisv6 *h = static_cast<struct hisv6 *>(history);
     bool r = true;
 
     switch (selector) {
