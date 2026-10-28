@@ -153,8 +153,10 @@ objects that are there:
    best tested, shared by many programs.  First round.
 2. innd's domain objects: articles (`ARTDATA`, `HDRCONTENT`, headers),
    channels, sites, newsgroups.  Central, but currently almost untested, so
-   **innd needs at least 33% line coverage before further C++ conversion
-   work** (decided 2026-10-28).
+   **innd needs at least 33% line coverage before any further C++
+   conversion work anywhere in the tree** (decided 2026-10-28), so that no
+   change lands without tests that would catch lost compatibility with
+   existing INN installations.
 3. Utilities (`lib/vector`, `hashtab`, `buffer`, `list`): replaced by standard
    containers as the layers above stop needing them.
 

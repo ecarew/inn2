@@ -37,7 +37,9 @@ commit message as a `Tested:` section listing each check and its result.
 Only list checks that actually ran on the exact tree being committed.
 
 Run `support/verify-cxx.sh` (needs a configured `build/`) and paste its output
-into the `Tested:` section. Its reference data lives in `support/verify-cxx/`.
+into the `Tested:` section.  `support/cxx-tools/commit-verified.sh` does both;
+the conversion helpers are listed in `support/cxx-tools/README.md`.  The
+reference data lives in `support/verify-cxx/`.
 
 Also run it against a sanitizer build when a change touches memory handling:
 `cmake -S . -B build-asan -DINN_SANITIZE=ON -DCMAKE_BUILD_TYPE=Debug`, then
@@ -146,8 +148,10 @@ Everything below must be done before the Autoconf/Make build is deleted.
 
 **Design follow-ups (2026-10-28)**
 - Gate: raise innd/ line coverage to at least 33% (now 2.0%) before any
-  further C++ conversion work.  Start with the innd test plan under "Test
-  coverage" below.
+  further C++ conversion work anywhere in the tree, not just innd (decided
+  2026-10-28), so no change lands without tests that would catch lost
+  compatibility with existing INN installations.  Start with the innd test
+  plan under "Test coverage" below.
 - Convert innfeed's parser to the C++ outputs of bison (lalr1.cc) and flex
   (C++ scanner) when innfeed is converted.
 - Benchmark the current header tree against the planned sorted-array
