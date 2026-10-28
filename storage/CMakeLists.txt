@@ -2,7 +2,7 @@
 # ovmethods.c and ovsqlite/sql-*.c are generated; see the root CMakeLists.txt.
 
 add_library(innstorage STATIC
-    expire.cc interface.c methods.c ov.cc overdata.cc overview.cc ovmethods.c
+    expire.cc interface.cc methods.c ov.cc overdata.cc overview.cc ovmethods.c
     tombstone.cc
     buffindexed/buffindexed.c buffindexed/shmem.c
     cnfs/cnfs.c

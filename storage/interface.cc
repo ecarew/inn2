@@ -179,7 +179,7 @@ GetXref(ARTHANDLE *art)
         ;
     if (q == p)
         return NULL;
-    if ((q = memchr(q, ' ', p - q)) == NULL)
+    if ((q = static_cast<const char *>(memchr(q, ' ', p - q))) == NULL)
         return NULL;
     for (q++; (*q == ' ') && (q < p); q++)
         ;
@@ -303,7 +303,7 @@ SMreadconfig(void)
     size_t maxsize = 0;
     time_t minexpire = 0;
     time_t maxexpire = 0;
-    int class = 0;
+    int storageclass = 0;
     STORAGE_SUB *sub = NULL;
     STORAGE_SUB *prev = NULL;
     char *options = 0;
@@ -359,7 +359,7 @@ SMreadconfig(void)
             /* initialize various params to defaults. */
             minsize = 0;
             maxsize = 0; /* zero means no limit */
-            class = 0;
+            storageclass = 0;
             pattern = NULL;
             options = NULL;
             minexpire = 0;
@@ -392,8 +392,8 @@ SMreadconfig(void)
                     }
                     break;
                 case SMclass:
-                    class = atoi(p);
-                    if (class > NUM_STORAGE_CLASSES) {
+                    storageclass = atoi(p);
+                    if (storageclass > NUM_STORAGE_CLASSES) {
                         SMseterror(SMERR_CONFIG, "Storage class too large");
                         warn("SM: storage class larger than %d, line %d",
                              NUM_STORAGE_CLASSES, f->lineno);
@@ -475,7 +475,7 @@ SMreadconfig(void)
             sub->pattern = pattern;
             sub->minsize = minsize;
             sub->maxsize = maxsize;
-            sub->storageclass = class;
+            sub->storageclass = storageclass;
             sub->options = options;
             sub->minexpire = minexpire;
             sub->maxexpire = maxexpire;
