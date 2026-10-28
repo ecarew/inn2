@@ -163,6 +163,14 @@ Everything below must be done before the Autoconf/Make build is deleted.
   `overview/overchan`, `storage/sm`, `storage/archive`, `storage/makehistory`,
   `lib/hissqlite-util`, `lib/xmalloc` (need the programs above).
 
+**Decisions**
+- 2026-10-28: INN's Perl and Python code is not converted to C++.  The Python
+  in `samples/` and the embedded Perl/Python filter and auth hooks are a
+  site-extension interface; the ~25,600 lines of Perl admin scripts are
+  text-processing tools better left in Perl; `INN::Config` is part of INN's
+  Perl interface.  They only need generating, building and installing
+  (CMake-only goal items 4, 7 and 8).
+
 **Resolved**
 - (none yet)
 
