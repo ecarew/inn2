@@ -52,7 +52,7 @@
 
 /* Pick the longest available integer type. */
 #if HAVE_LONG_LONG_INT
-typedef unsigned long long long_int_type;
+using long_int_type = unsigned long long;
 #    define LLFORMAT "llu"
 #else
 typedef unsigned long long_int_type;

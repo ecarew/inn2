@@ -19,7 +19,7 @@ struct _DDHANDLE {
     DDENTRY *Entries;
     DDENTRY *Current;
 };
-typedef struct _DDHANDLE DDHANDLE;
+using DDHANDLE = struct _DDHANDLE;
 
 struct _DDHANDLE *
 DDstart(FILE *FromServer, FILE *ToServer)

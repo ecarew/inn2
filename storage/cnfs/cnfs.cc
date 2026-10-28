@@ -1062,7 +1062,7 @@ cnfs_mapcntl(void *p, size_t length, int flags)
 ** FIXME: the code below is not endian-neutral!
 */
 
-typedef unsigned long ULONG;
+using ULONG = unsigned long;
 
 static int
 CNFSUsedBlock(CYCBUFF *cycbuff, off_t offset, bool set_operation,

@@ -269,7 +269,7 @@ static size_t GROUPmapsize = 0;
 static GROUPLOC GROUPemptyloc = {-1};
 #define NULLINDEX (-1)
 static OV ovnull = {0, NULLINDEX};
-typedef unsigned long ULONG;
+using ULONG = unsigned long;
 static ULONG onarray[64], offarray[64];
 static int longsize = sizeof(long);
 static bool Nospace;

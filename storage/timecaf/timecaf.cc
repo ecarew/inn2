@@ -78,12 +78,12 @@ struct caftoccacheent {
     CAFTOCENT *toc;
     CAFHEADER header;
 };
-typedef struct caftoccacheent CAFTOCCACHEENT;
+using CAFTOCCACHEENT = struct caftoccacheent;
 
 struct caftocl1cache {
     CAFTOCCACHEENT *entries[256];
 };
-typedef struct caftocl1cache CAFTOCL1CACHE;
+using CAFTOCL1CACHE = struct caftocl1cache;
 
 /*
 ** and similar structures indexed by the 3rd and 4th bytes of the arrival time.
@@ -97,12 +97,12 @@ typedef struct caftocl1cache CAFTOCL1CACHE;
 struct caftocl2cache {
     CAFTOCL1CACHE *l1ptr[256];
 };
-typedef struct caftocl2cache CAFTOCL2CACHE;
+using CAFTOCL2CACHE = struct caftocl2cache;
 
 struct caftocl3cache {
     CAFTOCL2CACHE *l2ptr[256];
 };
-typedef struct caftocl3cache CAFTOCL3CACHE;
+using CAFTOCL3CACHE = struct caftocl3cache;
 
 static CAFTOCL3CACHE *TOCCache[256]; /* indexed by storage class! */
 static int TOCCacheHits, TOCCacheMisses;

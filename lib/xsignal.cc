@@ -14,7 +14,7 @@
 #include <errno.h>
 #include <signal.h>
 
-typedef void (*sig_handler_type)(int);
+using sig_handler_type = void (*)(int);
 
 #ifdef HAVE_SIGACTION
 

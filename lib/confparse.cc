@@ -151,7 +151,7 @@ struct config_parameter {
 /* The type of a function that converts a raw parameter value to some other
    data type, storing the result in its second argument and returning true on
    success or false on failure. */
-typedef bool (*convert_func)(struct config_parameter *, const char *, void *);
+using convert_func = bool (*)(struct config_parameter *, const char *, void *);
 
 /* The basic element of configuration data, a group of parameters.  This is
    the only struct that is exposed to callers, and then only as an opaque

@@ -16,7 +16,7 @@
 #include "inn/wire.h"
 #include "innd.h"
 
-typedef struct iovec IOVEC;
+using IOVEC = struct iovec;
 
 #define ARTIOVCNT  16
 
