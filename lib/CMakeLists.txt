@@ -20,7 +20,7 @@ add_library(INN::inn ALIAS inn)
 
 # Linked directly into programs rather than libinn, as the Make build does
 # via CANLOCK_LIBS and PERL_LIBS.  Both compile to stubs when the feature is off.
-add_library(inn_canlock OBJECT canlock.c)
+add_library(inn_canlock OBJECT canlock.cc)
 target_include_directories(inn_canlock PRIVATE ${CMAKE_CURRENT_SOURCE_DIR})
 add_library(inn_perl OBJECT perl.c)
 target_include_directories(inn_perl PRIVATE ${CMAKE_CURRENT_SOURCE_DIR})
