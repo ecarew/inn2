@@ -70,9 +70,11 @@
 #    define pwrite fake_pwrite
 #    define write  fake_write
 #    define writev fake_writev
+BEGIN_DECLS
 ssize_t fake_pwrite(int, const void *, size_t, off_t);
 ssize_t fake_write(int, const void *, size_t);
 ssize_t fake_writev(int, const struct iovec *, int);
+END_DECLS
 #endif
 
 
@@ -189,7 +191,7 @@ xwritev(int fd, const struct iovec iov[], int iovcnt)
         offset -= iov[i].iov_len;
     iovleft = iovcnt - i;
     assert(iovleft > 0);
-    tmpiov = calloc(iovleft, sizeof(struct iovec));
+    tmpiov = static_cast<struct iovec *>(calloc(iovleft, sizeof(struct iovec)));
     if (tmpiov == NULL)
         return -1;
     memcpy(tmpiov, iov + i, iovleft * sizeof(struct iovec));
