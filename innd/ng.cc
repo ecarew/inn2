@@ -77,7 +77,7 @@ NGparseentry(NEWSGROUP *ngp, const char *p, char *end)
 
     /* p points into the writable in-core active file; q is stored for
        in-place updates, so it must be non-const as in the C version. */
-    if ((q = const_cast<char *>(strchr(p, ' '))) == NULL)
+    if ((q = const_cast<char *>(strchr(p, ' '))) == nullptr)
         return false;
     i = q - p;
 
@@ -88,13 +88,13 @@ NGparseentry(NEWSGROUP *ngp, const char *p, char *end)
     NGnames.used += i + 1;
 
     ngp->LastString = ++q;
-    if ((q = strchr(q, ' ')) == NULL || q > end)
+    if ((q = strchr(q, ' ')) == nullptr || q > end)
         return false;
     ngp->Lastwidth = q - ngp->LastString;
-    if ((q = strchr(q, ' ')) == NULL || q > end)
+    if ((q = strchr(q, ' ')) == nullptr || q > end)
         return false;
     lo = (ARTNUM) atol(q + 1);
-    if ((q = strchr(q + 1, ' ')) == NULL || q > end)
+    if ((q = strchr(q + 1, ' ')) == nullptr || q > end)
         return false;
     ngp->Rest = ++q;
     /* We count on atoi() to stop at the space after the digits! */
@@ -103,7 +103,7 @@ NGparseentry(NEWSGROUP *ngp, const char *p, char *end)
     ngp->Sites = xmalloc(NGHcount * sizeof(int));
     ngp->nPoison = 0;
     ngp->Poison = xmalloc(NGHcount * sizeof(int));
-    ngp->Alias = NULL;
+    ngp->Alias = nullptr;
 
     /* Find the right bucket for the group, make sure there is room. */
     NGH_HASH(ngp->Name, p, j);
@@ -182,7 +182,7 @@ NGparsefile(void)
 
     /* Count the number of sites. */
     SawMe = false;
-    for (strings = SITEreadfile(true), i = 0; (p = strings[i]) != NULL; i++)
+    for (strings = SITEreadfile(true), i = 0; (p = strings[i]) != nullptr; i++)
         if (*p == 'M' && *++p == 'E' && *++p == ':')
             SawMe = true;
     if (i == 0 || (i == 1 && SawMe)) {
@@ -195,7 +195,7 @@ NGparsefile(void)
      * the Groups array. */
     for (p = active, ngp = Groups, i = nGroups; --i >= 0; ngp++, p = q + 1) {
         ngp->Start = p - active;
-        if ((q = strchr(p, '\n')) == NULL || !NGparseentry(ngp, p, q)) {
+        if ((q = strchr(p, '\n')) == nullptr || !NGparseentry(ngp, p, q)) {
             syslog(L_FATAL, "%s bad_active %s...", LogName, MaxLength(p, q));
             exit(1);
         }
@@ -210,12 +210,12 @@ NGparsefile(void)
     for (ngp = Groups, i = nGroups; --i >= 0; ngp++)
         if (ngp->Rest[0] == NF_FLAG_ALIAS) {
             ngp->Alias = ngp;
-            if ((p = strchr(ngp->Alias->Rest, '\n')) != NULL)
+            if ((p = strchr(ngp->Alias->Rest, '\n')) != nullptr)
                 *p = '\0';
             ngp->Alias = NGfind(&ngp->Alias->Rest[1]);
             if (p)
                 *p = '\n';
-            if (ngp->Alias != NULL && ngp->Alias->Rest[0] == NF_FLAG_ALIAS)
+            if (ngp->Alias != nullptr && ngp->Alias->Rest[0] == NF_FLAG_ALIAS)
                 syslog(L_NOTICE, "%s alias_error %s too many levels", LogName,
                        ngp->Name);
         }
@@ -237,7 +237,7 @@ NGclose(void)
             free(ngp->Poison);
         }
         free(Groups);
-        Groups = NULL;
+        Groups = nullptr;
         free(GroupPointers);
         free(NGnames.data);
     }
@@ -247,7 +247,7 @@ NGclose(void)
         if (htp->Groups) {
             free(htp->Groups);
             htp->Used = 0;
-            htp->Groups = NULL;
+            htp->Groups = nullptr;
         }
     }
 }
@@ -270,7 +270,7 @@ NGfind(const char *Name)
     for (c = *Name, ngp = htp->Groups, i = htp->Used; --i >= 0; ngp++)
         if (c == ngp[0]->Name[0] && strcmp(Name, ngp[0]->Name) == 0)
             return ngp[0];
-    return NULL;
+    return nullptr;
 }
 
 
@@ -319,7 +319,7 @@ NGsplit(char *p, int size, LISTBUFFER *list)
         list->List = xrealloc(list->List, list->ListLength * sizeof(char *));
         gp = &list->List[i];
     }
-    *gp = NULL;
+    *gp = nullptr;
     return i;
 }
 
@@ -353,8 +353,9 @@ NGrenumber(NEWSGROUP *ngp)
     start = ICDreadactive(&dummy) + ngp->Start;
 
     /* Check the file format. */
-    if ((f2 = strchr(start, ' ')) == NULL || (f3 = strchr(++f2, ' ')) == NULL
-        || (f4 = strchr(++f3, ' ')) == NULL) {
+    if ((f2 = strchr(start, ' ')) == nullptr
+        || (f3 = strchr(++f2, ' ')) == nullptr
+        || (f4 = strchr(++f3, ' ')) == nullptr) {
         syslog(L_ERROR, "%s bad_format active %s", LogName,
                MaxLength(start, start));
         return false;
@@ -423,8 +424,9 @@ NGlowmark(NEWSGROUP *ngp, long lomark)
 
     start = ICDreadactive(&f2) + ngp->Start;
     /* Check the file format. */
-    if ((f2 = strchr(start, ' ')) == NULL || (f3 = strchr(++f2, ' ')) == NULL
-        || (f4 = strchr(++f3, ' ')) == NULL) {
+    if ((f2 = strchr(start, ' ')) == nullptr
+        || (f3 = strchr(++f2, ' ')) == nullptr
+        || (f4 = strchr(++f3, ' ')) == nullptr) {
         syslog(L_ERROR, "%s bad_format active %s", LogName,
                MaxLength(start, start));
         return false;

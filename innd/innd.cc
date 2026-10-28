@@ -35,7 +35,7 @@ time_t RemoteTimer = REMOTETIMER;
 int RemoteTotal = REMOTETOTAL;
 /* ThrottledbyIOError, Log and Errlog are defined by innd.h (DEFINE_DATA). */
 
-static char *PID = NULL;
+static char *PID = nullptr;
 
 /* Default values for the syntaxchecks parameter in inn.conf. */
 bool laxmid = false;
@@ -312,7 +312,7 @@ JustCleanup(void)
 
     CHANshutdown();
     innconf_free(innconf);
-    innconf = NULL;
+    innconf = nullptr;
 
     sleep(1);
 
@@ -336,7 +336,7 @@ ReopenLog(FILE *F)
 
     path = concatpath(innconf->pathlog,
                       (F == stdout) ? INN_PATH_LOGFILE : INN_PATH_ERRLOG);
-    oldpath = concat(path, ".old", (char *) 0);
+    oldpath = concat(path, ".old", (char *) nullptr);
     if (rename(path, oldpath) < 0)
         syswarn("SERVER cant rename %s to %s", path, oldpath);
     free(oldpath);
@@ -346,7 +346,7 @@ ReopenLog(FILE *F)
     free(path);
     umask(mask);
     if (BufferedLogs)
-        setvbuf(F, NULL, (F == stdout) ? _IOFBF : _IOLBF, LOG_BUFSIZ);
+        setvbuf(F, nullptr, (F == stdout) ? _IOFBF : _IOLBF, LOG_BUFSIZ);
 }
 
 
@@ -390,11 +390,11 @@ main(int ac, char *av[])
     /* Set up the pathname, first thing, and teach our error handlers about
        the name of the program. */
     name = av[0];
-    if (name == NULL || *name == '\0')
+    if (name == nullptr || *name == '\0')
         name = "innd";
     else {
         p = strrchr(name, '/');
-        if (p != NULL)
+        if (p != nullptr)
             name = p + 1;
     }
     message_program_name = name;
@@ -430,7 +430,7 @@ main(int ac, char *av[])
 
     /* Set some options from inn.conf that can be overridden with
        command-line options if they exist, so read inn.conf first. */
-    if (!innconf_read(NULL))
+    if (!innconf_read(nullptr))
         exit(1);
 
     /* Parse JCL. */
@@ -454,7 +454,7 @@ main(int ac, char *av[])
             AnyIncoming = true;
             break;
         case 'c':
-            innconf->artcutoff = strtoul(optarg, NULL, 10);
+            innconf->artcutoff = strtoul(optarg, nullptr, 10);
             break;
         case 'd':
             Debug = true;
@@ -466,15 +466,15 @@ main(int ac, char *av[])
             RemoteLimit = atoi(optarg);
             break;
         case 'i':
-            innconf->maxconnections = strtoul(optarg, NULL, 10);
+            innconf->maxconnections = strtoul(optarg, nullptr, 10);
             break;
         case 'l':
-            innconf->maxartsize = strtoul(optarg, NULL, 10);
+            innconf->maxartsize = strtoul(optarg, nullptr, 10);
             break;
         case 'm':
             if (ModeReason) {
                 free(ModeReason);
-                ModeReason = NULL;
+                ModeReason = nullptr;
             }
             switch (*optarg) {
             default:
@@ -491,8 +491,9 @@ main(int ac, char *av[])
                 break;
             }
             if (Mode != OMrunning)
-                ModeReason = concat(Mode == OMpaused ? "Paus" : "Throttl",
-                                    "ed from the command line", (char *) 0);
+                ModeReason =
+                    concat(Mode == OMpaused ? "Paus" : "Throttl",
+                           "ed from the command line", (char *) nullptr);
             break;
         case 'N':
 #if defined(DO_PERL) || defined(DO_PYTHON)
@@ -516,7 +517,7 @@ main(int ac, char *av[])
             MaxOutgoing = atoi(optarg);
             break;
         case 'P':
-            innconf->port = strtoul(optarg, NULL, 10);
+            innconf->port = strtoul(optarg, nullptr, 10);
             break;
         case 'r':
             ShouldRenumber = true;
@@ -547,21 +548,21 @@ main(int ac, char *av[])
     ac -= optind;
     if (ac != 0)
         Usage();
-    if (ModeReason != NULL && !innconf->readerswhenstopped)
+    if (ModeReason != nullptr && !innconf->readerswhenstopped)
         NNRPReason = xstrdup(ModeReason);
 
     if (ShouldSyntaxCheck) {
-        if ((p = CCcheckfile((char **) NULL)) == NULL)
+        if ((p = CCcheckfile((char **) nullptr)) == nullptr)
             exit(0);
         fprintf(stderr, "%s\n", p + 2);
         exit(1);
     }
 
     /* Initialize the checks to perform or not on article syntax. */
-    if ((innconf->syntaxchecks != NULL)
+    if ((innconf->syntaxchecks != nullptr)
         && (innconf->syntaxchecks->count > 0)) {
         for (j = 0; j < innconf->syntaxchecks->count; j++) {
-            if (innconf->syntaxchecks->strings[j] != NULL) {
+            if (innconf->syntaxchecks->strings[j] != nullptr) {
                 if (strcmp(innconf->syntaxchecks->strings[j], "laxmid") == 0) {
                     laxmid = true;
                 } else if (strcmp(innconf->syntaxchecks->strings[j],
@@ -579,7 +580,7 @@ main(int ac, char *av[])
     }
 
     /* Get the Path entry. */
-    if (innconf->pathhost == NULL) {
+    if (innconf->pathhost == nullptr) {
         syslog(L_FATAL, "%s No pathhost set", LogName);
         exit(1);
     }
@@ -587,18 +588,18 @@ main(int ac, char *av[])
     Path.size = Path.used + 1;
     Path.data = xmalloc(Path.size);
     snprintf(Path.data, Path.size, "%s!", innconf->pathhost);
-    if (innconf->pathalias == NULL) {
+    if (innconf->pathalias == nullptr) {
         Pathalias.used = 0;
-        Pathalias.data = NULL;
+        Pathalias.data = nullptr;
     } else {
         Pathalias.used = strlen(innconf->pathalias) + 1;
         Pathalias.size = Pathalias.used + 1;
         Pathalias.data = xmalloc(Pathalias.size);
         snprintf(Pathalias.data, Pathalias.size, "%s!", innconf->pathalias);
     }
-    if (innconf->pathcluster == NULL) {
+    if (innconf->pathcluster == nullptr) {
         Pathcluster.used = 0;
-        Pathcluster.data = NULL;
+        Pathcluster.data = nullptr;
     } else {
         Pathcluster.used = strlen(innconf->pathcluster) + 1;
         Pathcluster.size = Pathcluster.used + 1;
@@ -607,7 +608,7 @@ main(int ac, char *av[])
                  innconf->pathcluster);
     }
     /* Trace history ? */
-    if (innconf->stathist != NULL) {
+    if (innconf->stathist != nullptr) {
         syslog(L_NOTICE, "logging hist stats to %s", innconf->stathist);
         HISlogto(innconf->stathist);
     }
@@ -641,14 +642,14 @@ main(int ac, char *av[])
            well as to capture stderr from embedded filters).  Both are
            normally fully buffered. */
         path = concatpath(innconf->pathlog, INN_PATH_LOGFILE);
-        if (freopen(path, "a", stdout) == NULL)
+        if (freopen(path, "a", stdout) == nullptr)
             sysdie("SERVER cant freopen stdout to %s", path);
-        setvbuf(stdout, NULL, _IOFBF, LOG_BUFSIZ);
+        setvbuf(stdout, nullptr, _IOFBF, LOG_BUFSIZ);
         free(path);
         path = concatpath(innconf->pathlog, INN_PATH_ERRLOG);
-        if (freopen(path, "a", stderr) == NULL)
+        if (freopen(path, "a", stderr) == nullptr)
             sysdie("SERVER cant freopen stderr to %s", path);
-        setvbuf(stderr, NULL, _IOLBF, BUFSIZ);
+        setvbuf(stderr, nullptr, _IOLBF, BUFSIZ);
         free(path);
     }
     Log = stdout;
@@ -707,10 +708,10 @@ main(int ac, char *av[])
     }
 
     /* See if another instance is alive. */
-    if (PID == NULL)
+    if (PID == nullptr)
         PID = concatpath(innconf->pathrun, INN_PATH_SERVERPID);
-    if ((F = fopen(PID, "r")) != NULL) {
-        if (fgets(buff, sizeof buff, F) != NULL
+    if ((F = fopen(PID, "r")) != nullptr) {
+        if (fgets(buff, sizeof buff, F) != nullptr
             && ((pid = (pid_t) atol(buff)) > 0)
             && (kill(pid, 0) > 0 || errno != ESRCH)) {
             syslog(L_FATAL, "%s already_running pid %ld", LogName, (long) pid);
@@ -719,7 +720,7 @@ main(int ac, char *av[])
         fclose(F);
     }
 
-    if (gettimeofday(&Now, NULL) < 0)
+    if (gettimeofday(&Now, nullptr) < 0)
         syslog(L_ERROR, "%s cant gettimeofday %m", LogName);
 
     /* Set up signal and error handlers. */
@@ -761,7 +762,7 @@ main(int ac, char *av[])
 
     /* Record our PID. */
     pid = getpid();
-    if ((F = fopen(PID, "w")) == NULL) {
+    if ((F = fopen(PID, "w")) == nullptr) {
         i = errno;
         syslog(L_ERROR, "%s cant fopen %s %m", LogName, PID);
         IOError(WHEN, i);

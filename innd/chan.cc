@@ -80,7 +80,7 @@ CHANsystemdsa(CHANNEL *cp)
     int count;
 
     s = getenv(INN_ENV_LISTEN_FDS_COUNT);
-    if (s == NULL)
+    if (s == nullptr)
         return false;
 
     count = atoi(s);
@@ -110,7 +110,7 @@ CHANshutdown(void)
     channels.max_fd = -1;
     channels.max_sleep_fd = -1;
 
-    if (channels.table != NULL) {
+    if (channels.table != nullptr) {
         cp = channels.table;
         for (i = channels.table_size; --i >= 0; cp++) {
             if (CHANsystemdsa(cp))
@@ -124,7 +124,7 @@ CHANshutdown(void)
         }
     }
     free(channels.table);
-    channels.table = NULL;
+    channels.table = nullptr;
     channels.table_size = 0;
     if (channels.prioritized_size > 0) {
         free(channels.prioritized);
@@ -168,7 +168,7 @@ CHANsetup(int count)
     channels.prioritized_size = 3;
     channels.prioritized = xmalloc(3 * sizeof(CHANNEL *));
     for (i = 0; i < 3; i++)
-        channels.prioritized[i] = NULL;
+        channels.prioritized[i] = nullptr;
 }
 
 
@@ -182,8 +182,8 @@ CHANcreate(int fd, enum channel_type type, enum channel_state state,
 {
     CHANNEL *cp;
     int i, j, size;
-    struct buffer in = {0, 0, 0, NULL};
-    struct buffer out = {0, 0, 0, NULL};
+    struct buffer in = {0, 0, 0, nullptr};
+    struct buffer out = {0, 0, 0, nullptr};
 
     /* Last time to ensure the file descriptor is not too high.  Callers have
        normally already handled that case before and not called CHANcreate().
@@ -218,7 +218,7 @@ CHANcreate(int fd, enum channel_type type, enum channel_state state,
     /* Set up the channel's info.  Note that we don't have to initialize
        anything that's already set properly to zero in CHANnull. */
     *cp = CHANnull;
-    cp->av = NULL;
+    cp->av = nullptr;
     cp->fd = fd;
     cp->Type = type;
     cp->State = state;
@@ -247,14 +247,14 @@ CHANcreate(int fd, enum channel_type type, enum channel_state state,
     /* Note the control and remconn channels, for efficiency. */
     if (type == CTcontrol || type == CTremconn) {
         for (i = 0; i < channels.prioritized_size; i++)
-            if (channels.prioritized[i] == NULL)
+            if (channels.prioritized[i] == nullptr)
                 break;
         if (i >= channels.prioritized_size) {
             size = channels.prioritized_size + 1;
             channels.prioritized =
                 xrealloc(channels.prioritized, size * sizeof(CHANNEL *));
             for (j = channels.prioritized_size; j < size; j++)
-                channels.prioritized[j] = NULL;
+                channels.prioritized[j] = nullptr;
             channels.prioritized_size = size;
         }
         channels.prioritized[i] = cp;
@@ -336,40 +336,40 @@ CHANclose_nntp(CHANNEL *cp, const char *name)
                cp->Refused, cp->Rejected, cp->Duplicate, cp->Size,
                cp->DuplicateSize, cp->RejectSize);
     }
-    if (cp->Data.Newsgroups.Data != NULL) {
+    if (cp->Data.Newsgroups.Data != nullptr) {
         free(cp->Data.Newsgroups.Data);
-        cp->Data.Newsgroups.Data = NULL;
+        cp->Data.Newsgroups.Data = nullptr;
     }
-    if (cp->Data.Newsgroups.List != NULL) {
+    if (cp->Data.Newsgroups.List != nullptr) {
         free(cp->Data.Newsgroups.List);
-        cp->Data.Newsgroups.List = NULL;
+        cp->Data.Newsgroups.List = nullptr;
     }
-    if (cp->Data.Distribution.Data != NULL) {
+    if (cp->Data.Distribution.Data != nullptr) {
         free(cp->Data.Distribution.Data);
-        cp->Data.Distribution.Data = NULL;
+        cp->Data.Distribution.Data = nullptr;
     }
-    if (cp->Data.Distribution.List != NULL) {
+    if (cp->Data.Distribution.List != nullptr) {
         free(cp->Data.Distribution.List);
-        cp->Data.Distribution.List = NULL;
+        cp->Data.Distribution.List = nullptr;
     }
-    if (cp->Data.Path.Data != NULL) {
+    if (cp->Data.Path.Data != nullptr) {
         free(cp->Data.Path.Data);
-        cp->Data.Path.Data = NULL;
+        cp->Data.Path.Data = nullptr;
     }
-    if (cp->Data.Path.List != NULL) {
+    if (cp->Data.Path.List != nullptr) {
         free(cp->Data.Path.List);
-        cp->Data.Path.List = NULL;
+        cp->Data.Path.List = nullptr;
     }
     if (cp->Data.Overview.size != 0) {
         free(cp->Data.Overview.data);
-        cp->Data.Overview.data = NULL;
+        cp->Data.Overview.data = nullptr;
         cp->Data.Overview.size = 0;
         cp->Data.Overview.left = 0;
         cp->Data.Overview.used = 0;
     }
     if (cp->Data.XrefBufLength != 0) {
         free(cp->Data.Xref);
-        cp->Data.Xref = NULL;
+        cp->Data.Xref = nullptr;
         cp->Data.XrefBufLength = 0;
     }
 
@@ -385,7 +385,7 @@ CHANclose_nntp(CHANNEL *cp, const char *name)
         CHANNEL *tempchan;
 
         label = RClabelname(cp);
-        if (label != NULL) {
+        if (label != nullptr) {
             for (tfd = 0; tfd <= channels.max_fd; tfd++) {
                 if (tfd == cp->fd)
                     continue;
@@ -393,7 +393,7 @@ CHANclose_nntp(CHANNEL *cp, const char *name)
                 if (tempchan->fd < 0 || tempchan->Type != CTnntp)
                     continue;
                 tmplabel = RClabelname(tempchan);
-                if (tmplabel == NULL)
+                if (tmplabel == nullptr)
                     continue;
                 if (strcmp(label, tmplabel) == 0 && tempchan->ActiveCnx != 0) {
                     tempchan->ActiveCnx = cp->ActiveCnx;
@@ -433,16 +433,16 @@ CHANclose(CHANNEL *cp, const char *name)
             syswarn("%s cant close %s", LogName, name);
         for (i = 0; i < channels.prioritized_size; i++)
             if (channels.prioritized[i] == cp)
-                channels.prioritized[i] = NULL;
+                channels.prioritized[i] = nullptr;
     }
 
     /* Mark it unused. */
     cp->Type = CTfree;
     cp->State = CSerror;
     cp->fd = -1;
-    if (cp->Argument != NULL)
+    if (cp->Argument != nullptr)
         free(cp->Argument);
-    cp->Argument = NULL;
+    cp->Argument = nullptr;
     cp->ActiveCnx = 0;
 
     /* Free the buffers if they got big. */
@@ -451,14 +451,14 @@ CHANclose(CHANNEL *cp, const char *name)
         cp->In.used = 0;
         cp->In.left = 0;
         free(cp->In.data);
-        cp->In.data = NULL;
+        cp->In.data = nullptr;
     }
     if (cp->Out.size > BIG_BUFFER) {
         cp->Out.size = 0;
         cp->Out.used = 0;
         cp->Out.left = 0;
         free(cp->Out.data);
-        cp->Out.data = NULL;
+        cp->Out.data = nullptr;
     }
 
     /* Always free the Sendid buffer. */
@@ -467,14 +467,14 @@ CHANclose(CHANNEL *cp, const char *name)
         cp->Sendid.used = 0;
         cp->Sendid.left = 0;
         free(cp->Sendid.data);
-        cp->Sendid.data = NULL;
+        cp->Sendid.data = nullptr;
     }
 
     /* Free the space allocated for NNTP commands. */
-    if (cp->av != NULL) {
+    if (cp->av != nullptr) {
         free(cp->av[0]);
         free(cp->av);
-        cp->av = NULL;
+        cp->av = nullptr;
     }
 }
 
@@ -562,7 +562,7 @@ CHANNEL *
 CHANfromdescriptor(int fd)
 {
     if (fd < 0 || fd >= channels.table_size)
-        return NULL;
+        return nullptr;
     return &channels.table[fd];
 }
 
@@ -588,7 +588,7 @@ CHANiter(int *ip, enum channel_type type)
             return cp;
         }
     }
-    return NULL;
+    return nullptr;
 }
 
 
@@ -801,10 +801,10 @@ CHANresize(CHANNEL *cp, size_t size)
     if (offset != 0) {
         if (cp->State == CSgetheader || cp->State == CSgetbody
             || cp->State == CSeatarticle) {
-            if (cp->Data.BytesHeader != NULL)
+            if (cp->Data.BytesHeader != nullptr)
                 cp->Data.BytesHeader -= offset;
             for (i = 0; i < MAX_ARTHEADER; i++, hc++) {
-                if (hc->Value != NULL)
+                if (hc->Value != nullptr)
                     hc->Value -= offset;
             }
         }
@@ -991,7 +991,7 @@ CHANwritesleep(CHANNEL *cp, const char *name)
         }
     delay = bad * innconf->blockbackoff;
     warn("%s blocked sleeping %lu", name, delay);
-    SCHANadd(cp, Now.tv_sec + delay, NULL, CHANwakeup, NULL);
+    SCHANadd(cp, Now.tv_sec + delay, nullptr, CHANwakeup, nullptr);
 }
 
 
@@ -1012,7 +1012,8 @@ CHANdiagnose(void)
             FD_SET(fd, &test);
             tv.tv_sec = 0;
             tv.tv_usec = 0;
-            if (select(fd + 1, &test, NULL, NULL, &tv) < 0 && errno != EINTR) {
+            if (select(fd + 1, &test, nullptr, nullptr, &tv) < 0
+                && errno != EINTR) {
                 warn("%s bad read file %d", LogName, fd);
                 FD_CLR(fd, &channels.read_set);
                 /* Probably do something about the file descriptor here; call
@@ -1024,7 +1025,8 @@ CHANdiagnose(void)
             FD_SET(fd, &test);
             tv.tv_sec = 0;
             tv.tv_usec = 0;
-            if (select(fd + 1, NULL, &test, NULL, &tv) < 0 && errno != EINTR) {
+            if (select(fd + 1, nullptr, &test, nullptr, &tv) < 0
+                && errno != EINTR) {
                 warn("%s bad write file %d", LogName, fd);
                 FD_CLR(fd, &channels.write_set);
                 /* Probably do something about the file descriptor here; call
@@ -1054,12 +1056,12 @@ CHANcount_active(CHANNEL *cp)
         return;
     found = 1;
     label = RClabelname(cp);
-    if (label == NULL)
+    if (label == nullptr)
         return;
     for (fd = 0; fd <= channels.max_fd; fd++) {
         tempchan = &channels.table[fd];
         tmplabel = RClabelname(tempchan);
-        if (tmplabel == NULL)
+        if (tmplabel == nullptr)
             continue;
         if (strcmp(label, tmplabel) == 0 && tempchan->ActiveCnx != 0)
             found++;
@@ -1149,8 +1151,8 @@ CHANhandle_write(CHANNEL *cp)
         } else if (cp->BadWrites >= innconf->badiocount) {
             warn("%s sleeping", name);
             WCHANremove(cp);
-            SCHANadd(cp, Now.tv_sec + innconf->pauseretrytime, NULL,
-                     CHANwakeup, NULL);
+            SCHANadd(cp, Now.tv_sec + innconf->pauseretrytime, nullptr,
+                     CHANwakeup, nullptr);
         }
     } else {
         cp->BadWrites = 0;
@@ -1188,7 +1190,7 @@ CHANreadloop(void)
     int fd = 0;
 
     STATUSinit();
-    gettimeofday(&Now, NULL);
+    gettimeofday(&Now, nullptr);
     last_sync = Now.tv_sec;
 
     while (1) {
@@ -1215,7 +1217,7 @@ CHANreadloop(void)
            from accessing data that the main code is mutating. */
         TMRstart(TMR_IDLE);
         xsignal_unmask();
-        count = select(channels.max_fd + 1, &rdfds, &wrfds, NULL, &tv);
+        count = select(channels.max_fd + 1, &rdfds, &wrfds, nullptr, &tv);
         xsignal_mask();
         TMRstop(TMR_IDLE);
 
@@ -1238,11 +1240,11 @@ CHANreadloop(void)
             PYmode(Mode, OMshutdown, (char *) "exiting due to signal");
 #endif
             notice("%s exiting due to signal", LogName);
-            CleanupAndExit(0, NULL);
+            CleanupAndExit(0, nullptr);
         }
 
         /* Update the "reasonably accurate" time. */
-        gettimeofday(&Now, NULL);
+        gettimeofday(&Now, nullptr);
         if (Now.tv_sec > last_sync + TimeOut.tv_sec) {
             HISsync(History);
             if (ICDactivedirty != 0) {
@@ -1264,7 +1266,7 @@ CHANreadloop(void)
         for (i = 0; i < channels.prioritized_size; i++) {
             int pfd;
 
-            if (channels.prioritized[i] == NULL)
+            if (channels.prioritized[i] == nullptr)
                 continue;
             pfd = channels.prioritized[i]->fd;
             if (FD_ISSET(pfd, &channels.read_set) && FD_ISSET(pfd, &rdfds)) {
@@ -1340,7 +1342,7 @@ CHANreadloop(void)
                 } else {
                     cp->LastActive = Now.tv_sec;
                     SCHANremove(cp);
-                    if (cp->Waker != NULL) {
+                    if (cp->Waker != nullptr) {
                         (*cp->Waker)(cp);
                     } else {
                         name = CHANname(cp);

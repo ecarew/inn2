@@ -14,7 +14,7 @@
 #ifdef HAVE_UNIX_DOMAIN_SOCKETS
 #    include "portable/socket-unix.h"
 
-static char *LCpath = NULL;
+static char *LCpath = nullptr;
 static CHANNEL *LCchan;
 
 
@@ -33,7 +33,7 @@ LCreader(CHANNEL *cp)
         return;
     }
 
-    if ((fd = accept(cp->fd, NULL, NULL)) < 0) {
+    if ((fd = accept(cp->fd, nullptr, nullptr)) < 0) {
         syslog(L_ERROR, "%s cant accept CCreader %m", LogName);
         return;
     }
@@ -47,7 +47,7 @@ LCreader(CHANNEL *cp)
         return;
     }
 
-    if ((newcp = NCcreate(fd, false, true)) != NULL) {
+    if ((newcp = NCcreate(fd, false, true)) != nullptr) {
         memset(&newcp->Address, 0, sizeof(newcp->Address));
         syslog(L_NOTICE, "%s connected %d", "localhost", newcp->fd);
         NCwritereply(newcp, (char *) NCgreeting);
@@ -77,7 +77,7 @@ LCsetup(void)
     int i;
     struct sockaddr_un server;
 
-    if (LCpath == NULL)
+    if (LCpath == nullptr)
         LCpath = concatpath(innconf->pathrun, INN_PATH_NNTPCONNECT);
     /* Remove old detritus. */
     if (unlink(LCpath) < 0 && errno != ENOENT) {
@@ -127,7 +127,7 @@ LCclose(void)
 {
 #if defined(HAVE_UNIX_DOMAIN_SOCKETS)
     CHANclose(LCchan, CHANname(LCchan));
-    LCchan = NULL;
+    LCchan = nullptr;
     if (unlink(LCpath) < 0)
         syslog(L_ERROR, "%s cant unlink %s %m", LogName, LCpath);
     free(LCpath);

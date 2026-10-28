@@ -43,7 +43,7 @@ SITEspool(SITE *sp, CHANNEL *cp)
 {
     int i;
     char *name;
-    char *togo = NULL;
+    char *togo = nullptr;
 
     name = sp->SpoolName;
     i = open(name, O_APPEND | O_CREAT | O_WRONLY, BATCHFILE_MODE);
@@ -56,12 +56,12 @@ SITEspool(SITE *sp, CHANNEL *cp)
         i = errno;
         syslog(L_ERROR, "%s cant open %s %m", sp->Name, name);
         IOError("site batch file", i);
-        sp->Channel = NULL;
-        if (togo != NULL)
+        sp->Channel = nullptr;
+        if (togo != nullptr)
             free(togo);
         return false;
     }
-    if (togo != NULL)
+    if (togo != nullptr)
         free(togo);
     if (!isvalidfd(i)) {
         syslog(L_ERROR,
@@ -71,7 +71,7 @@ SITEspool(SITE *sp, CHANNEL *cp)
         close(i);
         return false;
     }
-    if (cp != NULL) {
+    if (cp != nullptr) {
         /* Don't log a message here; it spewed into syslog. */
         if (cp->fd >= 0) {
             WCHANremove(cp);
@@ -83,7 +83,7 @@ SITEspool(SITE *sp, CHANNEL *cp)
         return true;
     }
     sp->Channel = CHANcreate(i, CTfile, CSwriting, SITEreader, SITEwritedone);
-    if (sp->Channel == NULL) {
+    if (sp->Channel == nullptr) {
         syslog(L_ERROR, "%s cant channel %m", sp->Name);
         close(i);
         return false;
@@ -176,7 +176,7 @@ SITEbufferoldest(void)
 
     /* Now close the original channel. */
     CHANclose(sp->Channel, sp->Name);
-    sp->Channel = NULL;
+    sp->Channel = nullptr;
 }
 
 /*
@@ -188,7 +188,7 @@ SITECHANbilge(SITE *sp)
     int fd;
     int i;
     char *name;
-    char *togo = NULL;
+    char *togo = nullptr;
 
     name = sp->SpoolName;
     fd = open(name, O_APPEND | O_CREAT | O_WRONLY, BATCHFILE_MODE);
@@ -201,12 +201,12 @@ SITECHANbilge(SITE *sp)
         int oerrno = errno;
         syslog(L_ERROR, "%s cant open %s %m", sp->Name, name);
         IOError("site batch file", oerrno);
-        sp->Channel = NULL;
-        if (togo != NULL)
+        sp->Channel = nullptr;
+        if (togo != nullptr)
             free(togo);
         return false;
     }
-    if (togo != NULL)
+    if (togo != nullptr)
         free(togo);
     while (sp->Channel->Out.left > 0) {
         i = write(fd, &sp->Channel->Out.data[sp->Channel->Out.used],
@@ -315,7 +315,7 @@ SITEwrite(SITE *sp, const char *text)
     if (sp->Buffered)
         bp = &sp->Buffer;
     else {
-        if (sp->Channel == NULL)
+        if (sp->Channel == nullptr)
             return;
         sp->Channel->LastActive = Now.tv_sec;
         bp = &sp->Channel->Out;
@@ -323,7 +323,7 @@ SITEwrite(SITE *sp, const char *text)
     buffer_append(bp, PREFIX, strlen(PREFIX));
     buffer_append(bp, text, strlen(text));
     buffer_append(bp, "\n", 1);
-    if (sp->Channel != NULL)
+    if (sp->Channel != nullptr)
         WCHANadd(sp->Channel);
 }
 
@@ -350,7 +350,7 @@ SITEwritefromflags(SITE *sp, ARTDATA *Data)
         /* This should not happen, but if we tried to spool and failed,
          * e.g., because of a bad F param for this site, we can get
          * into this state.  We already logged a message so give up. */
-        if (sp->Channel == NULL)
+        if (sp->Channel == nullptr)
             return;
         bp = &sp->Channel->Out;
     }
@@ -556,7 +556,7 @@ SITEsend(SITE *sp, ARTDATA *Data)
             argv[0] = SITEshell;
             argv[1] = (char *) "-c";
             argv[2] = buff;
-            argv[3] = NULL;
+            argv[3] = nullptr;
         }
 
         /* Start the process. */
@@ -581,7 +581,7 @@ SITEspoolwake(CHANNEL *cp)
     ip = (int *) cp->Argument;
     sp = &Sites[*ip];
     free(cp->Argument);
-    cp->Argument = NULL;
+    cp->Argument = nullptr;
     if (sp->Channel != cp) {
         syslog(L_ERROR, "%s internal SITEspoolwake %s got %d, not %d", LogName,
                sp->Name, cp->fd, sp->Channel->fd);
@@ -638,7 +638,7 @@ SITEstartprocess(SITE *sp)
         argv[0] = SITEshell;
         argv[1] = (char *) "-c";
         argv[2] = process;
-        argv[3] = NULL;
+        argv[3] = nullptr;
     }
 
     /* Fork a child. */
@@ -661,14 +661,14 @@ SITEstartprocess(SITE *sp)
     close(pan[PIPE_WRITE]);
     close(pan[PIPE_READ]);
     free(process);
-    if (!SITEspool(sp, (CHANNEL *) NULL))
+    if (!SITEspool(sp, (CHANNEL *) nullptr))
         return false;
 
     /* We'll try to restart the channel later. */
     syslog(L_ERROR, "%s cant spawn spooling %m", sp->Name);
     ip = xmalloc(sizeof(int));
     *ip = sp - Sites;
-    SCHANadd(sp->Channel, Now.tv_sec + innconf->chanretrytime, NULL,
+    SCHANadd(sp->Channel, Now.tv_sec + innconf->chanretrytime, nullptr,
              SITEspoolwake, ip);
     return true;
 }
@@ -684,7 +684,7 @@ SITEbuffer(SITE *sp)
 
     SITEunlink(sp);
     sp->Buffered = true;
-    sp->Channel = NULL;
+    sp->Channel = nullptr;
     bp = &sp->Buffer;
     buffer_resize(bp, sp->Flushpoint);
     buffer_set(bp, "", 0);
@@ -788,11 +788,11 @@ SITEprocdied(SITE *sp, int process, PROCESS *pp)
     syslog(pp->Status ? L_ERROR : L_NOTICE, "%s exit %d elapsed %lu pid %ld",
            sp->Name ? sp->Name : "?", pp->Status,
            (unsigned long) (pp->Collected - pp->Started), (long) pp->Pid);
-    if (sp->Process != process || sp->Name == NULL)
+    if (sp->Process != process || sp->Name == nullptr)
         /* We already started a new process for this channel
          * or this site has been dropped. */
         return;
-    if ((cp = sp->Channel) != NULL && cp->Type != CTfree)
+    if ((cp = sp->Channel) != nullptr && cp->Type != CTfree)
         CHANclose(cp, CHANname(cp));
     sp->Working = SITEsetup(sp);
     if (!sp->Working) {
@@ -817,7 +817,7 @@ SITEchanclose(CHANNEL *cp)
             /* Found the site that has this channel.  Start that
              * site spooling, copy any data that might be pending,
              * and arrange to retry later. */
-            if (!SITEspool(sp, (CHANNEL *) NULL)) {
+            if (!SITEspool(sp, (CHANNEL *) nullptr)) {
                 syslog(L_ERROR, "%s loss %lu bytes", sp->Name,
                        (unsigned long) cp->Out.left);
                 return;
@@ -826,7 +826,7 @@ SITEchanclose(CHANNEL *cp)
             WCHANadd(sp->Channel);
             ip = xmalloc(sizeof(int));
             *ip = sp - Sites;
-            SCHANadd(sp->Channel, Now.tv_sec + innconf->chanretrytime, NULL,
+            SCHANadd(sp->Channel, Now.tv_sec + innconf->chanretrytime, nullptr,
                      SITEspoolwake, ip);
             break;
         }
@@ -843,7 +843,7 @@ SITEflush(SITE *sp, const bool Restart)
     struct buffer *out;
     int count;
 
-    if (sp->Name == NULL)
+    if (sp->Name == nullptr)
         return;
 
     if (Restart)
@@ -863,10 +863,10 @@ SITEflush(SITE *sp, const bool Restart)
     case FTchannel:
     case FTexploder:
         /* If spooling, close the file right now -- documented behavior. */
-        if (sp->Spooling && (cp = sp->Channel) != NULL) {
+        if (sp->Spooling && (cp = sp->Channel) != nullptr) {
             WCHANflush(cp);
             CHANclose(cp, CHANname(cp));
-            sp->Channel = NULL;
+            sp->Channel = nullptr;
         }
         break;
 
@@ -887,14 +887,14 @@ SITEflush(SITE *sp, const bool Restart)
     }
 
     /* We're only dealing with files and channels now. */
-    if ((cp = sp->Channel) != NULL)
+    if ((cp = sp->Channel) != nullptr)
         WCHANflush(cp);
 
     /* Restart the site, copy any pending data. */
     if (Restart) {
         if (!SITEsetup(sp))
             syslog(L_ERROR, "%s cant restart %m", sp->Name);
-        else if (cp != NULL) {
+        else if (cp != nullptr) {
             if (sp->Buffered) {
                 /* SITEsetup had to buffer us; save any residue. */
                 out = &cp->Out;
@@ -903,7 +903,7 @@ SITEflush(SITE *sp, const bool Restart)
             } else
                 WCHANsetfrombuffer(sp->Channel, &cp->Out);
         }
-    } else if (cp != NULL && cp->Out.left) {
+    } else if (cp != nullptr && cp->Out.left) {
         if (sp->Type == FTfile || sp->Spooling) {
             /* Can't flush a file?  Hopeless. */
             syslog(L_ERROR, "%s dataloss %lu", sp->Name,
@@ -919,10 +919,10 @@ SITEflush(SITE *sp, const bool Restart)
     }
 
     /* Close the old channel if it was open. */
-    if (cp != NULL) {
+    if (cp != nullptr) {
         /* Make sure we have no dangling pointers to it. */
         if (!Restart)
-            sp->Channel = NULL;
+            sp->Channel = nullptr;
         CHANclose(cp, sp->Name);
         if (sp->Type == FTfile)
             SITEunlink(sp);
@@ -959,7 +959,7 @@ SITEwantsgroup(SITE *sp, char *name)
 
     match = SUB_DEFAULT;
     if (ME.Patterns) {
-        for (argv = ME.Patterns; (pat = *argv++) != NULL;) {
+        for (argv = ME.Patterns; (pat = *argv++) != nullptr;) {
             subvalue = *pat != SUB_NEGATE && *pat != SUB_POISON;
             if (!subvalue)
                 pat++;
@@ -967,7 +967,7 @@ SITEwantsgroup(SITE *sp, char *name)
                 match = subvalue;
         }
     }
-    for (argv = sp->Patterns; (pat = *argv++) != NULL;) {
+    for (argv = sp->Patterns; (pat = *argv++) != nullptr;) {
         subvalue = *pat != SUB_NEGATE && *pat != SUB_POISON;
         if (!subvalue)
             pat++;
@@ -992,7 +992,7 @@ SITEpoisongroup(SITE *sp, char *name)
 
     match = SUB_DEFAULT;
     if (ME.Patterns) {
-        for (argv = ME.Patterns; (pat = *argv++) != NULL;) {
+        for (argv = ME.Patterns; (pat = *argv++) != nullptr;) {
             poisonvalue = *pat == SUB_POISON;
             if (*pat == SUB_NEGATE || *pat == SUB_POISON)
                 pat++;
@@ -1000,7 +1000,7 @@ SITEpoisongroup(SITE *sp, char *name)
                 match = poisonvalue;
         }
     }
-    for (argv = sp->Patterns; (pat = *argv++) != NULL;) {
+    for (argv = sp->Patterns; (pat = *argv++) != nullptr;) {
         poisonvalue = *pat == SUB_POISON;
         if (*pat == SUB_NEGATE || *pat == SUB_POISON)
             pat++;
@@ -1023,7 +1023,7 @@ SITEfind(const char *p)
     for (i = nSites, sp = Sites; --i >= 0; sp++)
         if (sp->Name && strcasecmp(p, sp->Name) == 0)
             return sp;
-    return NULL;
+    return nullptr;
 }
 
 
@@ -1038,7 +1038,7 @@ SITEfindnext(const char *p, SITE *sp)
     for (sp++, end = &Sites[nSites]; sp < end; sp++)
         if (sp->Name && strcasecmp(p, sp->Name) == 0)
             return sp;
-    return NULL;
+    return nullptr;
 }
 
 
@@ -1055,12 +1055,12 @@ SITEfree(SITE *sp)
 
     if (sp->Channel) {
         CHANclose(sp->Channel, CHANname(sp->Channel));
-        sp->Channel = NULL;
+        sp->Channel = nullptr;
     }
 
     SITEunlink(sp);
 
-    sp->Name = NULL;
+    sp->Name = nullptr;
     if (sp->Process > 0) {
         /* Kill the backpointer so PROCdied won't call us. */
         PROCunwatch(sp->Process);
@@ -1068,40 +1068,40 @@ SITEfree(SITE *sp)
     }
     if (sp->Entry) {
         free(sp->Entry);
-        sp->Entry = NULL;
+        sp->Entry = nullptr;
     }
     if (sp->Originator) {
         free(sp->Originator);
-        sp->Originator = NULL;
+        sp->Originator = nullptr;
     }
     if (sp->Param) {
         free(sp->Param);
-        sp->Param = NULL;
+        sp->Param = nullptr;
     }
     if (sp->SpoolName) {
         free(sp->SpoolName);
-        sp->SpoolName = NULL;
+        sp->SpoolName = nullptr;
     }
     if (sp->Patterns) {
         free(sp->Patterns);
-        sp->Patterns = NULL;
+        sp->Patterns = nullptr;
     }
     if (sp->Exclusions) {
         free(sp->Exclusions);
-        sp->Exclusions = NULL;
+        sp->Exclusions = nullptr;
     }
     if (sp->Distributions) {
         free(sp->Distributions);
-        sp->Distributions = NULL;
+        sp->Distributions = nullptr;
     }
     if (sp->Buffer.data) {
         free(sp->Buffer.data);
-        sp->Buffer.data = NULL;
+        sp->Buffer.data = nullptr;
         sp->Buffer.size = 0;
     }
     if (sp->FNLnames.data) {
         free(sp->FNLnames.data);
-        sp->FNLnames.data = NULL;
+        sp->FNLnames.data = nullptr;
         sp->FNLnames.size = 0;
         sp->FNLnames.left = 0;
         sp->FNLnames.used = 0;
@@ -1111,7 +1111,7 @@ SITEfree(SITE *sp)
             hn = hf->next;
             free(hf);
         }
-        sp->HashFeedList = NULL;
+        sp->HashFeedList = nullptr;
     }
 
     /* If this site was a master, find a new one. */
@@ -1143,7 +1143,7 @@ SITEforward(SITE *sp, const char *text)
     fsp = sp;
     if (fsp->Funnel != NOSITE)
         fsp = &Sites[fsp->Funnel];
-    if (sp->Name == NULL || fsp->Name == NULL)
+    if (sp->Name == nullptr || fsp->Name == nullptr)
         return;
     if (fsp->Type == FTexploder) {
         strlcpy(buff, text, sizeof(buff));
@@ -1178,7 +1178,7 @@ SITEinfo(struct buffer *bp, SITE *sp, const bool Verbose)
     CHANNEL *cp;
     const char *sep;
 
-    if (sp->Name == NULL) {
+    if (sp->Name == nullptr) {
         buffer_append(bp, FREESITE, strlen(FREESITE));
         return;
     }
@@ -1200,7 +1200,7 @@ SITEinfo(struct buffer *bp, SITE *sp, const bool Verbose)
         if (sp->Buffered)
             buffer_append_sprintf(bp, " buffered(%lu)",
                                   (unsigned long) sp->Buffer.left);
-        else if ((cp = sp->Channel) == NULL)
+        else if ((cp = sp->Channel) == nullptr)
             buffer_append_sprintf(bp, " no channel?");
         else
             buffer_append_sprintf(bp, " open fd=%d, in mem %lu", cp->fd,
@@ -1217,7 +1217,7 @@ SITEinfo(struct buffer *bp, SITE *sp, const bool Verbose)
         if (sp->Spooling)
             buffer_append_sprintf(bp, " spooling");
         cp = sp->Channel;
-        if (cp == NULL)
+        if (cp == nullptr)
             buffer_append_sprintf(bp, " no channel?");
         else
             buffer_append_sprintf(bp, " fd=%d, in mem %lu", cp->fd,
@@ -1257,7 +1257,7 @@ SITEinfo(struct buffer *bp, SITE *sp, const bool Verbose)
         if (sp->Spooling && sp->SpoolName)
             buffer_append_sprintf(bp, "\tSpooling to \"%s\"\n", sp->SpoolName);
         cp = sp->Channel;
-        if (cp != NULL) {
+        if (cp != nullptr) {
             buffer_append_sprintf(bp, "\tChannel created %.12s",
                                   ctime(&cp->Started) + 4);
             buffer_append_sprintf(bp, ", last active %.12s\n",

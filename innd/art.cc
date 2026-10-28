@@ -108,11 +108,11 @@ SITEmark(SITE *sp, NEWSGROUP *ngp)
     SITE *funnel;
 
     sp->Sendit = true;
-    if (sp->ng == NULL)
+    if (sp->ng == nullptr)
         sp->ng = ngp;
     if (sp->Funnel != NOSITE) {
         funnel = &Sites[sp->Funnel];
-        if (funnel->ng == NULL)
+        if (funnel->ng == nullptr)
             funnel->ng = ngp;
     }
 }
@@ -130,9 +130,9 @@ ARTreadschema(void)
     const ARTHEADER *hp;
     bool ok = true;
 
-    if (ARTfields != NULL) {
+    if (ARTfields != nullptr) {
         free(ARTfields);
-        ARTfields = NULL;
+        ARTfields = nullptr;
     }
 
     /* Count the number of overview fields and allocate ARTfields. */
@@ -175,7 +175,7 @@ ARTreadschema(void)
         fp++;
     }
 
-    fp->Header = NULL;
+    fp->Header = nullptr;
     vector_free(extraoverview);
 
     return ok;
@@ -198,11 +198,11 @@ ARTbuildtree(const ARTHEADER **Table, int lo, int hi)
     tp->Header = Table[mid];
     tp->Name = tp->Header->Name;
     if (mid == lo)
-        tp->Before = NULL;
+        tp->Before = nullptr;
     else
         tp->Before = ARTbuildtree(Table, lo, mid);
     if (mid == hi - 1)
-        tp->After = NULL;
+        tp->After = nullptr;
     else
         tp->After = ARTbuildtree(Table, mid + 1, hi);
     return tp;
@@ -266,7 +266,7 @@ ARTfreetree(TREE *tp)
 {
     TREE *next;
 
-    for (; tp != NULL; tp = next) {
+    for (; tp != nullptr; tp = next) {
         if (tp->Before)
             ARTfreetree(tp->Before);
         next = tp->After;
@@ -278,9 +278,9 @@ ARTfreetree(TREE *tp)
 void
 ARTclose(void)
 {
-    if (ARTfields != NULL) {
+    if (ARTfields != nullptr) {
         free(ARTfields);
-        ARTfields = NULL;
+        ARTfields = nullptr;
     }
     ARTfreetree(ARTheadertree);
 }
@@ -304,14 +304,14 @@ ARTlog(const ARTDATA *data, char code, const char *text)
     if (text)
         i = fprintf(Log, "%.15s.%03d %c %s %s %s%s", ctime(&t) + 4,
                     (int) (Now.tv_usec / 1000), code,
-                    data->Feedsite != NULL ? data->Feedsite : "(null)",
+                    data->Feedsite != nullptr ? data->Feedsite : "(null)",
                     HDR_FOUND(HDR__MESSAGE_ID) ? HDR(HDR__MESSAGE_ID)
                                                : "(null)",
                     text, Done ? "" : "\n");
     else
         i = fprintf(Log, "%.15s.%03d %c %s %s%s", ctime(&t) + 4,
                     (int) (Now.tv_usec / 1000), code,
-                    data->Feedsite != NULL ? data->Feedsite : "(null)",
+                    data->Feedsite != nullptr ? data->Feedsite : "(null)",
                     HDR_FOUND(HDR__MESSAGE_ID) ? HDR(HDR__MESSAGE_ID)
                                                : "(null)",
                     Done ? "" : "\n");
@@ -362,7 +362,7 @@ ARTparsepath(const char *p, int size, LISTBUFFER *list)
         list->List = xrealloc(list->List, list->ListLength * sizeof(char *));
         hp = &list->List[i];
     }
-    *hp = NULL;
+    *hp = nullptr;
     return i;
 }
 
@@ -401,7 +401,7 @@ ARTlogreject(CHANNEL *cp, const char *text)
                 ARTparsepath(HDR(HDR__PATH), HDR_LEN(HDR__PATH), &data->Path);
             HDR_PARSE_END(HDR__PATH);
             hops = data->Path.List;
-            if (hopcount > 0 && hops != NULL && hops[0] != NULL) {
+            if (hopcount > 0 && hops != nullptr && hops[0] != nullptr) {
                 data->Feedsite = hops[0];
             } else {
                 data->Feedsite = "localhost";
@@ -417,7 +417,7 @@ ARTlogreject(CHANNEL *cp, const char *text)
 
     data->FeedsiteLength = strlen(data->Feedsite);
 
-    ARTlog(data, ART_REJECT, text != NULL ? text : cp->Error);
+    ARTlog(data, ART_REJECT, text != nullptr ? text : cp->Error);
 
     if (HDR_FOUND(HDR__MESSAGE_ID))
         HDR_PARSE_END(HDR__MESSAGE_ID);
@@ -555,7 +555,7 @@ ARTstore(CHANNEL *cp, bool filtered)
     arth.iov = iov;
     arth.iovcnt = iovcnt;
     arth.arrived = (time_t) 0;
-    arth.token = (TOKEN *) NULL;
+    arth.token = (TOKEN *) nullptr;
     arth.expires = data->Expires;
     arth.filtered = filtered;
     if (innconf->storeonxref) {
@@ -642,15 +642,15 @@ ARTcheckheader(CHANNEL *cp, int size)
     ihave = (cp->Sendid.size > 3) ? false : true;
 
     /* Find first colon */
-    if ((colon = static_cast<char *>(memchr(header, ':', size))) == NULL
+    if ((colon = static_cast<char *>(memchr(header, ':', size))) == nullptr
         || !ISWHITE(colon[1])) {
-        if ((p = static_cast<char *>(memchr(header, '\r', size))) != NULL)
+        if ((p = static_cast<char *>(memchr(header, '\r', size))) != nullptr)
             *p = '\0';
         snprintf(cp->Error, sizeof(cp->Error),
                  "%d No colon-space in \"%s\" header field",
                  ihave ? NNTP_FAIL_IHAVE_REJECT : NNTP_FAIL_TAKETHIS_REJECT,
                  MaxLength(header, header));
-        if (p != NULL)
+        if (p != nullptr)
             *p = '\r';
         return;
     }
@@ -670,7 +670,7 @@ ARTcheckheader(CHANNEL *cp, int size)
     }
     *colon = ':';
 
-    if (tp == NULL) {
+    if (tp == nullptr) {
         /* Not a system header field, make sure we have <word><colon><space>.
          */
         for (p = colon; --p > header;) {
@@ -742,7 +742,7 @@ ARTprepare(CHANNEL *cp)
     int i;
 
     for (i = 0; i < MAX_ARTHEADER; i++, hc++) {
-        hc->Value = NULL;
+        hc->Value = nullptr;
         hc->Length = 0;
         hc->LastChar = '\r';
     }
@@ -750,7 +750,7 @@ ARTprepare(CHANNEL *cp)
         0;
     data->DotStuffedLines = 0;
     data->CurHeader = data->Body = cp->Start;
-    data->BytesHeader = NULL;
+    data->BytesHeader = nullptr;
     data->Feedsite = "?";
     data->FeedsiteLength = strlen(data->Feedsite);
     *cp->Error = '\0';
@@ -974,7 +974,7 @@ ARTparse(CHANNEL *cp)
     ARTchecksize(cp);
     if (cp->State == CSgotarticle || cp->State == CSgotlargearticle)
         if (cp->Error[0] != '\0')
-            ARTlogreject(cp, NULL);
+            ARTlogreject(cp, nullptr);
 }
 
 /*
@@ -1203,33 +1203,34 @@ ARTcancel(const ARTDATA *data, const char *MessageID, const bool Trusted)
          * It also means that we do not honour cancel requests for articles not
          * yet received, even if they do not have a Cancel-Lock header field
          * (but we don't know yet). */
-        if (!HISlookup(History, MessageID, NULL, NULL, NULL, &token)) {
+        if (!HISlookup(History, MessageID, nullptr, nullptr, nullptr,
+                       &token)) {
             TMRstop(TMR_ARTCNCL);
             return;
         }
-        if ((art = SMretrieve(token, RETR_HEAD)) == NULL) {
+        if ((art = SMretrieve(token, RETR_HEAD)) == nullptr) {
             TMRstop(TMR_ARTCNCL);
             return;
         }
         start = wire_findheader(art->data, art->len, "Cancel-Lock", true);
 
-        if (start == NULL
+        if (start == nullptr
             && strcasecmp(innconf->docancels, "require-auth") == 0) {
             SMfreearticle(art);
             TMRstop(TMR_ARTCNCL);
             return;
-        } else if (start != NULL) {
+        } else if (start != nullptr) {
             /* canlockhdr will store a copy of the Cancel-Lock header field
              * body of the original article to be cancelled.
              * end points to the final "\n" of the header field body. */
             end = wire_endheader(start, art->data + art->len - 1);
 
-            if (end == NULL
+            if (end == nullptr
                 && strcasecmp(innconf->docancels, "require-auth") == 0) {
                 SMfreearticle(art);
                 TMRstop(TMR_ARTCNCL);
                 return;
-            } else if (end != NULL) {
+            } else if (end != nullptr) {
                 r = false;
 #if defined(HAVE_CANLOCK)
                 if (HDR(HDR__CANCEL_KEY) != NULL) {
@@ -1273,7 +1274,7 @@ ARTcancel(const ARTDATA *data, const char *MessageID, const bool Trusted)
         TMRstop(TMR_ARTCNCL);
         return;
     }
-    r = HISlookup(History, MessageID, NULL, NULL, NULL, &token);
+    r = HISlookup(History, MessageID, nullptr, nullptr, nullptr, &token);
     if (r == false) {
         TMRstop(TMR_ARTCNCL);
         return;
@@ -1360,7 +1361,7 @@ ARTparsedist(const char *p, int size, LISTBUFFER *list)
         list->List = xrealloc(list->List, list->ListLength * sizeof(char *));
         dp = &list->List[i];
     }
-    *dp = NULL;
+    *dp = nullptr;
     return;
 }
 
@@ -1375,7 +1376,7 @@ DISTwanted(char **list, char *p)
     char c;
     bool sawbang;
 
-    for (sawbang = false, c = *p; (q = *list) != NULL; list++) {
+    for (sawbang = false, c = *p; (q = *list) != nullptr; list++) {
         if (*q == '!') {
             sawbang = true;
             if (c == *++q && strcasecmp(p, q) == 0)
@@ -1396,7 +1397,7 @@ static bool
 DISTwantany(char **site, char **article)
 {
     /* An empty distributions list is allowed. */
-    if (*article == NULL) {
+    if (*article == nullptr) {
         return true;
     }
 
@@ -1418,7 +1419,7 @@ ARTsendthegroup(char *name, char *fromgroup)
     NEWSGROUP *ngp;
 
     for (ngp = NGfind(fromgroup), sp = Sites, i = nSites; --i >= 0; sp++) {
-        if (sp->Name != NULL && SITEwantsgroup(sp, name)) {
+        if (sp->Name != nullptr && SITEwantsgroup(sp, name)) {
             SITEmark(sp, ngp);
         }
     }
@@ -1435,7 +1436,7 @@ ARTpoisongroup(char *name)
     int i;
 
     for (sp = Sites, i = nSites; --i >= 0; sp++) {
-        if (sp->Name != NULL && (sp->PoisonEntry || ME.PoisonEntry)
+        if (sp->Name != nullptr && (sp->PoisonEntry || ME.PoisonEntry)
             && SITEpoisongroup(sp, name))
             sp->Poison = true;
     }
@@ -1462,7 +1463,7 @@ ARTassignnumbers(ARTDATA *data)
     }
     len = Path.used - 1;
     p = q = data->Xref + len;
-    for (linelen = i = 0; (ngp = GroupPointers[i]) != NULL; i++) {
+    for (linelen = i = 0; (ngp = GroupPointers[i]) != nullptr; i++) {
         /* If already went to this group (i.e., multiple groups are aliased
          * into it), then skip it. */
         if (ngp->PostCount > 0)
@@ -1533,7 +1534,7 @@ ARTxrefslave(ARTDATA *data)
     if (!HDR_FOUND(HDR__XREF))
         return false;
     /* skip server name */
-    if ((p = strpbrk(HDR(HDR__XREF), " \t\r\n")) == NULL)
+    if ((p = strpbrk(HDR(HDR__XREF), " \t\r\n")) == nullptr)
         return false;
     if (p > HDR(HDR__XREF) + HDR_LEN(HDR__XREF))
         return false;
@@ -1548,29 +1549,29 @@ ARTxrefslave(ARTDATA *data)
          p = next) {
         /* Mark end of this entry and where next one starts. */
         name = p;
-        if ((q = next = strpbrk(p, " \t\r\n")) != NULL) {
+        if ((q = next = strpbrk(p, " \t\r\n")) != nullptr) {
             c = *q;
             *q = '\0';
             while (*++next == ' ' || *next == '\t' || *next == '\r'
                    || *next == '\n')
                 ;
         } else {
-            q = NULL;
+            q = nullptr;
             next = (char *) "";
         }
 
         /* Split into news.group:# */
-        if ((p = strchr(p, ':')) == NULL) {
+        if ((p = strchr(p, ':')) == nullptr) {
             syslog(L_ERROR, "%s bad_format %s", LogName, name);
-            if (q != NULL)
+            if (q != nullptr)
                 *q = c;
             continue;
         }
         *p = '\0';
-        if ((ngp = NGfind(name)) == NULL) {
+        if ((ngp = NGfind(name)) == nullptr) {
             syslog(L_ERROR, "%s bad_newsgroup %s", LogName, name);
             *p = ':';
-            if (q != NULL)
+            if (q != nullptr)
                 *q = c;
             continue;
         }
@@ -1582,7 +1583,7 @@ ARTxrefslave(ARTDATA *data)
             return false;
         }
 
-        if (q != NULL)
+        if (q != nullptr)
             *q = c;
 
         /* Update active file if we got a new high water mark. */
@@ -1600,7 +1601,7 @@ ARTxrefslave(ARTDATA *data)
         GroupPointers[i++] = ngp;
         nogroup = false;
     }
-    GroupPointers[i] = NULL;
+    GroupPointers[i] = nullptr;
     if (nogroup)
         return false;
     return true;
@@ -1616,7 +1617,7 @@ ListHas(const char **list, const char *p)
 {
     size_t i;
 
-    for (i = 0; list[i] != NULL; i++)
+    for (i = 0; list[i] != nullptr; i++)
         if (strcasecmp(p, list[i]) == 0)
             return true;
     return false;
@@ -1745,7 +1746,7 @@ ARTpropagate(ARTDATA *data, const char **hops, int hopcount, char **list,
                 savec = *p;
                 *p = '\0';
 
-                for (j = 0, sendit = false; (q = sp->Originator[j]) != NULL;
+                for (j = 0, sendit = false; (q = sp->Originator[j]) != nullptr;
                      j++) {
                     if (*q == '@') {
                         if (uwildmat(begin, &q[1])) {
@@ -1762,10 +1763,10 @@ ARTpropagate(ARTDATA *data, const char **hops, int hopcount, char **list,
                 if (!sendit)
                     continue;
             } else if (HDR_FOUND(HDR__XTRACE)) {
-                if ((p = strchr(HDR(HDR__XTRACE), ' ')) != NULL) {
+                if ((p = strchr(HDR(HDR__XTRACE), ' ')) != nullptr) {
                     *p = '\0';
                     for (j = 0, sendit = false;
-                         (q = sp->Originator[j]) != NULL; j++) {
+                         (q = sp->Originator[j]) != nullptr; j++) {
                         if (*q == '@') {
                             if (uwildmat(HDR(HDR__XTRACE), &q[1])) {
                                 *p = ' ';
@@ -1810,19 +1811,19 @@ ARTpropagate(ARTDATA *data, const char **hops, int hopcount, char **list,
             /* Hashfeed doesn't match. */
             continue;
 
-        if (list && *list != NULL && sp->Distributions
+        if (list && *list != nullptr && sp->Distributions
             && !DISTwantany(sp->Distributions, list))
             /* Not in the site's desired list of distributions. */
             continue;
-        if (sp->DistRequired && (list == NULL || *list == NULL))
+        if (sp->DistRequired && (list == nullptr || *list == nullptr))
             /* Site requires Distribution header field and there isn't one. */
             continue;
 
         if (sp->Exclusions) {
-            for (j = 0; (p = sp->Exclusions[j]) != NULL; j++)
+            for (j = 0; (p = sp->Exclusions[j]) != nullptr; j++)
                 if (ListHas(hops, p))
                     break;
-            if (p != NULL)
+            if (p != nullptr)
                 /* A host in the site's exclusion list was in the Path. */
                 continue;
         }
@@ -1883,7 +1884,7 @@ ARTmakeoverview(CHANNEL *cp)
     int i, j, len;
     bool keywords_generated = false;
 
-    if (ARTfields == NULL) {
+    if (ARTfields == nullptr) {
         /* User error. */
         return;
     }
@@ -1905,15 +1906,15 @@ ARTmakeoverview(CHANNEL *cp)
         if (DO_KEYWORDS && innconf->keywords) {
             /* Ensure that there are keywords to shovel. */
             if (hp == &ARTheaders[HDR__KEYWORDS]
-                && HDR(HDR__KEYWORDS) == NULL) {
+                && HDR(HDR__KEYWORDS) == nullptr) {
                 keywords_generated = true;
                 KEYgenerate(&hc[HDR__KEYWORDS], cp->In.data + data->Body,
                             cp->Next - data->Body);
                 /* Do not memorize an empty Keywords header field body. */
                 if (HDR_LEN(HDR__KEYWORDS) == 0) {
-                    if (HDR(HDR__KEYWORDS) != NULL)
+                    if (HDR(HDR__KEYWORDS) != nullptr)
                         free(HDR(HDR__KEYWORDS)); /* malloc'd within. */
-                    HDR(HDR__KEYWORDS) = NULL;
+                    HDR(HDR__KEYWORDS) = nullptr;
                     keywords_generated = false;
                 }
             }
@@ -1968,9 +1969,9 @@ ARTmakeoverview(CHANNEL *cp)
         /* Patch the old keywords back in. */
         if (DO_KEYWORDS && innconf->keywords) {
             if (keywords_generated) {
-                if (HDR(HDR__KEYWORDS) != NULL)
+                if (HDR(HDR__KEYWORDS) != nullptr)
                     free(HDR(HDR__KEYWORDS)); /* malloc'd within. */
-                HDR(HDR__KEYWORDS) = NULL;
+                HDR(HDR__KEYWORDS) = nullptr;
                 HDR_LEN(HDR__KEYWORDS) = 0;
                 keywords_generated = false;
             }
@@ -2032,7 +2033,7 @@ ARTpost(CHANNEL *cp)
     } else {
         data->Feedsite = "localhost";
     }
-    if (data->Feedsite == NULL)
+    if (data->Feedsite == nullptr)
         data->Feedsite = CHANname(cp);
     data->FeedsiteLength = strlen(data->Feedsite);
 
@@ -2095,12 +2096,12 @@ ARTpost(CHANNEL *cp)
         data->Hassamepath = true;
     else
         data->Hassamepath = false;
-    if (Pathcluster.data != NULL && n == Pathcluster.used - 1
+    if (Pathcluster.data != nullptr && n == Pathcluster.used - 1
         && strncasecmp(Pathcluster.data, hops[0], Pathcluster.used - 1) == 0)
         data->Hassamecluster = true;
     else
         data->Hassamecluster = false;
-    if (Pathalias.data != NULL
+    if (Pathalias.data != nullptr
         && !ListHas((const char **) hops, (const char *) innconf->pathalias))
         data->AddAlias = true;
     else
@@ -2202,8 +2203,8 @@ ARTpost(CHANNEL *cp)
         } else {
             ARTparsedist(HDR(HDR__DISTRIBUTION), HDR_LEN(HDR__DISTRIBUTION),
                          &data->Distribution);
-            if (ME.Distributions && data->Distribution.List != NULL
-                && *data->Distribution.List != NULL
+            if (ME.Distributions && data->Distribution.List != nullptr
+                && *data->Distribution.List != nullptr
                 && !DISTwantany(ME.Distributions, data->Distribution.List)) {
                 snprintf(cp->Error, sizeof(cp->Error),
                          "%d Unwanted distribution \"%s\"",
@@ -2228,14 +2229,14 @@ ARTpost(CHANNEL *cp)
         sp->Poison = false;
         sp->Sendit = false;
         sp->Seenit = false;
-        buffer_set(&sp->FNLnames, NULL, 0);
-        sp->ng = NULL;
+        buffer_set(&sp->FNLnames, nullptr, 0);
+        sp->ng = nullptr;
     }
 
     if (HDR_FOUND(HDR__FOLLOWUPTO)) {
         /* Count the number of commas without syntactically parsing the header
          * field body. */
-        for (i = 1, p = HDR(HDR__FOLLOWUPTO); (p = strchr(p, ',')) != NULL;
+        for (i = 1, p = HDR(HDR__FOLLOWUPTO); (p = strchr(p, ',')) != nullptr;
              i++, p++)
             ;
 
@@ -2290,7 +2291,7 @@ ARTpost(CHANNEL *cp)
                     break;
                 }
             }
-            groupbuff[1] = NULL;
+            groupbuff[1] = nullptr;
             groups = groupbuff;
             data->Groupcount = 2;
             if (data->Followcount == 0)
@@ -2303,7 +2304,7 @@ ARTpost(CHANNEL *cp)
         /* Control messages to "foo.ctl" are treated as if they were
          * posted to "foo".  I should probably apologize for all the
          * side-effects in the if. */
-        for (i = 0; (p = groups[i++]) != NULL;)
+        for (i = 0; (p = groups[i++]) != nullptr;)
             if ((j = strlen(p) - 4) > 0 && *(p += j) == '.' && p[1] == 'c'
                 && p[2] == 't' && p[3] == 'l')
                 *p = '\0';
@@ -2317,8 +2318,8 @@ ARTpost(CHANNEL *cp)
     ToGroup = NoHistoryUpdate = false;
     Approved = HDR_FOUND(HDR__APPROVED);
     ngptr = GroupPointers;
-    for (GroupMissing = Accepted = false; (p = *groups) != NULL; groups++) {
-        if ((ngp = NGfind(p)) == NULL) {
+    for (GroupMissing = Accepted = false; (p = *groups) != nullptr; groups++) {
+        if ((ngp = NGfind(p)) == nullptr) {
             GroupMissing = true;
             if (LikeNewgroup && Approved) {
                 /* Checkgroups/newgroup/rmgroup being sent to a group that
@@ -2333,7 +2334,7 @@ ARTpost(CHANNEL *cp)
                  * up filing the article in the junk group. */
                 for (ngpjunk = NGfind(ARTjnk), sp = Sites, i = nSites;
                      --i >= 0; sp++) {
-                    if (sp->Name != NULL && sp->FeedTrash
+                    if (sp->Name != nullptr && sp->FeedTrash
                         && SITEwantsgroup(sp, *groups)) {
                         SITEmark(sp, ngpjunk);
                     }
@@ -2368,7 +2369,7 @@ ARTpost(CHANNEL *cp)
                     continue;
                 ngp = NGfind("to");
                 ToGroup = true;
-                if ((sp = SITEfind(p)) != NULL) {
+                if ((sp = SITEfind(p)) != nullptr) {
                     SITEmark(sp, ngp);
                 }
             } else {
@@ -2441,7 +2442,7 @@ ARTpost(CHANNEL *cp)
             continue;
 
         /* Expand aliases, mark the article as getting filed in the group. */
-        if (ngp->Alias != NULL)
+        if (ngp->Alias != nullptr)
             ngp = ngp->Alias;
         *ngptr++ = ngp;
         ngp->PostCount = 0;
@@ -2451,8 +2452,8 @@ ARTpost(CHANNEL *cp)
      * or control. */
     if (IsControl && Accepted && !ToGroup) {
         ControlStore = true;
-        controlgroup = concat("control.", ControlWord, (char *) 0);
-        if ((ngp = NGfind(controlgroup)) == NULL)
+        controlgroup = concat("control.", ControlWord, (char *) nullptr);
+        if ((ngp = NGfind(controlgroup)) == nullptr)
             ngp = NGfind(ARTctl);
         free(controlgroup);
         ngp->PostCount = 0;
@@ -2536,7 +2537,7 @@ ARTpost(CHANNEL *cp)
             }
         }
     }
-    *ngptr = NULL;
+    *ngptr = nullptr;
 
     /* Loop over sites to find Poisons/ControlOnly and undo Sendit flags. */
     for (i = nSites, sp = Sites; --i >= 0; sp++) {
@@ -2586,7 +2587,7 @@ ARTpost(CHANNEL *cp)
         ICDactivedirty = 0;
     }
     TMRstart(TMR_ARTWRITE);
-    for (i = 0; (ngp = GroupPointers[i]) != NULL; i++)
+    for (i = 0; (ngp = GroupPointers[i]) != nullptr; i++)
         ngp->PostCount = 0;
 
     token = ARTstore(cp, Filtered);
@@ -2672,7 +2673,7 @@ ARTpost(CHANNEL *cp)
         /* We have another ARTlog() for the same article just after. */
         ARTlog(data, ART_STRSTR, cp->Error);
     }
-    ARTlog(data, Accepted ? ART_ACCEPT : ART_JUNK, (char *) NULL);
+    ARTlog(data, Accepted ? ART_ACCEPT : ART_JUNK, (char *) nullptr);
     if ((innconf->nntplinklog)
         && (fprintf(Log, " (%s)", data->TokenText) == EOF || ferror(Log))) {
         oerrno = errno;

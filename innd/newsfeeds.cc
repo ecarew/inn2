@@ -21,8 +21,8 @@ typedef struct _SITEVARIABLES {
 #define VARIABLE_CHAR '$'
 
 static SITE SITEnull;
-static char *SITEfeedspath = NULL;
-static SITEVARIABLES *SITEvariables = NULL;
+static char *SITEfeedspath = nullptr;
+static SITEVARIABLES *SITEvariables = nullptr;
 
 
 /*
@@ -40,7 +40,7 @@ SITEcopystrings(char **av)
     for (copy = save = xmalloc((pp - av + 1) * sizeof(char *)), pp = av; *pp;
          pp++)
         *copy++ = xstrdup(*pp);
-    *copy = NULL;
+    *copy = nullptr;
     return save;
 }
 
@@ -77,7 +77,7 @@ SITEaddvariable(char *line)
         return false;
 
     /* Is variable already defined?  Free and reassign. */
-    w = NULL;
+    w = nullptr;
     v = SITEvariables;
     while (v && strcmp(line + 1, v->Name)) {
         w = v;
@@ -92,7 +92,7 @@ SITEaddvariable(char *line)
         if (w)
             w->Next = v;
         v->Name = xstrdup(line + 1);
-        v->Next = NULL;
+        v->Next = nullptr;
     }
 
     /* Add variable's contents. */
@@ -120,7 +120,7 @@ SITEclearvariables(void)
         v = v->Next;
         free(w);
     }
-    SITEvariables = NULL;
+    SITEvariables = nullptr;
 }
 
 static SITEVARIABLES *
@@ -138,7 +138,7 @@ static char *
 SITEexpandvariables(char *site)
 {
     char *p, *r, *s;
-    char *q = NULL;
+    char *q = nullptr;
     int c = 0;
     char modifier;
     char varname[64];
@@ -168,7 +168,7 @@ SITEexpandvariables(char *site)
                 continue;
             } else {
                 v = SITEfindvariable(varname + 1);
-                if (v != NULL) {
+                if (v != nullptr) {
                     /* Add length of contents. */
                     c += strlen(v->Value);
                     /* If modified add number of mods. */
@@ -226,7 +226,7 @@ SITEexpandvariables(char *site)
                 continue;
             } else {
                 v = SITEfindvariable(varname + 1);
-                if (v != NULL) {
+                if (v != nullptr) {
                     if (modifier)
                         *s++ = modifier;
                     for (q = v->Value; *q; q++) {
@@ -282,22 +282,22 @@ SITEreadfile(const bool ReadOnly)
     struct stat Sb;
     char *data;
 
-    if (SITEfeedspath == NULL)
+    if (SITEfeedspath == nullptr)
         SITEfeedspath = concatpath(innconf->pathetc, INN_PATH_NEWSFEEDS);
-    if (old_strings != NULL) {
+    if (old_strings != nullptr) {
         /* If the file hasn't changed, return a copy of the old data. */
         if (stat(SITEfeedspath, &Sb) >= 0 && Sb.st_ino == old_ino
             && Sb.st_size == old_size && Sb.st_mtime == old_mtime)
             return ReadOnly ? old_strings : SITEcopystrings(old_strings);
 
         /* Data's bad, toss it. */
-        for (i = 0; old_strings[i] != NULL; i++)
+        for (i = 0; old_strings[i] != nullptr; i++)
             free(old_strings[i]);
         free(old_strings);
     }
 
     /* Read in the file, note its statistics. */
-    if ((data = ReadInFile(SITEfeedspath, &Sb)) == NULL) {
+    if ((data = ReadInFile(SITEfeedspath, &Sb)) == nullptr) {
         syslog(L_FATAL, "%s cant read %s %m", LogName, SITEfeedspath);
         exit(1);
     }
@@ -306,7 +306,7 @@ SITEreadfile(const bool ReadOnly)
     old_size = Sb.st_size;
 
     /* Get a gross count of the number of sites. */
-    for (p = data, i = 0; (p = strchr(p, '\n')) != NULL; p++, i++)
+    for (p = data, i = 0; (p = strchr(p, '\n')) != nullptr; p++, i++)
         continue;
 
     /* Scan the file, parse all multi-line entries. */
@@ -348,7 +348,7 @@ SITEreadfile(const bool ReadOnly)
         else
             old_strings[i++] = xstrdup(site);
     }
-    old_strings[i] = NULL;
+    old_strings[i] = nullptr;
 
     SITEclearvariables();
     free(data);
@@ -370,7 +370,7 @@ SITEsetlist(char **patlist, char *subbed, char *poison, bool *poisonEntry)
     NEWSGROUP *ngp;
     int i;
 
-    while ((pat = *patlist++) != NULL) {
+    while ((pat = *patlist++) != nullptr) {
         subvalue = *pat != SUB_NEGATE && *pat != SUB_POISON;
         poisonvalue = *pat == SUB_POISON;
         if (!subvalue)
@@ -388,7 +388,7 @@ SITEsetlist(char **patlist, char *subbed, char *poison, bool *poisonEntry)
                 break;
         if (*p == '\0') {
             /* Simple string; look it up, set it. */
-            if ((ngp = NGfind(pat)) != NULL) {
+            if ((ngp = NGfind(pat)) != nullptr) {
                 subbed[ngp - Groups] = subvalue;
                 poison[ngp - Groups] = poisonvalue;
             }
@@ -427,7 +427,7 @@ SlashSplit(char *text)
             *av++ = p;
         } else
             p++;
-    *av = NULL;
+    *av = nullptr;
     return save;
 }
 
@@ -467,7 +467,7 @@ SITEparseone(char *Entry, SITE *sp, char *subbed, char *poison)
     sp->Process = -1;
     sp->Next = sp->Prev = NOSITE;
     sp->Entry = Entry;
-    sp->Originator = NULL;
+    sp->Originator = nullptr;
     sp->FileFlags[0] = FEED_NAME;
     sp->FileFlags[1] = '\0';
     sp->Nice = innconf->nicekids;
@@ -477,14 +477,14 @@ SITEparseone(char *Entry, SITE *sp, char *subbed, char *poison)
     sp->FeedwithoutOriginator = false;
     sp->DropFiltered = false;
     sp->FeedTrash = false;
-    sp->HashFeedList = NULL;
+    sp->HashFeedList = nullptr;
 
     /* Nip off the first field, the site name. */
-    if ((f2 = strchr(Entry, NF_FIELD_SEP)) == NULL)
+    if ((f2 = strchr(Entry, NF_FIELD_SEP)) == nullptr)
         return "missing field 2";
     *f2++ = '\0';
     sp->Name = Entry;
-    if ((p = strchr(Entry, NF_SUBFIELD_SEP)) != NULL) {
+    if ((p = strchr(Entry, NF_SUBFIELD_SEP)) != nullptr) {
         /* Exclusions within the site field. */
         *p++ = '\0';
         if (*p)
@@ -493,10 +493,10 @@ SITEparseone(char *Entry, SITE *sp, char *subbed, char *poison)
     sp->NameLength = strlen(sp->Name);
 
     /* Parse the second field, the subscriptions. */
-    if ((f3 = strchr(f2, NF_FIELD_SEP)) == NULL)
+    if ((f3 = strchr(f2, NF_FIELD_SEP)) == nullptr)
         return "missing field 3";
     *f3++ = '\0';
-    if ((p = strchr(f2, NF_SUBFIELD_SEP)) != NULL) {
+    if ((p = strchr(f2, NF_SUBFIELD_SEP)) != nullptr) {
         /* Distributions within the subscription field. */
         *p++ = '\0';
         if (*p)
@@ -515,13 +515,13 @@ SITEparseone(char *Entry, SITE *sp, char *subbed, char *poison)
     }
 
     /* Get the third field, the flags. */
-    if ((f4 = strchr(f3, NF_FIELD_SEP)) == NULL)
+    if ((f4 = strchr(f3, NF_FIELD_SEP)) == nullptr)
         return "missing field 4";
     *f4++ = '\0';
     JustModerated = false;
     JustUnmoderated = false;
     sp->Type = FTfile;
-    for (save = argv = CommaSplit(f3); (p = *argv++) != NULL;)
+    for (save = argv = CommaSplit(f3); (p = *argv++) != nullptr;)
         switch (*p) {
         default:
             return "unknown field 3 flag";
@@ -574,7 +574,7 @@ SITEparseone(char *Entry, SITE *sp, char *subbed, char *poison)
         case 'B':
             if (*++p && isdigit((unsigned char) *p)) {
                 sp->StartWriting = atoi(p);
-                if ((p = strchr(p, NF_SUBFIELD_SEP)) != NULL && *++p
+                if ((p = strchr(p, NF_SUBFIELD_SEP)) != nullptr && *++p
                     && isdigit((unsigned char) *p))
                     sp->StopWriting = atoi(p);
             }
@@ -605,7 +605,7 @@ SITEparseone(char *Entry, SITE *sp, char *subbed, char *poison)
             break;
         case 'I':
             if (*++p && isdigit((unsigned char) *p))
-                sp->Flushpoint = strtoul(p, NULL, 10);
+                sp->Flushpoint = strtoul(p, nullptr, 10);
             break;
         case 'N':
             while (*++p)
@@ -640,7 +640,7 @@ SITEparseone(char *Entry, SITE *sp, char *subbed, char *poison)
                 hf->type = HASHFEED_MD5;
             }
             /* Check the presence of a starting byte-offset for hashfeed. */
-            if ((u = strchr(p, '_')) != NULL) {
+            if ((u = strchr(p, '_')) != nullptr) {
                 if (sscanf(u + 1, "%u", &hf->offset) != 1 || hf->offset > 12) {
                     free(hf);
                     return "invalid hash offset for Q param in field 3";
@@ -769,21 +769,21 @@ SITEparseone(char *Entry, SITE *sp, char *subbed, char *poison)
     else
         sp->Param = xstrdup(f4);
 
-    if (sp->SpoolName == NULL)
+    if (sp->SpoolName == nullptr)
         sp->SpoolName = concatpath(innconf->pathoutgoing, sp->Name);
 
     /* Make sure there is only one %s, and only one *. */
     if (sp->Type == FTprogram) {
-        f3 = NULL;
+        f3 = nullptr;
         for (f2 = sp->Param; *f2; f2 = p + 1) {
             p = strchr(f2, '%');
-            if (p == NULL)
+            if (p == nullptr)
                 break;
             if (p[1] == '%') {
                 p++;
                 continue;
             }
-            if (f3 != NULL)
+            if (f3 != nullptr)
                 return "bad (extra) sprintf format for field 4";
             f3 = p;
             while (*++p && *p != '*' && !isalpha((unsigned char) *p))
@@ -792,8 +792,8 @@ SITEparseone(char *Entry, SITE *sp, char *subbed, char *poison)
                 return "bad sprintf format for field 4";
         }
         if (sp->FNLwantsnames
-            && ((p = strchr(sp->Param, '*')) == NULL
-                || strchr(++p, '*') != NULL))
+            && ((p = strchr(sp->Param, '*')) == nullptr
+                || strchr(++p, '*') != nullptr))
             return "multiple or no *'s in field 4";
     }
 
@@ -827,7 +827,7 @@ SITEparseone(char *Entry, SITE *sp, char *subbed, char *poison)
     nsp = SITEfind(sp->Name);
     if (nsp == sp)
         nsp = SITEfindnext(sp->Name, nsp);
-    if (nsp != NULL) {
+    if (nsp != nullptr) {
         if (nsp->Master != NOSITE)
             nsp = &Sites[nsp->Master];
         if (nsp != sp) {
@@ -836,7 +836,7 @@ SITEparseone(char *Entry, SITE *sp, char *subbed, char *poison)
         }
     }
 
-    return NULL;
+    return nullptr;
 }
 
 
@@ -854,22 +854,22 @@ SITEfunnelpatch(void)
 
     /* Get worst-case length of all sitenames. */
     for (length = 0, i = nSites, sp = Sites; --i >= 0; sp++)
-        if (sp->Name != NULL)
+        if (sp->Name != nullptr)
             length += 1 + strlen(sp->Name);
 
     /* Loop over all funnel feeds. */
     for (result = true, i = nSites, sp = Sites; --i >= 0; sp++) {
-        if (sp->Name == NULL || sp->Type != FTfunnel)
+        if (sp->Name == nullptr || sp->Type != FTfunnel)
             continue;
 
         /* Find the entry they feed in to, give that entry a buffer. */
-        if (sp->Param == NULL) {
+        if (sp->Param == nullptr) {
             syslog(L_FATAL, "%s funnel NULL", sp->Name);
             SITEfree(sp);
             result = false;
             continue;
         }
-        if ((funnel = SITEfind(sp->Param)) == NULL) {
+        if ((funnel = SITEfind(sp->Param)) == nullptr) {
             syslog(L_FATAL, "%s funnel_bad", sp->Name);
             SITEfree(sp);
             result = false;
@@ -937,13 +937,13 @@ SITEparsefile(bool StartSite)
                        "bad_newsfeeds. Must have exactly one ME entry");
                 errors++;
             } else if ((error = SITEparseone(p, &ME, subbed, poison))
-                       != NULL) {
+                       != nullptr) {
                 syslog(L_FATAL, "%s bad_newsfeeds %s", MaxLength(p, p), error);
                 errors++;
             }
             continue;
         }
-        if ((error = SITEparseone(p, sp, subbed, poison)) != NULL) {
+        if ((error = SITEparseone(p, sp, subbed, poison)) != nullptr) {
             syslog(L_FATAL, "%s bad_newsfeeds %s", MaxLength(p, p), error);
             errors++;
             continue;

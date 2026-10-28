@@ -52,12 +52,12 @@ WIPprecomfree(CHANNEL *cp)
 {
     WIP *cur;
     int i;
-    if (cp == NULL)
+    if (cp == nullptr)
         return;
 
     for (i = 0; i < PRECOMMITCACHESIZE; i++) {
         cur = cp->PrecommitWIP[i];
-        if (cur != (WIP *) NULL) {
+        if (cur != (WIP *) nullptr) {
             WIPfree(cur);
         }
     }
@@ -68,12 +68,12 @@ WIPfree(WIP *wp)
 {
     unsigned long bucket;
     WIP *cur;
-    WIP *prev = NULL;
+    WIP *prev = nullptr;
     int i;
     /* This is good error checking, but also allows us to
      *     WIPfree(WIPbymessageid(id))
      * without having to check if id exists first. */
-    if (wp == NULL)
+    if (wp == nullptr)
         return;
 
     memcpy(&bucket, &wp->MessageID,
@@ -82,18 +82,18 @@ WIPfree(WIP *wp)
 
     for (i = 0; i < PRECOMMITCACHESIZE; i++) {
         if (wp->Chan->PrecommitWIP[i] == wp) {
-            wp->Chan->PrecommitWIP[i] = (WIP *) NULL;
+            wp->Chan->PrecommitWIP[i] = (WIP *) nullptr;
             break;
         }
     }
-    for (cur = WIPtable[bucket]; (cur != NULL) && (cur != wp);
+    for (cur = WIPtable[bucket]; (cur != nullptr) && (cur != wp);
          prev = cur, cur = cur->Next)
         ;
 
-    if (cur == NULL)
+    if (cur == nullptr)
         return;
 
-    if (prev == NULL)
+    if (prev == nullptr)
         WIPtable[bucket] = cur->Next;
     else
         prev->Next = cur->Next;
@@ -112,7 +112,7 @@ WIPinprogress(const char *msgid, CHANNEL *cp, bool Precommit)
     WIP *wp;
     unsigned long i;
 
-    if ((wp = WIPbyid(msgid)) != NULL) {
+    if ((wp = WIPbyid(msgid)) != nullptr) {
         if (wp->Chan->ArtBeg == 0)
             i = 0;
         else {
@@ -126,7 +126,7 @@ WIPinprogress(const char *msgid, CHANNEL *cp, bool Precommit)
         if ((Now.tv_sec - wp->Timestamp) > (time_t) (i + innconf->wipexpire)) {
             for (i = 0; i < PRECOMMITCACHESIZE; i++) {
                 if (wp->Chan->PrecommitWIP[i] == wp) {
-                    wp->Chan->PrecommitWIP[i] = (WIP *) NULL;
+                    wp->Chan->PrecommitWIP[i] = (WIP *) nullptr;
                     break;
                 }
             }
@@ -165,11 +165,11 @@ WIPbyid(const char *messageid)
     bucket = bucket % WIPTABLESIZE;
 
     /* Traverse the list until we find a match or find the head again. */
-    for (wp = WIPtable[bucket]; wp != NULL; wp = wp->Next)
+    for (wp = WIPtable[bucket]; wp != nullptr; wp = wp->Next)
         if (!memcmp(&hash, &wp->MessageID, sizeof(HASH)))
             return wp;
 
-    return NULL;
+    return nullptr;
 }
 
 WIP *
@@ -183,9 +183,9 @@ WIPbyhash(const HASH hash)
     bucket = bucket % WIPTABLESIZE;
 
     /* Traverse the list until we find a match or find the head again. */
-    for (wp = WIPtable[bucket]; wp != NULL; wp = wp->Next)
+    for (wp = WIPtable[bucket]; wp != nullptr; wp = wp->Next)
         if (!memcmp(&hash, &wp->MessageID, sizeof(HASH)))
             return wp;
 
-    return NULL;
+    return nullptr;
 }

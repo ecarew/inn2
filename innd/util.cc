@@ -60,7 +60,7 @@ MaxLength(const char *p, const char *q)
     unsigned int i;
 
     /* Return an empty string when p is NULL. */
-    if (p == NULL) {
+    if (p == nullptr) {
         *buff = '\0';
         return buff;
     }
@@ -73,7 +73,7 @@ MaxLength(const char *p, const char *q)
     }
 
     /* Simple case of just want the beginning? */
-    if (q == NULL || (unsigned) (q - p) < sizeof buff - 4) {
+    if (q == nullptr || (unsigned) (q - p) < sizeof buff - 4) {
         strlcpy(buff, p, sizeof(buff) - 3);
         strlcat(buff, "...", sizeof(buff));
     }
@@ -118,7 +118,7 @@ CommaSplit(char *text)
             *av++ = p;
         } else
             p++;
-    *av = NULL;
+    *av = nullptr;
     return save;
 }
 
@@ -132,7 +132,7 @@ void
 SetupListBuffer(int size, LISTBUFFER *list)
 {
     /* get space for data to be split */
-    if (list->Data == NULL) {
+    if (list->Data == nullptr) {
         list->DataLength = size;
         list->Data = xmalloc(list->DataLength + 1);
     } else if (list->DataLength < size) {
@@ -140,7 +140,7 @@ SetupListBuffer(int size, LISTBUFFER *list)
         list->Data = xrealloc(list->Data, list->DataLength + 1);
     }
     /* get an array of character pointers. */
-    if (list->List == NULL) {
+    if (list->List == nullptr) {
         list->ListLength = DEFAULTNGBOXSIZE;
         list->List = xmalloc(list->ListLength * sizeof(char *));
     }
@@ -162,7 +162,7 @@ NeedShell(char *p, const char **av, const char **end)
     if (*p != '/')
         return true;
     for (q = p; *q; q++)
-        if (strchr(Metachars, *q) != NULL)
+        if (strchr(Metachars, *q) != nullptr)
             return true;
 
     for (end--; av < end;) {
@@ -172,7 +172,7 @@ NeedShell(char *p, const char **av, const char **end)
 
         /* If end of list, we're done. */
         if (*p == '\0') {
-            *av = NULL;
+            *av = nullptr;
             return false;
         }
 
@@ -180,7 +180,7 @@ NeedShell(char *p, const char **av, const char **end)
         for (*p++ = '\0'; ISWHITE(*p); p++)
             continue;
         if (*p == '\0') {
-            *av = NULL;
+            *av = nullptr;
             return false;
         }
     }
@@ -274,11 +274,11 @@ ThrottleIOError(const char *when)
         oerrno = errno;
         if (Reservation) {
             free(Reservation);
-            Reservation = NULL;
+            Reservation = nullptr;
         }
         snprintf(buff, sizeof(buff), "%s writing %s file -- throttling",
                  strerror(oerrno), when);
-        if ((p = CCblock(OMthrottled, buff)) != NULL)
+        if ((p = CCblock(OMthrottled, buff)) != nullptr)
             syslog(L_ERROR, "%s cant throttle %s", LogName, p);
         syslog(L_FATAL, "%s throttle %s", LogName, buff);
         errno = oerrno;
@@ -298,11 +298,11 @@ ThrottleNoMatchError(void)
     if (Mode == OMrunning) {
         if (Reservation) {
             free(Reservation);
-            Reservation = NULL;
+            Reservation = nullptr;
         }
         snprintf(buff, sizeof(buff), "%s storing article -- throttling",
                  SMerrorstr);
-        if ((p = CCblock(OMthrottled, buff)) != NULL)
+        if ((p = CCblock(OMthrottled, buff)) != nullptr)
             syslog(L_ERROR, "%s cant throttle %s", LogName, p);
         syslog(L_FATAL, "%s throttle %s", LogName, buff);
         ThrottledbyIOError = true;
@@ -317,7 +317,7 @@ InndHisOpen(void)
     size_t synccount;
 
     histpath = concatpath(innconf->pathhistory, INN_PATH_HISTORY);
-    if (innconf->hismethod == NULL) {
+    if (innconf->hismethod == nullptr) {
         sysdie("hismethod is not defined");
         /*NOTREACHED*/
     }
@@ -337,7 +337,7 @@ InndHisOpen(void)
 void
 InndHisClose(void)
 {
-    if (History == NULL)
+    if (History == nullptr)
         return;
     if (!HISclose(History)) {
         char *histpath;
@@ -347,7 +347,7 @@ InndHisClose(void)
         /* NOTREACHED */
         free(histpath);
     }
-    History = NULL;
+    History = nullptr;
 }
 
 bool

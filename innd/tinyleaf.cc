@@ -49,9 +49,9 @@ static void command_quit(struct cvector *, void *);
 /* The actual command dispatch table for TinyNNTP.  This table MUST be
    sorted. */
 static const struct dispatch commands[] = {
-    {"help",  command_help,  0, 0, NULL},
-    {"ihave", command_ihave, 1, 1, NULL},
-    {"quit",  command_quit,  0, 0, NULL},
+    {"help",  command_help,  0, 0, nullptr},
+    {"ihave", command_ihave, 1, 1, nullptr},
+    {"quit",  command_quit,  0, 0, nullptr},
 };
 
 /* Global state for the daemon. */
@@ -72,7 +72,7 @@ shutdown(struct state *state)
 {
     int status;
 
-    if (state->processor != NULL) {
+    if (state->processor != nullptr) {
         status = pclose(state->processor);
         if (status == -1)
             syswarn("unable to wait for processor");
@@ -145,7 +145,7 @@ command_ihave(struct cvector *command, void *cookie)
         sysdie("unable to write article %s to file %s", msgid, filename);
     }
     close(fd);
-    if (state->processor != NULL) {
+    if (state->processor != nullptr) {
         fprintf(state->processor, "%s %s\n", filename, msgid);
         if (fflush(state->processor) == EOF || ferror(state->processor))
             sysdie("unable to flush %s to processor", filename);
@@ -221,7 +221,7 @@ command_unknown(struct cvector *command UNUSED, void *cookie)
 int
 main(int argc, char *argv[])
 {
-    struct state state = {NULL, 0, 0, NULL};
+    struct state state = {nullptr, 0, 0, nullptr};
     struct cvector *command;
     enum nntp_status status;
 
@@ -239,9 +239,9 @@ main(int argc, char *argv[])
     /* If a processing command was specified, open a pipe to it. */
     if (argc == 3) {
         state.processor = popen(argv[2], "w");
-        if (state.processor == NULL)
+        if (state.processor == nullptr)
             sysdie("cannot open a pipe to %s", argv[2]);
-        setvbuf(state.processor, NULL, _IONBF, BUFSIZ);
+        setvbuf(state.processor, nullptr, _IONBF, BUFSIZ);
     }
 
     /* Go into the main input loop.  The only commands we support, for now,

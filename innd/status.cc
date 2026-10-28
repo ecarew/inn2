@@ -61,10 +61,10 @@ STATUSgettime(void)
     struct timeval tv;
 
     if (!init) {
-        gettimeofday(&start_tv, NULL);
+        gettimeofday(&start_tv, nullptr);
         init++;
     }
-    gettimeofday(&tv, NULL);
+    gettimeofday(&tv, nullptr);
     return ((tv.tv_sec - start_tv.tv_sec) * 1000
             + (tv.tv_usec - start_tv.tv_usec) / 1000);
 }
@@ -75,7 +75,7 @@ STATUSinit(void)
     time_t now;
 
     STATUSlast_time = STATUSgettime(); /* First invocation */
-    now = time(NULL);
+    now = time(nullptr);
     strlcpy(start_time, ctime(&now), sizeof(start_time));
 }
 
@@ -122,7 +122,7 @@ STATUSsummary(void)
     } else {
         path = concatpath(innconf->pathlog, "inn.status");
     }
-    if ((F = Fopen(path, "w", TEMPORARYOPEN)) == NULL) {
+    if ((F = Fopen(path, "w", TEMPORARYOPEN)) == nullptr) {
         syswarn("SERVER cant open %s", path);
         return;
     }
@@ -139,16 +139,16 @@ STATUSsummary(void)
     fprintf(F, "%s\n", INN_VERSION_STRING);
     fprintf(F, "pid %d started %s\n", (int) getpid(), start_time);
 
-    tmp = head = NULL;
-    for (i = 0; (cp = CHANiter(&i, CTnntp)) != NULL;) {
+    tmp = head = nullptr;
+    for (i = 0; (cp = CHANiter(&i, CTnntp)) != nullptr;) {
         strlcpy(TempString,
                 cp->Address.ss_family == 0 ? "localhost" : RChostname(cp),
                 sizeof(TempString));
-        for (status = head; status != NULL; status = status->next) {
+        for (status = head; status != nullptr; status = status->next) {
             if (strcmp(TempString, status->name) == 0)
                 break;
         }
-        if (status == NULL) {
+        if (status == nullptr) {
             status = xmalloc(sizeof(STATUS));
             peers++; /* A new peer. */
             strlcpy(status->name, TempString, sizeof(status->name));
@@ -176,8 +176,8 @@ STATUSsummary(void)
             status->Duplicate = status->Unwanted_u = 0;
             status->Unwanted_d = status->Unwanted_g = 0;
             status->Unwanted_s = status->Unwanted_f = 0;
-            status->next = NULL;
-            if (head == NULL)
+            status->next = nullptr;
+            if (head == nullptr)
                 head = status;
             else
                 tmp->next = status;
@@ -188,8 +188,8 @@ STATUSsummary(void)
             /* Concatenate the addresses if it is a new one.
              * Make sure we have enough space to write the entire new address.
              */
-            if ((((p = strstr(status->ip_addr, other_ip_addr)) == NULL)
-                 || ((p != NULL) && (p[strlen(other_ip_addr)] != ' ')
+            if ((((p = strstr(status->ip_addr, other_ip_addr)) == nullptr)
+                 || ((p != nullptr) && (p[strlen(other_ip_addr)] != ' ')
                      && (p[strlen(other_ip_addr)] != '\0')))
                 && (strlen(status->ip_addr) + strlen(other_ip_addr) + 1
                     < sizeof(status->ip_addr))) {
@@ -243,7 +243,7 @@ STATUSsummary(void)
     }
 
     /* Header */
-    now = time(NULL);
+    now = time(nullptr);
     strlcpy(TempString, ctime(&now), sizeof(TempString));
     fprintf(F, "Updated: %s", TempString);
     fprintf(F, "(peers: %d, active-cxns: %d, sleeping-cxns: %d)\n\n", peers,
@@ -328,7 +328,7 @@ STATUSsummary(void)
     }
 
     /* Incoming Feeds */
-    for (status = head; status != NULL;) {
+    for (status = head; status != nullptr;) {
         fprintf(F, "%s\n", status->name);
         fprintf(F, " ip address: %s\n", status->ip_addr);
         fprintf(F, "    seconds: %-7lu  ", (unsigned long) status->seconds);

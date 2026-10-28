@@ -19,7 +19,7 @@
 #    undef HAVE_MMAP
 #endif
 
-static char *ICDactpath = NULL;
+static char *ICDactpath = nullptr;
 static char *ICDactpointer;
 static int ICDactfd;
 static int ICDactsize;
@@ -61,7 +61,7 @@ ICDcloseactive(void)
 #else
         free(ICDactpointer);
 #endif
-        ICDactpointer = NULL;
+        ICDactpointer = nullptr;
         if (close(ICDactfd) < 0) {
             syslog(L_FATAL, "%s cant close %s %m", LogName, ICDactpath);
             exit(1);
@@ -82,15 +82,15 @@ ICDsetup(bool StartSites)
         ICDcloseactive();
         NGparsefile();
     }
-    if (NGfind("control") == NULL || NGfind("junk") == NULL) {
+    if (NGfind("control") == nullptr || NGfind("junk") == nullptr) {
         syslog(L_FATAL, "%s internal no control and/or junk group", LogName);
         exit(1);
     }
-    if (NGfind("control.cancel") == NULL) {
+    if (NGfind("control.cancel") == nullptr) {
         syslog(L_FATAL, "%s internal no control.cancel group", LogName);
         exit(1);
     }
-    if (innconf->mergetogroups && NGfind("to") == NULL) {
+    if (innconf->mergetogroups && NGfind("to") == nullptr) {
         syslog(L_FATAL, "%s internal no to group", LogName);
         exit(1);
     }
@@ -155,8 +155,8 @@ ICDrenumberactive(void)
 static bool
 ICDwritevactive(struct iovec *vp, int vpcount)
 {
-    static char *BACKUP = NULL;
-    static char *NEWACT = NULL;
+    static char *BACKUP = nullptr;
+    static char *NEWACT = nullptr;
     static char WHEN[] = "backup active";
     int fd;
     int oerrno;
@@ -167,9 +167,9 @@ ICDwritevactive(struct iovec *vp, int vpcount)
     int i;
 #endif
 
-    if (BACKUP == NULL)
+    if (BACKUP == nullptr)
         BACKUP = concatpath(innconf->pathdb, INN_PATH_OLDACTIVE);
-    if (NEWACT == NULL)
+    if (NEWACT == nullptr)
         NEWACT = concatpath(innconf->pathdb, INN_PATH_NEWACTIVE);
     /* Write the current file to a backup. */
     if (unlink(BACKUP) < 0 && errno != ENOENT) {
@@ -335,7 +335,7 @@ ICDchangegroup(NEWSGROUP *ngp, char *Rest)
 bool
 ICDnewgroup(char *Name, char *Rest)
 {
-    char *buff = NULL;
+    char *buff = nullptr;
     struct iovec iov[2];
     bool ret;
 
@@ -439,7 +439,7 @@ ICDreadactive(char **endp)
         *endp = ICDactpointer + ICDactsize;
         return ICDactpointer;
     }
-    if (ICDactpath == NULL)
+    if (ICDactpath == nullptr)
         ICDactpath = concatpath(innconf->pathdb, INN_PATH_ACTIVE);
     if ((ICDactfd = open(ICDactpath, O_RDWR)) < 0) {
         syslog(L_FATAL, "%s cant open %s %m", LogName, ICDactpath);
@@ -461,7 +461,7 @@ ICDreadactive(char **endp)
     ICDactsize = (int) Sb.st_size;
 
     ICDactpointer = static_cast<char *>(mmap(
-        NULL, ICDactsize, PROT_READ | PROT_WRITE, MAP_SHARED, ICDactfd, 0));
+        nullptr, ICDactsize, PROT_READ | PROT_WRITE, MAP_SHARED, ICDactfd, 0));
     if (ICDactpointer == (char *) -1) {
         syslog(L_FATAL, "%s cant mmap %d %s %m", LogName, ICDactfd,
                ICDactpath);

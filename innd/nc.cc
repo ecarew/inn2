@@ -64,12 +64,12 @@ static NCDISPATCH NCcommands[] = {
     COMMAND("CAPABILITIES",  NCcapabilities, false, 1, 2, true,  "[keyword]"),
     COMMAND("CHECK",         NCcheck,        true,  2, 2, false, "message-ID"),
     COMMAND("HEAD",          NChead,         true,  1, 2, true,  "message-ID"),
-    COMMAND("HELP",          NChelp,         false, 1, 1, true,  NULL),
+    COMMAND("HELP",          NChelp,         false, 1, 1, true,  nullptr),
     COMMAND("IHAVE",         NCihave,        true,  2, 2, true,  "message-ID"),
     COMMAND("LIST",          NClist,         true,  1, 3, true,
         "[ACTIVE [wildmat]|ACTIVE.TIMES [wildmat]|MOTD|NEWSGROUPS [wildmat]]"),
     COMMAND("MODE",          NCmode,         false, 2, 2, true,  "READER"),
-    COMMAND("QUIT",          NCquit,         false, 1, 1, true,  NULL),
+    COMMAND("QUIT",          NCquit,         false, 1, 1, true,  nullptr),
     COMMAND("STAT",          NCstat,         true,  1, 2, true,  "message-ID"),
     COMMAND("TAKETHIS",      NCtakethis,     true,  2, 2, false, "message-ID"),
     COMMAND("XBATCH",        NCxbatch,       true,  2, 2, true,  "size"),
@@ -339,7 +339,7 @@ NChead(CHANNEL *cp)
 {
     TOKEN token;
     ARTHANDLE *art;
-    char *buff = NULL;
+    char *buff = nullptr;
 
     cp->Start = cp->Next;
 
@@ -372,13 +372,13 @@ NChead(CHANNEL *cp)
 
     /* Get the article token and retrieve it (to make sure
      * the article is still here). */
-    if (!HISlookup(History, cp->av[1], NULL, NULL, NULL, &token)) {
+    if (!HISlookup(History, cp->av[1], nullptr, nullptr, nullptr, &token)) {
         xasprintf(&buff, "%d No such article", NNTP_FAIL_MSGID_NOTFOUND);
         NCwritereply(cp, buff);
         free(buff);
         return;
     }
-    if ((art = SMretrieve(token, RETR_HEAD)) == NULL) {
+    if ((art = SMretrieve(token, RETR_HEAD)) == nullptr) {
         xasprintf(&buff, "%d No such article", NNTP_FAIL_MSGID_NOTFOUND);
         NCwritereply(cp, buff);
         free(buff);
@@ -405,7 +405,7 @@ NCstat(CHANNEL *cp)
 {
     TOKEN token;
     ARTHANDLE *art;
-    char *buff = NULL;
+    char *buff = nullptr;
 
     cp->Start = cp->Next;
 
@@ -438,13 +438,13 @@ NCstat(CHANNEL *cp)
 
     /* Get the article token and retrieve it (to make sure
      * the article is still here). */
-    if (!HISlookup(History, cp->av[1], NULL, NULL, NULL, &token)) {
+    if (!HISlookup(History, cp->av[1], nullptr, nullptr, nullptr, &token)) {
         xasprintf(&buff, "%d No such article", NNTP_FAIL_MSGID_NOTFOUND);
         NCwritereply(cp, buff);
         free(buff);
         return;
     }
-    if ((art = SMretrieve(token, RETR_STAT)) == NULL) {
+    if ((art = SMretrieve(token, RETR_STAT)) == nullptr) {
         xasprintf(&buff, "%d No such article", NNTP_FAIL_MSGID_NOTFOUND);
         NCwritereply(cp, buff);
         free(buff);
@@ -465,7 +465,7 @@ NCstat(CHANNEL *cp)
 static void
 NCauthinfo(CHANNEL *cp)
 {
-    char *buff = NULL;
+    char *buff = nullptr;
     cp->Start = cp->Next;
 
     /* Make sure we're getting only AUTHINFO USER/PASS commands. */
@@ -530,7 +530,7 @@ NChelp(CHANNEL *cp)
 {
     static char LINE1[] = "For more information, contact \"";
     static char LINE2[] = "\" at this machine.";
-    char *buff = NULL;
+    char *buff = nullptr;
     NCDISPATCH *dp;
 
     cp->Start = cp->Next;
@@ -544,7 +544,7 @@ NChelp(CHANNEL *cp)
                 || (dp->Function != NCcheck && dp->Function != NCtakethis)) {
                 WCHANappend(cp, "  ", 2);
                 WCHANappend(cp, dp->Name, strlen(dp->Name));
-                if (dp->Help != NULL) {
+                if (dp->Help != nullptr) {
                     WCHANappend(cp, " ", 1);
                     WCHANappend(cp, dp->Help, strlen(dp->Help));
                 }
@@ -565,7 +565,7 @@ NChelp(CHANNEL *cp)
 static void
 NCcapabilities(CHANNEL *cp)
 {
-    char *buff = NULL;
+    char *buff = nullptr;
 
     cp->Start = cp->Next;
 
@@ -605,7 +605,7 @@ NCcapabilities(CHANNEL *cp)
     }
 
     if (cp->CanAuthenticate && !innconf->noreader
-        && (NNRPReason == NULL || innconf->readerswhenstopped)) {
+        && (NNRPReason == nullptr || innconf->readerswhenstopped)) {
         WCHANappend(cp, "MODE-READER", 11);
         WCHANappend(cp, NCterm, strlen(NCterm));
     }
@@ -631,7 +631,7 @@ NCcapabilities(CHANNEL *cp)
 static void
 NCihave(CHANNEL *cp)
 {
-    char *buff = NULL;
+    char *buff = nullptr;
 #if defined(DO_PERL) || defined(DO_PYTHON)
     char *filterrc = NULL;
     size_t msglen;
@@ -752,7 +752,7 @@ NCihave(CHANNEL *cp)
 static void
 NCxbatch(CHANNEL *cp)
 {
-    char *buff = NULL;
+    char *buff = nullptr;
 
     cp->Start = cp->Next;
 
@@ -803,7 +803,7 @@ NClist(CHANNEL *cp)
     QIOSTATE *qp;
     char *p, *path, *save;
     char savec;
-    char *buff = NULL;
+    char *buff = nullptr;
     bool checkutf8 = false;
 
     cp->Start = cp->Next;
@@ -812,7 +812,7 @@ NClist(CHANNEL *cp)
         /* Even authenticated, a peer that has list set to false will not
          * be able to use the LIST command. */
         if (!cp->CanAuthenticate || innconf->noreader
-            || (NNRPReason != NULL && !innconf->readerswhenstopped))
+            || (NNRPReason != nullptr && !innconf->readerswhenstopped))
             xasprintf(&buff, "%d Permission denied", NNTP_ERR_ACCESS);
         else
             xasprintf(&buff, "%d MODE-READER", NNTP_FAIL_WRONG_MODE);
@@ -826,7 +826,7 @@ NClist(CHANNEL *cp)
         path = concatpath(innconf->pathdb, INN_PATH_ACTIVE);
         qp = QIOopen(path);
         free(path);
-        if (qp == NULL) {
+        if (qp == nullptr) {
             xasprintf(&buff, "%d No list of active newsgroups available",
                       NNTP_ERR_UNAVAILABLE);
             NCwritereply(cp, buff);
@@ -842,7 +842,7 @@ NClist(CHANNEL *cp)
         path = concatpath(innconf->pathdb, INN_PATH_NEWSGROUPS);
         qp = QIOopen(path);
         free(path);
-        if (qp == NULL) {
+        if (qp == nullptr) {
             xasprintf(&buff, "%d No list of newsgroup descriptions available",
                       NNTP_ERR_UNAVAILABLE);
             NCwritereply(cp, buff);
@@ -860,7 +860,7 @@ NClist(CHANNEL *cp)
         path = concatpath(innconf->pathdb, INN_PATH_ACTIVETIMES);
         qp = QIOopen(path);
         free(path);
-        if (qp == NULL) {
+        if (qp == nullptr) {
             xasprintf(&buff,
                       "%d No list of newsgroup creation times available",
                       NNTP_ERR_UNAVAILABLE);
@@ -886,7 +886,7 @@ NClist(CHANNEL *cp)
         path = concatpath(innconf->pathetc, INN_PATH_MOTD_INND);
         qp = QIOopen(path);
         free(path);
-        if (qp == NULL) {
+        if (qp == nullptr) {
             xasprintf(&buff, "%d No message of the day available",
                       NNTP_ERR_UNAVAILABLE);
             NCwritereply(cp, buff);
@@ -899,7 +899,7 @@ NClist(CHANNEL *cp)
             free(buff);
         }
     } else if (cp->CanAuthenticate && !innconf->noreader
-               && (NNRPReason == NULL || innconf->readerswhenstopped)
+               && (NNRPReason == nullptr || innconf->readerswhenstopped)
                && (strcasecmp(cp->av[1], "COUNTS") == 0
                    || strcasecmp(cp->av[1], "DISTRIB.PATS") == 0
                    || strcasecmp(cp->av[1], "DISTRIBUTIONS") == 0
@@ -919,7 +919,7 @@ NClist(CHANNEL *cp)
     }
 
     /* Loop over all lines, sending the text and "\r\n". */
-    while ((p = QIOread(qp)) != NULL) {
+    while ((p = QIOread(qp)) != nullptr) {
         /* Check that the output does not break the NNTP protocol. */
         if (p[0] == '.' && p[1] != '.') {
             syslog(L_ERROR, "%s NClist bad dot-stuffing in file %s",
@@ -988,7 +988,7 @@ NCmode(CHANNEL *cp)
             NCwritereply(cp, buff);
             return;
         }
-        if (NNRPReason != NULL && !innconf->readerswhenstopped) {
+        if (NNRPReason != nullptr && !innconf->readerswhenstopped) {
             /* Server paused or throttled. */
             snprintf(buff, sizeof(buff), "%d %s", NNTP_FAIL_ACTION,
                      NNRPReason);
@@ -1061,7 +1061,7 @@ NC_reader(CHANNEL *cp)
     cp->Start = cp->Next;
 
     if (!cp->CanAuthenticate || innconf->noreader
-        || (NNRPReason != NULL && !innconf->readerswhenstopped))
+        || (NNRPReason != nullptr && !innconf->readerswhenstopped))
         snprintf(buff, sizeof(buff), "%d Permission denied", NNTP_ERR_ACCESS);
     else
         snprintf(buff, sizeof(buff), "%d MODE-READER", NNTP_FAIL_WRONG_MODE);
@@ -1207,9 +1207,9 @@ NCproc(CHANNEL *cp)
 
             /* We got something -- stop sleeping (in case we were). */
             SCHANremove(cp);
-            if (cp->Argument != NULL) {
+            if (cp->Argument != nullptr) {
                 free(cp->Argument);
-                cp->Argument = NULL;
+                cp->Argument = nullptr;
             }
 
             /* When MODE CANCEL is used... */
@@ -1310,10 +1310,10 @@ NCproc(CHANNEL *cp)
                    we're writing-goodbye */
                 if (cp->Type == CTfree)
                     return;
-                for (i = 0; (p = NCquietlist[i]) != NULL; i++)
+                for (i = 0; (p = NCquietlist[i]) != nullptr; i++)
                     if (strcasecmp(p, q) == 0)
                         break;
-                if (p == NULL)
+                if (p == nullptr)
                     syslog(L_NOTICE, "%s bad_command %s", CHANname(cp),
                            MaxLength(q, q));
                 break;
@@ -1492,9 +1492,9 @@ NCproc(CHANNEL *cp)
             }
 
             SCHANremove(cp);
-            if (cp->Argument != NULL) {
+            if (cp->Argument != nullptr) {
                 free(cp->Argument);
-                cp->Argument = NULL;
+                cp->Argument = nullptr;
             }
             NCpostit(cp);
             /* Clear the work-in-progress entry. */
@@ -1518,9 +1518,9 @@ NCproc(CHANNEL *cp)
             if (i < bp->used) { /* did find terminator */
                 /* Reached the end of the command line. */
                 SCHANremove(cp);
-                if (cp->Argument != NULL) {
+                if (cp->Argument != nullptr) {
                     free(cp->Argument);
-                    cp->Argument = NULL;
+                    cp->Argument = nullptr;
                 }
                 i += cp->LargeCmdSize;
                 syslog(
@@ -1576,7 +1576,7 @@ NCproc(CHANNEL *cp)
                 int fd, oerrno, failed;
                 time_t now;
 
-                now = time(NULL);
+                now = time(nullptr);
                 failed = 0;
                 /* time+channel file descriptor should make an unique file name
                  */
@@ -1668,10 +1668,10 @@ NCproc(CHANNEL *cp)
                  */
                 data->CurHeader -= cp->Start;
                 data->Body -= cp->Start;
-                if (data->BytesHeader != NULL)
+                if (data->BytesHeader != nullptr)
                     data->BytesHeader -= cp->Start;
                 for (i = 0; i < MAX_ARTHEADER; i++, hc++) {
-                    if (hc->Value != NULL)
+                    if (hc->Value != nullptr)
                         hc->Value -= cp->Start;
                 }
             }
@@ -1734,7 +1734,7 @@ NCsetup(void)
      * for sure that the client will not be able to use POST during its
      * entire session. */
     p = innconf->pathhost;
-    if (p == NULL)
+    if (p == nullptr)
         /* Worked in main, now it fails?  Curious. */
         p = Path.data;
     snprintf(buff, sizeof(buff),
@@ -1754,7 +1754,7 @@ NCclose(void)
     int j;
 
     /* Close all incoming channels. */
-    for (j = 0; (cp = CHANiter(&j, CTnntp)) != NULL;) {
+    for (j = 0; (cp = CHANiter(&j, CTnntp)) != nullptr;) {
         if (NCcount > 0)
             NCcount--;
         CHANclose(cp, CHANname(cp));
@@ -1803,22 +1803,22 @@ NCcreate(int fd, bool MustAuthorize, bool IsLocal)
     NCcount++;
     if (Mode == OMthrottled) {
         NCwriteshutdown(cp, ModeReason);
-        return NULL;
+        return nullptr;
     }
     if (RejectReason) {
         NCwriteshutdown(cp, RejectReason);
-        return NULL;
+        return nullptr;
     }
 
     /* See if we have too many channels. */
     if (!IsLocal && innconf->maxconnections != 0
         && NCcount >= innconf->maxconnections && !RCnolimit(cp)) {
         /* Recount, just in case we got out of sync. */
-        for (NCcount = 0, i = 0; CHANiter(&i, CTnntp) != NULL;)
+        for (NCcount = 0, i = 0; CHANiter(&i, CTnntp) != nullptr;)
             NCcount++;
         if (NCcount >= innconf->maxconnections) {
             NCwriteshutdown(cp, "Too many connections");
-            return NULL;
+            return nullptr;
         }
     }
     cp->BadReads = 0;
@@ -1839,7 +1839,7 @@ NCcreate(int fd, bool MustAuthorize, bool IsLocal)
 static void
 NCcheck(CHANNEL *cp)
 {
-    char *buff = NULL;
+    char *buff = nullptr;
     size_t idlen, msglen;
 #if defined(DO_PERL) || defined(DO_PYTHON)
     char *filterrc = NULL;
@@ -2019,7 +2019,7 @@ NCtakethis(CHANNEL *cp)
     cp->State = CSgetheader;
     ARTprepare(cp);
     /* Set WIP for benefit of later code in NCreader. */
-    if ((wp = WIPbyid(mid)) == (WIP *) NULL)
+    if ((wp = WIPbyid(mid)) == (WIP *) nullptr)
         wp = WIPnew(mid, cp);
     cp->CurrentMessageIDHash = wp->MessageID;
 }
@@ -2030,7 +2030,7 @@ NCtakethis(CHANNEL *cp)
 static void
 NCcancel(CHANNEL *cp)
 {
-    char *argv[2] = {NULL, NULL};
+    char *argv[2] = {nullptr, nullptr};
     char buff[SMBUF];
     const char *res;
 

@@ -71,7 +71,7 @@ static const char *CCpython(char *av[]);
 static const char *CClowmark(char *av[]);
 
 
-static char *CCpath = NULL;
+static char *CCpath = nullptr;
 static char **CCargv;
 static char CCnosite[] = "1 No such site";
 static char CCwrongtype[] = "1 Wrong site type";
@@ -146,7 +146,7 @@ CCcopyargv(char *av[])
             continue;
         *v++ = xstrdup(*av);
     }
-    *v = NULL;
+    *v = nullptr;
 }
 
 
@@ -228,7 +228,7 @@ static const char *
 CCgetid(char *p, const char **store)
 {
     static char NULLMESGID[] = "1 Empty Message-ID";
-    static struct buffer Save = {0, 0, 0, NULL};
+    static struct buffer Save = {0, 0, 0, nullptr};
     int i;
 
     if (*p == '\0')
@@ -237,7 +237,7 @@ CCgetid(char *p, const char **store)
         if (p[1] == '\0' || p[1] == '>')
             return NULLMESGID;
         *store = p;
-        return NULL;
+        return nullptr;
     }
 
     /* Make sure the Message-ID buffer has room. */
@@ -245,7 +245,7 @@ CCgetid(char *p, const char **store)
     buffer_resize(&Save, i);
     *store = Save.data;
     snprintf(Save.data, Save.size, "<%s>", p);
-    return NULL;
+    return nullptr;
 }
 
 
@@ -278,7 +278,7 @@ CCaddhist(char *av[])
 
     /* You must pass a <message-id> ID, the history API will hash it as it
      * wants */
-    if ((p = CCgetid(av[0], &msgid)) != NULL)
+    if ((p = CCgetid(av[0], &msgid)) != nullptr)
         return p;
 
     /* If paused, don't try to use the history database since expire may be
@@ -324,7 +324,7 @@ CCaddhist(char *av[])
                           &token);
         InndHisClose();
     }
-    return ok ? NULL : "1 Write failed";
+    return ok ? nullptr : "1 Write failed";
 }
 
 
@@ -336,15 +336,15 @@ CCallow(char *av[])
 {
     char *p;
 
-    if (RejectReason == NULL)
+    if (RejectReason == nullptr)
         return "1 Already allowed";
     p = av[0];
     if (*p && strcmp(p, RejectReason) != 0)
         return "1 Wrong reason";
     free(RejectReason);
-    RejectReason = NULL;
+    RejectReason = nullptr;
     CCsdnotify();
-    return NULL;
+    return nullptr;
 }
 
 
@@ -366,18 +366,18 @@ CCbegin(char *av[])
     char *poison;
 
     /* If site already exists, drop it. */
-    if (SITEfind(av[0]) != NULL && (p1 = CCdrop(av)) != NULL)
+    if (SITEfind(av[0]) != nullptr && (p1 = CCdrop(av)) != nullptr)
         return p1;
 
     /* Find the named site. */
     length = strlen(av[0]);
-    for (strings = SITEreadfile(true), i = 0; (p = strings[i]) != NULL; i++)
+    for (strings = SITEreadfile(true), i = 0; (p = strings[i]) != nullptr; i++)
         if (strncasecmp(p, av[0], length) == 0
             && (p[length] == NF_FIELD_SEP || p[length] == NF_SUBFIELD_SEP)) {
             p = xstrdup(p);
             break;
         }
-    if (p == NULL)
+    if (p == nullptr)
         return CCnosite;
 
     if (p[0] == 'M' && p[1] == 'E' && p[2] == NF_FIELD_SEP)
@@ -386,7 +386,7 @@ CCbegin(char *av[])
         /* Get space for the new site entry, and space for it in all
          * the groups. */
         for (i = nSites, sp = Sites; --i >= 0; sp++)
-            if (sp->Name == NULL)
+            if (sp->Name == nullptr)
                 break;
         if (i < 0) {
             nSites++;
@@ -406,7 +406,7 @@ CCbegin(char *av[])
     error = SITEparseone(p, sp, subbed, poison);
     free(subbed);
     free(poison);
-    if (error != NULL) {
+    if (error != nullptr) {
         free((void *) p);
         syslog(L_ERROR, "%s bad_newsfeeds %s", av[0], error);
         return "1 Parse error";
@@ -415,7 +415,7 @@ CCbegin(char *av[])
     if (sp != &ME && (!SITEsetup(sp) || !SITEfunnelpatch()))
         return "1 Startup error";
     SITEforward(sp, "begin");
-    return NULL;
+    return nullptr;
 }
 
 
@@ -432,7 +432,7 @@ CCdochange(NEWSGROUP *ngp, char *Rest)
     if (ngp->Rest[0] == Rest[0]) {
         length = strlen(Rest);
         end = strchr(ngp->Rest, '\n');
-        if (end != NULL && (size_t) (end - ngp->Rest) == length
+        if (end != nullptr && (size_t) (end - ngp->Rest) == length
             && memcmp(ngp->Rest, Rest, length) == 0)
             return "0 Group status unchanged";
     }
@@ -447,7 +447,7 @@ CCdochange(NEWSGROUP *ngp, char *Rest)
     }
     syslog(L_NOTICE, "%s change_group %s to %s", LogName, p, Rest);
     free(p);
-    return NULL;
+    return nullptr;
 }
 
 
@@ -460,7 +460,7 @@ CCchgroup(char *av[])
     NEWSGROUP *ngp;
     char *Rest;
 
-    if ((ngp = NGfind(av[0])) == NULL)
+    if ((ngp = NGfind(av[0])) == nullptr)
         return CCnogroup;
     Rest = av[1];
     if (Rest[0] != NF_FLAG_ALIAS) {
@@ -484,7 +484,7 @@ CCcancel(char *av[])
     Data.Posted = Data.Arrived = Now.tv_sec;
     Data.Expires = 0;
     Data.Feedsite = "?";
-    if ((p = CCgetid(av[0], &msgid)) != NULL)
+    if ((p = CCgetid(av[0], &msgid)) != nullptr)
         return p;
 
     Data.HdrContent[HDR__MESSAGE_ID].Value = (char *) msgid;
@@ -505,7 +505,7 @@ CCcancel(char *av[])
     }
     if (innconf->logcancelcomm)
         syslog(L_NOTICE, "%s cancelled %s", LogName, msgid);
-    return NULL;
+    return nullptr;
 }
 
 
@@ -527,16 +527,17 @@ CCcheckfile(char *av[] UNUSED)
     /* Parse all site entries. */
     strings = SITEreadfile(false);
     fake.Buffer.size = 0;
-    fake.Buffer.data = NULL;
+    fake.Buffer.data = nullptr;
     /* save global variables not to be changed */
     needheaders = NeedHeaders;
     needoverview = NeedOverview;
     needpath = NeedPath;
     needstoredgroup = NeedStoredGroup;
     needreplicdata = NeedReplicdata;
-    for (errors = 0, i = 0; (p = strings[i]) != NULL; i++) {
-        if ((error = SITEparseone(p, &fake, (char *) NULL, (char *) NULL))
-            != NULL) {
+    for (errors = 0, i = 0; (p = strings[i]) != nullptr; i++) {
+        if ((error =
+                 SITEparseone(p, &fake, (char *) nullptr, (char *) nullptr))
+            != nullptr) {
             syslog(L_ERROR, "%s bad_newsfeeds %s", MaxLength(p, p), error);
             errors++;
         }
@@ -551,7 +552,7 @@ CCcheckfile(char *av[] UNUSED)
     NeedReplicdata = needreplicdata;
 
     if (errors == 0)
-        return NULL;
+        return nullptr;
 
     buffer_sprintf(&CCreply, "1 Found %d error(s) -- see syslog", errors);
     return CCreply.data;
@@ -571,7 +572,7 @@ CCdrop(char *av[])
     int i;
     int j;
 
-    if ((sp = SITEfind(av[0])) == NULL)
+    if ((sp = SITEfind(av[0])) == nullptr)
         return CCnosite;
 
     SITEdrop(sp);
@@ -586,7 +587,7 @@ CCdrop(char *av[])
                 *ip = NOSITE;
     }
 
-    return NULL;
+    return nullptr;
 }
 
 /*
@@ -602,11 +603,11 @@ CCfeedinfo(char *av[])
     buffer_set(&CCreply, "0 ", 2);
     p = av[0];
     if (*p != '\0') {
-        if ((sp = SITEfind(p)) == NULL)
+        if ((sp = SITEfind(p)) == nullptr)
             return "1 No such site";
 
         SITEinfo(&CCreply, sp, true);
-        while ((sp = SITEfindnext(p, sp)) != NULL)
+        while ((sp = SITEfindnext(p, sp)) != nullptr)
             SITEinfo(&CCreply, sp, true);
     } else
         for (i = nSites, sp = Sites; --i >= 0; sp++)
@@ -672,12 +673,12 @@ CCflush(char *av[])
             SITEflush(sp, true);
         syslog(L_NOTICE, "%s flush_all", LogName);
     } else {
-        if ((sp = SITEfind(p)) == NULL)
+        if ((sp = SITEfind(p)) == nullptr)
             return CCnosite;
         syslog(L_NOTICE, "%s flush", sp->Name);
         SITEflush(sp, true);
     }
-    return NULL;
+    return nullptr;
 }
 
 
@@ -701,13 +702,13 @@ CCflushlogs(char *unused[] UNUSED)
     /* Flush exploder and process channels so that they take into account
      * the new log files (for instance during log rotation). */
     for (sp = Sites, i = nSites; --i >= 0; sp++) {
-        if (((cp = sp->Channel) != NULL)
+        if (((cp = sp->Channel) != nullptr)
             && ((cp->Type == CTexploder) || (cp->Type == CTprocess))) {
             SITEflush(sp, true);
             syslog(L_NOTICE, "%s flush", sp->Name);
         }
     }
-    return NULL;
+    return nullptr;
 }
 
 
@@ -723,11 +724,11 @@ CCgo(char *av[])
     p = av[0];
     if (Reservation && strcmp(p, Reservation) == 0) {
         free(Reservation);
-        Reservation = NULL;
+        Reservation = nullptr;
     }
     if (RejectReason && strcmp(p, RejectReason) == 0) {
         free(RejectReason);
-        RejectReason = NULL;
+        RejectReason = nullptr;
     }
 
     if (Mode == OMrunning)
@@ -743,11 +744,11 @@ CCgo(char *av[])
 #endif /* defined(DO_PYTHON) */
 
     free(ModeReason);
-    ModeReason = NULL;
+    ModeReason = nullptr;
     Mode = OMrunning;
     ThrottledbyIOError = false;
 
-    if (NNRPReason != NULL && !innconf->readerswhenstopped) {
+    if (NNRPReason != nullptr && !innconf->readerswhenstopped) {
         av[0] = YES;
         av[1] = p;
         CCreaders(av);
@@ -760,7 +761,7 @@ CCgo(char *av[])
     if (ICDneedsetup)
         ICDsetup(true);
     SCHANwakeup(&Mode);
-    return NULL;
+    return nullptr;
 }
 
 
@@ -783,7 +784,7 @@ CChangup(char *av[])
     }
 
     /* Loop over all channels for the desired one. */
-    for (i = 0; (cp = CHANiter(&i, CTany)) != NULL;)
+    for (i = 0; (cp = CHANiter(&i, CTany)) != nullptr;)
         if (cp->fd == fd) {
             p = CHANname(cp);
             switch (cp->Type) {
@@ -797,7 +798,7 @@ CChangup(char *av[])
             case CTreject:
                 syslog(L_NOTICE, "%s hangup", p);
                 CHANclose(cp, p);
-                return NULL;
+                return nullptr;
             }
         }
     return "1 Not active";
@@ -813,7 +814,7 @@ CClowmark(char *av[])
 {
     long lo;
     char *line, *cp;
-    const char *ret = NULL;
+    const char *ret = nullptr;
     QIOSTATE *qp;
     NEWSGROUP *ngp;
 
@@ -821,11 +822,11 @@ CClowmark(char *av[])
         return CCnotrunning;
     if (ICDneedsetup)
         return "1 Must first reload newsfeeds";
-    if ((qp = QIOopen(av[0])) == NULL) {
+    if ((qp = QIOopen(av[0])) == nullptr) {
         syslog(L_ERROR, "%s cant open %s %m", LogName, av[0]);
         return "1 Cannot read input file";
     }
-    while ((line = QIOread(qp)) != NULL) {
+    while ((line = QIOread(qp)) != nullptr) {
         if (QIOerror(qp))
             break;
         if (QIOtoolong(qp)) {
@@ -851,7 +852,7 @@ CClowmark(char *av[])
             ret = "1 Malformed input line (bad low mark)";
             break;
         }
-        if ((ngp = NGfind(line)) == NULL) {
+        if ((ngp = NGfind(line)) == nullptr) {
             /* ret = CCnogroup; break; */
             continue;
         }
@@ -860,7 +861,7 @@ CClowmark(char *av[])
             break;
         }
     }
-    if (ret == NULL && QIOerror(qp)) {
+    if (ret == nullptr && QIOerror(qp)) {
         syslog(L_ERROR, "%s cant read %s %m", LogName, av[0]);
         ret = "1 Error reading input file";
     }
@@ -905,7 +906,7 @@ CCmode(char *unused[] UNUSED)
         buffer_append_sprintf(&CCreply, "Allowing remote connections\n");
 
     /* Server parameters. */
-    for (count = 0, i = 0; CHANiter(&i, CTnntp) != NULL;)
+    for (count = 0, i = 0; CHANiter(&i, CTnntp) != nullptr;)
         count++;
     buffer_append_sprintf(&CCreply,
                           "Parameters c %lu i %lu (%d) l %lu o %d"
@@ -929,7 +930,7 @@ CCmode(char *unused[] UNUSED)
         buffer_append_sprintf(&CCreply, "independent ");
     else
         buffer_append_sprintf(&CCreply, "follow ");
-    if (NNRPReason == NULL)
+    if (NNRPReason == nullptr)
         buffer_append_sprintf(&CCreply, "enabled");
     else
         buffer_append_sprintf(&CCreply, "disabled %s", NNRPReason);
@@ -967,7 +968,7 @@ static const char *
 CClogmode(char *unused[] UNUSED)
 {
     syslog(L_NOTICE, "%s servermode %s", LogName, CCcurrmode());
-    return NULL;
+    return nullptr;
 }
 
 
@@ -989,7 +990,7 @@ CCname(char *av[])
             }
         }
         cp = CHANfromdescriptor(atoi(av[0]));
-        if (cp == NULL || cp->Type == CTfree) {
+        if (cp == nullptr || cp->Type == CTfree) {
             return xstrdup(CCnochannel);
         }
         buffer_set(&CCreply, "0 ", 2);
@@ -1000,7 +1001,7 @@ CCname(char *av[])
 
     /* Write information for all channels. */
     buffer_set(&CCreply, "0 ", 2);
-    for (count = 0, i = 0; (cp = CHANiter(&i, CTany)) != NULL;) {
+    for (count = 0, i = 0; (cp = CHANiter(&i, CTany)) != nullptr;) {
         if (cp->Type == CTfree)
             continue;
         if (++count > 1)
@@ -1060,7 +1061,7 @@ CCnameWriteInfo(struct buffer *buffer, CHANNEL *cp)
 static const char *
 CCnewgroup(char *av[])
 {
-    static char *TIMES = NULL;
+    static char *TIMES = nullptr;
     static char WHEN[] = "updating active.times";
     int fd;
     char *p;
@@ -1068,10 +1069,10 @@ CCnewgroup(char *av[])
     char *Name;
     char *Rest;
     const char *who;
-    char *buff = NULL;
+    char *buff = nullptr;
     int oerrno;
 
-    if (TIMES == NULL)
+    if (TIMES == nullptr)
         TIMES = concatpath(innconf->pathdb, INN_PATH_ACTIVETIMES);
 
     Name = av[0];
@@ -1103,7 +1104,7 @@ CCnewgroup(char *av[])
     if (strlen(Name) > NNTP_MAXLEN_ARG || strlen(Rest) > NNTP_MAXLEN_ARG + 1)
         return "1 Name too long";
 
-    if ((ngp = NGfind(Name)) != NULL)
+    if ((ngp = NGfind(Name)) != nullptr)
         return CCdochange(ngp, Rest);
 
     if (Mode == OMthrottled && ThrottledbyIOError)
@@ -1137,7 +1138,7 @@ CCnewgroup(char *av[])
         return "1 Failed";
     syslog(L_NOTICE, "%s newgroup %s as %s", LogName, Name, Rest);
 
-    return NULL;
+    return nullptr;
 }
 
 
@@ -1181,16 +1182,16 @@ CCparam(char *av[])
             return BADVAL;
         break;
     case 'c':
-        innconf->artcutoff = strtoul(p, NULL, 10);
+        innconf->artcutoff = strtoul(p, nullptr, 10);
         syslog(L_NOTICE, "%s changed -c %lu", LogName, innconf->artcutoff);
         break;
     case 'i':
-        innconf->maxconnections = strtoul(p, NULL, 10);
+        innconf->maxconnections = strtoul(p, nullptr, 10);
         syslog(L_NOTICE, "%s changed -i %lu", LogName,
                innconf->maxconnections);
         break;
     case 'l':
-        innconf->maxartsize = strtoul(p, NULL, 10);
+        innconf->maxartsize = strtoul(p, nullptr, 10);
         syslog(L_NOTICE, "%s changed -l %lu", LogName, innconf->maxartsize);
         break;
     case 'n':
@@ -1228,7 +1229,7 @@ CCparam(char *av[])
                (unsigned long) RemoteTimer);
         break;
     }
-    return NULL;
+    return nullptr;
 }
 
 
@@ -1258,7 +1259,7 @@ CCblock(OPERATINGMODE NewMode, char *reason)
             return CCreply.data;
         }
         free(Reservation);
-        Reservation = NULL;
+        Reservation = nullptr;
     }
 
 #ifdef DO_PERL
@@ -1275,7 +1276,7 @@ CCblock(OPERATINGMODE NewMode, char *reason)
         free(ModeReason);
     ModeReason = xstrdup(reason);
     /* Disallow readers when the server is paused or throttled. */
-    if (NNRPReason == NULL && !innconf->readerswhenstopped) {
+    if (NNRPReason == nullptr && !innconf->readerswhenstopped) {
         av[0] = NO;
         av[1] = ModeReason;
         CCreaders(av);
@@ -1283,7 +1284,7 @@ CCblock(OPERATINGMODE NewMode, char *reason)
     syslog(L_NOTICE, "%s %s %s", LogName,
            NewMode == OMpaused ? "paused" : "throttled", reason);
     CCsdnotify();
-    return NULL;
+    return nullptr;
 }
 
 
@@ -1319,13 +1320,13 @@ CCreaders(char *av[])
     default:
         return "1 Bad flag";
     case 'y':
-        if (NNRPReason == NULL)
+        if (NNRPReason == nullptr)
             return "1 Already allowing readers";
         p = av[1];
         if (*p && strcmp(p, NNRPReason) != 0)
             return "1 Wrong reason";
         free(NNRPReason);
-        NNRPReason = NULL;
+        NNRPReason = nullptr;
         break;
     case 'n':
         if (NNRPReason)
@@ -1342,7 +1343,7 @@ CCreaders(char *av[])
         break;
     }
     CCsdnotify();
-    return NULL;
+    return nullptr;
 }
 
 
@@ -1359,7 +1360,7 @@ CCxexec(char *av[])
     int count;
     int status;
 
-    if (CCargv == NULL)
+    if (CCargv == nullptr)
         return "1 no argv!";
 
     innd = concatpath(innconf->pathbin, "innd");
@@ -1385,14 +1386,14 @@ CCxexec(char *av[])
     /* Restore the systemd variables which were backed up in RCsetup()
        if socket activation was set. */
     s = getenv(INN_ENV_LISTEN_FDS_BACKUP);
-    if (s != NULL) {
+    if (s != nullptr) {
         if (setenv(INN_ENV_LISTEN_FDS, s, true) != 0)
             die("setenv failed for LISTEN_FDS");
         if (unsetenv(INN_ENV_LISTEN_FDS_BACKUP) != 0)
             die("unsetenv failed for INN_BACKUP_LISTEN_FDS");
     }
     s = getenv(INN_ENV_LISTEN_PID_BACKUP);
-    if (s != NULL) {
+    if (s != nullptr) {
         if (setenv(INN_ENV_LISTEN_PID, s, true) != 0)
             die("setenv failed for LISTEN_PID");
         if (unsetenv(INN_ENV_LISTEN_PID_BACKUP) != 0)
@@ -1404,7 +1405,7 @@ CCxexec(char *av[])
        and sd_listen_fds(), which was called in RCsetup(), set it on all
        passed file descriptors. */
     s = getenv(INN_ENV_LISTEN_FDS_COUNT);
-    if (s == NULL)
+    if (s == nullptr)
         count = 0;
     else
         count = atoi(s);
@@ -1437,7 +1438,7 @@ CCreject(char *av[])
         return "1 Invalid UTF-8 reason";
     RejectReason = xstrdup(av[0]);
     CCsdnotify();
-    return NULL;
+    return nullptr;
 }
 
 
@@ -1462,7 +1463,7 @@ CCreload(char *av[])
     p = av[0];
     if (*p == '\0' || strcmp(p, "all") == 0) {
         /* Check the syntax of the newsfeeds file before reloading. */
-        if ((error = CCcheckfile(NULL)) != NULL)
+        if ((error = CCcheckfile(nullptr)) != nullptr)
             return error;
         SITEflushall(false);
         if (Mode == OMrunning)
@@ -1485,7 +1486,7 @@ CCreload(char *av[])
         p = "all";
     } else if (strcmp(p, "active") == 0 || strcmp(p, "newsfeeds") == 0) {
         /* Check the syntax of the newsfeeds file before reloading. */
-        if ((error = CCcheckfile(NULL)) != NULL)
+        if ((error = CCcheckfile(nullptr)) != nullptr)
             return error;
         SITEflushall(false);
         ICDwrite();
@@ -1561,7 +1562,7 @@ CCreload(char *av[])
         return "1 Unknown reload type";
 
     syslog(L_NOTICE, "%s reload %s %s", LogName, p, av[1]);
-    return NULL;
+    return nullptr;
 }
 
 
@@ -1581,13 +1582,13 @@ CCrenumber(char *av[])
         return "1 Must first reload newsfeeds";
     p = av[0];
     if (*p) {
-        if ((ngp = NGfind(p)) == NULL)
+        if ((ngp = NGfind(p)) == nullptr)
             return CCnogroup;
         if (!NGrenumber(ngp))
             return CANTRENUMBER;
     } else if (!ICDrenumberactive())
         return CANTRENUMBER;
-    return NULL;
+    return nullptr;
 }
 
 
@@ -1614,12 +1615,12 @@ CCreserve(char *av[])
         Reservation = xstrdup(p);
     } else {
         /* Trying to remove a reservation. */
-        if (Reservation == NULL)
+        if (Reservation == nullptr)
             return "1 Not reserved";
         free(Reservation);
-        Reservation = NULL;
+        Reservation = nullptr;
     }
-    return NULL;
+    return nullptr;
 }
 
 
@@ -1631,7 +1632,7 @@ CCrmgroup(char *av[])
 {
     NEWSGROUP *ngp;
 
-    if ((ngp = NGfind(av[0])) == NULL)
+    if ((ngp = NGfind(av[0])) == nullptr)
         return CCnogroup;
 
     if (Mode == OMthrottled && ThrottledbyIOError)
@@ -1641,7 +1642,7 @@ CCrmgroup(char *av[])
     if (!ICDrmgroup(ngp))
         return "1 Failed";
     syslog(L_NOTICE, "%s rmgroup %s", LogName, av[0]);
-    return NULL;
+    return nullptr;
 }
 
 
@@ -1653,12 +1654,12 @@ CCsend(char *av[])
 {
     SITE *sp;
 
-    if ((sp = SITEfind(av[0])) == NULL)
+    if ((sp = SITEfind(av[0])) == nullptr)
         return CCnosite;
     if (sp->Type != FTexploder)
         return CCwrongtype;
     SITEwrite(sp, av[1]);
-    return NULL;
+    return nullptr;
 }
 
 
@@ -1707,7 +1708,7 @@ CCsignal(char *av[])
 
     /* Parse the site. */
     p = av[1];
-    if ((sp = SITEfind(p)) == NULL)
+    if ((sp = SITEfind(p)) == nullptr)
         return CCnosite;
     if (sp->Type != FTchannel && sp->Type != FTexploder)
         return CCwrongtype;
@@ -1724,7 +1725,7 @@ CCsignal(char *av[])
         return CCreply.data;
     }
 
-    return NULL;
+    return nullptr;
 }
 
 
@@ -1769,14 +1770,14 @@ CCtimer(char *av[])
             if (!isdigit((unsigned char) *p))
                 return "1 parameter should be a number or 'off'";
         }
-        value = strtoul(av[0], NULL, 10);
+        value = strtoul(av[0], nullptr, 10);
     }
     innconf->timer = value;
     if (innconf->timer != 0)
         TMRinit(TMR_MAX);
     else
         TMRinit(0);
-    return NULL;
+    return nullptr;
 }
 
 /*
@@ -1789,7 +1790,7 @@ CCstathist(char *av[])
         HISlogclose();
     else
         HISlogto(av[0]);
-    return NULL;
+    return nullptr;
 }
 
 /*
@@ -1808,10 +1809,10 @@ CCstatus(char *av[])
             if (!isdigit((unsigned char) *p))
                 return "1 parameter should be a number or 'off'";
         }
-        value = strtoul(av[0], NULL, 10);
+        value = strtoul(av[0], nullptr, 10);
     }
     innconf->status = value;
-    return NULL;
+    return nullptr;
 }
 
 /*
@@ -1868,12 +1869,12 @@ CCtrace(char *av[])
     case '8':
     case '9':
         cp = CHANfromdescriptor(atoi(p));
-        if (cp == NULL || cp->Type == CTfree)
+        if (cp == nullptr || cp->Type == CTfree)
             return CCnochannel;
         CHANtracing(cp, Flag);
         break;
     }
-    return NULL;
+    return nullptr;
 }
 
 
@@ -1893,7 +1894,7 @@ CCargsplit(char *p, char *end, char **argv, int size)
             *p = '\0';
             *argv++ = p + 1;
         }
-    *argv = NULL;
+    *argv = nullptr;
     return argv - save;
 }
 
@@ -2013,15 +2014,15 @@ CCreader(CHANNEL *cp)
     copy = xmalloc(bufflen + 1);
     memcpy(copy, buff, bufflen);
     copy[bufflen] = '\0';
-    for (offset = 0, start = NULL; offset < (size_t) bufflen; offset++)
+    for (offset = 0, start = nullptr; offset < (size_t) bufflen; offset++)
         if (copy[offset] == SC_SEP) {
             copy[offset] = ':';
-            if (start == NULL)
+            if (start == nullptr)
                 start = copy + offset + 1;
         } else if (copy[offset] == '\0') {
             copy[offset] = '?';
         }
-    notice("ctlinnd command %s", start != NULL ? start : copy);
+    notice("ctlinnd command %s", start != nullptr ? start : copy);
     free(copy);
 
     /* Split up the fields, get the command letter. */
@@ -2045,7 +2046,7 @@ CCreader(CHANNEL *cp)
     if (dp == ARRAY_END(CCcommands)) {
         syslog(L_NOTICE, "%s bad_message %c", LogName, i);
         p = "1 Bad command";
-    } else if (p == NULL)
+    } else if (p == nullptr)
         p = "0 Ok";
 
     /* Build the reply address and send the reply. */
@@ -2117,7 +2118,7 @@ CCsetup(void)
     int size = 65535;
 #endif /* defined(HAVE_UNIX_DOMAIN_SOCKETS) */
 
-    if (CCpath == NULL)
+    if (CCpath == nullptr)
         CCpath = concatpath(innconf->pathrun, INN_PATH_NEWSCONTROL);
     /* Remove old detritus. */
     if (unlink(CCpath) < 0 && errno != ENOENT) {
@@ -2193,13 +2194,13 @@ void
 CCclose(void)
 {
     CHANclose(CCchan, CHANname(CCchan));
-    CCchan = NULL;
+    CCchan = nullptr;
     if (unlink(CCpath) < 0)
         syslog(L_ERROR, "%s cant unlink %s %m", LogName, CCpath);
     free(CCpath);
-    CCpath = NULL;
+    CCpath = nullptr;
     free(CCreply.data);
-    CCreply.data = NULL;
+    CCreply.data = nullptr;
     CCreply.size = 0;
     CCreply.used = 0;
     CCreply.left = 0;

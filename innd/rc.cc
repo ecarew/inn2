@@ -61,8 +61,8 @@ typedef struct _REMOTETABLE {
     time_t Expires;
 } REMOTETABLE;
 
-static char *RCnnrpd = NULL;
-static char *RCnntpd = NULL;
+static char *RCnnrpd = nullptr;
+static char *RCnntpd = nullptr;
 static CHANNEL **RCchan;
 static unsigned int chanlimit;
 static REMOTEHOST_DATA *RCpeerlistfile;
@@ -140,7 +140,7 @@ GoodIdent(int fd, char *identd)
 #define PORT_IDENTD 113
     char IDENTuser[80];
     struct sockaddr *s_local;
-    struct sockaddr *s_distant = NULL;
+    struct sockaddr *s_distant = nullptr;
     int ident_fd;
     socklen_t local_len, distant_len;
     int port1, port2;
@@ -214,8 +214,8 @@ GoodIdent(int fd, char *identd)
         return false;
     }
     buf[lu] = '\0';
-    if ((lu > 0) && (strstr(buf, "ERROR") == NULL)
-        && ((buf2 = strrchr(buf, ':')) != NULL)) {
+    if ((lu > 0) && (strstr(buf, "ERROR") == nullptr)
+        && ((buf2 = strrchr(buf, ':')) != nullptr)) {
         buf2++;
         while (*buf2 == ' ')
             buf2++;
@@ -232,9 +232,9 @@ GoodIdent(int fd, char *identd)
     return strcmp(identd, IDENTuser) == 0;
 
 fail:
-    if (s_local != NULL)
+    if (s_local != nullptr)
         free(s_local);
-    if (s_distant != NULL)
+    if (s_distant != nullptr)
         free(s_distant);
     return false;
 }
@@ -274,7 +274,7 @@ RCCommaSplit(char *text)
             *av++ = p;
         } else
             p++;
-    *av = NULL;
+    *av = nullptr;
     return save;
 }
 
@@ -387,12 +387,12 @@ RChandoff(int fd, HANDOFF h)
     unsigned int j;
     struct vector *flags;
 
-    flags = vector_split_space(innconf->nnrpdflags, NULL);
+    flags = vector_split_space(innconf->nnrpdflags, nullptr);
     argv = xmalloc((flags->count + 6) * sizeof(char *));
 
-    if (RCnnrpd == NULL)
+    if (RCnnrpd == nullptr)
         RCnnrpd = concatpath(innconf->pathbin, "nnrpd");
-    if (RCnntpd == NULL)
+    if (RCnntpd == nullptr)
         RCnntpd = concatpath(innconf->pathbin, "nnrpd");
 #if defined(SOL_SOCKET) && defined(SO_KEEPALIVE)
     /* Set KEEPALIVE to catch broken socket connections. */
@@ -427,7 +427,7 @@ RChandoff(int fd, HANDOFF h)
     for (j = 0; j < flags->count; j++) {
         argv[i++] = flags->strings[j];
     }
-    argv[i] = NULL;
+    argv[i] = nullptr;
 
     /* Call NNRP; don't send back a QUIT message if Spawn fails since
      * that's a major error we want to find out about quickly. */
@@ -524,9 +524,9 @@ RCreader(CHANNEL *cp)
        Finally, if neither rejection happened, add the entry to the table, and
        continue on as a normal connect. */
     memcpy(&tempchan.Address, &remote, sizeof(tempchan.Address));
-    reject_message = NULL;
+    reject_message = nullptr;
     if (RemoteTimer != 0) {
-        now = time(NULL);
+        now = time(nullptr);
         i = remotefirst;
         count = remotecount;
         found = 0;
@@ -566,7 +566,7 @@ RCreader(CHANNEL *cp)
     ** Create a reject channel to reject the connection.  This is done
     ** to avoid a call to fork.
     */
-    if (reject_message != NULL) {
+    if (reject_message != nullptr) {
         newcp = CHANcreate(fd, CTreject, CSwritegoodbye, RCrejectreader,
                            RCrejectwritedone);
         memcpy(&remotetable[i].Address, &remote,
@@ -582,7 +582,7 @@ RCreader(CHANNEL *cp)
     }
 
     /* See if it's one of our servers. */
-    for (name = NULL, rp = RCpeerlist, i = RCnpeerlist; --i >= 0; rp++)
+    for (name = nullptr, rp = RCpeerlist, i = RCnpeerlist; --i >= 0; rp++)
         if (network_sockaddr_equal((struct sockaddr *) &rp->Address,
                                    (struct sockaddr *) &remote)) {
             name = rp->Name;
@@ -603,7 +603,8 @@ RCreader(CHANNEL *cp)
             }
         }
 
-        if ((newcp = NCcreate(fd, rp->Password[0] != '\0', false)) != NULL) {
+        if ((newcp = NCcreate(fd, rp->Password[0] != '\0', false))
+            != nullptr) {
             newcp->Streaming = rp->Streaming;
             newcp->Skip = rp->Skip;
             newcp->Ignore = rp->Ignore;
@@ -631,7 +632,7 @@ RCreader(CHANNEL *cp)
             }
         }
     } else if (AnyIncoming && !rp->Skip) {
-        if ((newcp = NCcreate(fd, false, false)) != NULL) {
+        if ((newcp = NCcreate(fd, false, false)) != nullptr) {
             NCwritereply(newcp, (char *) NCgreeting);
         }
     } else if (!innconf->noreader) {
@@ -655,7 +656,7 @@ RCreader(CHANNEL *cp)
         return;
     }
 
-    if (newcp != NULL) {
+    if (newcp != nullptr) {
         memcpy(&newcp->Address, &remote, sizeof(newcp->Address));
         network_sockaddr_sprint(addr, sizeof(addr),
                                 (struct sockaddr *) &remote);
@@ -698,32 +699,32 @@ RCreaddata(int *num, FILE *F, bool *toolong)
     *toolong = false;
     if (*RCbuff == '\0') {
         if (feof(F))
-            return (NULL);
-        if (fgets(RCbuff, sizeof RCbuff, F) == NULL)
-            return (NULL);
+            return (nullptr);
+        if (fgets(RCbuff, sizeof RCbuff, F) == nullptr)
+            return (nullptr);
         (*num)++;
         if (strlen(RCbuff) == sizeof RCbuff) {
             *toolong = true;
-            return (NULL); /* Line too long */
+            return (nullptr); /* Line too long */
         }
     }
     do {
         /* Ignore blank and comment lines. */
-        if ((p = strchr(RCbuff, '\n')) != NULL)
+        if ((p = strchr(RCbuff, '\n')) != nullptr)
             *p = '\0';
-        if ((p = strchr(RCbuff, '#')) != NULL) {
+        if ((p = strchr(RCbuff, '#')) != nullptr) {
             if (p == RCbuff || (p > RCbuff && *(p - 1) != '\\'))
                 *p = '\0';
         }
         for (p = RCbuff; *p == ' ' || *p == '\t'; p++)
             ;
         if (*p == '\0' && !feof(F)) {
-            if (fgets(RCbuff, sizeof RCbuff, F) == NULL)
-                return (NULL);
+            if (fgets(RCbuff, sizeof RCbuff, F) == nullptr)
+                return (nullptr);
             (*num)++;
             if (strlen(RCbuff) == sizeof RCbuff) {
                 *toolong = true;
-                return (NULL); /* Line too long */
+                return (nullptr); /* Line too long */
             }
             continue;
         }
@@ -737,14 +738,14 @@ RCreaddata(int *num, FILE *F, bool *toolong)
                 ;
             if (*t == '\0') {
                 *t++ = '\n';
-                if (fgets(t, sizeof RCbuff - strlen(RCbuff), F) == NULL)
-                    return (NULL);
+                if (fgets(t, sizeof RCbuff - strlen(RCbuff), F) == nullptr)
+                    return (nullptr);
                 (*num)++;
                 if (strlen(RCbuff) == sizeof RCbuff) {
                     *toolong = true;
-                    return (NULL); /* Line too long */
+                    return (nullptr); /* Line too long */
                 }
-                if ((s = strchr(t, '\n')) != NULL)
+                if ((s = strchr(t, '\n')) != nullptr)
                     *s = '\0';
             } else
                 break;
@@ -757,7 +758,7 @@ RCreaddata(int *num, FILE *F, bool *toolong)
             *t++ = '\0';
     }
     if (*p == '\0' && feof(F))
-        return (NULL);
+        return (nullptr);
     word = xstrdup(p);
     for (p = RCbuff; *t != '\0'; t++)
         *p++ = *t;
@@ -803,7 +804,7 @@ RCreadfile(REMOTEHOST_DATA **data, REMOTEHOST **list, int *count,
     REMOTEHOST *rp;
     char *word;
     REMOTEHOST *groups;
-    REMOTEHOST *group_params = NULL;
+    REMOTEHOST *group_params = nullptr;
     REMOTEHOST peer_params;
     REMOTEHOST default_params;
     bool flag, bit, toolong;
@@ -826,21 +827,21 @@ RCreadfile(REMOTEHOST_DATA **data, REMOTEHOST **list, int *count,
             }
         }
         free(*list);
-        *list = NULL;
+        *list = nullptr;
         *count = 0;
     }
     if (*data) {
         for (i = 0; (*data)[i].key != K_END; i++)
-            if ((*data)[i].value != NULL)
+            if ((*data)[i].value != nullptr)
                 free((*data)[i].value);
         free(*data);
-        *data = NULL;
+        *data = nullptr;
     }
 
     *count = 0;
     maxgroup = 0;
     /* Open the server file. */
-    if ((F = Fopen(filename, "r", TEMPORARYOPEN)) == NULL) {
+    if ((F = Fopen(filename, "r", TEMPORARYOPEN)) == nullptr) {
         syslog(L_FATAL, "%s cant read %s: %m", LogName, filename);
         exit(1);
     }
@@ -877,8 +878,8 @@ RCreadfile(REMOTEHOST_DATA **data, REMOTEHOST **list, int *count,
     linecount = 0;
     infocount = 0;
     groupcount = 0; /* no group defined yet */
-    groups = 0;
-    peer_params.Label = NULL;
+    groups = nullptr;
+    peer_params.Label = nullptr;
     default_params.Streaming = true;
     default_params.Skip = false;
     default_params.Ignore = false;
@@ -889,17 +890,17 @@ RCreadfile(REMOTEHOST_DATA **data, REMOTEHOST **list, int *count,
     default_params.HoldTime = 0;
     default_params.Password = xstrdup(NOPASS);
     default_params.Identd = xstrdup(NOIDENTD);
-    default_params.Pattern = NULL;
+    default_params.Pattern = nullptr;
     peer_params.Keysetbit = 0;
 
     /* Read the file to add all the hosts. */
-    while ((word = RCreaddata(&linecount, F, &toolong)) != NULL) {
+    while ((word = RCreaddata(&linecount, F, &toolong)) != nullptr) {
 
         /* group */
         if (!strncmp(word, GROUP, sizeof GROUP)) {
             free(word);
             /* name of the group */
-            if ((word = RCreaddata(&linecount, F, &toolong)) == NULL) {
+            if ((word = RCreaddata(&linecount, F, &toolong)) == nullptr) {
                 syslog(L_ERROR, GROUP_NAME, LogName, filename, linecount);
                 break;
             }
@@ -951,7 +952,7 @@ RCreadfile(REMOTEHOST_DATA **data, REMOTEHOST **list, int *count,
                                          ? groups[groupcount - 2].HoldTime
                                          : default_params.HoldTime;
 
-            if ((word = RCreaddata(&linecount, F, &toolong)) == NULL) {
+            if ((word = RCreaddata(&linecount, F, &toolong)) == nullptr) {
                 syslog(L_ERROR, LEFT_BRACE, LogName, filename, linecount);
                 break;
             }
@@ -969,19 +970,19 @@ RCreadfile(REMOTEHOST_DATA **data, REMOTEHOST **list, int *count,
         /* peer */
         if (!strncmp(word, PEER, sizeof PEER)) {
             free(word);
-            if (peer_params.Label != NULL) {
+            if (peer_params.Label != nullptr) {
                 /* peer can't contain peer */
                 syslog(L_ERROR, PEER_IN_PEER, LogName, filename, linecount);
                 break;
             }
-            if ((word = RCreaddata(&linecount, F, &toolong)) == NULL) {
+            if ((word = RCreaddata(&linecount, F, &toolong)) == nullptr) {
                 syslog(L_ERROR, PEER_NAME, LogName, filename, linecount);
                 break;
             }
             RCadddata(data, &infocount, K_BEGIN_PEER, T_STRING, word);
             /* name of the peer */
             peer_params.Label = word;
-            peer_params.Name = NULL;
+            peer_params.Name = nullptr;
             peer_params.Skip =
                 groupcount > 0 ? group_params->Skip : default_params.Skip;
             peer_params.Ignore =
@@ -1007,7 +1008,7 @@ RCreadfile(REMOTEHOST_DATA **data, REMOTEHOST **list, int *count,
 
             peer_params.Keysetbit = 0;
 
-            if ((word = RCreaddata(&linecount, F, &toolong)) == NULL) {
+            if ((word = RCreaddata(&linecount, F, &toolong)) == nullptr) {
                 syslog(L_ERROR, LEFT_BRACE, LogName, filename, linecount);
                 break;
             }
@@ -1024,15 +1025,15 @@ RCreadfile(REMOTEHOST_DATA **data, REMOTEHOST **list, int *count,
         /* right brace */
         if (!strncmp(word, "}", 1)) {
             free(word);
-            if (peer_params.Label != NULL) {
-                RCadddata(data, &infocount, K_END_PEER, T_STRING, NULL);
+            if (peer_params.Label != nullptr) {
+                RCadddata(data, &infocount, K_END_PEER, T_STRING, nullptr);
 
                 /* Hostname defaults to label if not given */
-                if (peer_params.Name == NULL)
+                if (peer_params.Name == nullptr)
                     peer_params.Name = xstrdup(peer_params.Label);
 
                 for (r = q = RCCommaSplit(xstrdup(peer_params.Name));
-                     *q != NULL; q++) {
+                     *q != nullptr; q++) {
                     struct addrinfo *res, *res0, hints;
                     int gai_ret;
 
@@ -1046,7 +1047,7 @@ RCreadfile(REMOTEHOST_DATA **data, REMOTEHOST **list, int *count,
                     memset(&hints, 0, sizeof(hints));
                     hints.ai_socktype = SOCK_STREAM;
                     hints.ai_family = PF_UNSPEC;
-                    if ((gai_ret = getaddrinfo(*q, NULL, &hints, &res0))
+                    if ((gai_ret = getaddrinfo(*q, nullptr, &hints, &res0))
                         != 0) {
                         syslog(L_ERROR, "%s cant getaddrinfo %s %s", LogName,
                                *q, gai_strerror(gai_ret));
@@ -1058,7 +1059,7 @@ RCreadfile(REMOTEHOST_DATA **data, REMOTEHOST **list, int *count,
                     /* Count the addresses and see if we have to grow the list
                      */
                     i = 0;
-                    for (res = res0; res != NULL; res = res->ai_next)
+                    for (res = res0; res != nullptr; res = res->ai_next)
                         i++;
                     /* Grow the array */
                     j = rp - *list;
@@ -1067,7 +1068,7 @@ RCreadfile(REMOTEHOST_DATA **data, REMOTEHOST **list, int *count,
                     rp = *list + j;
 
                     /* Add all hosts */
-                    for (res = res0; res != NULL; res = res->ai_next) {
+                    for (res = res0; res != nullptr; res = res->ai_next) {
                         (void) memcpy(&rp->Address, res->ai_addr,
                                       res->ai_addrlen);
                         rp->Name = xstrdup(*q);
@@ -1081,9 +1082,9 @@ RCreadfile(REMOTEHOST_DATA **data, REMOTEHOST **list, int *count,
                         rp->Password = xstrdup(peer_params.Password);
                         rp->Identd = xstrdup(peer_params.Identd);
                         rp->Patterns =
-                            peer_params.Pattern != NULL
+                            peer_params.Pattern != nullptr
                                 ? RCCommaSplit(xstrdup(peer_params.Pattern))
-                                : NULL;
+                                : nullptr;
                         rp->MaxCnx = peer_params.MaxCnx;
                         rp->HoldTime = peer_params.HoldTime;
                         rp++;
@@ -1092,10 +1093,10 @@ RCreadfile(REMOTEHOST_DATA **data, REMOTEHOST **list, int *count,
                 }
                 free(r[0]);
                 free(r);
-                peer_params.Label = NULL;
-            } else if (groupcount > 0 && group_params->Label != NULL) {
-                RCadddata(data, &infocount, K_END_GROUP, T_STRING, NULL);
-                group_params->Label = NULL;
+                peer_params.Label = nullptr;
+            } else if (groupcount > 0 && group_params->Label != nullptr) {
+                RCadddata(data, &infocount, K_END_GROUP, T_STRING, nullptr);
+                group_params->Label = nullptr;
                 groupcount--;
                 if (groupcount == 0) {
                     /* We are now outside a group block. */
@@ -1118,7 +1119,7 @@ RCreadfile(REMOTEHOST_DATA **data, REMOTEHOST **list, int *count,
                 syslog(L_ERROR, DUPLICATE_KEY, LogName, filename, linecount);
                 break;
             }
-            if ((word = RCreaddata(&linecount, F, &toolong)) == NULL) {
+            if ((word = RCreaddata(&linecount, F, &toolong)) == nullptr) {
                 break;
             }
             if (strcasecmp(word, "true") == 0 || strcasecmp(word, "yes") == 0
@@ -1133,9 +1134,9 @@ RCreadfile(REMOTEHOST_DATA **data, REMOTEHOST **list, int *count,
                 break;
             }
             RCadddata(data, &infocount, K_STREAM, T_STRING, word);
-            if (peer_params.Label != NULL)
+            if (peer_params.Label != nullptr)
                 peer_params.Streaming = flag;
-            else if (groupcount > 0 && group_params->Label != NULL)
+            else if (groupcount > 0 && group_params->Label != nullptr)
                 group_params->Streaming = flag;
             else
                 default_params.Streaming = flag;
@@ -1151,7 +1152,7 @@ RCreadfile(REMOTEHOST_DATA **data, REMOTEHOST **list, int *count,
                 syslog(L_ERROR, DUPLICATE_KEY, LogName, filename, linecount);
                 break;
             }
-            if ((word = RCreaddata(&linecount, F, &toolong)) == NULL) {
+            if ((word = RCreaddata(&linecount, F, &toolong)) == nullptr) {
                 break;
             }
             if (strcasecmp(word, "true") == 0 || strcasecmp(word, "yes") == 0
@@ -1166,9 +1167,9 @@ RCreadfile(REMOTEHOST_DATA **data, REMOTEHOST **list, int *count,
                 break;
             }
             RCadddata(data, &infocount, K_SKIP, T_STRING, word);
-            if (peer_params.Label != NULL)
+            if (peer_params.Label != nullptr)
                 peer_params.Skip = flag;
-            else if (groupcount > 0 && group_params->Label != NULL)
+            else if (groupcount > 0 && group_params->Label != nullptr)
                 group_params->Skip = flag;
             else
                 default_params.Skip = flag;
@@ -1184,7 +1185,7 @@ RCreadfile(REMOTEHOST_DATA **data, REMOTEHOST **list, int *count,
                 syslog(L_ERROR, DUPLICATE_KEY, LogName, filename, linecount);
                 break;
             }
-            if ((word = RCreaddata(&linecount, F, &toolong)) == NULL) {
+            if ((word = RCreaddata(&linecount, F, &toolong)) == nullptr) {
                 break;
             }
             if (strcasecmp(word, "true") == 0 || strcasecmp(word, "yes") == 0
@@ -1199,9 +1200,9 @@ RCreadfile(REMOTEHOST_DATA **data, REMOTEHOST **list, int *count,
                 break;
             }
             RCadddata(data, &infocount, K_IGNORE, T_STRING, word);
-            if (peer_params.Label != NULL)
+            if (peer_params.Label != nullptr)
                 peer_params.Ignore = flag;
-            else if (groupcount > 0 && group_params->Label != NULL)
+            else if (groupcount > 0 && group_params->Label != nullptr)
                 group_params->Ignore = flag;
             else
                 default_params.Ignore = flag;
@@ -1217,7 +1218,7 @@ RCreadfile(REMOTEHOST_DATA **data, REMOTEHOST **list, int *count,
                 syslog(L_ERROR, DUPLICATE_KEY, LogName, filename, linecount);
                 break;
             }
-            if ((word = RCreaddata(&linecount, F, &toolong)) == NULL) {
+            if ((word = RCreaddata(&linecount, F, &toolong)) == nullptr) {
                 break;
             }
             if (strcasecmp(word, "true") == 0 || strcasecmp(word, "yes") == 0
@@ -1232,9 +1233,9 @@ RCreadfile(REMOTEHOST_DATA **data, REMOTEHOST **list, int *count,
                 break;
             }
             RCadddata(data, &infocount, K_RESENDID, T_STRING, word);
-            if (peer_params.Label != NULL)
+            if (peer_params.Label != nullptr)
                 peer_params.ResendId = flag;
-            else if (groupcount > 0 && group_params->Label != NULL)
+            else if (groupcount > 0 && group_params->Label != nullptr)
                 group_params->ResendId = flag;
             else
                 default_params.ResendId = flag;
@@ -1250,7 +1251,7 @@ RCreadfile(REMOTEHOST_DATA **data, REMOTEHOST **list, int *count,
                 syslog(L_ERROR, DUPLICATE_KEY, LogName, filename, linecount);
                 break;
             }
-            if ((word = RCreaddata(&linecount, F, &toolong)) == NULL) {
+            if ((word = RCreaddata(&linecount, F, &toolong)) == nullptr) {
                 break;
             }
             if (strcasecmp(word, "true") == 0 || strcasecmp(word, "yes") == 0
@@ -1265,9 +1266,9 @@ RCreadfile(REMOTEHOST_DATA **data, REMOTEHOST **list, int *count,
                 break;
             }
             RCadddata(data, &infocount, K_LIST, T_STRING, word);
-            if (peer_params.Label != NULL)
+            if (peer_params.Label != nullptr)
                 peer_params.List = flag;
-            else if (groupcount > 0 && group_params->Label != NULL)
+            else if (groupcount > 0 && group_params->Label != nullptr)
                 group_params->List = flag;
             else
                 default_params.List = flag;
@@ -1283,7 +1284,7 @@ RCreadfile(REMOTEHOST_DATA **data, REMOTEHOST **list, int *count,
                 syslog(L_ERROR, DUPLICATE_KEY, LogName, filename, linecount);
                 break;
             }
-            if ((word = RCreaddata(&linecount, F, &toolong)) == NULL) {
+            if ((word = RCreaddata(&linecount, F, &toolong)) == nullptr) {
                 break;
             }
             if (strcasecmp(word, "true") == 0 || strcasecmp(word, "yes") == 0
@@ -1298,9 +1299,9 @@ RCreadfile(REMOTEHOST_DATA **data, REMOTEHOST **list, int *count,
                 break;
             }
             RCadddata(data, &infocount, K_XBATCH, T_STRING, word);
-            if (peer_params.Label != NULL)
+            if (peer_params.Label != nullptr)
                 peer_params.Xbatch = flag;
-            else if (groupcount > 0 && group_params->Label != NULL)
+            else if (groupcount > 0 && group_params->Label != nullptr)
                 group_params->Xbatch = flag;
             else
                 default_params.Xbatch = flag;
@@ -1317,7 +1318,7 @@ RCreadfile(REMOTEHOST_DATA **data, REMOTEHOST **list, int *count,
                 syslog(L_ERROR, DUPLICATE_KEY, LogName, filename, linecount);
                 break;
             }
-            if ((word = RCreaddata(&linecount, F, &toolong)) == NULL) {
+            if ((word = RCreaddata(&linecount, F, &toolong)) == nullptr) {
                 break;
             }
             RCadddata(data, &infocount, K_MAX_CONN, T_STRING, word);
@@ -1332,9 +1333,9 @@ RCreadfile(REMOTEHOST_DATA **data, REMOTEHOST **list, int *count,
                 }
                 max = atoi(word);
             }
-            if (peer_params.Label != NULL)
+            if (peer_params.Label != nullptr)
                 peer_params.MaxCnx = max;
-            else if (groupcount > 0 && group_params->Label != NULL)
+            else if (groupcount > 0 && group_params->Label != nullptr)
                 group_params->MaxCnx = max;
             else
                 default_params.MaxCnx = max;
@@ -1350,7 +1351,7 @@ RCreadfile(REMOTEHOST_DATA **data, REMOTEHOST **list, int *count,
                 syslog(L_ERROR, DUPLICATE_KEY, LogName, filename, linecount);
                 break;
             }
-            if ((word = RCreaddata(&linecount, F, &toolong)) == NULL) {
+            if ((word = RCreaddata(&linecount, F, &toolong)) == nullptr) {
                 break;
             }
             RCadddata(data, &infocount, K_HOLD_TIME, T_STRING, word);
@@ -1360,9 +1361,9 @@ RCreadfile(REMOTEHOST_DATA **data, REMOTEHOST **list, int *count,
                 syslog(L_ERROR, MUST_BE_INT, LogName, filename, linecount);
                 break;
             }
-            if (peer_params.Label != NULL)
+            if (peer_params.Label != nullptr)
                 peer_params.HoldTime = atoi(word);
-            else if (groupcount > 0 && group_params->Label != NULL)
+            else if (groupcount > 0 && group_params->Label != nullptr)
                 group_params->HoldTime = atoi(word);
             else
                 default_params.HoldTime = atoi(word);
@@ -1378,7 +1379,7 @@ RCreadfile(REMOTEHOST_DATA **data, REMOTEHOST **list, int *count,
                 syslog(L_ERROR, DUPLICATE_KEY, LogName, filename, linecount);
                 break;
             }
-            if ((word = RCreaddata(&linecount, F, &toolong)) == NULL) {
+            if ((word = RCreaddata(&linecount, F, &toolong)) == nullptr) {
                 break;
             }
             RCadddata(data, &infocount, K_HOSTNAME, T_STRING, word);
@@ -1395,13 +1396,13 @@ RCreadfile(REMOTEHOST_DATA **data, REMOTEHOST **list, int *count,
                 syslog(L_ERROR, DUPLICATE_KEY, LogName, filename, linecount);
                 break;
             }
-            if ((word = RCreaddata(&linecount, F, &toolong)) == NULL) {
+            if ((word = RCreaddata(&linecount, F, &toolong)) == nullptr) {
                 break;
             }
             RCadddata(data, &infocount, K_PASSWORD, T_STRING, word);
-            if (peer_params.Label != NULL)
+            if (peer_params.Label != nullptr)
                 peer_params.Password = word;
-            else if (groupcount > 0 && group_params->Label != NULL)
+            else if (groupcount > 0 && group_params->Label != nullptr)
                 group_params->Password = word;
             else
                 default_params.Password = word;
@@ -1417,13 +1418,13 @@ RCreadfile(REMOTEHOST_DATA **data, REMOTEHOST **list, int *count,
                 syslog(L_ERROR, DUPLICATE_KEY, LogName, filename, linecount);
                 break;
             }
-            if ((word = RCreaddata(&linecount, F, &toolong)) == NULL) {
+            if ((word = RCreaddata(&linecount, F, &toolong)) == nullptr) {
                 break;
             }
             RCadddata(data, &infocount, K_IDENTD, T_STRING, word);
-            if (peer_params.Label != NULL)
+            if (peer_params.Label != nullptr)
                 peer_params.Identd = word;
-            else if (groupcount > 0 && group_params->Label != NULL)
+            else if (groupcount > 0 && group_params->Label != nullptr)
                 group_params->Identd = word;
             else
                 default_params.Identd = word;
@@ -1439,13 +1440,13 @@ RCreadfile(REMOTEHOST_DATA **data, REMOTEHOST **list, int *count,
                 break;
             }
             free(word);
-            if ((word = RCreaddata(&linecount, F, &toolong)) == NULL) {
+            if ((word = RCreaddata(&linecount, F, &toolong)) == nullptr) {
                 break;
             }
             RCadddata(data, &infocount, K_PATTERNS, T_STRING, word);
-            if (peer_params.Label != NULL)
+            if (peer_params.Label != nullptr)
                 peer_params.Pattern = word;
-            else if (groupcount > 0 && group_params->Label != NULL)
+            else if (groupcount > 0 && group_params->Label != nullptr)
                 group_params->Pattern = word;
             else
                 default_params.Pattern = word;
@@ -1462,13 +1463,13 @@ RCreadfile(REMOTEHOST_DATA **data, REMOTEHOST **list, int *count,
         free(word);
         break;
     }
-    RCadddata(data, &infocount, K_END, T_STRING, NULL);
+    RCadddata(data, &infocount, K_END, T_STRING, nullptr);
 
     if (feof(F)) {
-        if (peer_params.Label != NULL)
+        if (peer_params.Label != nullptr)
             syslog(L_ERROR, INCOMPLETE_PEER, LogName, peer_params.Label,
                    filename, linecount);
-        if (groupcount > 0 && group_params->Label != NULL)
+        if (groupcount > 0 && group_params->Label != nullptr)
             syslog(L_ERROR, INCOMPLETE_GROUP, LogName, group_params->Label,
                    filename, linecount);
     } else
@@ -1523,7 +1524,7 @@ RCwritelist(char *filename)
     char *q;
     char *r;
 
-    if ((F = Fopen(filename, "w", TEMPORARYOPEN)) == NULL) {
+    if ((F = Fopen(filename, "w", TEMPORARYOPEN)) == nullptr) {
         syslog(L_FATAL, "%s cant write %s: %m", LogName, filename);
         return;
     }
@@ -1646,9 +1647,9 @@ RCwritelist(char *filename)
 void
 RCreadlist(void)
 {
-    static char *INNDHOSTS = NULL;
+    static char *INNDHOSTS = nullptr;
 
-    if (INNDHOSTS == NULL)
+    if (INNDHOSTS == nullptr)
         INNDHOSTS = concatpath(innconf->pathetc, INN_PATH_INNDHOSTS);
     StreamingOff = false;
     RCreadfile(&RCpeerlistfile, &RCpeerlist, &RCnpeerlist, INNDHOSTS);
@@ -1690,7 +1691,7 @@ RClabelname(CHANNEL *cp)
                                    (struct sockaddr *) &rp->Address))
             return rp->Label;
     }
-    return NULL;
+    return nullptr;
 }
 
 /*
@@ -1714,9 +1715,9 @@ RCcanpost(CHANNEL *cp, char *group)
         if (!network_sockaddr_equal((struct sockaddr *) &cp->Address,
                                     (struct sockaddr *) &rp->Address))
             continue;
-        if (rp->Patterns == NULL)
+        if (rp->Patterns == nullptr)
             break;
-        for (match = 0, argv = rp->Patterns; (pat = *argv++) != NULL;) {
+        for (match = 0, argv = rp->Patterns; (pat = *argv++) != nullptr;) {
             subvalue = (*pat != SUB_NEGATE) && (*pat != SUB_POISON) ? 0 : *pat;
             if (subvalue)
                 pat++;
@@ -1753,12 +1754,12 @@ RCsetup(void)
        which are unset by sd_listen_fds(), to be able to restore them later in
        CCxexec() before starting a new innd process. */
     s = getenv(INN_ENV_LISTEN_FDS);
-    if (s != NULL) {
+    if (s != nullptr) {
         if (setenv(INN_ENV_LISTEN_FDS_BACKUP, s, true) != 0)
             die("setenv failed for INN_BACKUP_LISTEN_FDS");
     }
     s = getenv(INN_ENV_LISTEN_PID);
-    if (s != NULL) {
+    if (s != nullptr) {
         if (setenv(INN_ENV_LISTEN_PID_BACKUP, s, true) != 0)
             die("setenv failed for INN_BACKUP_LISTEN_PID");
     }
@@ -1781,7 +1782,7 @@ RCsetup(void)
             start = 0;
         } else {
             for (start = 0; start < chanlimit; start++) {
-                if (RCchan[start] == NULL)
+                if (RCchan[start] == nullptr)
                     break;
                 if (chanlimit - start < count) {
                     chanlimit += count - (chanlimit - start);
@@ -1816,20 +1817,21 @@ RCsetup(void)
        descriptors.  Two is probably always sufficient, but we can't tell for
        sure how many will be returned by getaddrinfo and this only happens on
        startup so doing a bit of memory allocation won't hurt. */
-    if (innconf->bindaddress == NULL && innconf->bindaddress6 == NULL) {
+    if (innconf->bindaddress == nullptr && innconf->bindaddress6 == nullptr) {
         network_innbind_all(SOCK_STREAM, innconf->port, &fds, &count);
     } else {
-        if (innconf->bindaddress != NULL && innconf->bindaddress6 != NULL)
+        if (innconf->bindaddress != nullptr
+            && innconf->bindaddress6 != nullptr)
             count = 2;
         else
             count = 1;
         fds = xmalloc(count * sizeof(int));
         i = 0;
-        if (innconf->bindaddress6 != NULL) {
+        if (innconf->bindaddress6 != nullptr) {
             fds[i++] = network_innbind_ipv6(SOCK_STREAM, innconf->bindaddress6,
                                             innconf->port);
         }
-        if (innconf->bindaddress != NULL) {
+        if (innconf->bindaddress != nullptr) {
             fds[i] = network_innbind_ipv4(SOCK_STREAM, innconf->bindaddress,
                                           innconf->port);
         }
@@ -1842,7 +1844,7 @@ RCsetup(void)
         start = 0;
     } else {
         for (start = 0; start < chanlimit; start++)
-            if (RCchan[start] == NULL)
+            if (RCchan[start] == nullptr)
                 break;
         if (chanlimit - start < count) {
             chanlimit += count - (chanlimit - start);
@@ -1898,7 +1900,7 @@ RCclose(void)
     unsigned int j;
 
     for (j = 0; j < chanlimit; j++) {
-        if (RCchan[j] != NULL) {
+        if (RCchan[j] != nullptr) {
             /* Do not close the listening sockets if socket activation is being
                used because they need to be passed as-is by CCxexec() to the
                next innd process. */
@@ -1911,7 +1913,7 @@ RCclose(void)
     }
     if (chanlimit != 0)
         free(RCchan);
-    RCchan = NULL;
+    RCchan = nullptr;
     chanlimit = 0;
     if (RCpeerlist) {
         for (rp = RCpeerlist, i = RCnpeerlist; --i >= 0; rp++) {
@@ -1925,15 +1927,15 @@ RCclose(void)
             }
         }
         free(RCpeerlist);
-        RCpeerlist = NULL;
+        RCpeerlist = nullptr;
         RCnpeerlist = 0;
     }
 
     if (RCpeerlistfile) {
         for (i = 0; RCpeerlistfile[i].key != K_END; i++)
-            if (RCpeerlistfile[i].value != NULL)
+            if (RCpeerlistfile[i].value != nullptr)
                 free(RCpeerlistfile[i].value);
         free(RCpeerlistfile);
-        RCpeerlistfile = NULL;
+        RCpeerlistfile = nullptr;
     }
 }
