@@ -13,7 +13,7 @@ add_library(innstorage STATIC
     tradindexed/tdx-cache.c tradindexed/tdx-data.c tradindexed/tdx-group.c
     tradindexed/tradindexed.c
     tradspool/tradspool.c
-    trash/trash.c
+    trash/trash.cc
 )
 target_include_directories(innstorage PRIVATE ${CMAKE_CURRENT_SOURCE_DIR})
 target_link_libraries(innstorage PUBLIC INN::inn ZLIB::ZLIB SQLite::SQLite3)
