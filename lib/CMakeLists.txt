@@ -10,7 +10,7 @@ add_library(inn STATIC
     hashtab.c headers.c hex.c innconf.c inndcomm.c list.c localopen.c
     lockfile.c makedir.c md5.c messageid.c messages.c mmap.c network.c
     network-innbind.c newsuser.c nntp.c qio.c radix32.c readin.c remopen.c
-    reservedfd.c resource.c secrets.c sendarticle.c sendpass.c sequence.c
+    reservedfd.c resource.c secrets.c sendarticle.cc sendpass.c sequence.c
     sqlite-helper.c timer.c tst.c uwildmat.c vector.c wire.c xfopena.cc
     xmalloc.c xsignal.c xwrite.c
 )
