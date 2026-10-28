@@ -16,10 +16,10 @@ add_library(innstorage STATIC
     trash/trash.cc
 )
 target_include_directories(innstorage PRIVATE ${CMAKE_CURRENT_SOURCE_DIR})
-target_link_libraries(innstorage PUBLIC INN::inn ZLIB::ZLIB SQLite::SQLite3)
+target_link_libraries(innstorage PUBLIC INN::inn ZLIB::ZLIB SQLite3::SQLite3)
 add_library(INN::storage ALIAS innstorage)
 
 # innd/CMakeLists.txt links this for the libraries libinnstorage needs.
 add_library(storage_deps INTERFACE)
-target_link_libraries(storage_deps INTERFACE ZLIB::ZLIB SQLite::SQLite3)
+target_link_libraries(storage_deps INTERFACE ZLIB::ZLIB SQLite3::SQLite3)
 add_library(INN::storage_deps ALIAS storage_deps)

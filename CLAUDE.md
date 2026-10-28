@@ -39,6 +39,12 @@ Only list checks that actually ran on the exact tree being committed.
 Run `support/verify-cxx.sh` (needs a configured `build/`) and paste its output
 into the `Tested:` section. Its reference data lives in `support/verify-cxx/`.
 
+Also run it against a sanitizer build when a change touches memory handling:
+`cmake -S . -B build-asan -DINN_SANITIZE=ON -DCMAKE_BUILD_TYPE=Debug`, then
+`support/verify-cxx.sh build-asan` (AddressSanitizer + UBSan; the script builds
+the tests with the same flags).  `compile_commands.json` is always written to
+the build directory for clang-tidy (Homebrew LLVM: `/opt/homebrew/opt/llvm/bin`).
+
 Current verification set:
 - CMake build of lib, history, storage and innd succeeds
 - `innd` exports every symbol the Makefile-built `innd` does (169)

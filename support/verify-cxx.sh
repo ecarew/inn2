@@ -44,7 +44,7 @@ fi
 mangled=0
 for a in "$build/innd/innd" "$build"/history/libinnhist.a \
          "$build"/storage/libinnstorage.a "$build"/lib/libinn.a; do
-    n=$(nm -gU "$a" 2>/dev/null | grep -c ' __Z')
+    n=$(nm -gUm "$a" 2>/dev/null | grep -v weak | grep -c ' __Z')
     mangled=$((mangled + n))
 done
 if [ "$mangled" = 0 ]; then
@@ -80,6 +80,14 @@ libs=("$build/storage/libinnstorage.a" "$build/history/libinnhist.a"
       "$build/lib/libinn.a" -lz -lsqlite3)
 cflags=(-g -I"$root/include" -I"$root/tests" -I"$root/history"
         -I"$root/storage")
+# A build configured with -DINN_SANITIZE=ON needs its test programs built
+# with the same sanitizer flags.
+sanflags=()
+if grep -q '^INN_SANITIZE:BOOL=ON' "$build/CMakeCache.txt" 2>/dev/null; then
+    sanflags=(-fsanitize=address,undefined -fno-omit-frame-pointer
+              -fno-sanitize-recover=undefined)
+    cflags+=("${sanflags[@]}")
+fi
 tap=()
 for h in basic float messages process string; do
     cc "${cflags[@]}" -c "tests/tap/$h.c" -o "$tmp/tap-$h.o" 2>>"$tmp/tap.log"
@@ -139,9 +147,18 @@ shm_cleanup() {
     done
 }
 
+base_cflags=("${cflags[@]}")
 for spec in "${tests[@]}"; do
     shm_ids >"$tmp/shm.before"
     IFS=: read -r t src extra srcs <<<"$spec"
+    # macOS's gethostbyname() returns hostent data at misaligned addresses,
+    # which UBSan flags in these two tests (in the test and in the unconverted
+    # C fallback); turn off only the alignment check for them.
+    cflags=("${base_cflags[@]}")
+    case "$t" in
+    lib/getaddrinfo|lib/getnameinfo)
+        [ ${#sanflags[@]} -gt 0 ] && cflags+=(-fno-sanitize=alignment) ;;
+    esac
     src=${src:-$t}
     n=$(echo "$t" | tr / _)
     objs=()
@@ -155,7 +172,7 @@ for spec in "${tests[@]}"; do
     if ! $built \
        || ! cc "${cflags[@]}" $extra -c "tests/$src-t.c" -o "$tmp/$n-t.o" \
             2>>"$tmp/$n.log" \
-       || ! c++ "$tmp/$n-t.o" "${objs[@]}" "${tap[@]}" "${libs[@]}" -lm \
+       || ! c++ "$tmp/$n-t.o" "${objs[@]}" "${tap[@]}" "${libs[@]}" -lm "${sanflags[@]}" \
                 -o "$tmp/$n.t" 2>>"$tmp/$n.log"; then
         res "test $t" "FAIL (build)"
         continue

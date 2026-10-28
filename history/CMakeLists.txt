@@ -8,5 +8,5 @@ add_library(innhist STATIC
     hisv6/hisv6.cc
 )
 target_include_directories(innhist PRIVATE ${CMAKE_CURRENT_SOURCE_DIR})
-target_link_libraries(innhist PUBLIC INN::inn SQLite::SQLite3)
+target_link_libraries(innhist PUBLIC INN::inn SQLite3::SQLite3)
 add_library(INN::hist ALIAS innhist)

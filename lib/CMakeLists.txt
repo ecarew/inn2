@@ -15,7 +15,7 @@ add_library(inn STATIC
     xmalloc.cc xsignal.cc xwrite.cc
 )
 target_include_directories(inn PRIVATE ${CMAKE_CURRENT_SOURCE_DIR})
-target_link_libraries(inn PUBLIC SQLite::SQLite3)
+target_link_libraries(inn PUBLIC SQLite3::SQLite3)
 add_library(INN::inn ALIAS inn)
 
 # Linked directly into programs rather than libinn, as the Make build does

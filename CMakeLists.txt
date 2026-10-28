@@ -24,6 +24,17 @@ endforeach()
 
 include(GNUInstallDirs)
 
+# compile_commands.json for clang-tidy and other tooling.
+set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
+
+option(INN_SANITIZE "Build with AddressSanitizer and UndefinedBehaviorSanitizer" OFF)
+if(INN_SANITIZE)
+    set(INN_SANITIZE_FLAGS -fsanitize=address,undefined -fno-omit-frame-pointer
+        -fno-sanitize-recover=undefined)
+    add_compile_options(${INN_SANITIZE_FLAGS})
+    add_link_options(${INN_SANITIZE_FLAGS})
+endif()
+
 set(CMAKE_C_STANDARD 11)
 set(CMAKE_C_EXTENSIONS ON)
 set(CMAKE_POSITION_INDEPENDENT_CODE ON)
