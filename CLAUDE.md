@@ -87,6 +87,30 @@ Add the relevant INN tests when converting a new area (e.g. storage tests for
 Deferred work, newest first within each group.  When an item is done, move
 it to "Resolved" below with the date and commit rather than deleting it.
 
+**Goal: CMake-only build, no Autoconf/Make left (decided 2026-10-28)**
+Everything below must be done before the Autoconf/Make build is deleted.
+1. Native configuration: replace `./configure` with CMake checks
+   (`check_include_file`, `check_symbol_exists`, `find_package`, options for
+   optional features) and generate `config.h`, `inn/paths.h`, `inn/system.h`
+   and friends with `configure_file()`.  Today CMake only reads configure's
+   `config.h`.
+2. Generated sources: run `storage/buildconfig`, `history/buildconfig` and
+   `lib/sqlite-helper-gen` (or CMake equivalents) from CMake with
+   `add_custom_command`, instead of requiring one Make pass first.
+3. Generated configuration and helpers: `samples/*` (inn.conf etc. via
+   fixconfig) and `support/fixconfig`, `support/fixscript`.
+4. Scripts: generate the shell and Perl programs from their `.in` files
+   (controlchan, pgpverify, nntpsend, mailpost, innreport, inncheck,
+   expirerm, ...).
+5. Installation: install rules for programs, scripts, libraries, headers and
+   samples, with INN's ownership, setuid and permission modes.
+6. Documentation: man pages generated from `doc/pod`.
+7. Perl module `perl/INN/` (INN::Config, ovsqlite_client) and `contrib/`.
+8. Optional features as CMake options: Perl and Python filters/hooks,
+   Berkeley DB (ovdb), OpenSSL/TLS, libcanlock, systemd, blocklist.
+9. Tests: run them through CTest instead of only support/verify-cxx.sh.
+10. Portability: build and test on Linux and a BSD, not just macOS.
+
 **Test coverage (2026-10-28, support/coverage-report.sh)**
 - innd/ is 2.0% line-covered: every file except innd.cc startup is 0%
   (art, nc, cc, rc, site, chan, newsfeeds, ...).  INN's innd tests
@@ -121,8 +145,8 @@ it to "Resolved" below with the date and commit rather than deleting it.
   where `NULL` still remains in compiled-out code.
 - Generated sources still C: `storage/methods.c`, `storage/ovmethods.c`,
   `storage/ovsqlite/sql-*.c`, `history/hismethods.c`,
-  `history/hissqlite/hissqlite-{init,main,read}.c`.  CMake also does not run
-  their generators yet; it relies on `./configure` plus one Make pass.
+  `history/hissqlite/hissqlite-{init,main,read}.c` (their generators: goal
+  item 2).
 - `lib/` replacement functions not used on macOS (`asprintf`, `inet_*`,
   `snprintf`, `strlc*`, `setenv`, `mkstemp`, `pread`, `pwrite`,
   `getaddrinfo`, `getnameinfo`, `daemon`) are still C.
@@ -130,9 +154,6 @@ it to "Resolved" below with the date and commit rather than deleting it.
   libinnstorage (their Makefiles list `.c` files that are now `.cc`).  CMake
   now builds all 49 C programs (2026-10-28), but only innd, tinyleaf,
   encode/decode and convdate have been run; the rest are untested.
-- CMake does not yet generate INN's scripts from their `.in` files
-  (controlchan, pgpverify, nntpsend, mailpost, expirerm, ...), and has no
-  install rules for the programs (setuid/permissions, paths).
 - Kerberos (auth_krb5) is found through `krb5-config`, which on this Mac is
   Anaconda's (`/opt/anaconda3`), matching what configure picked.
 - Upstream bug, innfeed/article.c:37: `#define VALIDATE_HASH_TABLE() (void(0))`
