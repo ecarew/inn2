@@ -49,7 +49,8 @@ Current verification set:
   `lib/bloom-hiswalk`, `expire/tombstone-hisexpire`, `overview/api`,
   `overview/buffindexed`, `overview/tradindexed`, `overview/ovsqlite`,
   `overview/tdx-group`, `overview/xref`, `storage/caf`,
-  `storage/cancel-tombstone`
+  `storage/cancel-tombstone`, `storage/methods` (cnfs, timecaf, timehash and
+  trash store/retrieve/cancel; written for this conversion)
 
 Not yet covered: shell-driven tests that need INN's command-line programs
 (`overview/ovsqlite-integ`, `overview/overchan`, `storage/sm`,

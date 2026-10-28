@@ -85,7 +85,7 @@ tests=(
     overview/tradindexed:overview/overview:-DOVTYPE=tradindexed
     overview/ovsqlite
     overview/tdx-group overview/xref
-    storage/caf storage/cancel-tombstone
+    storage/caf storage/cancel-tombstone storage/methods
 )
 for spec in "${tests[@]}"; do
     IFS=: read -r t src extra <<<"$spec"

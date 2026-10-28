@@ -73,6 +73,7 @@ storage/archive
 storage/caf
 storage/cancel-tombstone
 storage/makehistory
+storage/methods
 storage/sm
 util/convdate
 util/innbind
