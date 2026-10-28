@@ -12,7 +12,7 @@ add_library(inn STATIC
     network-innbind.c newsuser.cc nntp.c qio.cc radix32.cc readin.cc remopen.cc
     reservedfd.cc resource.cc secrets.c sendarticle.cc sendpass.cc sequence.cc
     sqlite-helper.cc timer.c tst.c uwildmat.c vector.c wire.c xfopena.cc
-    xmalloc.c xsignal.c xwrite.c
+    xmalloc.c xsignal.cc xwrite.c
 )
 target_include_directories(inn PRIVATE ${CMAKE_CURRENT_SOURCE_DIR})
 target_link_libraries(inn PUBLIC SQLite::SQLite3)
