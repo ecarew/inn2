@@ -492,7 +492,7 @@ tradspool_explaintoken(const TOKEN token)
     path = TokenToPath(token);
 
     xasprintf(&text, "method=tradspool class=%u ngnum=%lu artnum=%lu file=%s",
-              (unsigned int) token.class, (unsigned long) ntohl(ngnum),
+              (unsigned int) token.class_, (unsigned long) ntohl(ngnum),
               (unsigned long) ntohl(artnum), path != NULL ? path : "");
 
     if (path != NULL)
@@ -506,7 +506,7 @@ tradspool_explaintoken(const TOKEN token)
 **  article number.
 */
 static TOKEN
-MakeToken(char *ng, unsigned long artnum, STORAGECLASS class)
+MakeToken(char *ng, unsigned long artnum, STORAGECLASS storageclass)
 {
     TOKEN token;
     NGTENT *ngtp;
@@ -515,7 +515,7 @@ MakeToken(char *ng, unsigned long artnum, STORAGECLASS class)
     memset(&token, '\0', sizeof(token));
 
     token.type = TOKEN_TRADSPOOL;
-    token.class = class;
+    token.class_ = storageclass;
 
     /* If not already in the NG Table, be sure to add this ng! This way we
      * catch things like newsgroups added since startup. */
@@ -614,7 +614,7 @@ CrackXref(char *xref, unsigned int *lenp)
 }
 
 TOKEN
-tradspool_store(const ARTHANDLE article, const STORAGECLASS class)
+tradspool_store(const ARTHANDLE article, const STORAGECLASS storageclass)
 {
     char **xrefs;
     char *xrefhdr;
@@ -652,7 +652,7 @@ tradspool_store(const ARTHANDLE article, const STORAGECLASS class)
     DeDotify(ng);
     artnum = atol(p);
 
-    token = MakeToken(ng, artnum, class);
+    token = MakeToken(ng, artnum, storageclass);
 
     length = strlen(innconf->patharticles) + strlen(ng) + 32;
     path = xmalloc(length);
@@ -778,7 +778,7 @@ static ARTHANDLE *
 OpenArticle(const char *path, RETRTYPE amount)
 {
     int fd;
-    PRIV_TRADSPOOL *private;
+    PRIV_TRADSPOOL *priv;
     char *p;
     struct stat sb;
     ARTHANDLE *art;
@@ -794,7 +794,7 @@ OpenArticle(const char *path, RETRTYPE amount)
         art->type = TOKEN_TRADSPOOL;
         art->data = NULL;
         art->len = 0;
-        art->private = NULL;
+        art->private_ = NULL;
         return art;
     }
 
@@ -824,73 +824,73 @@ OpenArticle(const char *path, RETRTYPE amount)
 
     art->arrived = sb.st_mtime;
 
-    private = xmalloc(sizeof(PRIV_TRADSPOOL));
-    art->private = (void *) private;
-    private->artlen = (size_t) sb.st_size;
+    priv = xmalloc(sizeof(PRIV_TRADSPOOL));
+    art->private_ = (void *) priv;
+    priv->artlen = (size_t) sb.st_size;
     if (innconf->articlemmap) {
-        if ((private->artbase =
-                 mmap(NULL, private->artlen, PROT_READ, MAP_SHARED, fd, 0))
+        if ((priv->artbase =
+                 static_cast<char *>(mmap(NULL, priv->artlen, PROT_READ, MAP_SHARED, fd, 0)))
             == MAP_FAILED) {
             SMseterror(SMERR_UNDEFINED, NULL);
             syswarn("tradspool: could not mmap article %s", path);
-            free(art->private);
+            free(art->private_);
             free(art);
             close(fd);
             return NULL;
         }
         if (amount == RETR_ALL)
-            madvise(private->artbase, private->artlen, MADV_WILLNEED);
+            madvise(priv->artbase, priv->artlen, MADV_WILLNEED);
         else
-            madvise(private->artbase, private->artlen, MADV_SEQUENTIAL);
+            madvise(priv->artbase, priv->artlen, MADV_SEQUENTIAL);
 
         /* consider coexisting both wireformatted and nonwireformatted */
-        p = memchr(private->artbase, '\n', private->artlen);
-        if (p == NULL || p == private->artbase) {
+        p = static_cast<char *>(memchr(priv->artbase, '\n', priv->artlen));
+        if (p == NULL || p == priv->artbase) {
             SMseterror(SMERR_UNDEFINED, NULL);
             syswarn("tradspool: apparently corrupt article %s", path);
-            munmap(private->artbase, private->artlen);
-            free(art->private);
+            munmap(priv->artbase, priv->artlen);
+            free(art->private_);
             free(art);
             close(fd);
             return NULL;
         }
         if (p[-1] == '\r') {
-            private->mmapped = true;
+            priv->mmapped = true;
         } else {
             wfarticle =
-                wire_from_native(private->artbase, private->artlen, &wflen);
+                wire_from_native(priv->artbase, priv->artlen, &wflen);
             if (wfarticle == NULL) {
                 SMseterror(SMERR_UNDEFINED,
                            "article is too large after wire formatting");
-                munmap(private->artbase, private->artlen);
-                free(art->private);
+                munmap(priv->artbase, priv->artlen);
+                free(art->private_);
                 free(art);
                 close(fd);
                 return NULL;
             }
-            munmap(private->artbase, private->artlen);
-            private->artbase = wfarticle;
-            private->artlen = wflen;
-            private->mmapped = false;
+            munmap(priv->artbase, priv->artlen);
+            priv->artbase = wfarticle;
+            priv->artlen = wflen;
+            priv->mmapped = false;
         }
     } else {
-        private->mmapped = false;
-        private->artbase = xmalloc(private->artlen);
-        if (xread(fd, private->artbase, sb.st_size) < 0) {
+        priv->mmapped = false;
+        priv->artbase = xmalloc(priv->artlen);
+        if (xread(fd, priv->artbase, sb.st_size) < 0) {
             SMseterror(SMERR_UNDEFINED, NULL);
             syswarn("tradspool: could not read article %s", path);
-            free(private->artbase);
-            free(art->private);
+            free(priv->artbase);
+            free(art->private_);
             free(art);
             close(fd);
             return NULL;
         }
-        p = memchr(private->artbase, '\n', private->artlen);
-        if (p == NULL || p == private->artbase) {
+        p = static_cast<char *>(memchr(priv->artbase, '\n', priv->artlen));
+        if (p == NULL || p == priv->artbase) {
             SMseterror(SMERR_UNDEFINED, NULL);
             syswarn("tradspool: apparently corrupt article %s", path);
-            free(private->artbase);
-            free(art->private);
+            free(priv->artbase);
+            free(art->private_);
             free(art);
             close(fd);
             return NULL;
@@ -898,48 +898,48 @@ OpenArticle(const char *path, RETRTYPE amount)
         if (p[-1] != '\r') {
             /* need to make a wireformat copy of the article */
             wfarticle =
-                wire_from_native(private->artbase, private->artlen, &wflen);
+                wire_from_native(priv->artbase, priv->artlen, &wflen);
             if (wfarticle == NULL) {
                 SMseterror(SMERR_UNDEFINED,
                            "article is too large after wire formatting");
-                free(private->artbase);
-                free(art->private);
+                free(priv->artbase);
+                free(art->private_);
                 free(art);
                 close(fd);
                 return NULL;
             }
-            free(private->artbase);
-            private->artbase = wfarticle;
-            private->artlen = wflen;
+            free(priv->artbase);
+            priv->artbase = wfarticle;
+            priv->artlen = wflen;
         }
     }
     close(fd);
 
-    private->ngtp = NULL;
-    private->curdir = NULL;
-    private->curdirname = NULL;
-    private->nextindex = -1;
+    priv->ngtp = NULL;
+    priv->curdir = NULL;
+    priv->curdirname = NULL;
+    priv->nextindex = -1;
 
     if (amount == RETR_ALL) {
-        art->data = private->artbase;
-        art->len = private->artlen;
+        art->data = priv->artbase;
+        art->len = priv->artlen;
         return art;
     }
 
-    if (((p = wire_findbody(private->artbase, private->artlen)) == NULL)) {
-        if (private->mmapped)
-            munmap(private->artbase, private->artlen);
+    if (((p = wire_findbody(priv->artbase, priv->artlen)) == NULL)) {
+        if (priv->mmapped)
+            munmap(priv->artbase, priv->artlen);
         else
-            free(private->artbase);
+            free(priv->artbase);
         SMseterror(SMERR_NOBODY, NULL);
-        free(art->private);
+        free(art->private_);
         free(art);
         return NULL;
     }
 
     if (amount == RETR_HEAD) {
-        art->data = private->artbase;
-        art->len = p - private->artbase;
+        art->data = priv->artbase;
+        art->len = p - priv->artbase;
         /* Headers end just before the first empty line (\r\n). */
         art->len = art->len - 2;
         return art;
@@ -947,15 +947,15 @@ OpenArticle(const char *path, RETRTYPE amount)
 
     if (amount == RETR_BODY) {
         art->data = p;
-        art->len = private->artlen - (p - private->artbase);
+        art->len = priv->artlen - (p - priv->artbase);
         return art;
     }
     SMseterror(SMERR_UNDEFINED, "Invalid retrieve request");
-    if (private->mmapped)
-        munmap(private->artbase, private->artlen);
+    if (priv->mmapped)
+        munmap(priv->artbase, priv->artlen);
     else
-        free(private->artbase);
-    free(art->private);
+        free(priv->artbase);
+    free(art->private_);
     free(art);
     return NULL;
 }
@@ -988,21 +988,21 @@ tradspool_retrieve(const TOKEN token, const RETRTYPE amount)
 void
 tradspool_freearticle(ARTHANDLE *article)
 {
-    PRIV_TRADSPOOL *private;
+    PRIV_TRADSPOOL *priv;
 
     if (article == NULL)
         return;
 
-    if (article->private) {
-        private = (PRIV_TRADSPOOL *) article->private;
-        if (private->mmapped)
-            munmap(private->artbase, private->artlen);
+    if (article->private_) {
+        priv = (PRIV_TRADSPOOL *) article->private_;
+        if (priv->mmapped)
+            munmap(priv->artbase, priv->artlen);
         else
-            free(private->artbase);
-        if (private->curdir)
-            closedir(private->curdir);
-        free(private->curdirname);
-        free(private);
+            free(priv->artbase);
+        if (priv->curdir)
+            closedir(priv->curdir);
+        free(priv->curdirname);
+        free(priv);
     }
     free(article);
 }
@@ -1147,8 +1147,8 @@ tradspool_next(ARTHANDLE *article, const RETRTYPE amount)
         priv.curdirname = NULL;
         priv.nextindex = -1;
     } else {
-        priv = *(PRIV_TRADSPOOL *) article->private;
-        free(article->private);
+        priv = *(PRIV_TRADSPOOL *) article->private_;
+        free(article->private_);
         free(article);
         if (priv.artbase != NULL) {
             if (priv.mmapped)
@@ -1199,11 +1199,11 @@ tradspool_next(ARTHANDLE *article, const RETRTYPE amount)
         art->type = TOKEN_TRADSPOOL;
         art->data = NULL;
         art->len = 0;
-        art->private = xmalloc(sizeof(PRIV_TRADSPOOL));
+        art->private_ = xmalloc(sizeof(PRIV_TRADSPOOL));
         art->expires = 0;
         art->groups = NULL;
         art->groupslen = 0;
-        newpriv = (PRIV_TRADSPOOL *) art->private;
+        newpriv = (PRIV_TRADSPOOL *) art->private_;
         newpriv->artbase = NULL;
     } else {
         /* Skip linked (not symlinked) crossposted articles.
@@ -1296,7 +1296,7 @@ tradspool_next(ARTHANDLE *article, const RETRTYPE amount)
         /* for backward compatibility; assumes no Xref unless crossposted
            for 1.4 and 1.5: just fall through */
     }
-    newpriv = (PRIV_TRADSPOOL *) art->private;
+    newpriv = (PRIV_TRADSPOOL *) art->private_;
     newpriv->nextindex = priv.nextindex;
     newpriv->curdir = priv.curdir;
     newpriv->curdirname = priv.curdirname;

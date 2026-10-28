@@ -12,7 +12,7 @@ add_library(innstorage STATIC
     timehash/timehash.cc
     tradindexed/tdx-cache.cc tradindexed/tdx-data.cc tradindexed/tdx-group.cc
     tradindexed/tradindexed.cc
-    tradspool/tradspool.c
+    tradspool/tradspool.cc
     trash/trash.cc
 )
 target_include_directories(innstorage PRIVATE ${CMAKE_CURRENT_SOURCE_DIR})
