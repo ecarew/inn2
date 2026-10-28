@@ -92,6 +92,13 @@ it to "Resolved" below with the date and commit rather than deleting it.
   (art, nc, cc, rc, site, chan, newsfeeds, ...).  INN's innd tests
   (tests/innd/artparse-t.c, chan-t.c, fakeinnd) are not in verify-cxx.sh yet;
   add them before any further innd changes.
+  Plan: split innd's objects (all but innd.cc) into an internal innd_core
+  library that innd and the tests both link; build artparse and chan with
+  tests/innd/fakeinnd.c in verify-cxx.sh; baseline them against the original
+  Make-built innd objects to separate test problems from regressions.
+- Even then nc.cc, cc.cc, rc.cc and site.cc stay untested: they only run in a
+  live innd.  Needs a scratch-configuration innd driven over NNTP (separate
+  piece of work).
 - Overall 35.8% of lines: lib/ 72.5%, history/ 59.8%, storage/ 36.2%.
   0% also in storage/overdata.cc, lib/inndcomm.cc, lib/network-innbind.cc.
 
