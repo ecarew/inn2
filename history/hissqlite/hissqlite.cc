@@ -458,7 +458,7 @@ hissqlite_open(const char *path, int flags, struct history *history)
 bool
 hissqlite_sync(void *history)
 {
-    struct hissqlite *h = history;
+    struct hissqlite *h = static_cast<struct hissqlite *>(history);
     bool ok = true;
 
     /* HISsync is deliberately NOT a durability barrier, matching dbz:
@@ -486,7 +486,7 @@ hissqlite_sync(void *history)
 bool
 hissqlite_close(void *history)
 {
-    struct hissqlite *h = history;
+    struct hissqlite *h = static_cast<struct hissqlite *>(history);
     bool ok = true;
 
     /* A deferred handle (HISopen(NULL) whose HISCTLS_PATH was never set or
@@ -533,7 +533,7 @@ bool
 hissqlite_lookup(void *history, const char *key, time_t *arrived,
                  time_t *posted, time_t *expires, struct token *token)
 {
-    struct hissqlite *h = history;
+    struct hissqlite *h = static_cast<struct hissqlite *>(history);
     sqlite3_stmt *stmt = h->direct_reader ? h->read.lookup : h->main.lookup;
     bool found = false;
     int status;
@@ -570,7 +570,7 @@ hissqlite_lookup(void *history, const char *key, time_t *arrived,
 bool
 hissqlite_check(void *history, const char *key)
 {
-    struct hissqlite *h = history;
+    struct hissqlite *h = static_cast<struct hissqlite *>(history);
     sqlite3_stmt *stmt = h->direct_reader ? h->read.check : h->main.check;
     bool found;
     int status;
@@ -590,7 +590,7 @@ bool
 hissqlite_write(void *history, const char *key, time_t arrived, time_t posted,
                 time_t expires, const struct token *token)
 {
-    struct hissqlite *h = history;
+    struct hissqlite *h = static_cast<struct hissqlite *>(history);
     sqlite3_stmt *stmt = h->main.write;
     bool ok;
 
@@ -625,7 +625,7 @@ bool
 hissqlite_remember(void *history, const char *key, time_t arrived,
                    time_t posted)
 {
-    struct hissqlite *h = history;
+    struct hissqlite *h = static_cast<struct hissqlite *>(history);
     sqlite3_stmt *stmt = h->main.remember;
     bool ok;
 
@@ -644,7 +644,7 @@ bool
 hissqlite_replace(void *history, const char *key, time_t arrived,
                   time_t posted, time_t expires, const struct token *token)
 {
-    struct hissqlite *h = history;
+    struct hissqlite *h = static_cast<struct hissqlite *>(history);
     sqlite3_stmt *stmt = h->main.replace;
     bool ok;
 
@@ -670,7 +670,7 @@ hissqlite_walk(void *history, const char *reason UNUSED, void *cookie,
                bool (*callback)(void *, const HASH *, time_t, time_t, time_t,
                                 const TOKEN *))
 {
-    struct hissqlite *h = history;
+    struct hissqlite *h = static_cast<struct hissqlite *>(history);
     sqlite3_stmt *stmt = h->direct_reader ? h->read.walk : h->main.walk;
     bool ok = true;
     int status;
@@ -729,7 +729,7 @@ hissqlite_expire(void *history, const char *path UNUSED,
                  bool (*decide)(void *, time_t, time_t, time_t,
                                 struct token *))
 {
-    struct hissqlite *h = history;
+    struct hissqlite *h = static_cast<struct hissqlite *>(history);
     struct expire_action *acts;
     HASH last;
     bool ok = true, more = true, first = true;
@@ -872,7 +872,7 @@ hissqlite_expire(void *history, const char *path UNUSED,
 bool
 hissqlite_ctl(void *history, int selector, void *val)
 {
-    struct hissqlite *h = history;
+    struct hissqlite *h = static_cast<struct hissqlite *>(history);
 
     switch (selector) {
     case HISCTLG_PATH:
@@ -904,7 +904,7 @@ hissqlite_ctl(void *history, int selector, void *val)
            count(*) has no thin index to use on this WITHOUT ROWID table, so
            it would traverse the whole clustered B-tree -- the very scan
            callers such as expireover are about to make via HISwalk. */
-        return hissqlite_entryestimate(h, val);
+        return hissqlite_entryestimate(h, static_cast<size_t *>(val));
     case HISCTLS_PATH:
         /* Deferred-open path (makehistory): HISopen(NULL) left the database
            unopened; set the real path now and perform the open/create.  Refuse

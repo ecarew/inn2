@@ -4,7 +4,7 @@
 add_library(innhist STATIC
     his.cc hismethods.c
     hissqlite/hissqlite-init.c hissqlite/hissqlite-main.c
-    hissqlite/hissqlite-read.c hissqlite/hissqlite.c
+    hissqlite/hissqlite-read.c hissqlite/hissqlite.cc
     hisv6/hisv6.cc
 )
 target_include_directories(innhist PRIVATE ${CMAKE_CURRENT_SOURCE_DIR})
