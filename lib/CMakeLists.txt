@@ -4,7 +4,7 @@
 
 add_library(inn STATIC
     setproctitle.cc sd-daemon.cc reallocarray.cc
-    argparse.cc artnumber.cc bloom.c buffer.c cleanfrom.cc clientactive.cc
+    argparse.cc artnumber.cc bloom.cc buffer.c cleanfrom.cc clientactive.cc
     clientlib.cc commands.cc concat.cc conffile.cc confparse.c date.c dbz.c
     defdist.cc dispatch.cc fdflag.cc fdlimit.cc getfqdn.cc getmodaddr.c hash.cc
     hashtab.c headers.c hex.cc innconf.c inndcomm.c list.cc localopen.cc
