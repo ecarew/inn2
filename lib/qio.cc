@@ -113,7 +113,7 @@ QIOread(QIOSTATE *qp)
             qp->_start = qp->_buffer;
             qp->_end = qp->_buffer;
         } else {
-            p = memchr(qp->_start, '\n', nleft);
+            p = static_cast<char *>(memchr(qp->_start, '\n', nleft));
             if (p != NULL) {
                 *p = '\0';
                 qp->_length = p - qp->_start;
