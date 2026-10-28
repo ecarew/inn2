@@ -2,7 +2,7 @@
 # hissqlite.c) are generated; see the root CMakeLists.txt.
 
 add_library(innhist STATIC
-    his.c hismethods.c
+    his.cc hismethods.c
     hissqlite/hissqlite-init.c hissqlite/hissqlite-main.c
     hissqlite/hissqlite-read.c hissqlite/hissqlite.c
     hisv6/hisv6.c
