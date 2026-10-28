@@ -230,7 +230,7 @@ message_log_syslog(int pri, size_t len, const char *fmt, va_list args, int err)
     char *buffer;
     int status;
 
-    buffer = malloc(len + 1);
+    buffer = static_cast<char *>(malloc(len + 1));
     if (buffer == NULL) {
         fprintf(stderr, "failed to malloc %lu bytes at %s line %d: %s",
                 (unsigned long) len + 1, __FILE__, __LINE__, strerror(errno));
