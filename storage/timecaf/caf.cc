@@ -59,8 +59,6 @@ typedef unsigned long long_int_type;
 #    define LLFORMAT "lu"
 #endif
 
-int CAFClean(char *path, int verbose, double PercentFreeThreshold);
-
 int caf_error = 0;
 int caf_errno = 0;
 
@@ -99,7 +97,7 @@ CAFError(int code)
 static int
 OurRead(int fd, void *buf, size_t n)
 {
-    char *p = buf;
+    char *p = static_cast<char *>(buf);
     ssize_t rval;
     size_t request;
 

@@ -136,6 +136,7 @@ extern const char *CAFErrorStr(void);
 extern CAFTOCENT *CAFReadTOC(char *cfpath, CAFHEADER *ch);
 extern int CAFRemoveMultArts(char *cfpath, unsigned int narts, ARTNUM *arts);
 extern int CAFStatArticle(char *path, ARTNUM art, struct stat *st);
+extern int CAFClean(char *path, int verbose, double PercentFreeThreshold);
 
 #ifdef CAF_INNARDS
 /*
