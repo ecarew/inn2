@@ -43,7 +43,7 @@ struct cache_entry {
 static unsigned long
 entry_hash(const void *key)
 {
-    const HASH *hash = key;
+    const HASH *hash = static_cast<const HASH *>(key);
     unsigned long bucket;
 
     memcpy(&bucket, hash, sizeof(bucket));
@@ -111,7 +111,7 @@ entry_find_oldest(void *data, void *cookie)
         return;
     if (entry->lastused > (*oldest)->lastused)
         return;
-    *oldest = data;
+    *oldest = static_cast<struct cache_entry *>(data);
 }
 
 
@@ -143,7 +143,7 @@ tdx_cache_lookup(struct cache *cache, HASH hash)
     struct cache_entry *entry;
 
     cache->queries++;
-    entry = hash_lookup(cache->hashtable, &hash);
+    entry = static_cast<struct cache_entry *>(hash_lookup(cache->hashtable, &hash));
     if (entry != NULL) {
         cache->hits++;
         entry->lastused = time(NULL);

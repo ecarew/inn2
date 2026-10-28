@@ -123,7 +123,7 @@ bool tdx_data_add(struct group_index *, struct group_entry *,
    then _finish when done, with the new group_entry information. */
 bool tdx_index_rebuild_start(struct group_index *, struct group_entry *);
 bool tdx_index_rebuild_finish(struct group_index *, struct group_entry *,
-                              struct group_entry *new);
+                              struct group_entry *newentry);
 
 /* Expire a single group. */
 bool tdx_expire(const char *group, ARTNUM *low, struct history *);
