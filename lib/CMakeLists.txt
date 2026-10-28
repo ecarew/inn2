@@ -3,7 +3,7 @@
 # configure selected (LIBOBJS) for macOS; other platforms may need others.
 
 add_library(inn STATIC
-    setproctitle.c sd-daemon.cc reallocarray.cc
+    setproctitle.cc sd-daemon.cc reallocarray.cc
     argparse.c artnumber.cc bloom.c buffer.c cleanfrom.cc clientactive.c
     clientlib.c commands.cc concat.cc conffile.c confparse.c date.c dbz.c
     defdist.c dispatch.cc fdflag.c fdlimit.c getfqdn.cc getmodaddr.c hash.c
