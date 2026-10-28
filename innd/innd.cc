@@ -33,7 +33,7 @@ OPERATINGMODE Mode = OMrunning;
 int RemoteLimit = REMOTELIMIT;
 time_t RemoteTimer = REMOTETIMER;
 int RemoteTotal = REMOTETOTAL;
-bool ThrottledbyIOError = false;
+/* ThrottledbyIOError, Log and Errlog are defined by innd.h (DEFINE_DATA). */
 
 static char *PID = NULL;
 
@@ -50,10 +50,6 @@ static volatile sig_atomic_t killer_signal = 0;
    to determine whether fflush is needed.  Should be static. */
 bool BufferedLogs = true;
 
-/* FILEs for logs and error logs.  Everything should just use stdout and
-   stderr. */
-FILE *Log = NULL;
-FILE *Errlog = NULL;
 
 /* Some very old systems have a completely inadequate BUFSIZ buffer size, at
    least for our logging purposes. */
