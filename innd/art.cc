@@ -607,11 +607,12 @@ ARTstore(CHANNEL *cp, bool filtered)
     buffer_set(headers, data->Bytes, strlen(data->Bytes));
     for (i = 0; i < iovcnt; i++) {
         if (i + 1 == iovcnt)
-            buffer_append(headers, iov[i].iov_base,
+            buffer_append(headers, static_cast<const char *>(iov[i].iov_base),
                           Article->data + data->Body
-                              - (char *) iov[i].iov_base);
+                              - static_cast<char *>(iov[i].iov_base));
         else
-            buffer_append(headers, iov[i].iov_base, iov[i].iov_len);
+            buffer_append(headers, static_cast<const char *>(iov[i].iov_base),
+                          iov[i].iov_len);
     }
     buffer_trimcr(headers);
 
@@ -641,8 +642,9 @@ ARTcheckheader(CHANNEL *cp, int size)
     ihave = (cp->Sendid.size > 3) ? false : true;
 
     /* Find first colon */
-    if ((colon = memchr(header, ':', size)) == NULL || !ISWHITE(colon[1])) {
-        if ((p = memchr(header, '\r', size)) != NULL)
+    if ((colon = static_cast<char *>(memchr(header, ':', size))) == NULL
+        || !ISWHITE(colon[1])) {
+        if ((p = static_cast<char *>(memchr(header, '\r', size))) != NULL)
             *p = '\0';
         snprintf(cp->Error, sizeof(cp->Error),
                  "%d No colon-space in \"%s\" header field",

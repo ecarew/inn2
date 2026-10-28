@@ -40,7 +40,11 @@ typedef unsigned char STORAGETYPE;
 
 typedef struct token {
     STORAGETYPE type;
+#ifdef __cplusplus
+    STORAGECLASS class_; /* "class" is reserved in C++; same layout. */
+#else
     STORAGECLASS class;
+#endif
     char token[STORAGE_TOKEN_LENGTH];
 } TOKEN;
 
@@ -52,7 +56,11 @@ typedef struct {
     size_t len;               /* Length of the requested data */
     unsigned char nextmethod; /* Next method to try when iterating over the
                                  spool */
+#ifdef __cplusplus
+    void *private_; /* "private" is reserved in C++; same layout. */
+#else
     void *private;            /* A pointer to method specific data */
+#endif
     time_t arrived;           /* The time when the article arrived */
     time_t expires;           /* The time when the article will be expired */
     bool filtered;            /* Article was marked by a filter */

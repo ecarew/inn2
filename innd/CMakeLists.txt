@@ -4,7 +4,6 @@
 # ── innd ──────────────────────────────────────────────────────────────────────
 
 set(INND_C_SOURCES
-    art.c
     cc.c
     chan.c
     icd.c
@@ -24,7 +23,9 @@ set(INND_C_SOURCES
     wip.c
 )
 
-set(INND_CXX_SOURCES)
+set(INND_CXX_SOURCES
+    art.cc
+)
 
 add_executable(innd ${INND_C_SOURCES} ${INND_CXX_SOURCES})
 

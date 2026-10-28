@@ -30,7 +30,7 @@
  */
 
 #ifndef INN_XMALLOC_H
-#define INN_XMALLOC_H
+#define INN_XMALLOC_H 1
 
 #include "inn/portable-macros.h"
 #include "inn/system.h"
@@ -119,5 +119,32 @@ void xmalloc_fail(const char *, size_t, const char *, int)
 extern xmalloc_handler_type xmalloc_error_handler;
 
 END_DECLS
+
+#ifdef __cplusplus
+/*
+ * In C++, void* does not implicitly convert to typed pointers.  This helper
+ * struct wraps the void* returned by x_* and provides a conversion operator
+ * to any pointer type so that existing call sites need no explicit casts.
+ */
+struct inn_void_ptr {
+    void *p;
+    inn_void_ptr(void *p_) noexcept : p(p_) {}
+    template<typename T>
+    operator T *() const noexcept { return static_cast<T *>(p); }
+};
+
+#    undef xcalloc
+#    undef xmalloc
+#    undef xrealloc
+#    undef xreallocarray
+#    define xcalloc(n, size) \
+        inn_void_ptr(x_calloc((n), (size), __FILE__, __LINE__))
+#    define xmalloc(size) \
+        inn_void_ptr(x_malloc((size), __FILE__, __LINE__))
+#    define xrealloc(p, size) \
+        inn_void_ptr(x_realloc((p), (size), __FILE__, __LINE__))
+#    define xreallocarray(p, n, size) \
+        inn_void_ptr(x_reallocarray((p), (n), (size), __FILE__, __LINE__))
+#endif /* __cplusplus */
 
 #endif /* INN_XMALLOC_H */
