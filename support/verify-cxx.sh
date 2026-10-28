@@ -21,6 +21,21 @@ res() {
 
 cd "$root" || exit 1
 
+# A build configured with -DINN_COVERAGE=ON: build the tests with coverage
+# too, send every run's profile to $build/coverage/raw, and keep the test
+# programs in $build/coverage/bin for support/coverage-report.sh.
+covdir=
+covlink=()
+covcflags=()
+if grep -q '^INN_COVERAGE:BOOL=ON' "$build/CMakeCache.txt" 2>/dev/null; then
+    covdir=$build/coverage
+    rm -rf "$covdir"
+    mkdir -p "$covdir/raw" "$covdir/bin"
+    export LLVM_PROFILE_FILE="$covdir/raw/%m-%p.profraw"
+    covlink=(-fprofile-instr-generate)
+    covcflags=(-fprofile-instr-generate -fcoverage-mapping)
+fi
+
 if cmake --build "$build" -j8 >"$tmp/build.log" 2>&1; then
     res "cmake build (lib, history, storage, innd)" PASS
 else
@@ -80,6 +95,7 @@ libs=("$build/storage/libinnstorage.a" "$build/history/libinnhist.a"
       "$build/lib/libinn.a" -lz -lsqlite3)
 cflags=(-g -I"$root/include" -I"$root/tests" -I"$root/history"
         -I"$root/storage")
+cflags+=("${covcflags[@]}")
 # A build configured with -DINN_SANITIZE=ON needs its test programs built
 # with the same sanitizer flags.
 sanflags=()
@@ -172,11 +188,12 @@ for spec in "${tests[@]}"; do
     if ! $built \
        || ! cc "${cflags[@]}" $extra -c "tests/$src-t.c" -o "$tmp/$n-t.o" \
             2>>"$tmp/$n.log" \
-       || ! c++ "$tmp/$n-t.o" "${objs[@]}" "${tap[@]}" "${libs[@]}" -lm "${sanflags[@]}" \
+       || ! c++ "$tmp/$n-t.o" "${objs[@]}" "${tap[@]}" "${libs[@]}" -lm "${sanflags[@]}" "${covlink[@]}" \
                 -o "$tmp/$n.t" 2>>"$tmp/$n.log"; then
         res "test $t" "FAIL (build)"
         continue
     fi
+    [ -n "$covdir" ] && cp "$tmp/$n.t" "$covdir/bin/"
     out=$(cd tests && C_TAP_SOURCE=$PWD C_TAP_BUILD=$PWD "$tmp/$n.t" 2>&1)
     rc=$?
     shm_cleanup "$tmp/shm.before"

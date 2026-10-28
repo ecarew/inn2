@@ -35,6 +35,13 @@ if(INN_SANITIZE)
     add_link_options(${INN_SANITIZE_FLAGS})
 endif()
 
+# Source-based code coverage; see support/coverage-report.sh.
+option(INN_COVERAGE "Build with clang source-based code coverage" OFF)
+if(INN_COVERAGE)
+    add_compile_options(-fprofile-instr-generate -fcoverage-mapping)
+    add_link_options(-fprofile-instr-generate)
+endif()
+
 set(CMAKE_C_STANDARD 11)
 set(CMAKE_C_EXTENSIONS ON)
 set(CMAKE_POSITION_INDEPENDENT_CODE ON)

@@ -45,6 +45,11 @@ Also run it against a sanitizer build when a change touches memory handling:
 the tests with the same flags).  `compile_commands.json` is always written to
 the build directory for clang-tidy (Homebrew LLVM: `/opt/homebrew/opt/llvm/bin`).
 
+Code coverage: `cmake -S . -B build-cov -DINN_COVERAGE=ON -DCMAKE_BUILD_TYPE=Debug`,
+`support/verify-cxx.sh build-cov`, then `support/coverage-report.sh build-cov`
+(add `--html` for a line-by-line report in `build-cov/coverage/html/`).  Uses
+Xcode's `llvm-profdata`/`llvm-cov` via `xcrun`, matching Apple clang.
+
 Current verification set:
 - CMake build of lib, history, storage and innd succeeds
 - `innd` exports every symbol the Makefile-built `innd` does (169)
@@ -78,6 +83,14 @@ Add the relevant INN tests when converting a new area (e.g. storage tests for
 
 Deferred work, newest first within each group.  When an item is done, move
 it to "Resolved" below with the date and commit rather than deleting it.
+
+**Test coverage (2026-10-28, support/coverage-report.sh)**
+- innd/ is 2.0% line-covered: every file except innd.cc startup is 0%
+  (art, nc, cc, rc, site, chan, newsfeeds, ...).  INN's innd tests
+  (tests/innd/artparse-t.c, chan-t.c, fakeinnd) are not in verify-cxx.sh yet;
+  add them before any further innd changes.
+- Overall 35.8% of lines: lib/ 72.5%, history/ 59.8%, storage/ 36.2%.
+  0% also in storage/overdata.cc, lib/inndcomm.cc, lib/network-innbind.cc.
 
 **Deferred modernization (on hold by decision, 2026-10-28)**
 - C-style casts: 323 `cppcoreguidelines-pro-type-cstyle-cast` hits in the
