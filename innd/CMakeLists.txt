@@ -8,7 +8,6 @@ set(INND_C_SOURCES
     chan.c
     icd.c
     innd.c
-    nc.c
     newsfeeds.c
     ng.c
     perl.c
@@ -25,6 +24,7 @@ set(INND_CXX_SOURCES
     status.cc
     keywords.cc
     lc.cc
+    nc.cc
 )
 
 add_executable(innd ${INND_C_SOURCES} ${INND_CXX_SOURCES})
