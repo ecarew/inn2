@@ -290,7 +290,7 @@ tradindexed_search(void *handle, ARTNUM *artnum, char **data, int *length,
         warn("tradindexed: overview method not initialized");
         return false;
     }
-    if (!tdx_search(handle, &article))
+    if (!tdx_search(static_cast<struct search *>(handle), &article))
         return false;
     if (artnum != NULL)
         *artnum = article.number;
@@ -312,7 +312,7 @@ tradindexed_search(void *handle, ARTNUM *artnum, char **data, int *length,
 void
 tradindexed_closesearch(void *handle)
 {
-    tdx_search_close(handle);
+    tdx_search_close(static_cast<struct search *>(handle));
 }
 
 

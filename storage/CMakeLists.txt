@@ -11,7 +11,7 @@ add_library(innstorage STATIC
     timecaf/caf.c timecaf/timecaf.c
     timehash/timehash.cc
     tradindexed/tdx-cache.cc tradindexed/tdx-data.c tradindexed/tdx-group.c
-    tradindexed/tradindexed.c
+    tradindexed/tradindexed.cc
     tradspool/tradspool.c
     trash/trash.cc
 )
