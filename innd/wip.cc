@@ -30,21 +30,21 @@ WIPnew(const char *messageid, CHANNEL *cp)
 {
     HASH hash;
     unsigned long bucket;
-    WIP *new;
+    WIP *entry;
 
     hash = Hash(messageid, strlen(messageid));
     memcpy(&bucket, &hash,
            sizeof(bucket) < sizeof(hash) ? sizeof(bucket) : sizeof(hash));
     bucket = bucket % WIPTABLESIZE;
 
-    new = xmalloc(sizeof(WIP));
-    new->MessageID = hash;
-    new->Timestamp = Now.tv_sec;
-    new->Chan = cp;
+    entry = xmalloc(sizeof(WIP));
+    entry->MessageID = hash;
+    entry->Timestamp = Now.tv_sec;
+    entry->Chan = cp;
     /* Link the new entry into the list. */
-    new->Next = WIPtable[bucket];
-    WIPtable[bucket] = new;
-    return new;
+    entry->Next = WIPtable[bucket];
+    WIPtable[bucket] = entry;
+    return entry;
 }
 
 void

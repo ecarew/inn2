@@ -20,11 +20,11 @@ set(INND_C_SOURCES
     site.c
     status.c
     util.c
-    wip.c
 )
 
 set(INND_CXX_SOURCES
     art.cc
+    wip.cc
 )
 
 add_executable(innd ${INND_C_SOURCES} ${INND_CXX_SOURCES})
