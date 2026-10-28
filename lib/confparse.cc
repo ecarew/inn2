@@ -245,7 +245,7 @@ static void error_unexpected_token(struct config_file *,
 static const void *
 parameter_key(const void *p)
 {
-    const struct config_parameter *param = p;
+    const struct config_parameter *param = static_cast<const struct config_parameter *>(p);
 
     return param->key;
 }
@@ -258,8 +258,8 @@ parameter_key(const void *p)
 static bool
 parameter_equal(const void *k, const void *p)
 {
-    const char *key = k;
-    const struct config_parameter *param = p;
+    const char *key = static_cast<const char *>(k);
+    const struct config_parameter *param = static_cast<const struct config_parameter *>(p);
 
     return strcmp(key, param->key) == 0;
 }
@@ -271,7 +271,7 @@ parameter_equal(const void *k, const void *p)
 static void
 parameter_free(void *p)
 {
-    struct config_parameter *param = p;
+    struct config_parameter *param = static_cast<struct config_parameter *>(p);
 
     free(param->key);
     if (param->raw_value != NULL)
@@ -1303,7 +1303,7 @@ convert_boolean(struct config_parameter *param, const char *file, void *result)
 {
     static const char *const truevals[] = {"yes", "on", "true", NULL};
     static const char *const falsevals[] = {"no", "off", "false", NULL};
-    bool *value = result;
+    bool *value = static_cast<bool *>(result);
     int i;
 
     if (param->type == VALUE_BOOL) {
@@ -1340,7 +1340,7 @@ static bool
 convert_signed_number(struct config_parameter *param, const char *file,
                       void *result)
 {
-    long *value = result;
+    long *value = static_cast<long *>(result);
     char *p;
 
     if (param->type == VALUE_NUMBER) {
@@ -1386,7 +1386,7 @@ static bool
 convert_unsigned_number(struct config_parameter *param, const char *file,
                         void *result)
 {
-    unsigned long *value = result;
+    unsigned long *value = static_cast<unsigned long *>(result);
     char *p;
 
     if (param->type == VALUE_UNUMBER) {
@@ -1434,7 +1434,7 @@ convert_unsigned_number(struct config_parameter *param, const char *file,
 static bool
 convert_real(struct config_parameter *param, const char *file, void *result)
 {
-    double *value = result;
+    double *value = static_cast<double *>(result);
     char *p;
 
     if (param->type == VALUE_REAL) {
@@ -1499,7 +1499,7 @@ fail:
 static bool
 convert_string(struct config_parameter *param, const char *file, void *result)
 {
-    const char **value = result;
+    const char **value = static_cast<const char **>(result);
     char *string;
 
     if (param->type == VALUE_STRING) {
@@ -1530,7 +1530,7 @@ convert_string(struct config_parameter *param, const char *file, void *result)
 static bool
 convert_list(struct config_parameter *param, const char *file, void *result)
 {
-    const struct vector **value = result;
+    const struct vector **value = static_cast<const struct vector **>(result);
     struct vector *vector;
     char *string;
 
@@ -1582,7 +1582,7 @@ group_parameter_get(struct config_group *group, const char *key, void *result,
     while (current != NULL) {
         struct config_parameter *param;
 
-        param = hash_lookup(current->params, key);
+        param = static_cast<struct config_parameter *>(hash_lookup(current->params, key));
         if (param != NULL) {
             if (param->type == VALUE_INVALID)
                 return false;
@@ -1653,8 +1653,8 @@ config_param_list(struct config_group *group, const char *key,
 static void
 parameter_collect(void *element, void *cookie)
 {
-    struct config_parameter *param = element;
-    struct vector *params = cookie;
+    struct config_parameter *param = static_cast<struct config_parameter *>(element);
+    struct vector *params = static_cast<struct vector *>(cookie);
     size_t i;
 
     for (i = 0; i < params->count; i++)
@@ -1742,7 +1742,7 @@ config_error_param(struct config_group *group, const char *key,
     xvasprintf(&message, fmt, args);
     va_end(args);
 
-    param = hash_lookup(group->params, key);
+    param = static_cast<struct config_parameter *>(hash_lookup(group->params, key));
     if (param == NULL)
         warn("%s", message);
     else {
