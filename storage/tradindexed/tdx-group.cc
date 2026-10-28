@@ -285,7 +285,7 @@ index_map(struct group_index *index)
 
         if (index->writable)
             flag = PROT_READ | PROT_WRITE;
-        data = mmap(NULL, size, flag, MAP_SHARED, index->fd, 0);
+        data = static_cast<char *>(mmap(NULL, size, flag, MAP_SHARED, index->fd, 0));
         if (data == MAP_FAILED) {
             syswarn("tradindexed: cannot mmap %s", index->path);
             return false;
@@ -1033,16 +1033,16 @@ tdx_index_rebuild_start(struct group_index *index, struct group_entry *entry)
 */
 bool
 tdx_index_rebuild_finish(struct group_index *index, struct group_entry *entry,
-                         struct group_entry *new)
+                         struct group_entry *newentry)
 {
     ptrdiff_t offset;
     ino_t new_inode;
 
-    new_inode = new->indexinode;
-    new->indexinode = entry->indexinode;
-    *entry = *new;
+    new_inode = newentry->indexinode;
+    newentry->indexinode = entry->indexinode;
+    *entry = *newentry;
     entry->indexinode = new_inode;
-    new->indexinode = new_inode;
+    newentry->indexinode = new_inode;
     inn_msync_page(entry, sizeof(*entry), MS_ASYNC);
     offset = entry - index->entries;
     index_lock_group(index->fd, offset, INN_LOCK_UNLOCK);
@@ -1163,7 +1163,7 @@ static unsigned long
 hashmap_hash(const void *entry)
 {
     unsigned long hash;
-    const struct hashmap *group = entry;
+    const struct hashmap *group = static_cast<const struct hashmap *>(entry);
 
     memcpy(&hash, &group->hash, sizeof(hash));
     return hash;
@@ -1180,7 +1180,7 @@ hashmap_key(const void *entry)
 static bool
 hashmap_equal(const void *key, const void *entry)
 {
-    const HASH *first = key;
+    const HASH *first = static_cast<const HASH *>(key);
     const HASH *second;
 
     second = &((const struct hashmap *) entry)->hash;
@@ -1191,7 +1191,7 @@ hashmap_equal(const void *key, const void *entry)
 static void
 hashmap_delete(void *entry)
 {
-    struct hashmap *group = entry;
+    struct hashmap *group = static_cast<struct hashmap *>(entry);
 
     free(group->name);
     free(group);
@@ -1300,7 +1300,7 @@ tdx_index_dump(struct group_index *index, FILE *output)
             entry = index->entries + current;
             name = NULL;
             if (hashmap != NULL) {
-                group = hash_lookup(hashmap, &entry->hash);
+                group = static_cast<struct hashmap *>(hash_lookup(hashmap, &entry->hash));
                 if (group != NULL)
                     name = group->name;
             }
@@ -1501,7 +1501,7 @@ index_audit_group(struct group_index *index, struct group_entry *entry,
 
     offset = entry - index->entries;
     index_lock_group(index->fd, offset, INN_LOCK_WRITE);
-    group = hash_lookup(hashmap, &entry->hash);
+    group = static_cast<struct hashmap *>(hash_lookup(hashmap, &entry->hash));
     if (group == NULL) {
         warn("tradindexed: group %ld not found in active file",
              entry_loc(index, entry));
@@ -1533,8 +1533,8 @@ index_audit_group(struct group_index *index, struct group_entry *entry,
 static void
 index_audit_active(void *value, void *cookie)
 {
-    struct hashmap *group = value;
-    struct audit_data *data = cookie;
+    struct hashmap *group = static_cast<struct hashmap *>(value);
+    struct audit_data *data = static_cast<struct audit_data *>(cookie);
     struct group_entry *entry;
 
     entry = tdx_index_entry(data->index, group->name);
