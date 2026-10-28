@@ -450,7 +450,7 @@ RCreader(CHANNEL *cp)
     int i = 0;
     unsigned int j;
     REMOTEHOST *rp;
-    CHANNEL *new;
+    CHANNEL *newcp;
     char *name;
     long reject_val = 0;
     char *reject_message;
@@ -567,16 +567,16 @@ RCreader(CHANNEL *cp)
     ** to avoid a call to fork.
     */
     if (reject_message != NULL) {
-        new = CHANcreate(fd, CTreject, CSwritegoodbye, RCrejectreader,
+        newcp = CHANcreate(fd, CTreject, CSwritegoodbye, RCrejectreader,
                          RCrejectwritedone);
         memcpy(&remotetable[i].Address, &remote,
                sizeof(remotetable[i].Address));
         /* Use cp->Rejected for the response code in CHANclose. */
-        new->Rejected = reject_val;
-        RCHANremove(new);
-        WCHANset(new, reject_message, strlen(reject_message));
-        WCHANappend(new, RCterm, strlen(RCterm));
-        WCHANadd(new);
+        newcp->Rejected = reject_val;
+        RCHANremove(newcp);
+        WCHANset(newcp, reject_message, strlen(reject_message));
+        WCHANappend(newcp, RCterm, strlen(RCterm));
+        WCHANadd(newcp);
         free(reject_message);
         return;
     }
@@ -603,36 +603,36 @@ RCreader(CHANNEL *cp)
             }
         }
 
-        if ((new = NCcreate(fd, rp->Password[0] != '\0', false)) != NULL) {
-            new->Streaming = rp->Streaming;
-            new->Skip = rp->Skip;
-            new->Ignore = rp->Ignore;
-            new->ResendId = rp->ResendId;
-            new->List = rp->List;
-            new->Xbatch = rp->Xbatch;
-            new->CanAuthenticate = true; /* Can use AUTHINFO. */
-            new->MaxCnx = rp->MaxCnx;
-            new->HoldTime = rp->HoldTime;
-            memcpy(&new->Address, &remote, sizeof(new->Address));
-            if (new->MaxCnx > 0 && new->HoldTime == 0) {
-                CHANcount_active(new);
-                if ((new->ActiveCnx > new->MaxCnx) && (new->fd > 0)) {
+        if ((newcp = NCcreate(fd, rp->Password[0] != '\0', false)) != NULL) {
+            newcp->Streaming = rp->Streaming;
+            newcp->Skip = rp->Skip;
+            newcp->Ignore = rp->Ignore;
+            newcp->ResendId = rp->ResendId;
+            newcp->List = rp->List;
+            newcp->Xbatch = rp->Xbatch;
+            newcp->CanAuthenticate = true; /* Can use AUTHINFO. */
+            newcp->MaxCnx = rp->MaxCnx;
+            newcp->HoldTime = rp->HoldTime;
+            memcpy(&newcp->Address, &remote, sizeof(newcp->Address));
+            if (newcp->MaxCnx > 0 && newcp->HoldTime == 0) {
+                CHANcount_active(newcp);
+                if ((newcp->ActiveCnx > newcp->MaxCnx) && (newcp->fd > 0)) {
                     snprintf(buff, sizeof(buff),
-                             "You are limited to %d connection%s", new->MaxCnx,
-                             (new->MaxCnx != 1) ? "s" : "");
-                    NCwriteshutdown(new, buff);
+                             "You are limited to %d connection%s", newcp->MaxCnx,
+                             (newcp->MaxCnx != 1) ? "s" : "");
+                    NCwriteshutdown(newcp, buff);
                     syslog(L_NOTICE, "too many connections from %s",
                            rp->Label);
                 } else {
-                    NCwritereply(new, (char *) NCgreeting);
+                    NCwritereply(newcp, (char *) NCgreeting);
                 }
             } else {
-                NCwritereply(new, (char *) NCgreeting);
+                NCwritereply(newcp, (char *) NCgreeting);
             }
         }
     } else if (AnyIncoming && !rp->Skip) {
-        if ((new = NCcreate(fd, false, false)) != NULL) {
-            NCwritereply(new, (char *) NCgreeting);
+        if ((newcp = NCcreate(fd, false, false)) != NULL) {
+            NCwritereply(newcp, (char *) NCgreeting);
         }
     } else if (!innconf->noreader) {
         RChandoff(fd, HOnntpd);
@@ -642,25 +642,25 @@ RCreader(CHANNEL *cp)
     } else {
         reject_val = NNTP_ERR_ACCESS;
         xasprintf(&reject_message, "%d Permission denied", NNTP_ERR_ACCESS);
-        new = CHANcreate(fd, CTreject, CSwritegoodbye, RCrejectreader,
+        newcp = CHANcreate(fd, CTreject, CSwritegoodbye, RCrejectreader,
                          RCrejectwritedone);
-        memcpy(&new->Address, &remote, sizeof(new->Address));
+        memcpy(&newcp->Address, &remote, sizeof(newcp->Address));
         /* Use cp->Rejected for the response code in CHANclose. */
-        new->Rejected = reject_val;
-        RCHANremove(new);
-        WCHANset(new, reject_message, strlen(reject_message));
-        WCHANappend(new, RCterm, strlen(RCterm));
-        WCHANadd(new);
+        newcp->Rejected = reject_val;
+        RCHANremove(newcp);
+        WCHANset(newcp, reject_message, strlen(reject_message));
+        WCHANappend(newcp, RCterm, strlen(RCterm));
+        WCHANadd(newcp);
         free(reject_message);
         return;
     }
 
-    if (new != NULL) {
-        memcpy(&new->Address, &remote, sizeof(new->Address));
+    if (newcp != NULL) {
+        memcpy(&newcp->Address, &remote, sizeof(newcp->Address));
         network_sockaddr_sprint(addr, sizeof(addr),
                                 (struct sockaddr *) &remote);
-        notice("%s connected %d streaming %s", name ? name : addr, new->fd,
-               (!StreamingOff && new->Streaming) ? "allowed" : "not allowed");
+        notice("%s connected %d streaming %s", name ? name : addr, newcp->fd,
+               (!StreamingOff && newcp->Streaming) ? "allowed" : "not allowed");
     }
 }
 
