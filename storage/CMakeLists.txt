@@ -3,7 +3,7 @@
 
 add_library(innstorage STATIC
     expire.c interface.c methods.c ov.c overdata.c overview.c ovmethods.c
-    tombstone.c
+    tombstone.cc
     buffindexed/buffindexed.c buffindexed/shmem.c
     cnfs/cnfs.c
     ovdb/ovdb.c
