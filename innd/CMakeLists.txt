@@ -60,7 +60,7 @@ target_link_libraries(innd PRIVATE
 
 # ── tinyleaf ──────────────────────────────────────────────────────────────────
 
-add_executable(tinyleaf tinyleaf.c)
+add_executable(tinyleaf tinyleaf.cc)
 
 target_compile_features(tinyleaf PRIVATE cxx_std_20)
 set_target_properties(tinyleaf PROPERTIES CXX_EXTENSIONS OFF)

@@ -95,7 +95,7 @@ shutdown(struct state *state)
 static void
 command_ihave(struct cvector *command, void *cookie)
 {
-    struct state *state = cookie;
+    struct state *state = static_cast<struct state *>(cookie);
     enum nntp_status status;
     char filename[33], *article, *msgid;
     unsigned char hash[16];
@@ -163,7 +163,7 @@ command_ihave(struct cvector *command, void *cookie)
 static void
 command_help(struct cvector *command UNUSED, void *cookie)
 {
-    struct state *state = cookie;
+    struct state *state = static_cast<struct state *>(cookie);
 
     nntp_respond_noflush(state->nntp, NNTP_INFO_HELP, "tinyfeed from %s",
                          INN_VERSION_STRING);
@@ -184,7 +184,7 @@ command_help(struct cvector *command UNUSED, void *cookie)
 __attribute__((__noreturn__)) static void
 command_quit(struct cvector *command UNUSED, void *cookie)
 {
-    struct state *state = cookie;
+    struct state *state = static_cast<struct state *>(cookie);
 
     if (!nntp_respond(state->nntp, NNTP_OK_QUIT, "Goodbye"))
         syswarn("cannot flush output during QUIT");
@@ -198,7 +198,7 @@ command_quit(struct cvector *command UNUSED, void *cookie)
 static void
 command_syntax(struct cvector *command UNUSED, void *cookie)
 {
-    struct state *state = cookie;
+    struct state *state = static_cast<struct state *>(cookie);
 
     if (!nntp_respond(state->nntp, NNTP_ERR_SYNTAX, "Syntax error"))
         sysdie("cannot flush output");
@@ -211,7 +211,7 @@ command_syntax(struct cvector *command UNUSED, void *cookie)
 static void
 command_unknown(struct cvector *command UNUSED, void *cookie)
 {
-    struct state *state = cookie;
+    struct state *state = static_cast<struct state *>(cookie);
 
     if (!nntp_respond(state->nntp, NNTP_ERR_COMMAND, "Unsupported command"))
         sysdie("cannot flush output");
