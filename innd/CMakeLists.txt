@@ -4,7 +4,6 @@
 # ── innd ──────────────────────────────────────────────────────────────────────
 
 set(INND_C_SOURCES
-    perl.c
     python.c
 )
 
@@ -25,6 +24,7 @@ set(INND_CXX_SOURCES
     chan.cc
     cc.cc
     innd.cc
+    perl.cc
 )
 
 add_executable(innd ${INND_C_SOURCES} ${INND_CXX_SOURCES})
@@ -32,8 +32,8 @@ add_executable(innd ${INND_C_SOURCES} ${INND_CXX_SOURCES})
 target_compile_features(innd PRIVATE cxx_std_20)
 set_target_properties(innd PROPERTIES CXX_EXTENSIONS OFF)
 
-# perl.c and python.c need extra include flags
-set_source_files_properties(perl.c PROPERTIES
+# perl.cc and python.c need extra include flags
+set_source_files_properties(perl.cc PROPERTIES
     COMPILE_OPTIONS "${INN_PERL_CPPFLAGS}"
 )
 set_source_files_properties(python.c PROPERTIES
