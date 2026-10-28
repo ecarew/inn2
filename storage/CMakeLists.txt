@@ -6,7 +6,7 @@ add_library(innstorage STATIC
     tombstone.cc
     buffindexed/buffindexed.cc buffindexed/shmem.cc
     cnfs/cnfs.cc
-    ovdb/ovdb.c
+    ovdb/ovdb.cc
     ovsqlite/ovsqlite-private.cc ovsqlite/ovsqlite.cc ovsqlite/sql-read.c
     timecaf/caf.cc timecaf/timecaf.cc
     timehash/timehash.cc
