@@ -250,7 +250,7 @@ buffer_find_string(struct buffer *buffer, const char *string, size_t start,
     length = strlen(string);
     do {
         data = buffer->data + buffer->used + start;
-        terminator = memchr(data, string[0], buffer->left - start);
+        terminator = static_cast<const char *>(memchr(data, string[0], buffer->left - start));
         if (terminator == NULL)
             return false;
         start = (terminator - buffer->data) - buffer->used;
