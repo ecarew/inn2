@@ -8,7 +8,7 @@ add_library(innstorage STATIC
     cnfs/cnfs.c
     ovdb/ovdb.c
     ovsqlite/ovsqlite-private.cc ovsqlite/ovsqlite.c ovsqlite/sql-read.c
-    timecaf/caf.cc timecaf/timecaf.c
+    timecaf/caf.cc timecaf/timecaf.cc
     timehash/timehash.cc
     tradindexed/tdx-cache.cc tradindexed/tdx-data.cc tradindexed/tdx-group.cc
     tradindexed/tradindexed.cc
