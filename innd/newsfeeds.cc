@@ -31,16 +31,16 @@ static SITEVARIABLES *SITEvariables = NULL;
 static char **
 SITEcopystrings(char **av)
 {
-    char **new;
+    char **copy;
     char **pp;
     char **save;
 
     for (pp = av; *pp; pp++)
         continue;
-    for (new = save = xmalloc((pp - av + 1) * sizeof(char *)), pp = av; *pp;
+    for (copy = save = xmalloc((pp - av + 1) * sizeof(char *)), pp = av; *pp;
          pp++)
-        *new ++ = xstrdup(*pp);
-    *new = NULL;
+        *copy++ = xstrdup(*pp);
+    *copy = NULL;
     return save;
 }
 
@@ -484,7 +484,7 @@ SITEparseone(char *Entry, SITE *sp, char *subbed, char *poison)
         return "missing field 2";
     *f2++ = '\0';
     sp->Name = Entry;
-    if ((p = strchr(sp->Name, NF_SUBFIELD_SEP)) != NULL) {
+    if ((p = strchr(Entry, NF_SUBFIELD_SEP)) != NULL) {
         /* Exclusions within the site field. */
         *p++ = '\0';
         if (*p)
