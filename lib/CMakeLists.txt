@@ -6,7 +6,7 @@ add_library(inn STATIC
     setproctitle.cc sd-daemon.cc reallocarray.cc
     argparse.cc artnumber.cc bloom.c buffer.c cleanfrom.cc clientactive.cc
     clientlib.c commands.cc concat.cc conffile.c confparse.c date.c dbz.c
-    defdist.c dispatch.cc fdflag.c fdlimit.c getfqdn.cc getmodaddr.c hash.cc
+    defdist.c dispatch.cc fdflag.cc fdlimit.c getfqdn.cc getmodaddr.c hash.cc
     hashtab.c headers.c hex.cc innconf.c inndcomm.c list.cc localopen.cc
     lockfile.cc makedir.cc md5.c messageid.c messages.c mmap.cc network.c
     network-innbind.c newsuser.cc nntp.c qio.c radix32.cc readin.cc remopen.cc
