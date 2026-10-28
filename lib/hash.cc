@@ -31,11 +31,11 @@ static HASH empty = {
 static const char *
 cipoint(const char *s, size_t size)
 {
-    char *p;
+    const char *p;
     static const char post[] = "postmaster";
     static int plen = sizeof(post) - 1;
 
-    if ((p = memchr(s, '@', size)) == NULL) /* no local/domain split */
+    if ((p = static_cast<const char *>(memchr(s, '@', size))) == NULL) /* no local/domain split */
         return NULL;                        /* assume all local */
     if ((p - (s + 1) == plen) && !strncasecmp(post, s + 1, plen)) {
         /* crazy -- "postmaster" is case-insensitive */
@@ -51,7 +51,7 @@ Hash(const void *value, const size_t len)
     HASH hash;
 
     md5_init(&context);
-    md5_update(&context, value, len);
+    md5_update(&context, static_cast<const unsigned char *>(value), len);
     md5_final(&context);
     memcpy(&hash, &context.digest,
            (sizeof(hash) < sizeof(context.digest)) ? sizeof(hash)
@@ -62,7 +62,7 @@ Hash(const void *value, const size_t len)
 HASH
 HashMessageID(const char *MessageID)
 {
-    char *new = NULL;
+    char *lowered = NULL;
     const char *cip, *p = NULL;
     char *q;
     int len;
@@ -73,17 +73,17 @@ HashMessageID(const char *MessageID)
     if (cip != NULL) {
         for (p = cip + 1; *p != '\0'; p++) {
             if (!islower((unsigned char) *p)) {
-                new = xstrdup(MessageID);
+                lowered = xstrdup(MessageID);
                 break;
             }
         }
     }
-    if (new != NULL)
-        for (q = new + (p - MessageID); *q != '\0'; q++)
+    if (lowered != NULL)
+        for (q = lowered + (p - MessageID); *q != '\0'; q++)
             *q = (unsigned char) tolower((unsigned char) *q);
-    hash = Hash(new ? new : MessageID, len);
-    if (new != NULL)
-        free(new);
+    hash = Hash(lowered ? lowered : MessageID, len);
+    if (lowered != NULL)
+        free(lowered);
     return hash;
 }
 
