@@ -1,0 +1,14 @@
+Verified after commit on 2026-10-28 (retroactive check; not run before commit).
+Tests run on this commit, macOS / Apple Clang 21, CMake build:
+  cmake build (lib, history, storage, innd)  PASS
+  innd exports all 169 Make-build symbols    PASS
+  C linkage kept (no mangled exports)        PASS
+  innd starts (reaches news-group check)     PASS
+  tinyleaf HELP/IHAVE/duplicate/QUIT         PASS
+  test lib/hissqlite                         PASS (34/34)
+  test lib/bloom-hiswalk                     PASS (8/8)
+  test expire/tombstone-hisexpire            PASS (9/9)
+RESULT: PASS
+
+Generated sources (configure output, buildconfig and sqlite-helper-gen
+output) were the versions current at verification time.
