@@ -53,7 +53,7 @@ oops:
             size_t errlen;
 
             errlen = strlen(err);
-            errcopy = sqlite3_malloc(namelen + errlen + 3);
+            errcopy = static_cast<char *>(sqlite3_malloc(namelen + errlen + 3));
             if (errcopy) {
                 memcpy(errcopy, name, namelen);
                 errcopy[namelen] = ':';
@@ -61,7 +61,7 @@ oops:
                 memcpy(errcopy + namelen + 2, err, errlen + 1);
             }
         } else {
-            errcopy = sqlite3_malloc(namelen + 1);
+            errcopy = static_cast<char *>(sqlite3_malloc(namelen + 1));
             if (errcopy)
                 memcpy(errcopy, name, namelen + 1);
         }
