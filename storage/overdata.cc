@@ -344,7 +344,7 @@ overview_split(const char *line, size_t length, ARTNUM *number,
         } else {
             cvector_add(vector, line);
         }
-        p = memchr(line, '\t', length);
+        p = static_cast<const char *>(memchr(line, '\t', length));
         if (p != NULL) {
             /* Skip over the tab. */
             ++p;
