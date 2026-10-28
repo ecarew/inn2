@@ -42,11 +42,14 @@ into the `Tested:` section. Its reference data lives in `support/verify-cxx/`.
 Current verification set:
 - CMake build of lib, history, storage and innd succeeds
 - `innd` exports every symbol the Makefile-built `innd` does (169)
-- No C++-mangled exported symbols in `innd` or `libinnhist.a` (C linkage kept)
+- No C++-mangled exported symbols in `innd`, `libinn.a`, `libinnhist.a` or
+  `libinnstorage.a` (C linkage kept)
 - `innd -h` starts and reaches the news-group check
 - `tinyleaf` smoke test: HELP, IHAVE, duplicate IHAVE, unknown command, QUIT
-- INN tap tests built against the CMake libraries: `lib/hissqlite`,
-  `lib/bloom-hiswalk`, `expire/tombstone-hisexpire`, `overview/api`,
+- INN tap tests built against the CMake libraries: all 49 C-based `lib/`
+  tests in `tests/TESTS` (replacement-function tests compile their
+  `lib/X` source with `-DTESTING`, from `.cc` once converted),
+  `expire/tombstone-hisexpire`, `overview/api`,
   `overview/buffindexed`, `overview/tradindexed`, `overview/ovsqlite`,
   `overview/tdx-group`, `overview/xref`, `storage/caf`,
   `storage/cancel-tombstone`, `storage/methods` (cnfs, timecaf, timehash and
@@ -54,7 +57,12 @@ Current verification set:
 
 Not yet covered: shell-driven tests that need INN's command-line programs
 (`overview/ovsqlite-integ`, `overview/overchan`, `storage/sm`,
-`storage/archive`, `storage/makehistory`), until CMake builds those programs.
+`storage/archive`, `storage/makehistory`, `lib/hissqlite-util`,
+`lib/xmalloc`), until CMake builds those programs.
+`lib/canlock` and `lib/hissqlite-convert` report SKIP (no libcanlock; the
+hissqlite-convert program is not built); SKIP does not fail verification.
+`samples/inn.conf` (needed by `lib/innconf`) is generated from
+`inn.conf.in`; verify-cxx.sh runs `make -C samples inn.conf` if it is missing.
 
 Add the relevant INN tests when converting a new area (e.g. storage tests for
 `storage/`). Commits before this rule have retroactive `git notes`

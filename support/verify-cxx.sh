@@ -16,7 +16,7 @@ fail=0
 
 res() {
     printf '  %-42s %s\n' "$1" "$2"
-    [[ "$2" == PASS* ]] || fail=1
+    [[ "$2" == PASS* || "$2" == SKIP* ]] || fail=1
 }
 
 cd "$root" || exit 1
@@ -72,14 +72,54 @@ else
 fi
 
 # INN tap tests, built against the CMake libraries.
+# lib/innconf reads samples/inn.conf, generated from inn.conf.in by fixconfig.
+if [ ! -f samples/inn.conf ]; then
+    make -C samples inn.conf >"$tmp/samples.log" 2>&1
+fi
 libs=("$build/storage/libinnstorage.a" "$build/history/libinnhist.a"
       "$build/lib/libinn.a" -lz -lsqlite3)
 cflags=(-g -I"$root/include" -I"$root/tests" -I"$root/history"
         -I"$root/storage")
-cc "${cflags[@]}" -c tests/tap/basic.c -o "$tmp/basic.o" 2>"$tmp/basic.log"
-# Each entry: test-name[:source-without--t.c[:extra-cflag]]
+tap=()
+for h in basic float messages process string; do
+    cc "${cflags[@]}" -c "tests/tap/$h.c" -o "$tmp/tap-$h.o" 2>>"$tmp/tap.log"
+    tap+=("$tmp/tap-$h.o")
+done
+
+# Compile one extra source into a test.  lib/X entries are the file under
+# test, built with -DTESTING as tests/Makefile does, from X.cc with the C++
+# compiler once converted, else X.c; anything else is plain C test support.
+extra_obj() {
+    local src=$1 out=$2
+    case "$src" in
+    lib/*)
+        if [ -f "$src.cc" ]; then
+            c++ -std=c++20 "${cflags[@]}" -DTESTING -c "$src.cc" -o "$out"
+        else
+            cc "${cflags[@]}" -DTESTING -c "$src.c" -o "$out"
+        fi ;;
+    *)  cc "${cflags[@]}" -c "$src.c" -o "$out" ;;
+    esac
+}
+
+# Each entry: test-name[:source-without--t.c[:extra-cflag[:extra-sources]]]
+# with extra-sources separated by commas.
 tests=(
-    lib/hissqlite lib/bloom-hiswalk expire/tombstone-hisexpire
+    lib/artnumber lib/asprintf:::lib/asprintf lib/bloom lib/bloom-hiswalk
+    lib/buffer lib/canlock lib/concat lib/conffile lib/confparse lib/date
+    lib/daemon:::lib/daemon lib/dispatch lib/fdflag
+    lib/getaddrinfo:::lib/getaddrinfo lib/getnameinfo:::lib/getnameinfo
+    lib/hash lib/hashtab lib/headers lib/hex lib/hissqlite
+    lib/hissqlite-convert lib/inet_aton:::lib/inet_aton
+    lib/inet_ntoa:::lib/inet_ntoa lib/inet_ntop:::lib/inet_ntop lib/innconf
+    lib/list lib/md5 lib/messageid lib/messages lib/mkstemp:::lib/mkstemp
+    lib/network/addr-ipv4 lib/network/addr-ipv6 lib/network/client
+    lib/network/server lib/pread:::lib/pread lib/pwrite:::lib/pwrite lib/qio
+    lib/readin lib/reallocarray:::lib/reallocarray lib/reservedfd
+    lib/setenv:::lib/setenv lib/snprintf:::lib/snprintf
+    lib/strlcat:::lib/strlcat lib/strlcpy:::lib/strlcpy lib/tst lib/uwildmat
+    lib/vector lib/wire lib/xwrite:::lib/xwrite,tests/lib/fakewrite
+    expire/tombstone-hisexpire
     overview/api
     overview/buffindexed:overview/overview:-DOVTYPE=buffindexed
     overview/tradindexed:overview/overview:-DOVTYPE=tradindexed
@@ -87,22 +127,47 @@ tests=(
     overview/tdx-group overview/xref
     storage/caf storage/cancel-tombstone storage/methods
 )
+# buffindexed creates a System V shared memory segment and never removes it
+# (same in the original C), and macOS allows only 32.  Remove unattached
+# segments a test created; leave any that existed before it ran.
+shm_ids() { ipcs -m 2>/dev/null | awk '$1 == "m" { print $2 }' | sort; }
+shm_cleanup() {
+    local id
+    for id in $(comm -13 "$1" <(shm_ids)); do
+        ipcs -m -a 2>/dev/null | awk -v id="$id" '$1 == "m" && $2 == id { exit $(NF-6) != 0 }' \
+            && ipcrm -m "$id" 2>/dev/null
+    done
+}
+
 for spec in "${tests[@]}"; do
-    IFS=: read -r t src extra <<<"$spec"
+    shm_ids >"$tmp/shm.before"
+    IFS=: read -r t src extra srcs <<<"$spec"
     src=${src:-$t}
     n=$(echo "$t" | tr / _)
-    if ! cc "${cflags[@]}" $extra -c "tests/$src-t.c" -o "$tmp/$n-t.o" \
-            2>"$tmp/$n.log" \
-       || ! c++ "$tmp/$n-t.o" "$tmp/basic.o" "${libs[@]}" -o "$tmp/$n.t" \
-                2>>"$tmp/$n.log"; then
+    objs=()
+    built=true
+    IFS=, read -ra extras <<<"$srcs"
+    for e in "${extras[@]}"; do
+        o="$tmp/$n-$(basename "$e").o"
+        extra_obj "$e" "$o" 2>>"$tmp/$n.log" || built=false
+        objs+=("$o")
+    done
+    if ! $built \
+       || ! cc "${cflags[@]}" $extra -c "tests/$src-t.c" -o "$tmp/$n-t.o" \
+            2>>"$tmp/$n.log" \
+       || ! c++ "$tmp/$n-t.o" "${objs[@]}" "${tap[@]}" "${libs[@]}" -lm \
+                -o "$tmp/$n.t" 2>>"$tmp/$n.log"; then
         res "test $t" "FAIL (build)"
         continue
     fi
     out=$(cd tests && C_TAP_SOURCE=$PWD C_TAP_BUILD=$PWD "$tmp/$n.t" 2>&1)
     rc=$?
+    shm_cleanup "$tmp/shm.before"
     plan=$(echo "$out" | grep -m1 -E '^1\.\.' | cut -c4-)
     ok=$(echo "$out" | grep -cE '^ok ')
-    if [ $rc = 0 ] && [ -n "$plan" ] && [ "$ok" = "$plan" ]; then
+    if [[ "$plan" == "0 # skip"* ]]; then
+        res "test $t" "SKIP (${plan#0 # skip })"
+    elif [ $rc = 0 ] && [ -n "$plan" ] && [ "$ok" = "$plan" ]; then
         res "test $t" "PASS ($ok/$plan)"
     else
         res "test $t" "FAIL ($ok/${plan:-?}, exit $rc)"
