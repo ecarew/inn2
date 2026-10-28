@@ -26,6 +26,8 @@
 #include "hissqlite-main.h"
 #include "hissqlite-read.h"
 
+BEGIN_DECLS
+
 #define HISSQLITE_SCHEMA_VERSION  1
 
 /* Checkpoint the WAL once it has grown past this many frames (mirrors
@@ -82,5 +84,7 @@ struct hissqlite {
     hissqlite_read_t read;
     bool direct_reader;
 };
+
+END_DECLS
 
 #endif /* HISSQLITE_PRIVATE_H */

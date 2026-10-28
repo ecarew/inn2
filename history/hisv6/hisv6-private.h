@@ -17,6 +17,8 @@
 #include <syslog.h>
 #include <time.h>
 
+BEGIN_DECLS
+
 /* Used by lots of stuff that parses history file entries.  Should be moved
    into a header specifically for history parsing. */
 #define HISV6_BADCHAR     '_'
@@ -85,5 +87,7 @@ struct hisv6_walkstate {
 
 /* maximum length of the string from hisv6_errloc */
 #define HISV6_MAX_LOCATION 22
+
+END_DECLS
 
 #endif

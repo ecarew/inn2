@@ -125,7 +125,11 @@ EOE
       scalar(keys %{ $$history{method} }), "\n";
     print H unquote(<<'EOE');
 :
+:       BEGIN_DECLS
+:
 :       extern HIS_METHOD his_methods[NUM_HIS_METHODS];
+:
+:       END_DECLS
 :
 :       #endif /* HISMETHODS_H */
 EOE

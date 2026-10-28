@@ -13,6 +13,8 @@
 
 #include "inn/libinn.h"
 
+BEGIN_DECLS
+
 struct token;
 struct history;
 
@@ -46,5 +48,7 @@ bool hissqlite_remember(void *, const char *key, time_t arrived,
                         time_t posted);
 
 bool hissqlite_ctl(void *, int, void *);
+
+END_DECLS
 
 #endif /* HISSQLITE_H */

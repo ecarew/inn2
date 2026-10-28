@@ -14,6 +14,8 @@
 #include "inn/libinn.h"
 #include <sys/types.h>
 
+BEGIN_DECLS
+
 struct token;
 struct histopts;
 struct history;
@@ -58,4 +60,7 @@ enum {
 
 /* fine grained history logging */
 void his_logger(const char *s, int code);
+
+END_DECLS
+
 #endif

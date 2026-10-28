@@ -112,11 +112,15 @@ $preamble
 
 #ifdef HAVE_SQLITE3
 
+BEGIN_DECLS
+
 typedef struct ${name}_t {
     $stmts
 } ${name}_t;
 
 extern sqlite_helper_t const ${name}_helper;
+
+END_DECLS
 
 #endif /* HAVE_SQLITE3 */
 

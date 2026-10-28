@@ -12,6 +12,8 @@
 
 #include "inn/libinn.h"
 
+BEGIN_DECLS
+
 struct token;
 struct histopts;
 struct history;
@@ -47,5 +49,7 @@ const char *hisv6_error(void *);
 bool hisv6_remember(void *, const char *key, time_t arrived, time_t posted);
 
 bool hisv6_ctl(void *, int, void *);
+
+END_DECLS
 
 #endif
