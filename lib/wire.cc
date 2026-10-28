@@ -46,7 +46,7 @@ wire_findbody(const char *article, size_t length)
     /* Jump from \r to \r and give up if we're too close to the end. */
     end = article + length;
     for (p = (char *) article; (size_t) (end - p) >= 4; ++p) {
-        p = memchr(p, '\r', end - p - 3);
+        p = static_cast<char *>(memchr(p, '\r', end - p - 3));
         if (p == NULL)
             break;
         if (memcmp(p, "\r\n\r\n", 4) == 0) {
@@ -72,7 +72,7 @@ wire_nextline(const char *article, const char *end)
     if (article > end)
         return NULL;
     for (p = (char *) article; end - p >= 2; ++p) {
-        p = memchr(p, '\r', end - p - 1);
+        p = static_cast<char *>(memchr(p, '\r', end - p - 1));
         if (p == NULL)
             break;
         if (p[1] == '\n') {

@@ -11,7 +11,7 @@ add_library(inn STATIC
     lockfile.cc makedir.cc md5.c messageid.cc messages.c mmap.cc network.c
     network-innbind.c newsuser.cc nntp.c qio.cc radix32.cc readin.cc remopen.cc
     reservedfd.cc resource.cc secrets.cc sendarticle.cc sendpass.cc sequence.cc
-    sqlite-helper.cc timer.c tst.c uwildmat.c vector.c wire.c xfopena.cc
+    sqlite-helper.cc timer.c tst.c uwildmat.c vector.c wire.cc xfopena.cc
     xmalloc.c xsignal.cc xwrite.cc
 )
 target_include_directories(inn PRIVATE ${CMAKE_CURRENT_SOURCE_DIR})
