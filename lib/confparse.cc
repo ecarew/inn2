@@ -245,7 +245,8 @@ static void error_unexpected_token(struct config_file *,
 static const void *
 parameter_key(const void *p)
 {
-    const struct config_parameter *param = static_cast<const struct config_parameter *>(p);
+    const struct config_parameter *param =
+        static_cast<const struct config_parameter *>(p);
 
     return param->key;
 }
@@ -259,7 +260,8 @@ static bool
 parameter_equal(const void *k, const void *p)
 {
     const char *key = static_cast<const char *>(k);
-    const struct config_parameter *param = static_cast<const struct config_parameter *>(p);
+    const struct config_parameter *param =
+        static_cast<const struct config_parameter *>(p);
 
     return strcmp(key, param->key) == 0;
 }
@@ -1582,7 +1584,8 @@ group_parameter_get(struct config_group *group, const char *key, void *result,
     while (current != NULL) {
         struct config_parameter *param;
 
-        param = static_cast<struct config_parameter *>(hash_lookup(current->params, key));
+        param = static_cast<struct config_parameter *>(
+            hash_lookup(current->params, key));
         if (param != NULL) {
             if (param->type == VALUE_INVALID)
                 return false;
@@ -1653,7 +1656,8 @@ config_param_list(struct config_group *group, const char *key,
 static void
 parameter_collect(void *element, void *cookie)
 {
-    struct config_parameter *param = static_cast<struct config_parameter *>(element);
+    struct config_parameter *param =
+        static_cast<struct config_parameter *>(element);
     struct vector *params = static_cast<struct vector *>(cookie);
     size_t i;
 
@@ -1742,7 +1746,8 @@ config_error_param(struct config_group *group, const char *key,
     xvasprintf(&message, fmt, args);
     va_end(args);
 
-    param = static_cast<struct config_parameter *>(hash_lookup(group->params, key));
+    param = static_cast<struct config_parameter *>(
+        hash_lookup(group->params, key));
     if (param == NULL)
         warn("%s", message);
     else {

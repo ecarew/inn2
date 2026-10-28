@@ -130,21 +130,22 @@ timecaf_explaintoken(const TOKEN token)
     memcpy(&seqnum1, &token.token[4], sizeof(seqnum1));
     memcpy(&seqnum2, &token.token[6], sizeof(seqnum2));
 
-    xasprintf(&text,
-              "method=timecaf class=%u time=%lu seqnum=%lu "
-              "file=%s/timecaf-%02x/%02x/%02x%02x.CF",
-              (unsigned int) token.class_,
-              ((unsigned long) (ntohl(arrival))) << 8,
-              ((unsigned long) ntohs(seqnum1))
-                  + (((unsigned long) ntohs(seqnum2)) << 16),
-              innconf->patharticles, token.class_, (ntohl(arrival) >> 8) & 0xff,
-              (ntohl(arrival) >> 16) & 0xff, ntohl(arrival) & 0xff);
+    xasprintf(
+        &text,
+        "method=timecaf class=%u time=%lu seqnum=%lu "
+        "file=%s/timecaf-%02x/%02x/%02x%02x.CF",
+        (unsigned int) token.class_, ((unsigned long) (ntohl(arrival))) << 8,
+        ((unsigned long) ntohs(seqnum1))
+            + (((unsigned long) ntohs(seqnum2)) << 16),
+        innconf->patharticles, token.class_, (ntohl(arrival) >> 8) & 0xff,
+        (ntohl(arrival) >> 16) & 0xff, ntohl(arrival) & 0xff);
 
     return text;
 }
 
 static TOKEN
-MakeToken(time_t now, ARTNUM seqnum, STORAGECLASS storageclass, TOKEN *oldtoken)
+MakeToken(time_t now, ARTNUM seqnum, STORAGECLASS storageclass,
+          TOKEN *oldtoken)
 {
     TOKEN token;
     uint32_t i;
@@ -193,7 +194,8 @@ MakePath(time_t now, const STORAGECLASS storageclass)
     length = strlen(innconf->patharticles) + 32;
     path = xmalloc(length);
     snprintf(path, length, "%s/timecaf-%02x/%02x/%02x%02x.CF",
-             innconf->patharticles, storageclass, (unsigned int) ((now >> 8) & 0xff),
+             innconf->patharticles, storageclass,
+             (unsigned int) ((now >> 8) & 0xff),
              (unsigned int) ((now >> 16) & 0xff), (unsigned int) (now & 0xff));
 
     return path;
@@ -562,8 +564,8 @@ OpenArticle(const char *path, ARTNUM artnum, const RETRTYPE amount)
             return NULL;
         }
         priv->mmaplen = len + delta;
-        if ((priv->mmapbase = static_cast<char *>(mmap(NULL, priv->mmaplen, PROT_READ,
-                                      MAP_SHARED, fd, tmpoff)))
+        if ((priv->mmapbase = static_cast<char *>(
+                 mmap(NULL, priv->mmaplen, PROT_READ, MAP_SHARED, fd, tmpoff)))
             == MAP_FAILED) {
             SMseterror(SMERR_UNDEFINED, NULL);
             syswarn("timecaf: could not mmap article");

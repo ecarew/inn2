@@ -728,7 +728,8 @@ SMstore(const ARTHANDLE article)
     if ((sub = SMgetsub(article)) == NULL) {
         return result;
     }
-    return storage_methods[typetoindex[sub->type]].store(article, sub->storageclass);
+    return storage_methods[typetoindex[sub->type]].store(article,
+                                                         sub->storageclass);
 }
 
 ARTHANDLE *

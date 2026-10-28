@@ -828,8 +828,8 @@ OpenArticle(const char *path, RETRTYPE amount)
     art->private_ = (void *) priv;
     priv->artlen = (size_t) sb.st_size;
     if (innconf->articlemmap) {
-        if ((priv->artbase =
-                 static_cast<char *>(mmap(NULL, priv->artlen, PROT_READ, MAP_SHARED, fd, 0)))
+        if ((priv->artbase = static_cast<char *>(
+                 mmap(NULL, priv->artlen, PROT_READ, MAP_SHARED, fd, 0)))
             == MAP_FAILED) {
             SMseterror(SMERR_UNDEFINED, NULL);
             syswarn("tradspool: could not mmap article %s", path);
@@ -857,8 +857,7 @@ OpenArticle(const char *path, RETRTYPE amount)
         if (p[-1] == '\r') {
             priv->mmapped = true;
         } else {
-            wfarticle =
-                wire_from_native(priv->artbase, priv->artlen, &wflen);
+            wfarticle = wire_from_native(priv->artbase, priv->artlen, &wflen);
             if (wfarticle == NULL) {
                 SMseterror(SMERR_UNDEFINED,
                            "article is too large after wire formatting");
@@ -897,8 +896,7 @@ OpenArticle(const char *path, RETRTYPE amount)
         }
         if (p[-1] != '\r') {
             /* need to make a wireformat copy of the article */
-            wfarticle =
-                wire_from_native(priv->artbase, priv->artlen, &wflen);
+            wfarticle = wire_from_native(priv->artbase, priv->artlen, &wflen);
             if (wfarticle == NULL) {
                 SMseterror(SMERR_UNDEFINED,
                            "article is too large after wire formatting");

@@ -285,7 +285,8 @@ index_map(struct group_index *index)
 
         if (index->writable)
             flag = PROT_READ | PROT_WRITE;
-        data = static_cast<char *>(mmap(NULL, size, flag, MAP_SHARED, index->fd, 0));
+        data = static_cast<char *>(
+            mmap(NULL, size, flag, MAP_SHARED, index->fd, 0));
         if (data == MAP_FAILED) {
             syswarn("tradindexed: cannot mmap %s", index->path);
             return false;
@@ -1300,7 +1301,8 @@ tdx_index_dump(struct group_index *index, FILE *output)
             entry = index->entries + current;
             name = NULL;
             if (hashmap != NULL) {
-                group = static_cast<struct hashmap *>(hash_lookup(hashmap, &entry->hash));
+                group = static_cast<struct hashmap *>(
+                    hash_lookup(hashmap, &entry->hash));
                 if (group != NULL)
                     name = group->name;
             }

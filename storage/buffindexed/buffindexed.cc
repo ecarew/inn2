@@ -1180,7 +1180,8 @@ buffindexed_open(int mode)
             return false;
         }
         GROUPmapsize = (size_t) groupsize;
-        GROUPheader = static_cast<GROUPHEADER *>(mmap(0, GROUPmapsize, flag, MAP_SHARED, GROUPfd, 0));
+        GROUPheader = static_cast<GROUPHEADER *>(
+            mmap(0, GROUPmapsize, flag, MAP_SHARED, GROUPfd, 0));
         if (GROUPheader == MAP_FAILED) {
             syswarn("buffindexed: Could not mmap %s in buffindexed_open",
                     groupfn);
@@ -1469,8 +1470,9 @@ GROUPremapifneeded(GROUPLOC loc, bool hash_locked)
         return false;
     }
 
-    newheader = static_cast<GROUPHEADER *>(mmap(0, (size_t) groupsize, GROUPmappingprot(ovbuffmode),
-                     MAP_SHARED, GROUPfd, 0));
+    newheader = static_cast<GROUPHEADER *>(mmap(0, (size_t) groupsize,
+                                                GROUPmappingprot(ovbuffmode),
+                                                MAP_SHARED, GROUPfd, 0));
     if (newheader == MAP_FAILED) {
         syswarn(
             "buffindexed: Could not mmap group.index in GROUPremapifneeded");
@@ -1529,8 +1531,9 @@ GROUPexpand(int mode)
         syswarn("buffindexed: Could not extend group.index");
         return false;
     }
-    newheader = static_cast<GROUPHEADER *>(mmap(0, (size_t) groupsize, GROUPmappingprot(mode), MAP_SHARED,
-                     GROUPfd, 0));
+    newheader = static_cast<GROUPHEADER *>(mmap(0, (size_t) groupsize,
+                                                GROUPmappingprot(mode),
+                                                MAP_SHARED, GROUPfd, 0));
     if (newheader == MAP_FAILED) {
         syswarn("buffindexed: Could not mmap group.index in GROUPexpand");
         /* If this is initial creation, restore the header-only file.  For an
@@ -2089,7 +2092,8 @@ ovgroupmmap(GROUPENTRY *ge, ARTNUM low, ARTNUM high, bool needov)
             ovgroupunmap_failed();
             return false;
         }
-        ovblock = reinterpret_cast<OVBLOCK *>(static_cast<char *>(addr) + pagefudge);
+        ovblock =
+            reinterpret_cast<OVBLOCK *>(static_cast<char *>(addr) + pagefudge);
         if (ov.index == ge->curindex.index
             && ov.blocknum == ge->curindex.blocknum) {
             limit = ge->curindexoffset;

@@ -35,8 +35,9 @@ cipoint(const char *s, size_t size)
     static const char post[] = "postmaster";
     static int plen = sizeof(post) - 1;
 
-    if ((p = static_cast<const char *>(memchr(s, '@', size))) == NULL) /* no local/domain split */
-        return NULL;                        /* assume all local */
+    if ((p = static_cast<const char *>(memchr(s, '@', size)))
+        == NULL)     /* no local/domain split */
+        return NULL; /* assume all local */
     if ((p - (s + 1) == plen) && !strncasecmp(post, s + 1, plen)) {
         /* crazy -- "postmaster" is case-insensitive */
         return s;

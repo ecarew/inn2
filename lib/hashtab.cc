@@ -33,9 +33,9 @@ struct hash {
     unsigned long collisions; /* Count of collisions (for debugging). */
     unsigned long expansions; /* Count of hash resizes needed. */
 
-    hash_func hash;          /* Return hash of a key. */
-    hash_key_func key;       /* Given an element, returns its key. */
-    hash_equal_func equal;   /* Whether a key matches an element. */
+    hash_func hash;           /* Return hash of a key. */
+    hash_key_func key;        /* Given an element, returns its key. */
+    hash_equal_func equal;    /* Whether a key matches an element. */
     hash_delete_func delete_; /* Called when a hash element is deleted. */
 
     void **table; /* The actual elements. */

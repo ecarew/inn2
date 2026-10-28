@@ -319,7 +319,8 @@ match_pattern(const unsigned char *text, const unsigned char *start,
             q = p + (*p == '^') + 1;
             if (q > end)
                 return ABORT;
-            endclass = static_cast<const unsigned char *>(memchr(q, ']', (size_t) (end - q + 1)));
+            endclass = static_cast<const unsigned char *>(
+                memchr(q, ']', (size_t) (end - q + 1)));
             if (!endclass)
                 return ABORT;
 

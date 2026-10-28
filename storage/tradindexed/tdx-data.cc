@@ -295,7 +295,8 @@ map_file(int fd, off_t length, const char *base, const char *suffix)
             return NULL;
         }
     } else {
-        data = static_cast<char *>(mmap(NULL, size, PROT_READ, MAP_SHARED, fd, 0));
+        data = static_cast<char *>(
+            mmap(NULL, size, PROT_READ, MAP_SHARED, fd, 0));
         if (data == MAP_FAILED) {
             syswarn("tradindexed: cannot mmap %s.%s", base, suffix);
             return NULL;
@@ -361,7 +362,8 @@ map_data(struct group_data *data)
     if (r == -1)
         return false;
     data->datalen = st.st_size;
-    data->data = static_cast<char *>(map_file(data->datafd, data->datalen, data->path, "DAT"));
+    data->data = static_cast<char *>(
+        map_file(data->datafd, data->datalen, data->path, "DAT"));
     return data->data != NULL || data->datalen == 0;
 }
 

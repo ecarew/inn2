@@ -568,7 +568,7 @@ RCreader(CHANNEL *cp)
     */
     if (reject_message != NULL) {
         newcp = CHANcreate(fd, CTreject, CSwritegoodbye, RCrejectreader,
-                         RCrejectwritedone);
+                           RCrejectwritedone);
         memcpy(&remotetable[i].Address, &remote,
                sizeof(remotetable[i].Address));
         /* Use cp->Rejected for the response code in CHANclose. */
@@ -618,8 +618,8 @@ RCreader(CHANNEL *cp)
                 CHANcount_active(newcp);
                 if ((newcp->ActiveCnx > newcp->MaxCnx) && (newcp->fd > 0)) {
                     snprintf(buff, sizeof(buff),
-                             "You are limited to %d connection%s", newcp->MaxCnx,
-                             (newcp->MaxCnx != 1) ? "s" : "");
+                             "You are limited to %d connection%s",
+                             newcp->MaxCnx, (newcp->MaxCnx != 1) ? "s" : "");
                     NCwriteshutdown(newcp, buff);
                     syslog(L_NOTICE, "too many connections from %s",
                            rp->Label);
@@ -643,7 +643,7 @@ RCreader(CHANNEL *cp)
         reject_val = NNTP_ERR_ACCESS;
         xasprintf(&reject_message, "%d Permission denied", NNTP_ERR_ACCESS);
         newcp = CHANcreate(fd, CTreject, CSwritegoodbye, RCrejectreader,
-                         RCrejectwritedone);
+                           RCrejectwritedone);
         memcpy(&newcp->Address, &remote, sizeof(newcp->Address));
         /* Use cp->Rejected for the response code in CHANclose. */
         newcp->Rejected = reject_val;
@@ -660,7 +660,8 @@ RCreader(CHANNEL *cp)
         network_sockaddr_sprint(addr, sizeof(addr),
                                 (struct sockaddr *) &remote);
         notice("%s connected %d streaming %s", name ? name : addr, newcp->fd,
-               (!StreamingOff && newcp->Streaming) ? "allowed" : "not allowed");
+               (!StreamingOff && newcp->Streaming) ? "allowed"
+                                                   : "not allowed");
     }
 }
 

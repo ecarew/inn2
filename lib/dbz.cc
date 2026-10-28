@@ -1281,8 +1281,9 @@ getcore(hash_table *tab)
                 return false;
             }
         }
-        it = static_cast<char *>(mmap(NULL, length, readonly ? PROT_READ : PROT_WRITE | PROT_READ,
-                  MAP_SHARED, tab->fd, 0));
+        it = static_cast<char *>(
+            mmap(NULL, length, readonly ? PROT_READ : PROT_WRITE | PROT_READ,
+                 MAP_SHARED, tab->fd, 0));
         if (it == (char *) -1) {
             syswarn("dbz: getcore: mmap failed");
             return false;

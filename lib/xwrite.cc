@@ -191,7 +191,8 @@ xwritev(int fd, const struct iovec iov[], int iovcnt)
         offset -= iov[i].iov_len;
     iovleft = iovcnt - i;
     assert(iovleft > 0);
-    tmpiov = static_cast<struct iovec *>(calloc(iovleft, sizeof(struct iovec)));
+    tmpiov =
+        static_cast<struct iovec *>(calloc(iovleft, sizeof(struct iovec)));
     if (tmpiov == NULL)
         return -1;
     memcpy(tmpiov, iov + i, iovleft * sizeof(struct iovec));

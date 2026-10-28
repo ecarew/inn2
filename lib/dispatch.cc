@@ -19,7 +19,8 @@ static int
 compare_dispatch(const void *key, const void *element)
 {
     const char *command = static_cast<const char *>(key);
-    const struct dispatch *rule = static_cast<const struct dispatch *>(element);
+    const struct dispatch *rule =
+        static_cast<const struct dispatch *>(element);
 
     return strcasecmp(command, rule->command);
 }
@@ -44,8 +45,9 @@ dispatch(struct cvector *command, const struct dispatch *table, size_t count,
         (*unknown)(command, cookie);
         return;
     }
-    rule = static_cast<struct dispatch *>(bsearch(command->strings[0], table, count, sizeof(struct dispatch),
-                   compare_dispatch));
+    rule = static_cast<struct dispatch *>(
+        bsearch(command->strings[0], table, count, sizeof(struct dispatch),
+                compare_dispatch));
     if (rule == NULL)
         (*unknown)(command, cookie);
     else if (argc < rule->min_args || argc > rule->max_args)

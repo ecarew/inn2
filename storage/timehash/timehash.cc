@@ -84,7 +84,8 @@ timehash_explaintoken(const TOKEN token)
 }
 
 static TOKEN
-MakeToken(time_t now, unsigned int seqnum, STORAGECLASS storageclass, TOKEN *oldtoken)
+MakeToken(time_t now, unsigned int seqnum, STORAGECLASS storageclass,
+          TOKEN *oldtoken)
 {
     TOKEN token;
     uint32_t i;
@@ -124,7 +125,8 @@ MakePath(time_t now, unsigned int seqnum, const STORAGECLASS storageclass)
     length = strlen(innconf->patharticles) + 32;
     path = xmalloc(length);
     snprintf(path, length, "%s/time-%02x/%02x/%02x/%04x-%04x",
-             innconf->patharticles, storageclass, (unsigned int) ((now >> 16) & 0xff),
+             innconf->patharticles, storageclass,
+             (unsigned int) ((now >> 16) & 0xff),
              (unsigned int) ((now >> 8) & 0xff), seqnum,
              (unsigned int) ((now & 0xff) | ((now >> 16 & 0xff00))));
     return path;
@@ -292,8 +294,8 @@ OpenArticle(const char *path, RETRTYPE amount)
     art->private_ = (void *) priv;
     priv->len = sb.st_size;
     if (innconf->articlemmap) {
-        if ((priv->base =
-                 static_cast<char *>(mmap(NULL, sb.st_size, PROT_READ, MAP_SHARED, fd, 0)))
+        if ((priv->base = static_cast<char *>(
+                 mmap(NULL, sb.st_size, PROT_READ, MAP_SHARED, fd, 0)))
             == MAP_FAILED) {
             SMseterror(SMERR_UNDEFINED, NULL);
             syswarn("timehash: could not mmap article");

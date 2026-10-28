@@ -1586,8 +1586,9 @@ cnfs_retrieve(const TOKEN token, const RETRTYPE amount)
         pagefudge = offset % pagesize;
         mmapoffset = offset - pagefudge;
         privp->len = pagefudge + ntohl(cah.size);
-        if ((privp->base = static_cast<char *>(mmap(NULL, privp->len, PROT_READ, MAP_SHARED,
-                                  cycbuff->fd, mmapoffset)))
+        if ((privp->base = static_cast<char *>(mmap(NULL, privp->len,
+                                                    PROT_READ, MAP_SHARED,
+                                                    cycbuff->fd, mmapoffset)))
             == MAP_FAILED) {
             SMseterror(SMERR_UNDEFINED, "mmap failed");
             syswarn("CNFS: could not mmap token %s %s:0x%s:%u",
@@ -1988,8 +1989,9 @@ cnfs_next(ARTHANDLE *article, const RETRTYPE amount)
         pagefudge = offset % pagesize;
         mmapoffset = offset - pagefudge;
         privp->len = pagefudge + ntohl(cah.size);
-        if ((privp->base = static_cast<char *>(mmap(0, privp->len, PROT_READ, MAP_SHARED,
-                                  cycbuff->fd, mmapoffset)))
+        if ((privp->base =
+                 static_cast<char *>(mmap(0, privp->len, PROT_READ, MAP_SHARED,
+                                          cycbuff->fd, mmapoffset)))
             == MAP_FAILED) {
             art->data = NULL;
             art->len = 0;

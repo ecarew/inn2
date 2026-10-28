@@ -143,7 +143,8 @@ tdx_cache_lookup(struct cache *cache, HASH hash)
     struct cache_entry *entry;
 
     cache->queries++;
-    entry = static_cast<struct cache_entry *>(hash_lookup(cache->hashtable, &hash));
+    entry = static_cast<struct cache_entry *>(
+        hash_lookup(cache->hashtable, &hash));
     if (entry != NULL) {
         cache->hits++;
         entry->lastused = time(NULL);

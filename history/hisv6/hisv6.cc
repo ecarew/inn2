@@ -1099,7 +1099,8 @@ hisv6_traversecb(struct hisv6 *h UNUSED, void *cookie, const HASH *hash,
                  time_t arrived, time_t posted, time_t expires,
                  const TOKEN *token)
 {
-    struct hisv6_walkstate *hiscookie = static_cast<struct hisv6_walkstate *>(cookie);
+    struct hisv6_walkstate *hiscookie =
+        static_cast<struct hisv6_walkstate *>(cookie);
 
     return (*hiscookie->cb.walk)(hiscookie->cookie, hash, arrived, posted,
                                  expires, token);
@@ -1143,7 +1144,8 @@ static bool
 hisv6_expirecb(struct hisv6 *h, void *cookie, const HASH *hash, time_t arrived,
                time_t posted, time_t expires, const TOKEN *token)
 {
-    struct hisv6_walkstate *hiscookie = static_cast<struct hisv6_walkstate *>(cookie);
+    struct hisv6_walkstate *hiscookie =
+        static_cast<struct hisv6_walkstate *>(cookie);
     bool r = true;
 
     /* check if we've seen this message id already */
@@ -1183,8 +1185,8 @@ hisv6_expirecb(struct hisv6 *h, void *cookie, const HASH *hash, time_t arrived,
         if (hiscookie->newhis
             && (t != NULL || posted >= hiscookie->threshold
                 || (posted <= 0 && arrived >= hiscookie->threshold))) {
-            r = hisv6_writeline(hiscookie->newhis, hash, arrived, posted, expires,
-                                t);
+            r = hisv6_writeline(hiscookie->newhis, hash, arrived, posted,
+                                expires, t);
         }
     }
     return r;
