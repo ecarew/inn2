@@ -81,7 +81,7 @@ smcCreateSemaphore(const char *name)
 }
 
 int
-smcGetExclusiveLock(smcd_t *this)
+smcGetExclusiveLock(smcd_t *smc)
 {
     struct sembuf sops[3] = {
         {0, 0, SEM_UNDO}, /* wait for exclusive lock. */
@@ -91,7 +91,7 @@ smcGetExclusiveLock(smcd_t *this)
 
     /* Get a lock for the buffer. Try again if it fails because our
        SIGHUP may interrupt this semop() call */
-    if (semop(this->semap, sops, 3) < 0 && semop(this->semap, sops, 3) < 0) {
+    if (semop(smc->semap, sops, 3) < 0 && semop(smc->semap, sops, 3) < 0) {
         syswarn("semop failed to getExclusiveLock");
         return (-1);
     }
@@ -99,7 +99,7 @@ smcGetExclusiveLock(smcd_t *this)
 }
 
 int
-smcGetSharedLock(smcd_t *this)
+smcGetSharedLock(smcd_t *smc)
 {
     struct sembuf sops[2] = {
         {0, 0, SEM_UNDO}, /* wait for exclusive lock. */
@@ -108,7 +108,7 @@ smcGetSharedLock(smcd_t *this)
 
     /* Get a lock for the buffer. Try again if it fails because our
        SIGHUP may interrupt this semop() call */
-    if (semop(this->semap, sops, 2) < 0 && semop(this->semap, sops, 2) < 0) {
+    if (semop(smc->semap, sops, 2) < 0 && semop(smc->semap, sops, 2) < 0) {
         syswarn("semop failed to getSharedLock");
         return (-1);
     }
@@ -116,12 +116,12 @@ smcGetSharedLock(smcd_t *this)
 }
 
 int
-smcReleaseSharedLock(smcd_t *this)
+smcReleaseSharedLock(smcd_t *smc)
 {
     struct sembuf sops = {1, -1, SEM_UNDO | IPC_NOWAIT};
 
     /* Release the lock */
-    if (semop(this->semap, &sops, 1) < 0) {
+    if (semop(smc->semap, &sops, 1) < 0) {
         syswarn("semop failed to release shared lock");
         return (-1);
     }
@@ -129,12 +129,12 @@ smcReleaseSharedLock(smcd_t *this)
 }
 
 int
-smcReleaseExclusiveLock(smcd_t *this)
+smcReleaseExclusiveLock(smcd_t *smc)
 {
     struct sembuf sops = {0, -1, SEM_UNDO | IPC_NOWAIT};
 
     /* Release the lock */
-    if (semop(this->semap, &sops, 1) < 0) {
+    if (semop(smc->semap, &sops, 1) < 0) {
         syswarn("semop failed to release exclusive lock");
         return (-1);
     }
@@ -148,7 +148,7 @@ smcd_t *
 smcGetShmemBuffer(const char *name, int size)
 {
     int shmid, semap;
-    smcd_t *this;
+    smcd_t *smc;
     caddr_t addr;
     key_t fk = ftok((char *) name, 0);
 
@@ -177,17 +177,17 @@ smcGetShmemBuffer(const char *name, int size)
         return NULL;
     }
 
-    this = xmalloc(sizeof(smcd_t));
-    this->addr = addr;
-    this->size = size;
-    this->shmid = shmid;
-    this->semap = semap;
+    smc = xmalloc(sizeof(smcd_t));
+    smc->addr = addr;
+    smc->size = size;
+    smc->shmid = shmid;
+    smc->semap = semap;
 
     /* This makes news log file huge if enabled */
     debug("got shmid %d semap %d addr %p size %d", shmid, semap, (void *) addr,
           size);
 
-    return this;
+    return smc;
 }
 
 /*
@@ -197,7 +197,7 @@ smcd_t *
 smcCreateShmemBuffer(const char *name, int size)
 {
     int shmid, semap;
-    smcd_t *this;
+    smcd_t *smc;
     caddr_t addr;
     key_t fk = ftok((char *) name, 0);
 
@@ -244,54 +244,54 @@ smcCreateShmemBuffer(const char *name, int size)
         return NULL;
     }
 
-    this = xmalloc(sizeof(smcd_t));
-    this->addr = addr;
-    this->size = size;
-    this->shmid = shmid;
-    this->semap = semap;
+    smc = xmalloc(sizeof(smcd_t));
+    smc->addr = addr;
+    smc->size = size;
+    smc->shmid = shmid;
+    smc->semap = semap;
 
     debug("created shmid %d semap %d addr %p size %d", shmid, semap,
           (void *) addr, size);
 
-    return this;
+    return smc;
 }
 
 void
-smcClose(smcd_t *this)
+smcClose(smcd_t *smc)
 {
     struct shmid_ds buf;
 
-    if (this->addr != MAP_FAILED) {
+    if (smc->addr != MAP_FAILED) {
         /* detach shared memory segment */
-        if (shmdt(this->addr) < 0)
+        if (shmdt(smc->addr) < 0)
             syswarn("cant detach shared memory segment");
-        this->addr = MAP_FAILED;
+        smc->addr = MAP_FAILED;
     }
 
     /* delete shm if no one has attached it */
-    if (shmctl(this->shmid, IPC_STAT, &buf) < 0) {
-        syswarn("cant stat shmid %d", this->shmid);
+    if (shmctl(smc->shmid, IPC_STAT, &buf) < 0) {
+        syswarn("cant stat shmid %d", smc->shmid);
     } else if (buf.shm_nattch == 0) {
-        if (shmctl(this->shmid, IPC_RMID, 0) < 0)
-            syswarn("cant delete shmid %d", this->shmid);
+        if (shmctl(smc->shmid, IPC_RMID, 0) < 0)
+            syswarn("cant delete shmid %d", smc->shmid);
         else
-            debug("shmid %d deleted", this->shmid);
+            debug("shmid %d deleted", smc->shmid);
         /* Delete the semaphore too */
 #ifdef HAVE_UNION_SEMUN
         {
             union semun semArg;
             semArg.val = 0;
-            if (semctl(this->semap, 0, IPC_RMID, semArg) < 0) {
-                syswarn("can't remove semaphore %d", this->semap);
+            if (semctl(smc->semap, 0, IPC_RMID, semArg) < 0) {
+                syswarn("can't remove semaphore %d", smc->semap);
             }
         }
 #else
-        if (semctl(this->semap, 0, IPC_RMID, NULL) < 0) {
-            syswarn("can't remove semaphore %d", this->semap);
+        if (semctl(smc->semap, 0, IPC_RMID, NULL) < 0) {
+            syswarn("can't remove semaphore %d", smc->semap);
         }
 #endif
     }
-    free(this);
+    free(smc);
 }
 
 #ifdef _TEST_
@@ -306,12 +306,12 @@ static const char *testfile = "testfile";
 #    define TESTSIZE (1024 * 1024)
 #    define MAXCOUNT 100
 
-static smcd_t *this;
+static smcd_t *smc;
 static void
 myexit(void)
 {
-    if (this) {
-        smcClose(this);
+    if (smc) {
+        smcClose(smc);
     }
 }
 
@@ -339,11 +339,11 @@ main(int argc UNUSED, char **argv UNUSED)
     }
 
     /* try to get shared memory buffer */
-    this = smcGetShmemBuffer(testfile, TESTSIZE);
-    if (!this) {
+    smc = smcGetShmemBuffer(testfile, TESTSIZE);
+    if (!smc) {
         /* because there's no shared memory, create one. */
-        this = smcCreateShmemBuffer(testfile, TESTSIZE);
-        if (!this) {
+        smc = smcCreateShmemBuffer(testfile, TESTSIZE);
+        if (!smc) {
             printf("cant create shmem buffer");
             exit(1);
         }
@@ -355,20 +355,20 @@ main(int argc UNUSED, char **argv UNUSED)
         exit(1);
     }
 
-    x = (int *) this->addr;
-    len = this->size / sizeof(int);
+    x = (int *) smc->addr;
+    len = smc->size / sizeof(int);
     for (k = 0; k < MAXCOUNT; k++) {
-        if (smcGetExclusiveLock(this) < 0) {
+        if (smcGetExclusiveLock(smc) < 0) {
             printf("cant get exclusive lock");
             exit(1);
         }
         for (i = 0; i < len; i++)
             x[i] += 1;
-        if (write(fd, this->addr, this->size) != (signed int) this->size) {
+        if (write(fd, smc->addr, smc->size) != (signed int) smc->size) {
             printf("cant write");
             exit(1);
         }
-        if (smcReleaseExclusiveLock(this)) {
+        if (smcReleaseExclusiveLock(smc)) {
             printf("cant release exclusive lock");
             exit(1);
         }

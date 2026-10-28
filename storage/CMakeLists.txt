@@ -4,7 +4,7 @@
 add_library(innstorage STATIC
     expire.cc interface.cc methods.c ov.cc overdata.cc overview.cc ovmethods.c
     tombstone.cc
-    buffindexed/buffindexed.c buffindexed/shmem.c
+    buffindexed/buffindexed.c buffindexed/shmem.cc
     cnfs/cnfs.c
     ovdb/ovdb.c
     ovsqlite/ovsqlite-private.cc ovsqlite/ovsqlite.c ovsqlite/sql-read.c
