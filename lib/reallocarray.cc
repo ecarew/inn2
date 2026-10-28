@@ -35,7 +35,9 @@
 #if TESTING
 #    undef reallocarray
 #    define reallocarray test_reallocarray
+BEGIN_DECLS
 void *test_reallocarray(void *, size_t, size_t);
+END_DECLS
 #endif
 
 /*

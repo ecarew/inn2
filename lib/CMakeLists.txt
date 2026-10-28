@@ -1,9 +1,9 @@
 # libinn — general support library.
-# setproctitle.c, sd-daemon.cc and reallocarray.c are the replacement functions
+# setproctitle.c, sd-daemon.cc and reallocarray.cc are the replacement functions
 # configure selected (LIBOBJS) for macOS; other platforms may need others.
 
 add_library(inn STATIC
-    setproctitle.c sd-daemon.cc reallocarray.c
+    setproctitle.c sd-daemon.cc reallocarray.cc
     argparse.c artnumber.c bloom.c buffer.c cleanfrom.c clientactive.c
     clientlib.c commands.cc concat.c conffile.c confparse.c date.c dbz.c
     defdist.c dispatch.cc fdflag.c fdlimit.c getfqdn.cc getmodaddr.c hash.c
