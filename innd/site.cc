@@ -1050,7 +1050,7 @@ SITEfree(SITE *sp)
 {
     SITE *s;
     HASHFEEDLIST *hf, *hn;
-    int new;
+    int newmaster;
     int i;
 
     if (sp->Channel) {
@@ -1116,14 +1116,14 @@ SITEfree(SITE *sp)
 
     /* If this site was a master, find a new one. */
     if (sp->IsMaster) {
-        for (new = NOSITE, s = Sites, i = nSites; --i >= 0; s++)
+        for (newmaster = NOSITE, s = Sites, i = nSites; --i >= 0; s++)
             if (&Sites[s->Master] == sp) {
-                if (new == NOSITE) {
+                if (newmaster == NOSITE) {
                     s->Master = NOSITE;
                     s->IsMaster = true;
-                    new = s - Sites;
+                    newmaster = s - Sites;
                 } else
-                    s->Master = new;
+                    s->Master = newmaster;
             }
         sp->IsMaster = false;
     }

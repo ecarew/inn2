@@ -10,7 +10,6 @@ set(INND_C_SOURCES
     innd.c
     perl.c
     python.c
-    site.c
 )
 
 set(INND_CXX_SOURCES
@@ -25,6 +24,7 @@ set(INND_CXX_SOURCES
     proc.cc
     newsfeeds.cc
     rc.cc
+    site.cc
 )
 
 add_executable(innd ${INND_C_SOURCES} ${INND_CXX_SOURCES})
