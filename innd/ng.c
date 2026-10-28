@@ -3,6 +3,7 @@
 **  files.
 */
 
+extern "C" {
 #include "portable/system.h"
 
 #include <dirent.h>
@@ -10,6 +11,7 @@
 #include "inn/innconf.h"
 #include "inn/ov.h"
 #include "innd.h"
+}
 
 
 /*

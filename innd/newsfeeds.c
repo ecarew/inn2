@@ -2,10 +2,12 @@
 **  Routines for the in-core data structures for the newsfeeds file.
 */
 
+extern "C" {
 #include "portable/system.h"
 
 #include "inn/innconf.h"
 #include "innd.h"
+}
 
 /*
 ** List of variables assigned in the configuration file.

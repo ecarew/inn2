@@ -1,0 +1,196 @@
+# INN++ C++ Design Rules
+
+This project is converting the INN 2.8.0 C codebase to C++. All new and converted
+code must follow the rules below.
+
+---
+
+## Build system
+
+- CMake minimum version: 4.3
+- C++ standard: C++20, set per target with `target_compile_features(<tgt> PRIVATE cxx_std_20)`
+  and `CXX_EXTENSIONS OFF`. Chosen because Apple Clang supports it fully; C++23 support
+  in Apple's libc++ is still partial. Don't use C++23-only features.
+- C headers included from C++ translation units must be wrapped in `extern "C" { … }`
+- Per-file compile flags (Perl, Python) use `set_source_files_properties … COMPILE_OPTIONS`
+
+## Inclusion of C headers
+
+C headers that lack their own `extern "C"` guards must be wrapped:
+
+```cpp
+extern "C" {
+#include "portable/system.h"
+#include "inn/innconf.h"
+#include "innd.h"
+}
+```
+
+Conditionally-compiled headers get their own `extern "C"` block inside the `#ifdef`.
+Python.h is exempt — it ships its own guards since Python 3.
+
+## void* allocations
+
+Use `inn_void_ptr` (defined in `include/inn/xmalloc.h`) — `xmalloc`, `xcalloc`,
+`xrealloc`, and `xreallocarray` already return it. No explicit casts needed at
+call sites; the template conversion operator handles the assignment.
+
+---
+
+## Scott Meyers — Effective C++ (3rd ed.) applicable items
+
+**Resource management (RAII)**
+- Item 13: Use objects to manage resources. Acquire in constructor, release in
+  destructor. Prefer `std::unique_ptr` / `std::shared_ptr` over raw `new`/`delete`.
+- Item 14: Copy constructors and copy-assignment in resource-managing classes must
+  decide between deep copy and reference-counting. Document the choice.
+- Item 15: Resource-managing classes should provide a way to access the raw resource
+  (e.g., `.get()` or an implicit conversion), so they compose with C APIs.
+- Item 17: Store the result of `new` in a smart pointer in the same statement —
+  never interleave it with other expressions that could throw.
+
+**Class design**
+- Item 3: Use `const` wherever semantically correct — member functions, parameters,
+  local variables, pointers-to-const. Prefer `const T&` return for members that
+  expose internals.
+- Item 7: Declare destructors `virtual` in any class intended as a base for
+  polymorphic use.
+- Item 8: Destructors must not propagate exceptions. Catch and swallow (or
+  `std::terminate`) inside the destructor; never let one escape.
+- Item 9: Never call virtual functions from constructors or destructors — the
+  derived type is not yet (or no longer) alive.
+- Item 20: Prefer `const T&` over `T` for parameters that are not going to be
+  modified and are not trivially cheap to copy.
+- Item 23: Prefer non-member, non-friend functions over member functions when
+  the implementation does not require private access. Keeps the interface minimal.
+- Item 27: Minimize casting. When a cast is unavoidable, use the C++ named casts
+  (`static_cast`, `reinterpret_cast`, `const_cast`). Never C-style `(T)expr`.
+
+---
+
+## Scott Meyers — Effective Modern C++ applicable items
+
+**Type deduction and auto**
+- Item 5: Prefer `auto` over explicit type declarations for variables whose type
+  is obvious from context or verbose to spell out.
+- Item 8: Use `nullptr` instead of `0` or `NULL` for null pointer values.
+- Item 9: Prefer alias declarations (`using Foo = …`) over `typedef`.
+- Item 10: Prefer scoped enumerations (`enum class`) over unscoped `enum`.
+
+**Function and class declarations**
+- Item 11: Prefer `= delete` over `private` + undefined for functions you want to
+  prohibit. Apply to copy/move operations that should not exist.
+- Item 12: Mark every overriding virtual function `override`. The compiler then
+  catches signature mismatches.
+- Item 14: Declare a function `noexcept` if it genuinely will not throw — move
+  constructors and move-assignment operators in particular (see Caisse rules below).
+- Item 15: Use `constexpr` for values and functions that can be evaluated at
+  compile time. Prefer it over `#define` for constants.
+
+**Special member function generation (Rule of Five)**
+- Item 17: The compiler generates default constructor, destructor, copy ctor, copy
+  assignment, move ctor, and move assignment — but only under specific conditions.
+  Declaring *any* of destructor, copy ctor, or copy assignment suppresses move
+  generation. See Caisse rules for the canonical form.
+
+**Smart pointers**
+- Item 18: Use `std::unique_ptr` for exclusive-ownership resources. Zero overhead
+  over raw pointer; move-only semantics make ownership explicit.
+- Item 19: Use `std::shared_ptr` only when shared ownership is genuinely required.
+  Prefer `unique_ptr`; convert to `shared_ptr` when callers need it.
+- Item 21: Prefer `std::make_unique` and `std::make_shared` over `new` directly —
+  exception-safe, avoids repeating the type name.
+
+**Lambdas**
+- Item 31: Avoid default capture (`[=]`, `[&]`). Capture only what you need,
+  by name, so the intent is explicit.
+
+---
+
+## Michael Caisse — The Canonical Class (CppCon 2014)
+
+The six special member functions and their canonical forms:
+
+```
+Default constructor   T()
+Destructor            ~T()
+Copy constructor      T(const T&)
+Copy assignment       T& operator=(const T&)
+Move constructor      T(T&&) noexcept
+Move assignment       T& operator=(T&&) noexcept
+```
+
+**Rule of Zero** — the preferred option for new classes:  
+If every data member is itself a well-behaved type (owns its resource via RAII),
+declare none of the six. The compiler-generated versions do the right thing.
+Document that this is intentional with a comment if the class looks non-trivial.
+
+**Rule of Five** — required when you manage a raw resource:  
+If you declare *any* of {destructor, copy ctor, copy assignment, move ctor,
+move assignment}, you must declare *all five*. Omitting any invites subtle bugs
+or silently degraded performance.
+
+**noexcept rules**
+- Move constructor: `noexcept` — required for standard containers to use move
+  instead of copy when they resize.
+- Move assignment: `noexcept` — same reason.
+- Copy constructor: not `noexcept` — may allocate.
+- Copy assignment: not `noexcept` — may allocate.
+- Destructor: implicitly `noexcept`; never mark `noexcept(false)`.
+
+**Canonical move constructor**
+
+```cpp
+T(T&& other) noexcept
+    : member_(std::move(other.member_))
+{
+    // leave other in a valid, destructible state
+}
+```
+
+**Assignment: pick ONE of the two forms below, never both.** A by-value
+`operator=(T)` alongside `operator=(T&&)` makes rvalue assignment ambiguous and
+fails to compile. Either write separate `operator=(const T&)` + `operator=(T&&) noexcept`,
+or write the single by-value copy-and-swap operator, which serves both copy and move.
+
+**Canonical move-assignment operator** (separate-overloads form)
+
+```cpp
+T& operator=(T&& other) noexcept {
+    if (this != &other) {
+        member_ = std::move(other.member_);
+    }
+    return *this;
+}
+```
+
+**Canonical unified assignment (copy-and-swap idiom)** — replaces both overloads
+
+```cpp
+T& operator=(T other) {   // pass by value: caller's copy
+    swap(*this, other);
+    return *this;
+}
+friend void swap(T& a, T& b) noexcept {
+    using std::swap;
+    swap(a.member_, b.member_);
+}
+```
+
+**Explicit-delete pattern for non-copyable types**
+
+```cpp
+T(const T&) = delete;
+T& operator=(const T&) = delete;
+```
+
+---
+
+## General style guidance
+
+- Prefer `std::string` and `std::string_view` over raw `char *` in new code.
+  Existing C-interface boundaries keep `const char *`.
+- Prefer range-based `for` over index loops where the index itself is not needed.
+- Keep `#include` of C headers inside `extern "C"` blocks; `#include` of C++
+  standard-library headers outside, above the `extern "C"` block.
+- Do not use `using namespace std` at file scope.

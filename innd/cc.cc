@@ -11,6 +11,7 @@
 **  This module completely rips away all pretense of software layering.
 */
 
+extern "C" {
 #include "portable/system.h"
 
 #ifdef HAVE_UNIX_DOMAIN_SOCKETS
@@ -23,6 +24,7 @@
 #include "inn/qio.h"
 #include "innd.h"
 #include "innperl.h"
+}
 
 /*
 **  An entry in the dispatch table.  The name, and implementing function,

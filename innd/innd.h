@@ -109,6 +109,12 @@ typedef enum _ARTHEADERTYPE {
     HTstd, /* Standard optional header field */
     HTsav  /* Save header field, but may be deleted from article */
 } ARTHEADERTYPE;
+enum class ArtHeaderType{
+    HTreq, /* Drop article if this is missing */
+    HTobs, /* Obsolete header field but keep untouched */
+    HTstd, /* Standard optional header field */
+    HTsav  /* Save header field, but may be deleted from article */
+}
 
 
 /*
@@ -119,7 +125,13 @@ typedef struct _ARTHEADER {
     ARTHEADERTYPE Type;
     int Size; /* Length of Name. */
 } ARTHEADER;
-
+class ArtHeader{
+ public:
+ ArtHeader(std::string name, ArtHeaderType typ) : Name(name), Type(typ){}
+  std::string Name;
+  ArtHeaderType Type;
+  std::size_t Size(){return Name.size();}
+};
 
 /*
 **  Header body.

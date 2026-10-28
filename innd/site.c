@@ -3,11 +3,13 @@
 **  do buffering and determine what to send.
 */
 
+extern "C" {
 #include "portable/system.h"
 
 #include "inn/fdflag.h"
 #include "inn/innconf.h"
 #include "innd.h"
+}
 
 
 static int SITEcount;

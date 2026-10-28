@@ -17,7 +17,9 @@
 **      PyObject_HasAttrString(PyObject *o, const char *attr_name).
 */
 
+extern "C" {
 #include "portable/system.h"
+}
 
 #ifdef DO_PYTHON
 
@@ -30,7 +32,7 @@
 /*  Python.h must be included after having defined PY_SSIZE_T_CLEAN,
  *  and before any standard headers are included (because Python may
  *  define some pre-processor definitions which affect the standard
- *  headers on some systems). */
+ *  headers on some systems). Python.h has its own C++ guards. */
 #    include "Python.h"
 
 /*  Define Py_ssize_t when it does not exist (Python < 2.5.0). */
@@ -49,9 +51,11 @@ typedef int Py_ssize_t;
 #        define PYBUFF_FROMMEMORY(str, len) PyBuffer_FromMemory((str), (len))
 #    endif
 
+extern "C" {
 #    include "inn/innconf.h"
 #    include "inn/wire.h"
 #    include "innd.h"
+}
 
 bool PythonFilterActive;
 static PyObject *PYFilterObject = NULL;

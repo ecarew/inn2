@@ -2,6 +2,7 @@
 **  Periodic status reporting.
 */
 
+extern "C" {
 #include "portable/system.h"
 
 #include "portable/socket.h"
@@ -11,6 +12,7 @@
 #include "inn/version.h"
 #include "innd.h"
 #include "innperl.h"
+}
 
 #define MIN_REFRESH 60 /* 1 min */
 

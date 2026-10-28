@@ -5,6 +5,7 @@
 **  NNTP daemon.
 */
 
+extern "C" {
 #include "portable/system.h"
 
 #include "portable/socket.h"
@@ -17,6 +18,7 @@
 #include "inn/network.h"
 #include "inn/vector.h"
 #include "innd.h"
+}
 
 #define TEST_CONFIG(a, b)                                             \
     {                                                                 \

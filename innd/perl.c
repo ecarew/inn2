@@ -28,11 +28,14 @@
 **     active.
 */
 
+extern "C" {
 #include "portable/system.h"
+}
 
 /* Skip this entire file if DO_PERL (./configure --with-perl) isn't set. */
 #if DO_PERL
 
+extern "C" {
 #    include "inn/wire.h"
 #    include "innd.h"
 
@@ -43,6 +46,7 @@
 #    include <XSUB.h>
 
 #    include "innperl.h"
+}
 
 /* Prototypes for XS functions. */
 XS(XS_INN_addhist);

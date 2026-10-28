@@ -8,7 +8,8 @@
 **  Various bug fixes, code and documentation improvements since then
 **  in 2001-2004, 2006, 2008, 2009, 2011, 2013-2019, 2021-2025.
 */
-
+#include <vector>
+extern "C" {
 #include "portable/system.h"
 
 #include <sys/stat.h>
@@ -17,7 +18,7 @@
 
 #include "inn/innconf.h"
 #include "nnrpd.h"
-
+}
 /* Outside the ifdef so that make depend works even ifndef HAVE_OPENSSL. */
 #include "tls.h"
 

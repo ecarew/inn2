@@ -2,6 +2,7 @@
 **  Routines to read and write the active file.
 */
 
+extern "C" {
 #include "portable/system.h"
 
 #include "portable/mmap.h"
@@ -12,6 +13,7 @@
 #include "inn/mmap.h"
 #include "inn/ov.h"
 #include "innd.h"
+}
 
 /* If we fork and exec under Cygwin, children hold onto the mmap */
 /* of active, and Windows won't let us resize or replace it. */

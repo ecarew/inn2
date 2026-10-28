@@ -9,7 +9,7 @@
 #include "interface.h"
 
 bool timehash_init(SMATTRIBUTE *attr);
-TOKEN timehash_store(const ARTHANDLE article, const STORAGECLASS class);
+TOKEN timehash_store(const ARTHANDLE article, const STORAGECLASS _class);
 ARTHANDLE *timehash_retrieve(const TOKEN token, const RETRTYPE amount);
 ARTHANDLE *timehash_next(ARTHANDLE *article, const RETRTYPE amount);
 void timehash_freearticle(ARTHANDLE *article);

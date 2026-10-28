@@ -2,11 +2,13 @@
 **  Process control routines.
 */
 
+extern "C" {
 #include "portable/system.h"
 
 #include <sys/wait.h>
 
 #include "innd.h"
+}
 
 
 static PROCESS *PROCtable;

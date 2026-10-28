@@ -2,6 +2,7 @@
 **  Variable definitions, miscellany, and main().
 */
 
+extern "C" {
 #include "portable/system.h"
 
 /* Needed on AIX 4.1 to get fd_set and friends. */
@@ -22,6 +23,7 @@
 #define DEFINE_DATA
 #include "inn/ov.h"
 #include "innd.h"
+}
 
 bool Debug = false;
 bool NNRPTracing = false;
@@ -69,166 +71,166 @@ static void xmalloc_abort(const char *what, size_t size, const char *file,
                           int line) __attribute__((__noreturn__));
 static void Usage(void) __attribute__((__noreturn__));
 
-/* header table initialization */
-#define ARTHEADERINIT(name, type)    \
-    {                                \
-        name, type, sizeof(name) - 1 \
-    }
+/* header table initialization : replaced with class initialization, delete code later ???*/
+/* #define ARTHEADERINIT(name, type)    \ */
+/*     {                                \ */
+/*         name, type, sizeof(name) - 1 \ */
+/*     } */
 
 /* clang-format off */
-const ARTHEADER ARTheaders[] = {
+const ArtHeader ARTheaders[] = {
     /*            Name                            Type */
-    ARTHEADERINIT("Approved",                     HTstd),
+    ArtHeader("Approved",                     ArtHeaderType::HTstd),
     /* #define HDR__APPROVED                                 0 */
-    ARTHEADERINIT("Control",                      HTstd),
+    ArtHeader("Control",                      ArtHeaderType::HTstd),
     /* #define HDR__CONTROL                                  1 */
-    ARTHEADERINIT("Date",                         HTreq),
+    ArtHeader("Date",                         ArtHeaderType::HTreq),
     /* #define HDR__DATE                                     2 */
-    ARTHEADERINIT("Distribution",                 HTstd),
+    ArtHeader("Distribution",                 ArtHeaderType::HTstd),
     /* #define HDR__DISTRIBUTION                             3 */
-    ARTHEADERINIT("Expires",                      HTstd),
+    ArtHeader("Expires",                      ArtHeaderType::HTstd),
     /* #define HDR__EXPIRES                                  4 */
-    ARTHEADERINIT("From",                         HTreq),
+    ArtHeader("From",                         ArtHeaderType::HTreq),
     /* #define HDR__FROM                                     5 */
-    ARTHEADERINIT("Lines",                        HTobs),
+    ArtHeader("Lines",                        ArtHeaderType::HTobs),
     /* #define HDR__LINES                                    6 */
-    ARTHEADERINIT("Message-ID",                   HTreq),
+    ArtHeader("Message-ID",                   ArtHeaderType::HTreq),
     /* #define HDR__MESSAGE_ID                               7 */
-    ARTHEADERINIT("Newsgroups",                   HTreq),
+    ArtHeader("Newsgroups",                   ArtHeaderType::HTreq),
     /* #define HDR__NEWSGROUPS                               8 */
-    ARTHEADERINIT("Path",                         HTreq),
+    ArtHeader("Path",                         ArtHeaderType::HTreq),
     /* #define HDR__PATH                                     9 */
-    ARTHEADERINIT("Reply-To",                     HTstd),
+    ArtHeader("Reply-To",                     ArtHeaderType::HTstd),
     /* #define HDR__REPLY_TO                                10 */
-    ARTHEADERINIT("Sender",                       HTstd),
+    ArtHeader("Sender",                       ArtHeaderType::HTstd),
     /* #define HDR__SENDER                                  11 */
-    ARTHEADERINIT("Subject",                      HTreq),
+    ArtHeader("Subject",                      ArtHeaderType::HTreq),
     /* #define HDR__SUBJECT                                 12 */
-    ARTHEADERINIT("Supersedes",                   HTstd),
+    ArtHeader("Supersedes",                   ArtHeaderType::HTstd),
     /* #define HDR__SUPERSEDES                              13 */
-    ARTHEADERINIT("Bytes",                        HTobs),
+    ArtHeader("Bytes",                        ArtHeaderType::HTobs),
     /* #define HDR__BYTES                                   14 */
-    ARTHEADERINIT("Also-Control",                 HTobs),
+    ArtHeader("Also-Control",                 ArtHeaderType::HTobs),
     /* #define HDR__ALSOCONTROL                             15 */
-    ARTHEADERINIT("References",                   HTstd),
+    ArtHeader("References",                   ArtHeaderType::HTstd),
     /* #define HDR__REFERENCES                              16 */
-    ARTHEADERINIT("Xref",                         HTsav),
+    ArtHeader("Xref",                         ArtHeaderType::HTsav),
     /* #define HDR__XREF                                    17 */
-    ARTHEADERINIT("Keywords",                     HTstd),
+    ArtHeader("Keywords",                     ArtHeaderType::HTstd),
     /* #define HDR__KEYWORDS                                18 */
-    ARTHEADERINIT("X-Trace",                      HTobs),
+    ArtHeader("X-Trace",                      ArtHeaderType::HTobs),
     /* #define HDR__XTRACE                                  19 */
-    ARTHEADERINIT("Date-Received",                HTobs),
+    ArtHeader("Date-Received",                ArtHeaderType::HTobs),
     /* #define HDR__DATERECEIVED                            20 */
-    ARTHEADERINIT("Posted",                       HTobs),
+    ArtHeader("Posted",                       ArtHeaderType::HTobs),
     /* #define HDR__POSTED                                  21 */
-    ARTHEADERINIT("Posting-Version",              HTobs),
+    ArtHeader("Posting-Version",              ArtHeaderType::HTobs),
     /* #define HDR__POSTINGVERSION                          22 */
-    ARTHEADERINIT("Received",                     HTobs),
+    ArtHeader("Received",                     ArtHeaderType::HTobs),
     /* #define HDR__RECEIVED                                23 */
-    ARTHEADERINIT("Relay-Version",                HTobs),
+    ArtHeader("Relay-Version",                ArtHeaderType::HTobs),
     /* #define HDR__RELAYVERSION                            24 */
-    ARTHEADERINIT("NNTP-Posting-Host",            HTobs),
+    ArtHeader("NNTP-Posting-Host",            ArtHeaderType::HTobs),
     /* #define HDR__NNTPPOSTINGHOST                         25 */
-    ARTHEADERINIT("Followup-To",                  HTstd),
+    ArtHeader("Followup-To",                  ArtHeaderType::HTstd),
     /* #define HDR__FOLLOWUPTO                              26 */
-    ARTHEADERINIT("Organization",                 HTstd),
+    ArtHeader("Organization",                 ArtHeaderType::HTstd),
     /* #define HDR__ORGANIZATION                            27 */
-    ARTHEADERINIT("Content-Type",                 HTstd),
+    ArtHeader("Content-Type",                 ArtHeaderType::HTstd),
     /* #define HDR__CONTENTTYPE                             28 */
-    ARTHEADERINIT("Content-Base",                 HTstd),
+    ArtHeader("Content-Base",                 ArtHeaderType::HTstd),
     /* #define HDR__CONTENTBASE                             29 */
-    ARTHEADERINIT("Content-Disposition",          HTstd),
+    ArtHeader("Content-Disposition",          ArtHeaderType::HTstd),
     /* #define HDR__CONTENTDISPOSITION                      30 */
-    ARTHEADERINIT("X-Newsreader",                 HTstd),
+    ArtHeader("X-Newsreader",                 ArtHeaderType::HTstd),
     /* #define HDR__XNEWSREADER                             31 */
-    ARTHEADERINIT("X-Mailer",                     HTstd),
+    ArtHeader("X-Mailer",                     ArtHeaderType::HTstd),
     /* #define HDR__XMAILER                                 32 */
-    ARTHEADERINIT("X-Newsposter",                 HTstd),
+    ArtHeader("X-Newsposter",                 ArtHeaderType::HTstd),
     /* #define HDR__XNEWSPOSTER                             33 */
-    ARTHEADERINIT("X-Cancelled-By",               HTstd),
+    ArtHeader("X-Cancelled-By",               ArtHeaderType::HTstd),
     /* #define HDR__XCANCELLEDBY                            34 */
-    ARTHEADERINIT("X-Canceled-By",                HTstd),
+    ArtHeader("X-Canceled-By",                ArtHeaderType::HTstd),
     /* #define HDR__XCANCELEDBY                             35 */
-    ARTHEADERINIT("Cancel-Key",                   HTstd),
+    ArtHeader("Cancel-Key",                   ArtHeaderType::HTstd),
     /* #define HDR__CANCEL_KEY                              36 */
-    ARTHEADERINIT("User-Agent",                   HTstd),
+    ArtHeader("User-Agent",                   ArtHeaderType::HTstd),
     /* #define HDR__USER_AGENT                              37 */
-    ARTHEADERINIT("X-Original-Message-ID",        HTstd),
+    ArtHeader("X-Original-Message-ID",        ArtHeaderType::HTstd),
     /* #define HDR__X_ORIGINAL_MESSAGE_ID                   38 */
-    ARTHEADERINIT("Cancel-Lock",                  HTstd),
+    ArtHeader("Cancel-Lock",                  ArtHeaderType::HTstd),
     /* #define HDR__CANCEL_LOCK                             39 */
-    ARTHEADERINIT("Content-Transfer-Encoding",    HTstd),
+    ArtHeader("Content-Transfer-Encoding",    ArtHeaderType::HTstd),
     /* #define HDR__CONTENT_TRANSFER_ENCODING               40 */
-    ARTHEADERINIT("Face",                         HTstd),
+    ArtHeader("Face",                         ArtHeaderType::HTstd),
     /* #define HDR__FACE                                    41 */
-    ARTHEADERINIT("Injection-Info",               HTstd),
+    ArtHeader("Injection-Info",               ArtHeaderType::HTstd),
     /* #define HDR__INJECTION_INFO                          42 */
-    ARTHEADERINIT("List-ID",                      HTstd),
+    ArtHeader("List-ID",                      ArtHeaderType::HTstd),
     /* #define HDR__LIST_ID                                 43 */
-    ARTHEADERINIT("MIME-Version",                 HTstd),
+    ArtHeader("MIME-Version",                 ArtHeaderType::HTstd),
     /* #define HDR__MIME_VERSION                            44 */
-    ARTHEADERINIT("Originator",                   HTstd),
+    ArtHeader("Originator",                   ArtHeaderType::HTstd),
     /* #define HDR__ORIGINATOR                              45 */
-    ARTHEADERINIT("X-Auth",                       HTstd),
+    ArtHeader("X-Auth",                       ArtHeaderType::HTstd),
     /* #define HDR__X_AUTH                                  46 */
-    ARTHEADERINIT("X-Complaints-To",              HTobs),
+    ArtHeader("X-Complaints-To",              ArtHeaderType::HTobs),
     /* #define HDR__X_COMPLAINTS_TO                         47 */
-    ARTHEADERINIT("X-Face",                       HTstd),
+    ArtHeader("X-Face",                       ArtHeaderType::HTstd),
     /* #define HDR__X_FACE                                  48 */
-    ARTHEADERINIT("X-HTTP-UserAgent",             HTstd),
+    ArtHeader("X-HTTP-UserAgent",             ArtHeaderType::HTstd),
     /* #define HDR__X_HTTP_USERAGENT                        49 */
-    ARTHEADERINIT("X-HTTP-Via",                   HTstd),
+    ArtHeader("X-HTTP-Via",                   ArtHeaderType::HTstd),
     /* #define HDR__X_HTTP_VIA                              50 */
-    ARTHEADERINIT("X-Modbot",                     HTstd),
+    ArtHeader("X-Modbot",                     ArtHeaderType::HTstd),
     /* #define HDR__X_MODBOT                                51 */
-    ARTHEADERINIT("X-Modtrace",                   HTstd),
+    ArtHeader("X-Modtrace",                   ArtHeaderType::HTstd),
     /* #define HDR__X_MODTRACE                              52 */
-    ARTHEADERINIT("X-No-Archive",                 HTobs),
+    ArtHeader("X-No-Archive",                 ArtHeaderType::HTobs),
     /* #define HDR__X_NO_ARCHIVE                            53 */
-    ARTHEADERINIT("X-Original-Trace",             HTstd),
+    ArtHeader("X-Original-Trace",             ArtHeaderType::HTstd),
     /* #define HDR__X_ORIGINAL_TRACE                        54 */
-    ARTHEADERINIT("X-Originating-IP",             HTstd),
+    ArtHeader("X-Originating-IP",             ArtHeaderType::HTstd),
     /* #define HDR__X_ORIGINATING_IP                        55 */
-    ARTHEADERINIT("X-PGP-Key",                    HTstd),
+    ArtHeader("X-PGP-Key",                    ArtHeaderType::HTstd),
     /* #define HDR__X_PGP_KEY                               56 */
-    ARTHEADERINIT("X-PGP-Sig",                    HTstd),
+    ArtHeader("X-PGP-Sig",                    ArtHeaderType::HTstd),
     /* #define HDR__X_PGP_SIG                               57 */
-    ARTHEADERINIT("X-Poster-Trace",               HTstd),
+    ArtHeader("X-Poster-Trace",               ArtHeaderType::HTstd),
     /* #define HDR__X_POSTER_TRACE                          58 */
-    ARTHEADERINIT("X-Postfilter",                 HTstd),
+    ArtHeader("X-Postfilter",                 ArtHeaderType::HTstd),
     /* #define HDR__X_POSTFILTER                            59 */
-    ARTHEADERINIT("X-Proxy-User",                 HTstd),
+    ArtHeader("X-Proxy-User",                 ArtHeaderType::HTstd),
     /* #define HDR__X_PROXY_USER                            60 */
-    ARTHEADERINIT("X-Submissions-To",             HTstd),
+    ArtHeader("X-Submissions-To",             ArtHeaderType::HTstd),
     /* #define HDR__X_SUBMISSIONS_TO                        61 */
-    ARTHEADERINIT("X-Usenet-Provider",            HTstd),
+    ArtHeader("X-Usenet-Provider",            ArtHeaderType::HTstd),
     /* #define HDR__X_USENET_PROVIDER                       62 */
-    ARTHEADERINIT("In-Reply-To",                  HTstd),
+    ArtHeader("In-Reply-To",                  ArtHeaderType::HTstd),
     /* #define HDR__IN_REPLY_TO                             63 */
-    ARTHEADERINIT("Injection-Date",               HTstd),
+    ArtHeader("Injection-Date",               ArtHeaderType::HTstd),
     /* #define HDR__INJECTION_DATE                          64 */
-    ARTHEADERINIT("NNTP-Posting-Date",            HTobs),
+    ArtHeader("NNTP-Posting-Date",            ArtHeaderType::HTobs),
     /* #define HDR__NNTP_POSTING_DATE                       65 */
-    ARTHEADERINIT("X-User-ID",                    HTstd),
+    ArtHeader("X-User-ID",                    ArtHeaderType::HTstd),
     /* #define HDR__X_USER_ID                               66 */
-    ARTHEADERINIT("X-Auth-Sender",                HTstd),
+    ArtHeader("X-Auth-Sender",                ArtHeaderType::HTstd),
     /* #define HDR__X_AUTH_SENDER                           67 */
-    ARTHEADERINIT("X-Original-NNTP-Posting-Host", HTstd),
+    ArtHeader("X-Original-NNTP-Posting-Host", ArtHeaderType::HTstd),
     /* #define HDR__X_ORIGINAL_NNTP_POSTING_HOST            68 */
-    ARTHEADERINIT("Original-Sender",              HTstd),
+    ArtHeader("Original-Sender",              ArtHeaderType::HTstd),
     /* #define HDR__ORIGINAL_SENDER                         69 */
-    ARTHEADERINIT("NNTP-Posting-Path",            HTobs),
+    ArtHeader("NNTP-Posting-Path",            ArtHeaderType::HTobs),
     /* #define HDR__NNTP_POSTING_PATH                       70 */
-    ARTHEADERINIT("Archive",                      HTstd),
+    ArtHeader("Archive",                      ArtHeaderType::HTstd),
     /* #define HDR__ARCHIVE                                 71 */
-    ARTHEADERINIT("Archived-At",                  HTstd),
+    ArtHeader("Archived-At",                  ArtHeaderType::HTstd),
     /* #define HDR__ARCHIVED_AT                             72 */
-    ARTHEADERINIT("Summary",                      HTstd),
+    ArtHeader("Summary",                      ArtHeaderType::HTstd),
     /* #define HDR__SUMMARY                                 73 */
-    ARTHEADERINIT("Comments",                     HTstd),
+    ArtHeader("Comments",                     ArtHeaderType::HTstd),
     /* #define HDR__COMMENTS                                74 */
-    ARTHEADERINIT("Jabber-ID",                    HTstd),
+    ArtHeader("Jabber-ID",                    ArtHeaderType::HTstd),
     /* #define HDR__JABBER_ID                               75 */
 };
 /* #define MAX_ARTHEADER                                    76 */

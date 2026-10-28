@@ -5,10 +5,12 @@
 **  WIP stands for work-in-progress.
 */
 
+extern "C" {
 #include "portable/system.h"
 
 #include "inn/innconf.h"
 #include "innd.h"
+}
 
 #define WIPTABLESIZE 1024
 #define WIP_ARTMAX   300 /* innfeed default max send time. */

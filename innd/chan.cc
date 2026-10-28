@@ -13,6 +13,7 @@
 **  to whatever channels have work to do.
 */
 
+extern "C" {
 #include "portable/system.h"
 
 /* Needed on AIX 4.1 to get fd_set and friends. */
@@ -24,6 +25,7 @@
 #include "inn/innconf.h"
 #include "inn/network.h"
 #include "innd.h"
+}
 
 /* These errno values don't exist on all systems, but may be returned as an
    (ignorable) error to setting the accept socket nonblocking.  Define them

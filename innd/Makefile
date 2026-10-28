@@ -2,16 +2,18 @@ include ../Makefile.global
 
 top	        = ..
 CFLAGS		= $(GCFLAGS) $(SYSTEMD_CFLAGS)
+CXXFLAGS	= $(GXXFLAGS) $(SYSTEMD_CFLAGS)
 
 ALL		= innd tinyleaf
 
-SOURCES		= art.c cc.c chan.c icd.c innd.c keywords.c lc.c nc.c \
+SOURCES		= cc.c chan.c icd.c innd.c keywords.c lc.c nc.c \
 		  newsfeeds.c ng.c perl.c proc.c python.c rc.c site.c \
 		  status.c util.c wip.c
+CC_SOURCES	= art.cc
 
 EXTRASOURCES	= tinyleaf.c
 
-OBJECTS		= $(SOURCES:.c=.o)
+OBJECTS		= $(SOURCES:.c=.o) $(CC_SOURCES:.cc=.o)
 
 all: $(ALL)
 
@@ -68,7 +70,7 @@ depend:	Makefile $(SOURCES) $(EXTRASOURCES)
 	    $(SOURCES) $(EXTRASOURCES)
 
 # DO NOT DELETE THIS LINE -- make depend depends on it.
-art.o: art.c ../include/portable/system.h ../include/config.h \
+art.o: art.cc ../include/portable/system.h ../include/config.h \
   ../include/inn/macros.h ../include/inn/portable-macros.h \
   ../include/inn/options.h ../include/inn/system.h \
   ../include/portable/stdbool.h ../include/portable/macros.h \

@@ -35,7 +35,7 @@ struct overview {
     struct buffer *overdata;
     struct cvector *groups;
     struct overview_method *method;
-    void *private;
+    void *_private;
 };
 
 
@@ -84,7 +84,7 @@ overview_open(int mode)
     overview->overdata = NULL;
     overview->groups = NULL;
     overview->method = &ov_methods[i];
-    overview->private = NULL;
+    overview->_private = NULL;
     return overview;
 }
 

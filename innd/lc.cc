@@ -5,14 +5,17 @@
 **  by rnews to feed in articles from the UUCP sites.
 */
 
+extern "C" {
 #include "portable/system.h"
 
 #include "inn/innconf.h"
 #include "innd.h"
-
+}
 
 #ifdef HAVE_UNIX_DOMAIN_SOCKETS
+extern "C" {
 #    include "portable/socket-unix.h"
+}
 
 static char *LCpath = NULL;
 static CHANNEL *LCchan;

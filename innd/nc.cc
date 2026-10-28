@@ -3,12 +3,14 @@
 **  we turn into NNTP channels, and over which we speak NNTP.
 */
 
+extern "C" {
 #include "portable/system.h"
 
 #include "inn/innconf.h"
 #include "inn/qio.h"
 #include "inn/version.h"
 #include "innd.h"
+}
 
 #define BAD_COMMAND_COUNT 10
 

@@ -40,7 +40,7 @@
 
 
 ##  Sample authentication class.  It defines all auth methods known to nnrpd.
-class AUTH:
+_class AUTH:
     """Provide authentication callbacks to nnrpd."""
 
     def __init__(self):

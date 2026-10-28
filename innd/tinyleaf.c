@@ -25,6 +25,7 @@
 **  DEALINGS IN THE SOFTWARE.
 */
 
+extern "C" {
 #include "portable/system.h"
 
 #include <dirent.h>
@@ -40,6 +41,7 @@
 #include "inn/utility.h"
 #include "inn/vector.h"
 #include "inn/version.h"
+}
 
 /* Prototypes for command callbacks. */
 static void command_help(struct cvector *, void *);

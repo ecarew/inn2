@@ -2,6 +2,7 @@
 **  Various miscellaneous utility functions for innd internal use.
 */
 
+extern "C" {
 #include "portable/system.h"
 
 #include "inn/fdflag.h"
@@ -9,6 +10,7 @@
 #include "inn/libinn.h"
 
 #include "innd.h"
+}
 
 /*
 **  Sprintf a long into a buffer with enough leading zero's so that it

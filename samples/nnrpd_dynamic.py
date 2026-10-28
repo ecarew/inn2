@@ -38,7 +38,7 @@
 
 ##  Sample dynamic access class.  It defines all dynamic access methods known
 ##  to nnrpd.
-class DYNACCESS:
+_class DYNACCESS:
     """Provide dynamic access callbacks to nnrpd."""
 
     def __init__(self):

@@ -12,12 +12,14 @@
 **  by a magic cookie separator and then the sorted list of words.
 */
 
+extern "C" {
 #include "portable/system.h"
 
 #include "inn/libinn.h"
 
 #include "inn/innconf.h"
 #include "innd.h"
+}
 
 /*  If keyword support wasn't requested, stub out the main function provided by
 **  this file.

@@ -284,41 +284,41 @@ EXPreadfile(FILE *F)
 static enum KR
 EXPkeepit(const TOKEN *token, time_t when, time_t Expires)
 {
-    EXPIRECLASS class;
+    EXPIRECLASS _class;
 
-    class = EXPclasses[token->class];
-    if (class.Missing) {
+    _class = EXPclasses[token->_class];
+    if (_class.Missing) {
         if (EXPclasses[NUM_STORAGE_CLASSES].Missing) {
             /* no default */
-            if (!class.ReportedMissing) {
+            if (!_class.ReportedMissing) {
                 warn("class definition for %d missing from control file,"
                      " assuming it should never expire",
-                     token->class);
-                EXPclasses[token->class].ReportedMissing = true;
+                     token->_class);
+                EXPclasses[token->_class].ReportedMissing = true;
             }
             return Keep;
         } else {
             /* use the default */
-            class = EXPclasses[NUM_STORAGE_CLASSES];
-            EXPclasses[token->class] = class;
+            _class = EXPclasses[NUM_STORAGE_CLASSES];
+            EXPclasses[token->_class] = _class;
         }
     }
     /* Bad posting date? */
     if (when > (RealNow + 86400)) {
         /* Yes -- force the article to go to right now */
-        when = Expires ? class.Purge : class.Default;
+        when = Expires ? _class.Purge : _class.Default;
     }
     if (EXPverbose > 2) {
         if (EXPverbose > 3)
             printf("%s age = %0.2f\n", TokenToText(*token),
                    (double) (Now - when) / 86400.);
         if (Expires == 0) {
-            if (when <= class.Default)
+            if (when <= _class.Default)
                 printf("%s too old (no exp)\n", TokenToText(*token));
         } else {
-            if (when <= class.Purge)
+            if (when <= _class.Purge)
                 printf("%s later than purge\n", TokenToText(*token));
-            if (when >= class.Keep)
+            if (when >= _class.Keep)
                 printf("%s earlier than min\n", TokenToText(*token));
             if (Now >= Expires)
                 printf("%s later than header\n", TokenToText(*token));
@@ -327,13 +327,13 @@ EXPkeepit(const TOKEN *token, time_t when, time_t Expires)
 
     /* If no expiration, make sure it wasn't posted before the default. */
     if (Expires == 0) {
-        if (when >= class.Default)
+        if (when >= _class.Default)
             return Keep;
 
         /* Make sure it's not posted before the purge cut-off and
          * that it's not due to expire. */
     } else {
-        if (when >= class.Purge && (Expires >= Now || when >= class.Keep))
+        if (when >= _class.Purge && (Expires >= Now || when >= _class.Keep))
             return Keep;
     }
     return Remove;
