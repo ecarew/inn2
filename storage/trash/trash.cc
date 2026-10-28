@@ -12,7 +12,7 @@
 bool
 trash_init(SMATTRIBUTE *attr)
 {
-    if (attr == NULL) {
+    if (attr == nullptr) {
         SMseterror(SMERR_INTERNAL, "attr is NULL");
         return false;
     }
@@ -26,7 +26,7 @@ trash_store(const ARTHANDLE article, const STORAGECLASS storageclass)
 {
     TOKEN token;
 
-    if (article.token == (TOKEN *) NULL)
+    if (article.token == (TOKEN *) nullptr)
         memset(&token, '\0', sizeof(token));
     else {
         memcpy(&token, article.token, sizeof(token));
@@ -41,11 +41,11 @@ ARTHANDLE *
 trash_retrieve(const TOKEN token, const RETRTYPE amount UNUSED)
 {
     if (token.type != TOKEN_TRASH) {
-        SMseterror(SMERR_INTERNAL, NULL);
-        return (ARTHANDLE *) NULL;
+        SMseterror(SMERR_INTERNAL, nullptr);
+        return (ARTHANDLE *) nullptr;
     }
-    SMseterror(SMERR_NOENT, NULL);
-    return (ARTHANDLE *) NULL;
+    SMseterror(SMERR_NOENT, nullptr);
+    return (ARTHANDLE *) nullptr;
 }
 
 void
@@ -56,7 +56,7 @@ trash_freearticle(ARTHANDLE *article UNUSED)
 bool
 trash_cancel(TOKEN token UNUSED)
 {
-    SMseterror(SMERR_NOENT, NULL);
+    SMseterror(SMERR_NOENT, nullptr);
     return false;
 }
 
@@ -95,7 +95,7 @@ trash_explaintoken(const TOKEN token UNUSED)
 ARTHANDLE *
 trash_next(ARTHANDLE *article UNUSED, const RETRTYPE amount UNUSED)
 {
-    return NULL;
+    return nullptr;
 }
 
 void

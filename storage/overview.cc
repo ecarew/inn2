@@ -52,16 +52,16 @@ overview_open(int mode)
     bool status;
 
     /* Basic sanity checks. */
-    if (innconf == NULL)
-        if (!innconf_read(NULL))
-            return NULL;
+    if (innconf == nullptr)
+        if (!innconf_read(nullptr))
+            return nullptr;
     if (!innconf->enableoverview) {
         warn("enableoverview is not true");
-        return NULL;
+        return nullptr;
     }
-    if (innconf->ovmethod == NULL) {
+    if (innconf->ovmethod == nullptr) {
         warn("ovmethod is not defined");
-        return NULL;
+        return nullptr;
     }
     assert((mode & (OV_READ | OV_WRITE)) == mode);
 
@@ -71,20 +71,20 @@ overview_open(int mode)
             break;
     if (i == NUM_OV_METHODS) {
         warn("%s is not a known overview method", innconf->ovmethod);
-        return NULL;
+        return nullptr;
     }
 
     /* We have enough information to initialize the method. */
     status = ov_methods[i].open(mode);
     if (!status)
-        return NULL;
+        return nullptr;
     overview = xmalloc(sizeof(struct overview));
     overview->mode = mode;
     overview->cutoff = false;
-    overview->overdata = NULL;
-    overview->groups = NULL;
+    overview->overdata = nullptr;
+    overview->groups = nullptr;
     overview->method = &ov_methods[i];
-    overview->private_ = NULL;
+    overview->private_ = nullptr;
     return overview;
 }
 
@@ -96,7 +96,7 @@ overview_open(int mode)
 void
 overview_close(struct overview *overview)
 {
-    if (overview == NULL)
+    if (overview == nullptr)
         return;
     overview->method->close();
     free(overview);
@@ -161,7 +161,7 @@ overview_add(struct overview *overview, const char *group,
     /* We have to add the article number to the beginning of the overview data
        and CRLF to the end.  Use the overdata buffer as temporary storage
        space. */
-    if (overview->overdata == NULL) {
+    if (overview->overdata == nullptr) {
         overview->overdata = buffer_new();
         buffer_resize(overview->overdata, data->overlen + 13);
     }
@@ -198,13 +198,13 @@ overview_add_xref(struct overview *overview, const char *xref,
 
     xref_copy = xstrdup(xref);
     p = strchr(xref_copy, '\n');
-    if (p != NULL)
+    if (p != nullptr)
         *p = '\0';
     overview->groups = cvector_split_space(xref_copy, overview->groups);
     for (i = 0; i < overview->groups->count; i++) {
         group = overview->groups->strings[i];
         p = (char *) strchr(group, ':');
-        if (p == NULL || p == group || p[1] == '-')
+        if (p == nullptr || p == group || p[1] == '-')
             continue;
         *p = '\0';
         errno = 0;
@@ -244,13 +244,13 @@ overview_cancel_xref(struct overview *overview, TOKEN token)
     ARTNUM artnum;
 
     art = SMretrieve(token, RETR_HEAD);
-    if (art == NULL)
+    if (art == nullptr)
         return false;
     xref = wire_findheader(art->data, art->len, "Xref", true);
-    if (xref == NULL)
+    if (xref == nullptr)
         goto fail;
     xrefend = wire_endheader(xref, art->data + art->len - 1);
-    if (xrefend == NULL)
+    if (xrefend == nullptr)
         goto fail;
     xreflen = xrefend - xref + 1;
     xref_copy = xstrndup(xref, xreflen);
@@ -259,7 +259,7 @@ overview_cancel_xref(struct overview *overview, TOKEN token)
     for (i = 0; i < overview->groups->count; i++) {
         group = overview->groups->strings[i];
         p = (char *) strchr(group, ':');
-        if (p == NULL || p == group || p[1] == '-')
+        if (p == nullptr || p == group || p[1] == '-')
             continue;
         *p = '\0';
         errno = 0;

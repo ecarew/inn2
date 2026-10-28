@@ -91,7 +91,7 @@ MakeToken(time_t now, unsigned int seqnum, STORAGECLASS storageclass,
     uint32_t i;
     uint16_t s;
 
-    if (oldtoken == (TOKEN *) NULL)
+    if (oldtoken == (TOKEN *) nullptr)
         memset(&token, '\0', sizeof(token));
     else
         memcpy(&token, oldtoken, sizeof(token));
@@ -144,19 +144,19 @@ PathToToken(char *path)
     n = sscanf(path, "time-%02x/%02x/%02x/%04x-%04x", &tclass, &t1, &t2,
                &seqnum, &t3);
     if (n != 5) {
-        return (TOKEN *) NULL;
+        return (TOKEN *) nullptr;
     }
     now = ((t1 << 16) & 0xff0000) | ((t2 << 8) & 0xff00)
           | ((t3 << 16) & 0xff000000) | (t3 & 0xff);
     storageclass = tclass;
-    token = MakeToken(now, seqnum, storageclass, (TOKEN *) NULL);
+    token = MakeToken(now, seqnum, storageclass, (TOKEN *) nullptr);
     return &token;
 }
 
 bool
 timehash_init(SMATTRIBUTE *attr)
 {
-    if (attr == NULL) {
+    if (attr == nullptr) {
         warn("timehash: attr is NULL");
         SMseterror(SMERR_INTERNAL, "attr is NULL");
         return false;
@@ -165,7 +165,7 @@ timehash_init(SMATTRIBUTE *attr)
     attr->expensivestat = true;
     if (STORAGE_TOKEN_LENGTH < 6) {
         warn("timehash: token length is less than six bytes");
-        SMseterror(SMERR_TOKENSHORT, NULL);
+        SMseterror(SMERR_TOKENSHORT, nullptr);
         return false;
     }
     return true;
@@ -174,7 +174,7 @@ timehash_init(SMATTRIBUTE *attr)
 TOKEN
 timehash_store(const ARTHANDLE article, const STORAGECLASS storageclass)
 {
-    char *path = NULL;
+    char *path = nullptr;
     char *p;
     time_t now;
     TOKEN token;
@@ -184,7 +184,7 @@ timehash_store(const ARTHANDLE article, const STORAGECLASS storageclass)
     int i;
 
     if (article.arrived == (time_t) 0)
-        now = time(NULL);
+        now = time(nullptr);
     else
         now = article.arrived;
 
@@ -204,14 +204,14 @@ timehash_store(const ARTHANDLE article, const STORAGECLASS storageclass)
                 syswarn("timehash: could not make directory %s", path);
                 token.type = TOKEN_EMPTY;
                 free(path);
-                SMseterror(SMERR_UNDEFINED, NULL);
+                SMseterror(SMERR_UNDEFINED, nullptr);
                 return token;
             } else {
                 *p = '/';
                 if ((fd =
                          open(path, O_CREAT | O_EXCL | O_WRONLY, ARTFILE_MODE))
                     < 0) {
-                    SMseterror(SMERR_UNDEFINED, NULL);
+                    SMseterror(SMERR_UNDEFINED, nullptr);
                     syswarn("timehash: could not create %s", path);
                     token.type = TOKEN_EMPTY;
                     free(path);
@@ -222,7 +222,7 @@ timehash_store(const ARTHANDLE article, const STORAGECLASS storageclass)
         break;
     }
     if (i == 0x10000) {
-        SMseterror(SMERR_UNDEFINED, NULL);
+        SMseterror(SMERR_UNDEFINED, nullptr);
         warn("timehash: all sequence numbers for time %lu and class %d are"
              " reserved",
              (unsigned long) now, storageclass);
@@ -233,7 +233,7 @@ timehash_store(const ARTHANDLE article, const STORAGECLASS storageclass)
 
     result = xwritev(fd, article.iov, article.iovcnt);
     if (result != (ssize_t) article.len) {
-        SMseterror(SMERR_UNDEFINED, NULL);
+        SMseterror(SMERR_UNDEFINED, nullptr);
         syswarn("timehash: error writing %s", path);
         close(fd);
         token.type = TOKEN_EMPTY;
@@ -257,37 +257,37 @@ OpenArticle(const char *path, RETRTYPE amount)
 
     if (amount == RETR_STAT) {
         if (access(path, R_OK) < 0) {
-            SMseterror(SMERR_UNDEFINED, NULL);
-            return NULL;
+            SMseterror(SMERR_UNDEFINED, nullptr);
+            return nullptr;
         }
         art = xmalloc(sizeof(ARTHANDLE));
         art->type = TOKEN_TIMEHASH;
-        art->data = NULL;
+        art->data = nullptr;
         art->len = 0;
-        art->private_ = NULL;
+        art->private_ = nullptr;
         return art;
     }
 
     if ((fd = open(path, O_RDONLY)) < 0) {
-        SMseterror(SMERR_UNDEFINED, NULL);
-        return NULL;
+        SMseterror(SMERR_UNDEFINED, nullptr);
+        return nullptr;
     }
 
     art = xmalloc(sizeof(ARTHANDLE));
     art->type = TOKEN_TIMEHASH;
 
     if (fstat(fd, &sb) < 0) {
-        SMseterror(SMERR_UNDEFINED, NULL);
+        SMseterror(SMERR_UNDEFINED, nullptr);
         syswarn("timehash: could not fstat article");
         close(fd);
         free(art);
-        return NULL;
+        return nullptr;
     }
     if (sb.st_size < 0 || sb.st_size > INT_MAX) {
         SMseterror(SMERR_UNDEFINED, "article is too large");
         close(fd);
         free(art);
-        return NULL;
+        return nullptr;
     }
 
     priv = xmalloc(sizeof(PRIV_TIMEHASH));
@@ -295,14 +295,14 @@ OpenArticle(const char *path, RETRTYPE amount)
     priv->len = sb.st_size;
     if (innconf->articlemmap) {
         if ((priv->base = static_cast<char *>(
-                 mmap(NULL, sb.st_size, PROT_READ, MAP_SHARED, fd, 0)))
+                 mmap(nullptr, sb.st_size, PROT_READ, MAP_SHARED, fd, 0)))
             == MAP_FAILED) {
-            SMseterror(SMERR_UNDEFINED, NULL);
+            SMseterror(SMERR_UNDEFINED, nullptr);
             syswarn("timehash: could not mmap article");
             close(fd);
             free(art->private_);
             free(art);
-            return NULL;
+            return nullptr;
         }
         if (amount == RETR_ALL)
             madvise(priv->base, sb.st_size, MADV_WILLNEED);
@@ -311,24 +311,24 @@ OpenArticle(const char *path, RETRTYPE amount)
     } else {
         priv->base = xmalloc(priv->len);
         if (xread(fd, priv->base, priv->len) < 0) {
-            SMseterror(SMERR_UNDEFINED, NULL);
+            SMseterror(SMERR_UNDEFINED, nullptr);
             syswarn("timehash: could not read article");
             close(fd);
             free(priv->base);
             free(art->private_);
             free(art);
-            return NULL;
+            return nullptr;
         }
     }
     close(fd);
 
-    priv->top = NULL;
-    priv->sec = NULL;
-    priv->ter = NULL;
-    priv->artdir = NULL;
-    priv->topde = NULL;
-    priv->secde = NULL;
-    priv->terde = NULL;
+    priv->top = nullptr;
+    priv->sec = nullptr;
+    priv->ter = nullptr;
+    priv->artdir = nullptr;
+    priv->topde = nullptr;
+    priv->secde = nullptr;
+    priv->terde = nullptr;
 
     if (amount == RETR_ALL) {
         art->data = priv->base;
@@ -336,15 +336,15 @@ OpenArticle(const char *path, RETRTYPE amount)
         return art;
     }
 
-    if ((p = wire_findbody(priv->base, priv->len)) == NULL) {
-        SMseterror(SMERR_NOBODY, NULL);
+    if ((p = wire_findbody(priv->base, priv->len)) == nullptr) {
+        SMseterror(SMERR_NOBODY, nullptr);
         if (innconf->articlemmap)
             munmap(priv->base, priv->len);
         else
             free(priv->base);
         free(art->private_);
         free(art);
-        return NULL;
+        return nullptr;
     }
 
     if (amount == RETR_HEAD) {
@@ -367,7 +367,7 @@ OpenArticle(const char *path, RETRTYPE amount)
         free(priv->base);
     free(art->private_);
     free(art);
-    return NULL;
+    return nullptr;
 }
 
 ARTHANDLE *
@@ -380,13 +380,13 @@ timehash_retrieve(const TOKEN token, const RETRTYPE amount)
     static TOKEN ret_token;
 
     if (token.type != TOKEN_TIMEHASH) {
-        SMseterror(SMERR_INTERNAL, NULL);
-        return NULL;
+        SMseterror(SMERR_INTERNAL, nullptr);
+        return nullptr;
     }
 
     BreakToken(token, &now, &seqnum);
     path = MakePath(now, seqnum, token.class_);
-    if ((art = OpenArticle(path, amount)) != (ARTHANDLE *) NULL) {
+    if ((art = OpenArticle(path, amount)) != (ARTHANDLE *) nullptr) {
         art->arrived = now;
         ret_token = token;
         art->token = &ret_token;
@@ -435,7 +435,7 @@ timehash_cancel(TOKEN token)
     result = unlink(path);
     free(path);
     if (result < 0) {
-        SMseterror(SMERR_UNDEFINED, NULL);
+        SMseterror(SMERR_UNDEFINED, nullptr);
         return false;
     }
     return true;
@@ -446,7 +446,7 @@ FindDir(DIR *dir, FINDTYPE type)
 {
     struct dirent *de;
 
-    while ((de = readdir(dir)) != NULL) {
+    while ((de = readdir(dir)) != nullptr) {
         if (type == FIND_TOPDIR)
             if ((strlen(de->d_name) == 7)
                 && (strncmp(de->d_name, "time-", 5) == 0)
@@ -474,7 +474,7 @@ FindDir(DIR *dir, FINDTYPE type)
                 return de;
     }
 
-    return NULL;
+    return nullptr;
 }
 
 ARTHANDLE *
@@ -491,21 +491,21 @@ timehash_next(ARTHANDLE *article, const RETRTYPE amount)
 
     length = strlen(innconf->patharticles) + 32;
     path = xmalloc(length);
-    if (article == NULL || article->private_ == NULL) {
-        if (article != NULL)
+    if (article == nullptr || article->private_ == nullptr) {
+        if (article != nullptr)
             free(article);
-        priv.top = NULL;
-        priv.sec = NULL;
-        priv.ter = NULL;
-        priv.artdir = NULL;
-        priv.topde = NULL;
-        priv.secde = NULL;
-        priv.terde = NULL;
+        priv.top = nullptr;
+        priv.sec = nullptr;
+        priv.ter = nullptr;
+        priv.artdir = nullptr;
+        priv.topde = nullptr;
+        priv.secde = nullptr;
+        priv.terde = nullptr;
     } else {
         priv = *(PRIV_TIMEHASH *) article->private_;
         free(article->private_);
         free(article);
-        if (priv.base != NULL) {
+        if (priv.base != nullptr) {
             if (innconf->articlemmap)
                 munmap(priv.base, priv.len);
             else
@@ -513,78 +513,80 @@ timehash_next(ARTHANDLE *article, const RETRTYPE amount)
         }
     }
 
-    while (!priv.artdir || ((de = FindDir(priv.artdir, FIND_ART)) == NULL)) {
+    while (!priv.artdir
+           || ((de = FindDir(priv.artdir, FIND_ART)) == nullptr)) {
         if (priv.artdir) {
             closedir(priv.artdir);
-            priv.artdir = NULL;
+            priv.artdir = nullptr;
         }
         while (!priv.ter
-               || ((priv.terde = FindDir(priv.ter, FIND_DIR)) == NULL)) {
+               || ((priv.terde = FindDir(priv.ter, FIND_DIR)) == nullptr)) {
             if (priv.ter) {
                 closedir(priv.ter);
-                priv.ter = NULL;
+                priv.ter = nullptr;
             }
-            while (!priv.sec
-                   || ((priv.secde = FindDir(priv.sec, FIND_DIR)) == NULL)) {
+            while (
+                !priv.sec
+                || ((priv.secde = FindDir(priv.sec, FIND_DIR)) == nullptr)) {
                 if (priv.sec) {
                     closedir(priv.sec);
-                    priv.sec = NULL;
+                    priv.sec = nullptr;
                 }
                 if (!priv.top
                     || ((priv.topde = FindDir(priv.top, FIND_TOPDIR))
-                        == NULL)) {
+                        == nullptr)) {
                     if (priv.top) {
                         /* end of search */
                         closedir(priv.top);
-                        priv.top = NULL;
+                        priv.top = nullptr;
                         free(path);
-                        return NULL;
+                        return nullptr;
                     }
                     snprintf(path, length, "%s", innconf->patharticles);
-                    if ((priv.top = opendir(path)) == NULL) {
-                        SMseterror(SMERR_UNDEFINED, NULL);
+                    if ((priv.top = opendir(path)) == nullptr) {
+                        SMseterror(SMERR_UNDEFINED, nullptr);
                         free(path);
-                        return NULL;
+                        return nullptr;
                     }
                     if ((priv.topde = FindDir(priv.top, FIND_TOPDIR))
-                        == NULL) {
-                        SMseterror(SMERR_UNDEFINED, NULL);
+                        == nullptr) {
+                        SMseterror(SMERR_UNDEFINED, nullptr);
                         closedir(priv.top);
                         free(path);
-                        return NULL;
+                        return nullptr;
                     }
                 }
                 snprintf(path, length, "%s/%s", innconf->patharticles,
                          priv.topde->d_name);
-                if ((priv.sec = opendir(path)) == NULL)
+                if ((priv.sec = opendir(path)) == nullptr)
                     continue;
             }
             snprintf(path, length, "%s/%s/%s", innconf->patharticles,
                      priv.topde->d_name, priv.secde->d_name);
-            if ((priv.ter = opendir(path)) == NULL)
+            if ((priv.ter = opendir(path)) == nullptr)
                 continue;
         }
         snprintf(path, length, "%s/%s/%s/%s", innconf->patharticles,
                  priv.topde->d_name, priv.secde->d_name, priv.terde->d_name);
-        if ((priv.artdir = opendir(path)) == NULL)
+        if ((priv.artdir = opendir(path)) == nullptr)
             continue;
     }
-    if (de == NULL)
-        return NULL;
+    if (de == nullptr)
+        return nullptr;
     snprintf(path, length, "%s/%s/%s/%s/%s", innconf->patharticles,
              priv.topde->d_name, priv.secde->d_name, priv.terde->d_name,
              de->d_name);
 
     art = OpenArticle(path, amount);
-    if (art == (ARTHANDLE *) NULL) {
+    if (art == (ARTHANDLE *) nullptr) {
         art = xmalloc(sizeof(ARTHANDLE));
         art->type = TOKEN_TIMEHASH;
-        art->data = NULL;
+        art->data = nullptr;
         art->len = 0;
         art->private_ = xmalloc(sizeof(PRIV_TIMEHASH));
         newpriv = (PRIV_TIMEHASH *) art->private_;
-        newpriv->base = NULL;
-    } else if (art->private_ == NULL) {
+        newpriv->base = nullptr;
+    } else if (art->private_ == nullptr) {
         art->private_ = xcalloc(1, sizeof(PRIV_TIMEHASH));
     }
     newpriv = (PRIV_TIMEHASH *) art->private_;
@@ -598,9 +600,9 @@ timehash_next(ARTHANDLE *article, const RETRTYPE amount)
     snprintf(path, length, "%s/%s/%s/%s", priv.topde->d_name,
              priv.secde->d_name, priv.terde->d_name, de->d_name);
     nexttoken = PathToToken(path);
-    if (nexttoken == (TOKEN *) NULL) {
+    if (nexttoken == (TOKEN *) nullptr) {
         free(path);
-        return NULL;
+        return nullptr;
     }
     art->token = nexttoken;
     BreakToken(*art->token, &(art->arrived), &seqnum);
@@ -615,7 +617,7 @@ timehash_ctl(PROBETYPE type, TOKEN *token UNUSED, void *value)
 
     switch (type) {
     case SMARTNGNUM:
-        if ((ann = (struct artngnum *) value) == NULL)
+        if ((ann = (struct artngnum *) value) == nullptr)
             return false;
         /* make SMprobe() call timehash_retrieve() */
         ann->artnum = 0;

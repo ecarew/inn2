@@ -36,7 +36,7 @@ enum KRP {
 };
 
 /* Bloom filter token cache for fast OVhisthasmsgid lookups. */
-struct bloom_filter *OVtokencache = NULL;
+struct bloom_filter *OVtokencache = nullptr;
 
 /* Statistics */
 long EXPprocessed;
@@ -137,7 +137,7 @@ NGfind(char *Name)
     for (c = *Name, ngp = htp->Groups, i = htp->Used; --i >= 0; ngp++)
         if (c == ngp[0]->Name[0] && strcmp(Name, ngp[0]->Name) == 0)
             return ngp[0];
-    return NULL;
+    return nullptr;
 }
 
 /*
@@ -204,7 +204,7 @@ BuildGroups(char *active)
     char *fields[5];
 
     /* Count the number of groups. */
-    for (p = active, i = 0; (p = strchr(p, '\n')) != NULL; p++, i++)
+    for (p = active, i = 0; (p = strchr(p, '\n')) != nullptr; p++, i++)
         continue;
     nGroups = i;
     Groups = xmalloc(i * sizeof(NEWSGROUP));
@@ -223,7 +223,7 @@ BuildGroups(char *active)
     lines = 0;
     for (p = active, ngp = Groups, i = nGroups; --i >= 0; ngp++, p = q + 1) {
         lines++;
-        if ((q = strchr(p, '\n')) == NULL) {
+        if ((q = strchr(p, '\n')) == nullptr) {
             fprintf(stderr, "%s: line %d missing newline\n", ACTIVE, lines);
             exit(1);
         }
@@ -355,8 +355,8 @@ EXPreadfile(FILE *F)
     SawDefault = false;
     patterns = xmalloc(nGroups * sizeof(char *));
 
-    for (i = 1; fgets(buff, sizeof buff, F) != NULL; i++) {
-        if ((p = strchr(buff, '\n')) == NULL) {
+    for (i = 1; fgets(buff, sizeof buff, F) != nullptr; i++) {
+        if ((p = strchr(buff, '\n')) == nullptr) {
             fprintf(stderr, "Line %d too long\n", i);
             free(patterns);
             return false;
@@ -400,18 +400,18 @@ EXPreadfile(FILE *F)
         }
 
         /* Parse the fields. */
-        if (strchr(fields[1], 'M') != NULL)
+        if (strchr(fields[1], 'M') != nullptr)
             mod = 'm';
-        else if (strchr(fields[1], 'U') != NULL)
+        else if (strchr(fields[1], 'U') != nullptr)
             mod = 'u';
-        else if (strchr(fields[1], 'A') != NULL)
+        else if (strchr(fields[1], 'A') != nullptr)
             mod = 'a';
         else {
             fprintf(stderr, "Line %d bad modflag\n", i);
             free(patterns);
             return false;
         }
-        v.Poison = (strchr(fields[1], 'X') != NULL);
+        v.Poison = (strchr(fields[1], 'X') != nullptr);
         if (!EXPgetnum(i, fields[2], &v.Keep, "keep")
             || !EXPgetnum(i, fields[3], &v.Default, "default")
             || !EXPgetnum(i, fields[4], &v.Purge, "purge")) {
@@ -476,7 +476,7 @@ EXPnotfound(char *Entry)
     for (bg = EXPbadgroups; bg; bg = bg->Next)
         if (strcmp(Entry, bg->Name) == 0)
             break;
-    if (bg == NULL) {
+    if (bg == nullptr) {
         bg = xmalloc(sizeof(BADGROUP));
         bg->Name = xstrdup(Entry);
         bg->Next = EXPbadgroups;
@@ -500,7 +500,7 @@ EXPkeepit(char *Entry, time_t when, time_t expires)
     NEWSGROUP *ngp;
     enum KRP retval = Remove;
 
-    if ((ngp = NGfind(Entry)) == NULL)
+    if ((ngp = NGfind(Entry)) == nullptr)
         ngp = EXPnotfound(Entry);
 
     /* Bad posting date? */
@@ -540,7 +540,7 @@ OVEXPremove(TOKEN token, bool deletedgroups, char **xref, int ngroups)
         EXPprocessed++;
         EXPoverindexdrop++;
     }
-    if (EXPunlinkfile && xref != NULL) {
+    if (EXPunlinkfile && xref != nullptr) {
         SMprintfiles(EXPunlinkfile, token, xref, ngroups);
         if (!ferror(EXPunlinkfile)) {
             /* Deferred-removal path: actual SMcancel happens later via
@@ -551,20 +551,20 @@ OVEXPremove(TOKEN token, bool deletedgroups, char **xref, int ngroups)
              * is skipped, the .NEW file is wiped by the next
              * expireover and never consumed, so a partial rmfile
              * never lets expire drop history for live articles. */
-            if (OVtombstonefile != NULL) {
+            if (OVtombstonefile != nullptr) {
                 fprintf(OVtombstonefile, "%s\n", TokenToText(token));
                 if (ferror(OVtombstonefile)) {
                     syswarn("can't write tombstone log; ignoring it"
                             " for rest of run");
                     fclose(OVtombstonefile);
-                    OVtombstonefile = NULL;
+                    OVtombstonefile = nullptr;
                 }
             }
             return;
         }
         syswarn("can't write to -z file; ignoring it for rest of run");
         fclose(EXPunlinkfile);
-        EXPunlinkfile = NULL;
+        EXPunlinkfile = nullptr;
     }
     /* Inline-cancel path.  Tombstone is written only on a successful
      * SMcancel (or NOENT, where the article is already gone): the log
@@ -577,13 +577,13 @@ OVEXPremove(TOKEN token, bool deletedgroups, char **xref, int ngroups)
      * missing article, which is recoverable by a periodic non-tombstone
      * reconciliation run. */
     if (SMcancel(token) || SMerrno == SMERR_NOENT) {
-        if (OVtombstonefile != NULL) {
+        if (OVtombstonefile != nullptr) {
             fprintf(OVtombstonefile, "%s\n", TokenToText(token));
             if (ferror(OVtombstonefile)) {
                 syswarn("can't write tombstone log; ignoring it for"
                         " rest of run");
                 fclose(OVtombstonefile);
-                OVtombstonefile = NULL;
+                OVtombstonefile = nullptr;
             }
         }
     } else if (SMerrno != SMERR_UNINIT) {
@@ -645,25 +645,25 @@ OVERGetHeader(const char *p, int field)
 
     /* Skip leading headers. */
     for (; field-- >= 0 && *p; p++)
-        if ((p = strchr(p, '\t')) == NULL)
-            return NULL;
+        if ((p = strchr(p, '\t')) == nullptr)
+            return nullptr;
     if (*p == '\0')
-        return NULL;
+        return nullptr;
 
     if (fp->HasHeader)
         p += fp->Length + 2;
 
     if (fp->NeedsHeader) { /* find an exact match */
         while (strncmp(fp->Header, p, fp->Length) != 0) {
-            if ((p = strchr(p, '\t')) == NULL)
-                return NULL;
+            if ((p = strchr(p, '\t')) == nullptr)
+                return nullptr;
             p++;
         }
         p += fp->Length + 2;
     }
 
     /* Figure out length; get space. */
-    if ((next = strpbrk(p, "\n\r\t")) != NULL) {
+    if ((next = strpbrk(p, "\n\r\t")) != nullptr) {
         i = next - p;
     } else {
         i = strlen(p);
@@ -696,7 +696,8 @@ OVfindheaderindex(void)
         return;
     if (innconf->groupbaseexpiry) {
         ACTIVE = concatpath(innconf->pathdb, INN_PATH_ACTIVE);
-        if ((active = ReadInFile(ACTIVE, (struct stat *) NULL)) == NULL) {
+        if ((active = ReadInFile(ACTIVE, (struct stat *) nullptr))
+            == nullptr) {
             fprintf(stderr, "Can't read %s, %s\n", ACTIVE, strerror(errno));
             exit(1);
         }
@@ -705,7 +706,7 @@ OVfindheaderindex(void)
         krps = xmalloc(nGroups * sizeof(enum KRP));
         path = concatpath(innconf->pathetc, INN_PATH_EXPIRECTL);
         F = fopen(path, "r");
-        if (F == NULL) {
+        if (F == nullptr) {
             fprintf(stderr, "Can't read %s, %s\n", path, strerror(errno));
             free(path);
             exit(1);
@@ -742,7 +743,7 @@ bool
 OVgroupbasedexpire(TOKEN token, const char *group, const char *data,
                    int len UNUSED, time_t arrived, time_t expires)
 {
-    static char *Group = NULL;
+    static char *Group = nullptr;
     char *p;
     int i;
     int count;
@@ -753,7 +754,7 @@ OVgroupbasedexpire(TOKEN token, const char *group, const char *data,
     bool purge;
     char *Xref;
 
-    if (SMprobe(SELFEXPIRE, &token, NULL)) {
+    if (SMprobe(SELFEXPIRE, &token, nullptr)) {
         if (!OVignoreselfexpire)
             /* this article should be kept */
             return false;
@@ -763,7 +764,7 @@ OVgroupbasedexpire(TOKEN token, const char *group, const char *data,
     }
 
     if (OVusepost) {
-        if ((p = OVERGetHeader(data, Dateindex)) == NULL) {
+        if ((p = OVERGetHeader(data, Dateindex)) == nullptr) {
             EXPoverindexdrop++;
             return true;
         }
@@ -775,14 +776,14 @@ OVgroupbasedexpire(TOKEN token, const char *group, const char *data,
     } else {
         when = arrived;
     }
-    if ((Xref = OVERGetHeader(data, Xrefindex)) == NULL) {
-        if (Group != NULL) {
+    if ((Xref = OVERGetHeader(data, Xrefindex)) == nullptr) {
+        if (Group != nullptr) {
             free(Group);
         }
-        Group = concat(group, ":", (char *) 0);
+        Group = concat(group, ":", (char *) nullptr);
         Xref = Group;
     } else {
-        if ((Xref = strchr(Xref, ' ')) == NULL) {
+        if ((Xref = strchr(Xref, ' ')) == nullptr) {
             EXPoverindexdrop++;
             return true;
         }
@@ -800,7 +801,7 @@ OVgroupbasedexpire(TOKEN token, const char *group, const char *data,
        isn't in the expected form). */
     for (i = 0; i < count; i++) {
         p = strchr(arts[i], ':');
-        if (p == NULL) {
+        if (p == nullptr) {
             fflush(stdout);
             fprintf(stderr, "Bad entry, \"%s\"\n", arts[i]);
             EXPoverindexdrop++;
@@ -863,7 +864,7 @@ OVhisthasmsgid(struct history *h, const char *data)
     if (!ReadOverviewfmt) {
         OVfindheaderindex();
     }
-    if ((p = OVERGetHeader(data, Messageidindex)) == NULL)
+    if ((p = OVERGetHeader(data, Messageidindex)) == nullptr)
         return false;
 
     /* Fast path: if article is in the Bloom filter, it (probably) exists.
@@ -879,7 +880,7 @@ OVhisthasmsgid(struct history *h, const char *data)
 
     /* Slow path: per-article history lookup (original behavior).
      * Only reached for Bloom misses or when no Bloom filter is loaded. */
-    return HISlookup(h, p, NULL, NULL, NULL, NULL);
+    return HISlookup(h, p, nullptr, nullptr, nullptr, nullptr);
 }
 
 void
@@ -907,18 +908,18 @@ OVEXPcleanup(void)
         free(fp->Header);
     }
     free(ARTfields);
-    if (ACTIVE != NULL) {
+    if (ACTIVE != nullptr) {
         free(ACTIVE);
-        ACTIVE = NULL;
+        ACTIVE = nullptr;
     }
-    if (Groups != NULL) {
+    if (Groups != nullptr) {
         free(Groups);
-        Groups = NULL;
+        Groups = nullptr;
     }
     for (i = 0, htp = NGHtable; i < NGH_SIZE; i++, htp++) {
-        if (htp->Groups != NULL) {
+        if (htp->Groups != nullptr) {
             free(htp->Groups);
-            htp->Groups = NULL;
+            htp->Groups = nullptr;
         }
     }
 }

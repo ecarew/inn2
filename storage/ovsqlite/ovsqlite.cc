@@ -74,7 +74,7 @@ static ovsqlite_port port;
 
 /* Direct reader state (used when mode is OV_READ only). */
 static bool direct_reader = false;
-static sqlite3 *read_connection = NULL;
+static sqlite3 *read_connection = nullptr;
 static sql_read_t sql_read;
 static bool reader_use_compression = false;
 
@@ -162,7 +162,7 @@ reader_decompress(uint8_t const *overview, uint32_t overview_len,
 
     raw_len = reader_unpack_length(&reader_inflation);
     if (raw_len > MAX_OVDATA_SIZE)
-        return NULL;
+        return nullptr;
     if (raw_len > 0) {
         buffer_resize(reader_flate, raw_len);
         reader_inflation.next_out = (uint8_t *) reader_flate->data;
@@ -179,10 +179,10 @@ reader_decompress(uint8_t const *overview, uint32_t overview_len,
 #        endif
         reader_flate->left =
             (char *) reader_inflation.next_out - reader_flate->data;
-        reader_inflation.next_in = NULL;
+        reader_inflation.next_in = nullptr;
         reader_inflation.avail_in = 0;
         if (status != Z_STREAM_END || reader_inflation.avail_out > 0)
-            return NULL;
+            return nullptr;
         inflateReset(&reader_inflation);
         *out_len = reader_flate->left;
         return (uint8_t *) reader_flate->data;
@@ -243,7 +243,7 @@ direct_open(void)
     struct config_group *top;
     int status;
     char *errmsg;
-    char *journal_mode = NULL;
+    char *journal_mode = nullptr;
     bool use_wal = true;
     unsigned long reader_cachesize = 2000; /* default 2 MB */
     unsigned long mmapsize = 0;
@@ -276,7 +276,7 @@ direct_open(void)
      * database may not exist yet during initial setup. */
     path = concatpath(innconf->pathoverview, OVSQLITE_DB_FILE);
     status =
-        sqlite3_open_v2(path, &read_connection, SQLITE_OPEN_READONLY, NULL);
+        sqlite3_open_v2(path, &read_connection, SQLITE_OPEN_READONLY, nullptr);
     free(path);
     if (status != SQLITE_OK) {
         if (status != SQLITE_CANTOPEN)
@@ -284,7 +284,7 @@ direct_open(void)
                  read_connection ? sqlite3_errmsg(read_connection)
                                  : sqlite3_errstr(status));
         sqlite3_close_v2(read_connection);
-        read_connection = NULL;
+        read_connection = nullptr;
         return false;
     }
     sqlite3_extended_result_codes(read_connection, 1);
@@ -293,12 +293,12 @@ direct_open(void)
      * The writer sets WAL mode; if it hasn't run yet or the database was
      * created without WAL, fall back to the server path. */
     status = sqlite3_exec(read_connection, "pragma journal_mode;",
-                          pragma_callback, &journal_mode, NULL);
+                          pragma_callback, &journal_mode, nullptr);
     if (status != SQLITE_OK || !journal_mode
         || strcmp(journal_mode, "wal") != 0) {
         free(journal_mode);
         sqlite3_close_v2(read_connection);
-        read_connection = NULL;
+        read_connection = nullptr;
         return false;
     }
     free(journal_mode);
@@ -318,7 +318,8 @@ direct_open(void)
     if (reader_cachesize) {
         snprintf(sqltext, sizeof sqltext, "pragma cache_size = -%lu;",
                  reader_cachesize);
-        status = sqlite3_exec(read_connection, sqltext, 0, NULL, &errmsg);
+        status =
+            sqlite3_exec(read_connection, sqltext, nullptr, nullptr, &errmsg);
         if (status != SQLITE_OK) {
             warn("ovsqlite: cannot set reader cache size: %s", errmsg);
             sqlite3_free(errmsg);
@@ -332,7 +333,8 @@ direct_open(void)
      * would simply be cached twice. */
     if (mmapsize) {
         snprintf(sqltext, sizeof sqltext, "pragma mmap_size = %lu;", mmapsize);
-        status = sqlite3_exec(read_connection, sqltext, 0, NULL, &errmsg);
+        status =
+            sqlite3_exec(read_connection, sqltext, nullptr, nullptr, &errmsg);
         if (status != SQLITE_OK) {
             warn("ovsqlite: cannot set reader mmap size: %s", errmsg);
             sqlite3_free(errmsg);
@@ -416,7 +418,7 @@ fail:
         sqlite_helper_term(&sql_read_helper, (sqlite3_stmt **) &sql_read);
     if (read_connection) {
         sqlite3_close_v2(read_connection);
-        read_connection = NULL;
+        read_connection = nullptr;
     }
     return false;
 }
@@ -434,12 +436,12 @@ direct_close(void)
     if (reader_use_compression) {
         inflateEnd(&reader_inflation);
         buffer_free(reader_flate);
-        reader_flate = NULL;
+        reader_flate = nullptr;
     }
 #    endif
     sqlite_helper_term(&sql_read_helper, (sqlite3_stmt **) &sql_read);
     sqlite3_close_v2(read_connection);
-    read_connection = NULL;
+    read_connection = nullptr;
     direct_reader = false;
 }
 
@@ -523,7 +525,7 @@ start_request(unsigned int code)
 {
     uint8_t code_r;
 
-    buffer_set(request, NULL, 0);
+    buffer_set(request, nullptr, 0);
     code_r = code;
     pack_later(request, 4);
     pack_now(request, &code_r, sizeof code_r);
@@ -584,7 +586,7 @@ read_response(void)
     char *data;
     size_t size, response_size;
 
-    buffer_set(response, NULL, 0);
+    buffer_set(response, nullptr, 0);
     data = response->data;
     size = 0;
     response_size = 0;
@@ -960,7 +962,7 @@ ovsqlite_opensearch(const char *group, int low, int high)
 
     if (!direct_reader && sock == -1) {
         warn("ovsqlite: not connected to server");
-        return NULL;
+        return nullptr;
     }
     groupname_len = strlen(group);
     rh = xmalloc(offsetof(handle_t, groupname) + groupname_len);
@@ -1026,16 +1028,17 @@ fill_search_buffer_direct(handle_t *rh)
     tmp_artnum = xmalloc(max_rows * sizeof(ARTNUM));
     tmp_arrived = (cols & search_col_arrived)
                       ? xmalloc(max_rows * sizeof(time_t))
-                      : NULL;
-    tmp_token =
-        (cols & search_col_token) ? xmalloc(max_rows * sizeof(TOKEN)) : NULL;
-    tmp_overview = (cols & search_col_overview) ? xmalloc(SEARCHSPACE) : NULL;
+                      : nullptr;
+    tmp_token = (cols & search_col_token) ? xmalloc(max_rows * sizeof(TOKEN))
+                                          : nullptr;
+    tmp_overview =
+        (cols & search_col_overview) ? xmalloc(SEARCHSPACE) : nullptr;
     tmp_ov_offset = (cols & search_col_overview)
                         ? xmalloc(max_rows * sizeof(uint32_t))
-                        : NULL;
+                        : nullptr;
     tmp_ov_len = (cols & search_col_overview)
                      ? xmalloc(max_rows * sizeof(uint32_t))
-                     : NULL;
+                     : nullptr;
 
     /* Select the appropriate prepared statement. */
     stmt = (cols & search_col_overview) ? sql_read.list_articles_high_overview
@@ -1501,7 +1504,7 @@ expire_one(char const *group, int *low, struct history *h)
             char *overview;
             uint32_t overview_len;
             bool dodelete = false;
-            ARTHANDLE *ah = NULL;
+            ARTHANDLE *ah = nullptr;
 
             if (!unpack_now(response, &artnum, sizeof artnum))
                 return false;
@@ -1520,7 +1523,7 @@ expire_one(char const *group, int *low, struct history *h)
             if (!overview)
                 return false;
 
-            if (!SMprobe(EXPENSIVESTAT, &token, NULL) || OVstatall) {
+            if (!SMprobe(EXPENSIVESTAT, &token, nullptr) || OVstatall) {
                 ah = SMretrieve(token, RETR_STAT);
                 if (ah) {
                     SMfreearticle(ah);
@@ -1558,8 +1561,8 @@ expire_one(char const *group, int *low, struct history *h)
                 return false;
         }
     } while (!done);
-    if (low != NULL)
-        ovsqlite_groupstats(group, low, NULL, NULL, NULL);
+    if (low != nullptr)
+        ovsqlite_groupstats(group, low, nullptr, nullptr, nullptr);
     return true;
 }
 
@@ -1677,9 +1680,9 @@ ovsqlite_close(void)
     close(sock);
     sock = -1;
     buffer_free(request);
-    request = NULL;
+    request = nullptr;
     buffer_free(response);
-    response = NULL;
+    response = nullptr;
 }
 
 #else /* ! HAVE_SQLITE3 */

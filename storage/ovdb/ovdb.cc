@@ -163,7 +163,7 @@ ovdb_cancel(const char *group UNUSED, ARTNUM artnum UNUSED)
 void *
 ovdb_opensearch(const char *group UNUSED, int low UNUSED, int high UNUSED)
 {
-    return NULL;
+    return nullptr;
 }
 
 bool

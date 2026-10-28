@@ -63,21 +63,21 @@ tombstone_read(struct hash *h, const char *path, bool *out_error)
     size_t len;
     unsigned long count = 0;
 
-    if (out_error != NULL)
+    if (out_error != nullptr)
         *out_error = false;
-    if (h == NULL || path == NULL)
+    if (h == nullptr || path == nullptr)
         return 0;
 
     f = fopen(path, "r");
-    if (f == NULL) {
+    if (f == nullptr) {
         if (errno != ENOENT) {
             syswarn("can't open %s; ignoring", path);
-            if (out_error != NULL)
+            if (out_error != nullptr)
                 *out_error = true;
         }
         return 0;
     }
-    while (fgets(line, sizeof(line), f) != NULL) {
+    while (fgets(line, sizeof(line), f) != nullptr) {
         TOKEN t;
         TOKEN *entry;
 
@@ -107,7 +107,7 @@ tombstone_read(struct hash *h, const char *path, bool *out_error)
     }
     if (ferror(f)) {
         syswarn("error reading %s; will use what was read", path);
-        if (out_error != NULL)
+        if (out_error != nullptr)
             *out_error = true;
     }
     fclose(f);
@@ -121,26 +121,26 @@ tombstone_rename_for_processing(const char *path)
     char *snapshot_path;
     int fd;
 
-    if (path == NULL)
-        return NULL;
+    if (path == nullptr)
+        return nullptr;
 
     fd = open(path, O_RDWR);
     if (fd < 0) {
         if (errno != ENOENT)
             syswarn("can't open %s", path);
-        return NULL;
+        return nullptr;
     }
     if (!inn_lock_file(fd, INN_LOCK_WRITE, true)) {
         syswarn("can't lock %s", path);
         close(fd);
-        return NULL;
+        return nullptr;
     }
-    snapshot_path = concat(path, ".processing", (char *) 0);
+    snapshot_path = concat(path, ".processing", (char *) nullptr);
     if (rename(path, snapshot_path) < 0) {
         syswarn("can't rename %s to %s", path, snapshot_path);
         free(snapshot_path);
         close(fd);
-        return NULL;
+        return nullptr;
     }
     /* close releases the fcntl POSIX lock. */
     close(fd);
@@ -151,9 +151,9 @@ tombstone_rename_for_processing(const char *path)
 bool
 tombstone_present(struct hash *h, const TOKEN *token)
 {
-    if (h == NULL || token == NULL)
+    if (h == nullptr || token == nullptr)
         return false;
-    return hash_lookup(h, token) != NULL;
+    return hash_lookup(h, token) != nullptr;
 }
 
 
@@ -174,7 +174,7 @@ tombstone_ensure_header(const char *path)
     char *chunk_buf;
     off_t pos;
 
-    if (path == NULL)
+    if (path == nullptr)
         return;
 
     /* No O_APPEND: we use explicit offsets via pread/pwrite, and on

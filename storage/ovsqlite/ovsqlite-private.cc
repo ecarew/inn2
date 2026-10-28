@@ -23,7 +23,7 @@ unpack_later(buffer_t *src, size_t count)
     void *result;
 
     if (count > src->left)
-        return NULL;
+        return nullptr;
     result = src->data + src->used;
     src->used += count;
     src->left -= count;

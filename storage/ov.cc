@@ -46,14 +46,14 @@ OVopen(int mode)
         return true;
 
     /* if innconf isn't already read in, do so. */
-    if (innconf == NULL)
-        if (!innconf_read(NULL))
+    if (innconf == nullptr)
+        if (!innconf_read(nullptr))
             return false;
     if (!innconf->enableoverview) {
         warn("enableoverview is not true");
         return false;
     }
-    if (innconf->ovmethod == NULL) {
+    if (innconf->ovmethod == nullptr) {
         warn("ovmethod is not defined");
         return false;
     }
@@ -113,7 +113,7 @@ OVadd(TOKEN token, char *data, int len, time_t arrived, time_t expires)
 {
     char *next, *nextcheck;
     static char *xrefdata, *patcheck, *overdata;
-    char *xrefstart = NULL;
+    char *xrefstart = nullptr;
     char *xrefend;
     static int xrefdatalen = 0, overdatalen = 0;
     bool found = false;
@@ -139,7 +139,7 @@ OVadd(TOKEN token, char *data, int len, time_t arrived, time_t expires)
     for (next = data; ((len - (next - data)) > 6)
                       && ((next = static_cast<char *>(
                                memchr(next, 'X', len - (next - data))))
-                          != NULL);) {
+                          != nullptr);) {
         /* Check that the Xref header field is at the beginning of an overview
          * field. */
         if (memcmp(next, "Xref: ", 6) == 0 && next != data
@@ -157,7 +157,7 @@ OVadd(TOKEN token, char *data, int len, time_t arrived, time_t expires)
     for (i = 0; (i < 2) && (next < (data + len)); i++) {
         if ((next =
                  static_cast<char *>(memchr(next, ' ', len - (next - data))))
-            == NULL)
+            == nullptr)
             return OVADDFAILED;
         next++;
     }
@@ -168,19 +168,20 @@ OVadd(TOKEN token, char *data, int len, time_t arrived, time_t expires)
      * then we must find the end of the Xref header field body, or data
      * following is misinterpreted.
      */
-    if ((xrefend = static_cast<char *>(memchr(next, '\t', xreflen))) != NULL)
+    if ((xrefend = static_cast<char *>(memchr(next, '\t', xreflen)))
+        != nullptr)
         xreflen = xrefend - next;
 
     if (xrefdatalen == 0) {
         xrefdatalen = BIG_BUFFER;
         xrefdata = xmalloc(xrefdatalen);
-        if (innconf->ovgrouppat != NULL)
+        if (innconf->ovgrouppat != nullptr)
             patcheck = xmalloc(xrefdatalen);
     }
     if (xreflen > xrefdatalen) {
         xrefdatalen = xreflen;
         xrefdata = xrealloc(xrefdata, xrefdatalen + 1);
-        if (innconf->ovgrouppat != NULL)
+        if (innconf->ovgrouppat != nullptr)
             patcheck = xrealloc(patcheck, xrefdatalen + 1);
     }
     if (overdatalen == 0) {
@@ -194,7 +195,7 @@ OVadd(TOKEN token, char *data, int len, time_t arrived, time_t expires)
         overdata = xrealloc(overdata, overdatalen);
     }
 
-    if (innconf->ovgrouppat != NULL) {
+    if (innconf->ovgrouppat != nullptr) {
         memcpy(patcheck, next, xreflen);
         patcheck[xreflen] = '\0';
         for (group = patcheck; group && *group;
@@ -204,7 +205,7 @@ OVadd(TOKEN token, char *data, int len, time_t arrived, time_t expires)
                 group++;
             if ((nextcheck = static_cast<char *>(
                      memchr(group, ':', xreflen - (group - patcheck))))
-                == NULL)
+                == nullptr)
                 return OVADDFAILED;
             *nextcheck++ = '\0';
 
@@ -212,7 +213,7 @@ OVadd(TOKEN token, char *data, int len, time_t arrived, time_t expires)
             if (groupmatch == UWILDMAT_POISON) {
                 return OVADDGROUPNOMATCH;
             } else if (groupmatch == UWILDMAT_FAIL) {
-                if (!SMprobe(SELFEXPIRE, &token, NULL)
+                if (!SMprobe(SELFEXPIRE, &token, nullptr)
                     && innconf->groupbaseexpiry) {
                     /* This article will never be expired, since it does not
                      * have self expiry function in stored method and
@@ -233,17 +234,17 @@ OVadd(TOKEN token, char *data, int len, time_t arrived, time_t expires)
             group++;
         if ((next = static_cast<char *>(
                  memchr(group, ':', xreflen - (group - xrefdata))))
-            == NULL)
+            == nullptr)
             return OVADDFAILED;
         *next++ = '\0';
         if (!isdigit((unsigned char) *next))
             continue;
-        artnum = strtoul(next, NULL, 10);
+        artnum = strtoul(next, nullptr, 10);
         if (artnum == 0)
             continue;
 
         /* Skip overview generation according to ovgrouppat. */
-        if (innconf->ovgrouppat != NULL
+        if (innconf->ovgrouppat != nullptr
             && uwildmat_poison(group, innconf->ovgrouppat) != UWILDMAT_MATCH) {
             continue;
         }
@@ -283,26 +284,26 @@ OVcancel(TOKEN token)
        header field and then parse it to figure out what to cancel.  Articles
        without Xref header fields lose. */
     art = SMretrieve(token, RETR_HEAD);
-    if (art == NULL)
+    if (art == nullptr)
         return false;
     xref = wire_findheader(art->data, art->len, "Xref", true);
-    if (xref == NULL)
+    if (xref == nullptr)
         goto fail;
     xrefend = wire_endheader(xref, art->data + art->len - 1);
-    if (xrefend == NULL)
+    if (xrefend == nullptr)
         goto fail;
     xreflen = xrefend - xref + 1;
     xref_copy = xstrndup(xref, xreflen);
     SMfreearticle(art);
-    groups = cvector_split_space(xref_copy, NULL);
+    groups = cvector_split_space(xref_copy, nullptr);
     for (i = 0; i < groups->count; i++) {
         group = groups->strings[i];
         p = (char *) strchr(group, ':');
-        if (p == NULL || p == group || p[1] == '-')
+        if (p == nullptr || p == group || p[1] == '-')
             continue;
         *p = '\0';
         errno = 0;
-        artnum = strtoul(p + 1, NULL, 10);
+        artnum = strtoul(p + 1, nullptr, 10);
         if (artnum == 0 || errno == ERANGE)
             continue;
 
@@ -325,7 +326,7 @@ OVopensearch(char *group, int low, int high)
     if (!ov.open) {
         /* must be opened */
         warn("ovopen must be called first");
-        return NULL;
+        return nullptr;
     }
     return ((*ov.opensearch)(group, low, high));
 }
@@ -392,13 +393,13 @@ OVctl(OVCTLTYPE type, void *val)
             return false;
         }
         if (((OVGE *) val)->delayrm) {
-            if ((((OVGE *) val)->filename == NULL)
+            if ((((OVGE *) val)->filename == nullptr)
                 || (strlen(((OVGE *) val)->filename) == 0)) {
                 warn("file name must be specified");
                 return false;
             }
             if ((EXPunlinkfile = fopen(((OVGE *) val)->filename, "w"))
-                == NULL) {
+                == nullptr) {
                 syswarn("fopen: %s failed", ((OVGE *) val)->filename);
                 return false;
             }

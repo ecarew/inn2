@@ -151,7 +151,7 @@ MakeToken(time_t now, ARTNUM seqnum, STORAGECLASS storageclass,
     uint32_t i;
     uint16_t s;
 
-    if (oldtoken == (TOKEN *) NULL)
+    if (oldtoken == (TOKEN *) nullptr)
         memset(&token, '\0', sizeof(token));
     else
         memcpy(&token, oldtoken, sizeof(token));
@@ -212,11 +212,11 @@ PathNumToToken(char *path, ARTNUM artnum)
 
     n = sscanf(path, "timecaf-%02x/%02x/%04x.CF", &tclass, &t1, &t2);
     if (n != 3)
-        return (TOKEN *) NULL;
+        return (TOKEN *) nullptr;
     timestamp =
         ((t1 << 8) & 0xff00) | ((t2 << 8) & 0xff0000) | ((t2 << 0) & 0xff);
     storageclass = tclass;
-    token = MakeToken(timestamp, artnum, storageclass, (TOKEN *) NULL);
+    token = MakeToken(timestamp, artnum, storageclass, (TOKEN *) nullptr);
     return &token;
 }
 
@@ -224,7 +224,7 @@ PathNumToToken(char *path, ARTNUM artnum)
 bool
 timecaf_init(SMATTRIBUTE *attr)
 {
-    if (attr == NULL) {
+    if (attr == nullptr) {
         warn("timecaf: attr is NULL");
         SMseterror(SMERR_INTERNAL, "attr is NULL");
         return false;
@@ -233,11 +233,11 @@ timecaf_init(SMATTRIBUTE *attr)
     attr->expensivestat = false;
     if (STORAGE_TOKEN_LENGTH < 6) {
         warn("timecaf: token length is less than six bytes");
-        SMseterror(SMERR_TOKENSHORT, NULL);
+        SMseterror(SMERR_TOKENSHORT, nullptr);
         return false;
     }
     ReadingFile.fd = WritingFile.fd = -1;
-    ReadingFile.path = WritingFile.path = (char *) NULL;
+    ReadingFile.path = WritingFile.path = (char *) nullptr;
     return true;
 }
 
@@ -256,18 +256,18 @@ CheckTOCCache(time_t timestamp, STORAGECLASS tokenclass)
     CAFTOCCACHEENT *cent;
     unsigned char tmp;
 
-    if (TOCCache[tokenclass] == NULL)
-        return NULL; /* cache is empty */
+    if (TOCCache[tokenclass] == nullptr)
+        return nullptr; /* cache is empty */
 
     tmp = (timestamp >> 16) & 0xff;
     l2 = TOCCache[tokenclass]->l2ptr[tmp];
-    if (l2 == NULL)
-        return NULL;
+    if (l2 == nullptr)
+        return nullptr;
 
     tmp = (timestamp >> 8) & 0xff;
     l1 = l2->l1ptr[tmp];
-    if (l1 == NULL)
-        return NULL;
+    if (l1 == nullptr)
+        return nullptr;
 
     tmp = (timestamp) & 0xff;
     cent = l1->entries[tmp];
@@ -290,26 +290,26 @@ AddTOCCache(time_t timestamp, CAFTOCENT *toc, CAFHEADER head,
     unsigned char tmp;
     int i;
 
-    if (TOCCache[tokenclass] == NULL) {
+    if (TOCCache[tokenclass] == nullptr) {
         TOCCache[tokenclass] = xmalloc(sizeof(CAFTOCL3CACHE));
         for (i = 0; i < 256; ++i)
-            TOCCache[tokenclass]->l2ptr[i] = NULL;
+            TOCCache[tokenclass]->l2ptr[i] = nullptr;
     }
 
     tmp = (timestamp >> 16) & 0xff;
     l2 = TOCCache[tokenclass]->l2ptr[tmp];
-    if (l2 == NULL) {
+    if (l2 == nullptr) {
         TOCCache[tokenclass]->l2ptr[tmp] = l2 = xmalloc(sizeof(CAFTOCL2CACHE));
         for (i = 0; i < 256; ++i)
-            l2->l1ptr[i] = NULL;
+            l2->l1ptr[i] = nullptr;
     }
 
     tmp = (timestamp >> 8) & 0xff;
     l1 = l2->l1ptr[tmp];
-    if (l1 == NULL) {
+    if (l1 == nullptr) {
         l2->l1ptr[tmp] = l1 = xmalloc(sizeof(CAFTOCL1CACHE));
         for (i = 0; i < 256; ++i)
-            l1->entries[i] = NULL;
+            l1->entries[i] = nullptr;
     }
 
     tmp = (timestamp) & 0xff;
@@ -337,17 +337,17 @@ StatArticle(time_t timestamp, ARTNUM artnum, STORAGECLASS tokenclass)
     ARTHANDLE *art;
 
     cent = CheckTOCCache(timestamp, tokenclass);
-    if (cent == NULL) {
+    if (cent == nullptr) {
         path = MakePath(timestamp, tokenclass);
         toc = CAFReadTOC(path, &head);
-        if (toc == NULL) {
+        if (toc == nullptr) {
             if (caf_error == CAF_ERR_ARTNOTHERE) {
-                SMseterror(SMERR_NOENT, NULL);
+                SMseterror(SMERR_NOENT, nullptr);
             } else {
-                SMseterror(SMERR_UNDEFINED, NULL);
+                SMseterror(SMERR_UNDEFINED, nullptr);
             }
             free(path);
-            return NULL;
+            return nullptr;
         }
         cent = AddTOCCache(timestamp, toc, head, tokenclass);
         free(path);
@@ -355,23 +355,23 @@ StatArticle(time_t timestamp, ARTNUM artnum, STORAGECLASS tokenclass)
 
     /* check current TOC for the given artnum. */
     if (artnum < cent->header.Low || artnum > cent->header.High) {
-        SMseterror(SMERR_NOENT, NULL);
-        return NULL;
+        SMseterror(SMERR_NOENT, nullptr);
+        return nullptr;
     }
 
     tocentry = &(cent->toc[artnum - cent->header.Low]);
     if (tocentry->Size == 0) {
         /* no article with that article number present */
-        SMseterror(SMERR_NOENT, NULL);
-        return NULL;
+        SMseterror(SMERR_NOENT, nullptr);
+        return nullptr;
     }
 
     /* stat is a success, so build a null art struct to represent that. */
     art = xmalloc(sizeof(ARTHANDLE));
     art->type = TOKEN_TIMECAF;
-    art->data = NULL;
+    art->data = nullptr;
     art->len = 0;
-    art->private_ = NULL;
+    art->private_ = nullptr;
     return art;
 }
 
@@ -383,7 +383,7 @@ CloseOpenFile(CAFOPENFILE *foo)
         close(foo->fd);
         foo->fd = -1;
         free(foo->path);
-        foo->path = NULL;
+        foo->path = nullptr;
     }
 }
 
@@ -400,7 +400,7 @@ timecaf_store(const ARTHANDLE article, const STORAGECLASS storageclass)
     ARTNUM art;
 
     if (article.arrived == (time_t) 0)
-        now = time(NULL);
+        now = time(nullptr);
     else
         now = article.arrived;
 
@@ -425,7 +425,7 @@ timecaf_store(const ARTHANDLE article, const STORAGECLASS storageclass)
                     syswarn("timecaf: could not create directory %s", path);
                     token.type = TOKEN_EMPTY;
                     free(path);
-                    SMseterror(SMERR_UNDEFINED, NULL);
+                    SMseterror(SMERR_UNDEFINED, nullptr);
                     token.type = TOKEN_EMPTY;
                     return token;
                 } else {
@@ -434,7 +434,7 @@ timecaf_store(const ARTHANDLE article, const STORAGECLASS storageclass)
                     if (fd < 0) {
                         warn("timecaf: could not OpenArtWrite %s/%lu: %s",
                              path, art, CAFErrorStr());
-                        SMseterror(SMERR_UNDEFINED, NULL);
+                        SMseterror(SMERR_UNDEFINED, nullptr);
                         free(path);
                         token.type = TOKEN_EMPTY;
                         return token;
@@ -443,7 +443,7 @@ timecaf_store(const ARTHANDLE article, const STORAGECLASS storageclass)
             } else {
                 warn("timecaf: could not OpenArtWrite %s/%lu: %s", path, art,
                      CAFErrorStr());
-                SMseterror(SMERR_UNDEFINED, NULL);
+                SMseterror(SMERR_UNDEFINED, nullptr);
                 free(path);
                 token.type = TOKEN_EMPTY;
                 return token;
@@ -460,9 +460,9 @@ timecaf_store(const ARTHANDLE article, const STORAGECLASS storageclass)
         if (CAFStartWriteFd(fd, &art, article.len) < 0) {
             warn("timecaf: could not OpenArtWriteFd %s/%lu: %s", path, art,
                  CAFErrorStr());
-            SMseterror(SMERR_UNDEFINED, NULL);
+            SMseterror(SMERR_UNDEFINED, nullptr);
             free(path);
-            WritingFile.path = NULL;
+            WritingFile.path = nullptr;
             WritingFile.fd = -1;
             token.type = TOKEN_EMPTY;
             return token;
@@ -473,14 +473,14 @@ timecaf_store(const ARTHANDLE article, const STORAGECLASS storageclass)
     fdflag_close_exec(fd, true);
     result = xwritev(fd, article.iov, article.iovcnt);
     if (result != (ssize_t) article.len) {
-        SMseterror(SMERR_UNDEFINED, NULL);
+        SMseterror(SMERR_UNDEFINED, nullptr);
         syswarn("timecaf: error writing %s", path);
         token.type = TOKEN_EMPTY;
         CloseOpenFile(&WritingFile);
         return token;
     }
     if (CAFFinishArtWrite(fd) < 0) {
-        SMseterror(SMERR_UNDEFINED, NULL);
+        SMseterror(SMERR_UNDEFINED, nullptr);
         warn("timecaf: error writing %s: %s", path, CAFErrorStr());
         token.type = TOKEN_EMPTY;
         CloseOpenFile(&WritingFile);
@@ -506,27 +506,27 @@ OpenArticle(const char *path, ARTNUM artnum, const RETRTYPE amount)
         if (pagesize < 0) {
             syswarn("timecaf: getpagesize failed");
             pagesize = 0;
-            return NULL;
+            return nullptr;
         }
     }
 
     /* XXX need to figure some way to cache open fds or something? */
     if ((fd = CAFOpenArtRead(path, artnum, &len)) < 0) {
         if (caf_error == CAF_ERR_ARTNOTHERE) {
-            SMseterror(SMERR_NOENT, NULL);
+            SMseterror(SMERR_NOENT, nullptr);
         } else {
-            SMseterror(SMERR_UNDEFINED, NULL);
+            SMseterror(SMERR_UNDEFINED, nullptr);
         }
-        return NULL;
+        return nullptr;
     }
 
     art = xmalloc(sizeof(ARTHANDLE));
     art->type = TOKEN_TIMECAF;
 
     if (amount == RETR_STAT) {
-        art->data = NULL;
+        art->data = nullptr;
         art->len = 0;
-        art->private_ = NULL;
+        art->private_ = nullptr;
         close(fd);
         return art;
     }
@@ -538,7 +538,7 @@ OpenArticle(const char *path, ARTNUM artnum, const RETRTYPE amount)
         close(fd);
         free(art->private_);
         free(art);
-        return NULL;
+        return nullptr;
     }
     priv->artlen = len;
     if (innconf->articlemmap) {
@@ -547,12 +547,12 @@ OpenArticle(const char *path, ARTNUM artnum, const RETRTYPE amount)
 
         curoff = lseek(fd, (off_t) 0, SEEK_CUR);
         if (curoff < 0) {
-            SMseterror(SMERR_UNDEFINED, NULL);
+            SMseterror(SMERR_UNDEFINED, nullptr);
             syswarn("timecaf: could not locate article");
             close(fd);
             free(art->private_);
             free(art);
-            return NULL;
+            return nullptr;
         }
         delta = curoff % pagesize;
         tmpoff = curoff - delta;
@@ -561,18 +561,18 @@ OpenArticle(const char *path, ARTNUM artnum, const RETRTYPE amount)
             close(fd);
             free(art->private_);
             free(art);
-            return NULL;
+            return nullptr;
         }
         priv->mmaplen = len + delta;
-        if ((priv->mmapbase = static_cast<char *>(
-                 mmap(NULL, priv->mmaplen, PROT_READ, MAP_SHARED, fd, tmpoff)))
+        if ((priv->mmapbase = static_cast<char *>(mmap(
+                 nullptr, priv->mmaplen, PROT_READ, MAP_SHARED, fd, tmpoff)))
             == MAP_FAILED) {
-            SMseterror(SMERR_UNDEFINED, NULL);
+            SMseterror(SMERR_UNDEFINED, nullptr);
             syswarn("timecaf: could not mmap article");
             close(fd);
             free(art->private_);
             free(art);
-            return NULL;
+            return nullptr;
         }
         mmap_invalidate(priv->mmapbase, priv->mmaplen);
         if (amount == RETR_ALL)
@@ -583,25 +583,25 @@ OpenArticle(const char *path, ARTNUM artnum, const RETRTYPE amount)
     } else {
         priv->artdata = xmalloc(priv->artlen);
         if (xread(fd, priv->artdata, priv->artlen) < 0) {
-            SMseterror(SMERR_UNDEFINED, NULL);
+            SMseterror(SMERR_UNDEFINED, nullptr);
             syswarn("timecaf: could not read article");
             close(fd);
             free(priv->artdata);
             free(art->private_);
             free(art);
-            return NULL;
+            return nullptr;
         }
     }
     close(fd);
 
-    priv->top = NULL;
-    priv->sec = NULL;
-    priv->ter = NULL;
-    priv->curtoc = NULL;
+    priv->top = nullptr;
+    priv->sec = nullptr;
+    priv->ter = nullptr;
+    priv->curtoc = nullptr;
     priv->curartnum = 0;
-    priv->topde = NULL;
-    priv->secde = NULL;
-    priv->terde = NULL;
+    priv->topde = nullptr;
+    priv->secde = nullptr;
+    priv->terde = nullptr;
 
     if (amount == RETR_ALL) {
         art->data = priv->artdata;
@@ -609,15 +609,15 @@ OpenArticle(const char *path, ARTNUM artnum, const RETRTYPE amount)
         return art;
     }
 
-    if ((p = wire_findbody(priv->artdata, priv->artlen)) == NULL) {
-        SMseterror(SMERR_NOBODY, NULL);
-        if (innconf->articlemmap && priv->mmapbase != NULL)
+    if ((p = wire_findbody(priv->artdata, priv->artlen)) == nullptr) {
+        SMseterror(SMERR_NOBODY, nullptr);
+        if (innconf->articlemmap && priv->mmapbase != nullptr)
             munmap(priv->mmapbase, priv->mmaplen);
         else
             free(priv->artdata);
         free(art->private_);
         free(art);
-        return NULL;
+        return nullptr;
     }
 
     if (amount == RETR_HEAD) {
@@ -640,7 +640,7 @@ OpenArticle(const char *path, ARTNUM artnum, const RETRTYPE amount)
         free(priv->artdata);
     free(art->private_);
     free(art);
-    return NULL;
+    return nullptr;
 }
 
 ARTHANDLE *
@@ -654,8 +654,8 @@ timecaf_retrieve(const TOKEN token, const RETRTYPE amount)
     time_t now;
 
     if (token.type != TOKEN_TIMECAF) {
-        SMseterror(SMERR_INTERNAL, NULL);
-        return NULL;
+        SMseterror(SMERR_INTERNAL, nullptr);
+        return nullptr;
     }
 
     BreakToken(token, &timestamp, &artnum);
@@ -673,14 +673,14 @@ timecaf_retrieve(const TOKEN token, const RETRTYPE amount)
     */
 
     if (SMpreopen && amount == RETR_STAT) {
-        now = time(NULL);
+        now = time(nullptr);
         if (timestamp < ((now >> 8) & 0xffffff)) {
             return StatArticle(timestamp, artnum, token.class_);
         }
     }
 
     path = MakePath(timestamp, token.class_);
-    if ((art = OpenArticle(path, artnum, amount)) != (ARTHANDLE *) NULL) {
+    if ((art = OpenArticle(path, artnum, amount)) != (ARTHANDLE *) nullptr) {
         art->arrived = timestamp
                        << 8; /* XXX not quite accurate arrival time,
                              ** but getting a more accurate one would
@@ -725,14 +725,14 @@ timecaf_freearticle(ARTHANDLE *article)
 static void
 DoCancels(void)
 {
-    if (DeletePath != NULL) {
+    if (DeletePath != nullptr) {
         if (NumDeleteArtnums != 0) {
             /*
             ** Murgle. If we are trying to cancel something out of the
             ** currently open-for-writing file, we need to close it before
             ** doing CAFRemove...
             */
-            if (WritingFile.path != NULL
+            if (WritingFile.path != nullptr
                 && strcmp(WritingFile.path, DeletePath) == 0) {
                 CloseOpenFile(&WritingFile);
             }
@@ -740,11 +740,11 @@ DoCancels(void)
              * really do. */
             CAFRemoveMultArts(DeletePath, NumDeleteArtnums, DeleteArtnums);
             free(DeleteArtnums);
-            DeleteArtnums = NULL;
+            DeleteArtnums = nullptr;
             NumDeleteArtnums = MaxDeleteArtnums = 0;
         }
         free(DeletePath);
-        DeletePath = NULL;
+        DeletePath = nullptr;
     }
 }
 
@@ -757,7 +757,7 @@ timecaf_cancel(TOKEN token)
 
     BreakToken(token, &now, &seqnum);
     path = MakePath(now, token.class_);
-    if (DeletePath == NULL) {
+    if (DeletePath == nullptr) {
         DeletePath = path;
     } else if (strcmp(DeletePath, path) != 0) {
         /* different path, so flush all pending cancels. */
@@ -786,7 +786,7 @@ FindDir(DIR *dir, FINDTYPE type)
 {
     struct dirent *de;
 
-    while ((de = readdir(dir)) != NULL) {
+    while ((de = readdir(dir)) != nullptr) {
         if (type == FIND_TOPDIR)
             if ((strlen(de->d_name) == 10)
                 && (strncmp(de->d_name, "timecaf-", 8) == 0)
@@ -811,7 +811,7 @@ FindDir(DIR *dir, FINDTYPE type)
                 return de;
     }
 
-    return NULL;
+    return nullptr;
 }
 
 /*
@@ -852,94 +852,95 @@ timecaf_next(ARTHANDLE *article, const RETRTYPE amount)
 
     length = strlen(innconf->patharticles) + 32;
     path = xmalloc(length);
-    if (article == NULL || article->private_ == NULL) {
-        if (article != NULL)
+    if (article == nullptr || article->private_ == nullptr) {
+        if (article != nullptr)
             free(article);
-        priv.top = NULL;
-        priv.sec = NULL;
-        priv.ter = NULL;
-        priv.curtoc = NULL;
-        priv.topde = NULL;
-        priv.secde = NULL;
-        priv.terde = NULL;
+        priv.top = nullptr;
+        priv.sec = nullptr;
+        priv.ter = nullptr;
+        priv.curtoc = nullptr;
+        priv.topde = nullptr;
+        priv.secde = nullptr;
+        priv.terde = nullptr;
     } else {
         priv = *(PRIV_TIMECAF *) article->private_;
         free(article->private_);
         free(article);
-        if (innconf->articlemmap && priv.mmapbase != NULL)
+        if (innconf->articlemmap && priv.mmapbase != nullptr)
             munmap(priv.mmapbase, priv.mmaplen);
         else
             free(priv.artdata);
     }
 
-    while (priv.curtoc == NULL
+    while (priv.curtoc == nullptr
            || !FindNextArt(&priv.curheader, priv.curtoc, &priv.curartnum)) {
         if (priv.curtoc) {
             free(priv.curtoc);
-            priv.curtoc = NULL;
+            priv.curtoc = nullptr;
         }
         while (!priv.ter
-               || ((priv.terde = FindDir(priv.ter, FIND_CAF)) == NULL)) {
+               || ((priv.terde = FindDir(priv.ter, FIND_CAF)) == nullptr)) {
             if (priv.ter) {
                 closedir(priv.ter);
-                priv.ter = NULL;
+                priv.ter = nullptr;
             }
-            while (!priv.sec
-                   || ((priv.secde = FindDir(priv.sec, FIND_DIR)) == NULL)) {
+            while (
+                !priv.sec
+                || ((priv.secde = FindDir(priv.sec, FIND_DIR)) == nullptr)) {
                 if (priv.sec) {
                     closedir(priv.sec);
-                    priv.sec = NULL;
+                    priv.sec = nullptr;
                 }
                 if (!priv.top
                     || ((priv.topde = FindDir(priv.top, FIND_TOPDIR))
-                        == NULL)) {
+                        == nullptr)) {
                     if (priv.top) {
                         /* end of search */
                         closedir(priv.top);
-                        priv.top = NULL;
+                        priv.top = nullptr;
                         free(path);
-                        return NULL;
+                        return nullptr;
                     }
                     snprintf(path, length, "%s", innconf->patharticles);
-                    if ((priv.top = opendir(path)) == NULL) {
-                        SMseterror(SMERR_UNDEFINED, NULL);
+                    if ((priv.top = opendir(path)) == nullptr) {
+                        SMseterror(SMERR_UNDEFINED, nullptr);
                         free(path);
-                        return NULL;
+                        return nullptr;
                     }
                     if ((priv.topde = FindDir(priv.top, FIND_TOPDIR))
-                        == NULL) {
-                        SMseterror(SMERR_UNDEFINED, NULL);
+                        == nullptr) {
+                        SMseterror(SMERR_UNDEFINED, nullptr);
                         closedir(priv.top);
                         free(path);
-                        return NULL;
+                        return nullptr;
                     }
                 }
                 snprintf(path, length, "%s/%s", innconf->patharticles,
                          priv.topde->d_name);
-                if ((priv.sec = opendir(path)) == NULL)
+                if ((priv.sec = opendir(path)) == nullptr)
                     continue;
             }
             snprintf(path, length, "%s/%s/%s", innconf->patharticles,
                      priv.topde->d_name, priv.secde->d_name);
-            if ((priv.ter = opendir(path)) == NULL)
+            if ((priv.ter = opendir(path)) == nullptr)
                 continue;
         }
         snprintf(path, length, "%s/%s/%s/%s", innconf->patharticles,
                  priv.topde->d_name, priv.secde->d_name, priv.terde->d_name);
-        if ((priv.curtoc = CAFReadTOC(path, &priv.curheader)) == NULL)
+        if ((priv.curtoc = CAFReadTOC(path, &priv.curheader)) == nullptr)
             continue;
         priv.curartnum = 0;
     }
     snprintf(path, length, "%s/%s/%s/%s", innconf->patharticles,
              priv.topde->d_name, priv.secde->d_name, priv.terde->d_name);
     art = OpenArticle(path, priv.curartnum, amount);
-    if (art == (ARTHANDLE *) NULL) {
+    if (art == (ARTHANDLE *) nullptr) {
         art = xmalloc(sizeof(ARTHANDLE));
         art->type = TOKEN_TIMECAF;
-        art->data = NULL;
+        art->data = nullptr;
         art->len = 0;
         art->private_ = xcalloc(1, sizeof(PRIV_TIMECAF));
-    } else if (art->private_ == NULL) {
+    } else if (art->private_ == nullptr) {
         art->private_ = xcalloc(1, sizeof(PRIV_TIMECAF));
     }
     newpriv = (PRIV_TIMECAF *) art->private_;
@@ -968,7 +969,7 @@ timecaf_ctl(PROBETYPE type, TOKEN *token UNUSED, void *value)
 
     switch (type) {
     case SMARTNGNUM:
-        if ((ann = (struct artngnum *) value) == NULL)
+        if ((ann = (struct artngnum *) value) == nullptr)
             return false;
         /* make SMprobe() call timecaf_retrieve() */
         ann->artnum = 0;

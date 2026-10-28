@@ -37,10 +37,10 @@ typedef struct {
 
 static METHOD_DATA method_data[NUM_STORAGE_METHODS];
 
-static STORAGE_SUB *subscriptions = NULL;
+static STORAGE_SUB *subscriptions = nullptr;
 static unsigned int typetoindex[256];
 int SMerrno;
-char *SMerrorstr = NULL;
+char *SMerrorstr = nullptr;
 static bool Initialized = false;
 static bool filteredKeyUsed = false;
 bool SMopenmode = false;
@@ -156,11 +156,11 @@ GetXref(ARTHANDLE *art)
     bool Nocr = false;
 
     p = wire_findheader(art->data, art->len, "xref", true);
-    if (p == NULL)
-        return NULL;
+    if (p == nullptr)
+        return nullptr;
     q = p;
-    for (p1 = NULL; p < art->data + art->len; p++) {
-        if (p1 != (char *) NULL && *p1 == '\r' && *p == '\n') {
+    for (p1 = nullptr; p < art->data + art->len; p++) {
+        if (p1 != (char *) nullptr && *p1 == '\r' && *p == '\n') {
             Nocr = false;
             break;
         }
@@ -171,20 +171,20 @@ GetXref(ARTHANDLE *art)
         p1 = p;
     }
     if (p >= art->data + art->len)
-        return NULL;
+        return nullptr;
     if (!Nocr)
         p = p1;
     /* skip pathhost */
     for (; (*q == ' ') && (q < p); q++)
         ;
     if (q == p)
-        return NULL;
-    if ((q = static_cast<const char *>(memchr(q, ' ', p - q))) == NULL)
-        return NULL;
+        return nullptr;
+    if ((q = static_cast<const char *>(memchr(q, ' ', p - q))) == nullptr)
+        return nullptr;
     for (q++; (*q == ' ') && (q < p); q++)
         ;
     if (q == p)
-        return NULL;
+        return nullptr;
     buff = xmalloc(p - q + 1);
     memcpy(buff, q, p - q);
     buff[p - q] = '\0';
@@ -200,25 +200,25 @@ GetGroups(char *Xref)
 {
     char *p;
 
-    if ((p = strchr(Xref, ':')) == NULL)
+    if ((p = strchr(Xref, ':')) == nullptr)
         return 0;
     *p++ = '\0';
-    return strtoul(p, NULL, 10);
+    return strtoul(p, nullptr, 10);
 }
 
 STORAGE_SUB *
 SMGetConfig(STORAGETYPE type, STORAGE_SUB *sub)
 {
-    if (sub == (STORAGE_SUB *) NULL)
+    if (sub == (STORAGE_SUB *) nullptr)
         sub = subscriptions;
     else
         sub = sub->next;
-    for (; sub != NULL; sub = sub->next) {
+    for (; sub != nullptr; sub = sub->next) {
         if (sub->type == type) {
             return sub;
         }
     }
-    return (STORAGE_SUB *) NULL;
+    return (STORAGE_SUB *) nullptr;
 }
 
 static time_t
@@ -283,7 +283,7 @@ static CONFTOKEN smtoks[] = {
     {SMexactmatch, (char *) "exactmatch:"},
     {SMfiltered,   (char *) "filtered:"  },
     {SMpath,       (char *) "path:"      },
-    {0,            NULL                  }
+    {0,            nullptr               }
 };
 
 /* Open the config file and parse it, generating the policy data */
@@ -297,24 +297,24 @@ SMreadconfig(void)
     char *p;
     char *q;
     char *path;
-    char *method = NULL;
-    char *pattern = NULL;
+    char *method = nullptr;
+    char *pattern = nullptr;
     size_t minsize = 0;
     size_t maxsize = 0;
     time_t minexpire = 0;
     time_t maxexpire = 0;
     int storageclass = 0;
-    STORAGE_SUB *sub = NULL;
-    STORAGE_SUB *prev = NULL;
-    char *options = 0;
+    STORAGE_SUB *sub = nullptr;
+    STORAGE_SUB *prev = nullptr;
+    char *options = nullptr;
     int inbrace;
     bool exactmatch = false;
     bool filtered = false;
-    char *path_pattern = NULL;
+    char *path_pattern = nullptr;
 
     /* if innconf isn't already read in, do so. */
-    if (innconf == NULL) {
-        if (!innconf_read(NULL)) {
+    if (innconf == nullptr) {
+        if (!innconf_read(nullptr)) {
             SMseterror(SMERR_INTERNAL, "ReadInnConf() failed");
             return false;
         }
@@ -326,8 +326,8 @@ SMreadconfig(void)
     }
     path = concatpath(innconf->pathetc, INN_PATH_STORAGECTL);
     f = CONFfopen(path);
-    if (f == NULL) {
-        SMseterror(SMERR_UNDEFINED, NULL);
+    if (f == nullptr) {
+        SMseterror(SMERR_UNDEFINED, nullptr);
         syswarn("SM: cant open %s", path);
         free(path);
         return false;
@@ -336,20 +336,20 @@ SMreadconfig(void)
 
     filteredKeyUsed = false;
     inbrace = 0;
-    while ((tok = CONFgettoken(smtoks, f)) != NULL) {
+    while ((tok = CONFgettoken(smtoks, f)) != nullptr) {
         if (!inbrace) {
             if (tok->type != SMmethod) {
                 SMseterror(SMERR_CONFIG, "Expected 'method' keyword");
                 warn("SM: expected 'method' keyword, line %d", f->lineno);
                 return false;
             }
-            if ((tok = CONFgettoken(0, f)) == NULL) {
+            if ((tok = CONFgettoken(nullptr, f)) == nullptr) {
                 SMseterror(SMERR_CONFIG, "Expected method name");
                 warn("SM: expected method name, line %d", f->lineno);
                 return false;
             }
             method = xstrdup(tok->name);
-            if ((tok = CONFgettoken(smtoks, f)) == NULL
+            if ((tok = CONFgettoken(smtoks, f)) == nullptr
                 || tok->type != SMlbrace) {
                 SMseterror(SMERR_CONFIG, "Expected '{'");
                 warn("SM: Expected '{', line %d", f->lineno);
@@ -360,19 +360,19 @@ SMreadconfig(void)
             minsize = 0;
             maxsize = 0; /* zero means no limit */
             storageclass = 0;
-            pattern = NULL;
-            options = NULL;
+            pattern = nullptr;
+            options = nullptr;
             minexpire = 0;
             maxexpire = 0;
             exactmatch = false;
             filtered = false;
-            path_pattern = NULL;
+            path_pattern = nullptr;
         } else {
             type = tok->type;
             if (type == SMrbrace)
                 inbrace = 0;
             else {
-                if ((tok = CONFgettoken(0, f)) == NULL) {
+                if ((tok = CONFgettoken(nullptr, f)) == nullptr) {
                     SMseterror(SMERR_CONFIG, "Keyword with no value");
                     warn("SM: keyword with no value, line %d", f->lineno);
                     return false;
@@ -385,10 +385,10 @@ SMreadconfig(void)
                     pattern = xstrdup(tok->name);
                     break;
                 case SMsize:
-                    minsize = strtoul(p, NULL, 10);
-                    if ((p = strchr(p, ',')) != NULL) {
+                    minsize = strtoul(p, nullptr, 10);
+                    if ((p = strchr(p, ',')) != nullptr) {
                         p++;
-                        maxsize = strtoul(p, NULL, 10);
+                        maxsize = strtoul(p, nullptr, 10);
                     }
                     break;
                 case SMclass:
@@ -426,7 +426,7 @@ SMreadconfig(void)
                     }
                     break;
                 case SMpath:
-                    if (path_pattern != NULL)
+                    if (path_pattern != nullptr)
                         free(path_pattern);
                     path_pattern = xstrdup(tok->name);
                     /* Transform "!" to "|". */
@@ -484,14 +484,14 @@ SMreadconfig(void)
             sub->path_pattern = path_pattern;
 
             free(method);
-            method = 0;
+            method = nullptr;
 
             if (!prev)
                 subscriptions = sub;
             if (prev)
                 prev->next = sub;
             prev = sub;
-            sub->next = NULL;
+            sub->next = nullptr;
         }
     }
 
@@ -573,7 +573,7 @@ SMinit(void)
     if (!once && atexit(SMshutdown) < 0) {
         SMshutdown();
         Initialized = false;
-        SMseterror(SMERR_UNDEFINED, NULL);
+        SMseterror(SMERR_UNDEFINED, nullptr);
         return false;
     }
     once = true;
@@ -638,9 +638,9 @@ MatchGroups(const char *g, int len, const char *pattern, bool exactmatch)
     *q = '\0';
 
     group = strtok(groups, " ,");
-    while (group != NULL) {
+    while (group != nullptr) {
         q = strchr(group, ':');
-        if (q != NULL)
+        if (q != nullptr)
             *q = '\0';
         matched = uwildmat_poison(group, pattern);
         if (matched == UWILDMAT_POISON
@@ -650,7 +650,7 @@ MatchGroups(const char *g, int len, const char *pattern, bool exactmatch)
         }
         if (matched == UWILDMAT_MATCH)
             wanted = true;
-        group = strtok(NULL, " ,");
+        group = strtok(nullptr, " ,");
     }
 
     free(groups);
@@ -683,23 +683,23 @@ SMgetsub(const ARTHANDLE article)
     STORAGE_SUB *sub;
 
     if (article.len == 0) {
-        SMseterror(SMERR_BADHANDLE, NULL);
-        return NULL;
+        SMseterror(SMERR_BADHANDLE, nullptr);
+        return nullptr;
     }
 
-    if (article.groups == NULL) {
+    if (article.groups == nullptr) {
         SMseterror(SMERR_NOMATCH, "empty Newsgroups header field");
-        return NULL;
+        return nullptr;
     }
 
-    for (sub = subscriptions; sub != NULL; sub = sub->next) {
+    for (sub = subscriptions; sub != nullptr; sub = sub->next) {
         if (!(method_data[typetoindex[sub->type]].initialized == INIT_FAIL)
             && (article.len >= sub->minsize)
             && (!sub->maxsize || (article.len <= sub->maxsize))
             && (!sub->minexpire || article.expires >= sub->minexpire)
             && (!sub->maxexpire || (article.expires <= sub->maxexpire))
             && (!filteredKeyUsed || article.filtered == sub->filtered)
-            && (sub->path_pattern == NULL
+            && (sub->path_pattern == nullptr
                 || MatchPath(article.path, article.pathlen, sub->path_pattern))
             && MatchGroups(article.groups, article.groupslen, sub->pattern,
                            sub->exactmatch)) {
@@ -709,7 +709,7 @@ SMgetsub(const ARTHANDLE article)
     }
     errno = 0;
     SMseterror(SMERR_NOMATCH, "no matching entry in storage.conf");
-    return NULL;
+    return nullptr;
 }
 
 TOKEN
@@ -725,7 +725,7 @@ SMstore(const ARTHANDLE article)
         return result;
     }
     result.type = TOKEN_EMPTY;
-    if ((sub = SMgetsub(article)) == NULL) {
+    if ((sub = SMgetsub(article)) == nullptr) {
         return result;
     }
     return storage_methods[typetoindex[sub->type]].store(article,
@@ -738,16 +738,16 @@ SMretrieve(const TOKEN token, const RETRTYPE amount)
     ARTHANDLE *art;
 
     if (method_data[typetoindex[token.type]].initialized == INIT_FAIL) {
-        SMseterror(SMERR_UNINIT, NULL);
-        return NULL;
+        SMseterror(SMERR_UNINIT, nullptr);
+        return nullptr;
     }
     if (method_data[typetoindex[token.type]].initialized == INIT_NO
         && !InitMethod(typetoindex[token.type])) {
         warn("SM: could not find token type or method was not initialized"
              " (%d)",
              token.type);
-        SMseterror(SMERR_UNINIT, NULL);
-        return NULL;
+        SMseterror(SMERR_UNINIT, nullptr);
+        return nullptr;
     }
     art = storage_methods[typetoindex[token.type]].retrieve(token, amount);
     if (art)
@@ -762,29 +762,29 @@ SMnext(ARTHANDLE *article, const RETRTYPE amount)
     int start;
     ARTHANDLE *newart;
 
-    if (article == NULL)
+    if (article == nullptr)
         start = 0;
     else
         start = article->nextmethod;
 
     if (method_data[start].initialized == INIT_FAIL) {
-        SMseterror(SMERR_UNINIT, NULL);
-        return NULL;
+        SMseterror(SMERR_UNINIT, nullptr);
+        return nullptr;
     }
     if (method_data[start].initialized == INIT_NO
         && method_data[start].configured && !InitMethod(start)) {
-        SMseterror(SMERR_UNINIT, NULL);
-        return NULL;
+        SMseterror(SMERR_UNINIT, nullptr);
+        return nullptr;
     }
 
-    for (i = start, newart = NULL; i < NUM_STORAGE_METHODS; i++) {
+    for (i = start, newart = nullptr; i < NUM_STORAGE_METHODS; i++) {
         if (method_data[i].configured
             && (newart = storage_methods[i].next(article, amount))
-                   != (ARTHANDLE *) NULL) {
+                   != (ARTHANDLE *) nullptr) {
             newart->nextmethod = i;
             break;
         } else
-            article = NULL;
+            article = nullptr;
     }
 
     return newart;
@@ -812,12 +812,12 @@ SMcancel(TOKEN token)
         return false;
     }
     if (method_data[typetoindex[token.type]].initialized == INIT_FAIL) {
-        SMseterror(SMERR_UNINIT, NULL);
+        SMseterror(SMERR_UNINIT, nullptr);
         return false;
     }
     if (method_data[typetoindex[token.type]].initialized == INIT_NO
         && !InitMethod(typetoindex[token.type])) {
-        SMseterror(SMERR_UNINIT, NULL);
+        SMseterror(SMERR_UNINIT, nullptr);
         warn("SM: can't cancel article with uninitialized method");
         return false;
     }
@@ -909,7 +909,7 @@ SMcanceltombstone(TOKEN token)
         if (errno == EAGAIN || errno == EACCES) {
             struct timespec ts = {0, 1000000L}; /* 1ms */
             close(fd);
-            nanosleep(&ts, NULL);
+            nanosleep(&ts, nullptr);
             fd = open(path, O_RDWR | O_CREAT | O_APPEND, 0664);
             if (fd < 0) {
                 syswarn("can't reopen %s for tombstone append", path);
@@ -932,7 +932,7 @@ SMcanceltombstone(TOKEN token)
         }
     }
     fp = fdopen(fd, "a");
-    if (fp == NULL) {
+    if (fp == nullptr) {
         syswarn("can't fdopen %s", path);
         inn_lock_file(fd, INN_LOCK_UNLOCK, true);
         close(fd);
@@ -968,18 +968,18 @@ SMprobe(PROBETYPE type, TOKEN *token, void *value)
         return (method_data[typetoindex[token->type]].selfexpire);
     case SMARTNGNUM:
         if (method_data[typetoindex[token->type]].initialized == INIT_FAIL) {
-            SMseterror(SMERR_UNINIT, NULL);
+            SMseterror(SMERR_UNINIT, nullptr);
             return false;
         }
         if (method_data[typetoindex[token->type]].initialized == INIT_NO
             && !InitMethod(typetoindex[token->type])) {
-            SMseterror(SMERR_UNINIT, NULL);
+            SMseterror(SMERR_UNINIT, nullptr);
             warn("SM: can't probe article with uninitialized method");
             return false;
         }
-        if ((ann = (struct artngnum *) value) == NULL)
+        if ((ann = (struct artngnum *) value) == nullptr)
             return false;
-        ann->groupname = NULL;
+        ann->groupname = nullptr;
         if (storage_methods[typetoindex[token->type]].ctl(type, token,
                                                           value)) {
             if (ann->artnum != 0) {
@@ -988,21 +988,21 @@ SMprobe(PROBETYPE type, TOKEN *token, void *value)
             } else {
                 art = storage_methods[typetoindex[token->type]].retrieve(
                     *token, RETR_HEAD);
-                if (art == NULL) {
-                    if (ann->groupname != NULL)
+                if (art == nullptr) {
+                    if (ann->groupname != nullptr)
                         free(ann->groupname);
                     storage_methods[typetoindex[token->type]].freearticle(art);
                     return false;
                 }
-                if ((ann->groupname = GetXref(art)) == NULL) {
-                    if (ann->groupname != NULL)
+                if ((ann->groupname = GetXref(art)) == nullptr) {
+                    if (ann->groupname != nullptr)
                         free(ann->groupname);
                     storage_methods[typetoindex[token->type]].freearticle(art);
                     return false;
                 }
                 storage_methods[typetoindex[token->type]].freearticle(art);
                 if ((ann->artnum = GetGroups(ann->groupname)) == 0) {
-                    if (ann->groupname != NULL)
+                    if (ann->groupname != nullptr)
                         free(ann->groupname);
                     return false;
                 }
@@ -1039,7 +1039,7 @@ SMprintfiles(FILE *file, TOKEN token, char **xref, int ngroups)
         return;
     if (method_data[typetoindex[token.type]].initialized == INIT_NO
         && !InitMethod(typetoindex[token.type])) {
-        SMseterror(SMERR_UNINIT, NULL);
+        SMseterror(SMERR_UNINIT, nullptr);
         warn("SM: can't print files for article with uninitialized method");
         return;
     }
@@ -1084,14 +1084,14 @@ SMshutdown(void)
 void
 SMseterror(int errornum, const char *error)
 {
-    if (SMerrorstr != NULL)
+    if (SMerrorstr != nullptr)
         free(SMerrorstr);
 
     if (errornum == SMERR_UNDEFINED && errno == ENOENT)
         errornum = SMERR_NOENT;
     SMerrno = errornum;
 
-    if (error == NULL) {
+    if (error == nullptr) {
         switch (SMerrno) {
         case SMERR_UNDEFINED:
             error = strerror(errno);

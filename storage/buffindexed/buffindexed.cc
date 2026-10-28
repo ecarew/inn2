@@ -259,11 +259,11 @@ typedef enum {
 
 static long pagesize = 0;
 static long hdr_pagesize = OV_HDR_MIN_PAGESIZE;
-static OVBUFF *ovbufftab = NULL;
-static OVBUFF *ovbuffnext = NULL;
+static OVBUFF *ovbufftab = nullptr;
+static OVBUFF *ovbuffnext = nullptr;
 static int GROUPfd;
-static GROUPHEADER *GROUPheader = NULL;
-static GROUPENTRY *GROUPentries = NULL;
+static GROUPHEADER *GROUPheader = nullptr;
+static GROUPENTRY *GROUPentries = nullptr;
 static int GROUPcount = 0;
 static size_t GROUPmapsize = 0;
 static GROUPLOC GROUPemptyloc = {-1};
@@ -338,15 +338,15 @@ ovparse_part_line(char *l)
     OVBUFF *ovbuff, *tmp = ovbufftab;
 
     /* ovbuff partition name */
-    if ((p = strchr(l, ':')) == NULL || p - l <= 0
+    if ((p = strchr(l, ':')) == nullptr || p - l <= 0
         || p - l > OVMAXCYCBUFFNAME - 1) {
         warn("buffindexed: bad index in line '%s'", l);
         return false;
     }
     *p = '\0';
     ovbuff = xmalloc(sizeof(OVBUFF));
-    ovbuff->index = strtoul(l, NULL, 10);
-    for (; tmp != (OVBUFF *) NULL; tmp = tmp->next) {
+    ovbuff->index = strtoul(l, nullptr, 10);
+    for (; tmp != (OVBUFF *) nullptr; tmp = tmp->next) {
         if (tmp->index == ovbuff->index) {
             warn("buffindexed: duplicate index in line '%s'", l);
             free(ovbuff);
@@ -356,7 +356,7 @@ ovparse_part_line(char *l)
     l = ++p;
 
     /* Path to ovbuff partition */
-    if ((p = strchr(l, ':')) == NULL || p - l <= 0
+    if ((p = strchr(l, ':')) == nullptr || p - l <= 0
         || p - l > OVBUFFPASIZ - 1) {
         warn("buffindexed: bad pathname in line '%s'", l);
         free(ovbuff);
@@ -374,7 +374,7 @@ ovparse_part_line(char *l)
     l = ++p;
 
     /* Length/size of symbolic partition in KB */
-    len = strtoul(l, NULL, 10) * (off_t) 1024;
+    len = strtoul(l, nullptr, 10) * (off_t) 1024;
     /*
     ** The minimum article offset will be the size of the bitfield itself,
     ** len / (blocksize * 8), plus however many additional blocks the
@@ -400,15 +400,15 @@ ovparse_part_line(char *l)
     }
     ovbuff->len = len;
     ovbuff->fd = -1;
-    ovbuff->next = (OVBUFF *) NULL;
+    ovbuff->next = (OVBUFF *) nullptr;
     ovbuff->dirty = 0;
-    ovbuff->bitfield = NULL;
+    ovbuff->bitfield = nullptr;
     ovbuff->nextchunk = 1;
 
-    if (ovbufftab == (OVBUFF *) NULL)
+    if (ovbufftab == (OVBUFF *) nullptr)
         ovbufftab = ovbuff;
     else {
-        for (tmp = ovbufftab; tmp->next != (OVBUFF *) NULL; tmp = tmp->next)
+        for (tmp = ovbufftab; tmp->next != (OVBUFF *) nullptr; tmp = tmp->next)
             ;
         tmp->next = ovbuff;
     }
@@ -422,13 +422,13 @@ ovparse_part_line(char *l)
 static bool
 ovbuffread_config(void)
 {
-    char *path, *config, *from, *to, **ctab = (char **) NULL;
+    char *path, *config, *from, *to, **ctab = (char **) nullptr;
     int ctab_free = 0; /* Index to next free slot in ctab */
     int ctab_i;
 
     path = concatpath(innconf->pathetc, _PATH_OVBUFFCONFIG);
-    config = ReadInFile(path, NULL);
-    if (config == NULL) {
+    config = ReadInFile(path, nullptr);
+    if (config == nullptr) {
         warn("buffindexed: cannot read %s", path);
         free(config);
         free(path);
@@ -479,7 +479,7 @@ ovbuffread_config(void)
     }
     free(config);
     free(ctab);
-    if (ovbufftab == (OVBUFF *) NULL) {
+    if (ovbufftab == (OVBUFF *) nullptr) {
         warn("buffindexed: no buffindexed defined");
         return false;
     }
@@ -577,7 +577,7 @@ ovflushhead(OVBUFF *ovbuff)
     }
 
     memset(&rpx, 0, sizeof(OVBUFFHEAD));
-    ovbuff->updated = time(NULL);
+    ovbuff->updated = time(nullptr);
     /* Don't use sprintf() or strlcat() directly...
      * The terminating '\0' causes grief. */
 #if __GNUC__ > 7
@@ -649,7 +649,7 @@ ovbuffinit_disks(void)
     ** Discover the state of our ovbuffs.  If any of them are in icky shape,
     ** duck shamelessly & return false.
     */
-    for (; ovbuff != (OVBUFF *) NULL; ovbuff = ovbuff->next) {
+    for (; ovbuff != (OVBUFF *) nullptr; ovbuff = ovbuff->next) {
         if (ovbuff->fd < 0) {
             if ((fd = open(ovbuff->path,
                            (ovbuffmode & OV_WRITE) ? O_RDWR : O_RDONLY))
@@ -876,11 +876,11 @@ static OVBUFF *
 getovbuff(OV ov)
 {
     OVBUFF *ovbuff = ovbufftab;
-    for (; ovbuff != NULL; ovbuff = ovbuff->next) {
+    for (; ovbuff != nullptr; ovbuff = ovbuff->next) {
         if (ovbuff->index == (unsigned int) ov.index)
             return ovbuff;
     }
-    return NULL;
+    return nullptr;
 }
 
 static bool
@@ -919,7 +919,7 @@ ovblocknew(void)
     struct ov_trace_array *trace;
 #endif /* OV_DEBUG */
 
-    if (ovbuffnext == NULL)
+    if (ovbuffnext == nullptr)
         ovbuffnext = ovbufftab;
 
     /*
@@ -928,7 +928,7 @@ ovblocknew(void)
      */
 
 retry:
-    for (ovbuff = ovbuffnext; ovbuff != (OVBUFF *) NULL;
+    for (ovbuff = ovbuffnext; ovbuff != (OVBUFF *) nullptr;
          ovbuff = ovbuff->next) {
         ovlock(ovbuff, INN_LOCK_WRITE);
         ovreadhead(ovbuff);
@@ -944,7 +944,7 @@ retry:
         }
         break;
     }
-    if (ovbuff == NULL) {
+    if (ovbuff == nullptr) {
         for (ovbuff = ovbufftab; ovbuff != ovbuffnext; ovbuff = ovbuff->next) {
             ovlock(ovbuff, INN_LOCK_WRITE);
             ovreadhead(ovbuff);
@@ -1008,7 +1008,7 @@ retry:
     ovflushhead(ovbuff);
     ovlock(ovbuff, INN_LOCK_UNLOCK);
     ovbuffnext = ovbuff->next;
-    if (ovbuffnext == NULL)
+    if (ovbuffnext == nullptr)
         ovbuffnext = ovbufftab;
 
     if (!done)
@@ -1034,7 +1034,7 @@ ovblockfree(OV ov)
 
     if (ov.index == NULLINDEX)
         return;
-    if ((ovbuff = getovbuff(ov)) == NULL)
+    if ((ovbuff = getovbuff(ov)) == nullptr)
         return;
     ovlock(ovbuff, INN_LOCK_WRITE);
 #ifdef OV_DEBUG
@@ -1181,11 +1181,11 @@ buffindexed_open(int mode)
         }
         GROUPmapsize = (size_t) groupsize;
         GROUPheader = static_cast<GROUPHEADER *>(
-            mmap(0, GROUPmapsize, flag, MAP_SHARED, GROUPfd, 0));
+            mmap(nullptr, GROUPmapsize, flag, MAP_SHARED, GROUPfd, 0));
         if (GROUPheader == MAP_FAILED) {
             syswarn("buffindexed: Could not mmap %s in buffindexed_open",
                     groupfn);
-            GROUPheader = NULL;
+            GROUPheader = nullptr;
             GROUPmapsize = 0;
             GROUPlockhash(INN_LOCK_UNLOCK);
             free(groupfn);
@@ -1222,17 +1222,17 @@ GROUPfind(const char *group, bool Ignoredeleted, bool *failed)
 
     grouphash = Hash(group, strlen(group));
     memcpy(&i, &grouphash, sizeof(i));
-    if (failed != NULL)
+    if (failed != nullptr)
         *failed = false;
-    if (GROUPheader == NULL || GROUPentries == NULL) {
-        if (failed != NULL)
+    if (GROUPheader == nullptr || GROUPentries == nullptr) {
+        if (failed != nullptr)
             *failed = true;
         return GROUPemptyloc;
     }
 
     loc = GROUPheader->hash[i % GROUPHEADERHASHSIZE];
     if (!GROUPremapifneeded(loc, false)) {
-        if (failed != NULL)
+        if (failed != nullptr)
             *failed = true;
         return GROUPemptyloc;
     }
@@ -1240,19 +1240,19 @@ GROUPfind(const char *group, bool Ignoredeleted, bool *failed)
 
     while (!GROUPLOCempty(loc)) {
         if (loc.recno >= GROUPcount && !GROUPremapifneeded(loc, false)) {
-            if (failed != NULL)
+            if (failed != nullptr)
                 *failed = true;
             return GROUPemptyloc;
         }
         if (loc.recno >= GROUPcount) {
             warn("buffindexed: group index entry %d out of range", loc.recno);
-            if (failed != NULL)
+            if (failed != nullptr)
                 *failed = true;
             return GROUPemptyloc;
         }
         if (steps++ >= GROUPcount) {
             warn("buffindexed: cycle in group index chain");
-            if (failed != NULL)
+            if (failed != nullptr)
                 *failed = true;
             return GROUPemptyloc;
         }
@@ -1273,18 +1273,18 @@ buffindexed_groupstats(const char *group, int *lo, int *hi, int *count,
 {
     GROUPLOC gloc;
 
-    gloc = GROUPfind(group, false, NULL);
+    gloc = GROUPfind(group, false, nullptr);
     if (GROUPLOCempty(gloc)) {
         return false;
     }
     GROUPlock(gloc, INN_LOCK_READ);
-    if (lo != NULL)
+    if (lo != nullptr)
         *lo = GROUPentries[gloc.recno].low;
-    if (hi != NULL)
+    if (hi != nullptr)
         *hi = GROUPentries[gloc.recno].high;
-    if (count != NULL)
+    if (count != nullptr)
         *count = GROUPentries[gloc.recno].count;
-    if (flag != NULL)
+    if (flag != nullptr)
         *flag = GROUPentries[gloc.recno].flag;
     GROUPlock(gloc, INN_LOCK_UNLOCK);
     return true;
@@ -1437,7 +1437,8 @@ GROUPremapifneeded(GROUPLOC loc, bool hash_locked)
     bool locked = false;
     int count;
 
-    if (GROUPheader != NULL && GROUPentries != NULL && loc.recno < GROUPcount)
+    if (GROUPheader != nullptr && GROUPentries != nullptr
+        && loc.recno < GROUPcount)
         return true;
 
     /* GROUPexpand publishes the new file size while holding this lock.  A
@@ -1455,7 +1456,7 @@ GROUPremapifneeded(GROUPLOC loc, bool hash_locked)
         return false;
     }
 
-    if (GROUPheader != NULL && GROUPentries != NULL
+    if (GROUPheader != nullptr && GROUPentries != nullptr
         && (uintmax_t) GROUPmapsize >= (uintmax_t) sb.st_size) {
         if (locked)
             GROUPlockhash(INN_LOCK_UNLOCK);
@@ -1470,7 +1471,7 @@ GROUPremapifneeded(GROUPLOC loc, bool hash_locked)
         return false;
     }
 
-    newheader = static_cast<GROUPHEADER *>(mmap(0, (size_t) groupsize,
+    newheader = static_cast<GROUPHEADER *>(mmap(nullptr, (size_t) groupsize,
                                                 GROUPmappingprot(ovbuffmode),
                                                 MAP_SHARED, GROUPfd, 0));
     if (newheader == MAP_FAILED) {
@@ -1481,7 +1482,7 @@ GROUPremapifneeded(GROUPLOC loc, bool hash_locked)
         return false;
     }
 
-    if (GROUPheader != NULL) {
+    if (GROUPheader != nullptr) {
         if (munmap((void *) GROUPheader, GROUPmapsize) < 0) {
             syswarn("buffindexed: Could not munmap group.index in "
                     "GROUPremapifneeded");
@@ -1531,7 +1532,7 @@ GROUPexpand(int mode)
         syswarn("buffindexed: Could not extend group.index");
         return false;
     }
-    newheader = static_cast<GROUPHEADER *>(mmap(0, (size_t) groupsize,
+    newheader = static_cast<GROUPHEADER *>(mmap(nullptr, (size_t) groupsize,
                                                 GROUPmappingprot(mode),
                                                 MAP_SHARED, GROUPfd, 0));
     if (newheader == MAP_FAILED) {
@@ -1540,11 +1541,11 @@ GROUPexpand(int mode)
            established mapping, keep the harmless zero-filled extension so
            that a reader from an older process cannot be left mapped past EOF.
            A later expansion attempt will initialize the same entries. */
-        if (GROUPheader == NULL && ftruncate(GROUPfd, oldsize) < 0)
+        if (GROUPheader == nullptr && ftruncate(GROUPfd, oldsize) < 0)
             syswarn("buffindexed: Could not undo group.index expansion");
         return false;
     }
-    if (GROUPheader != NULL
+    if (GROUPheader != nullptr
         && munmap((void *) GROUPheader, GROUPmapsize) < 0) {
         syswarn("buffindexed: Could not munmap group.index in GROUPexpand");
         munmap(newheader, (size_t) groupsize);
@@ -1614,7 +1615,7 @@ buffindexed_groupdel(const char *group)
     }
     GROUPlock(gloc, INN_LOCK_WRITE);
     ge = &GROUPentries[gloc.recno];
-    ge->deleted = time(NULL);
+    ge->deleted = time(nullptr);
     HashClear(&ge->hash);
     GROUPlock(gloc, INN_LOCK_UNLOCK);
     return true;
@@ -1670,7 +1671,7 @@ ovsetcurindexblock(GROUPENTRY *ge)
         warn("buffindexed: ovsetcurindexblock could not get new block");
         return false;
     }
-    if ((ovbuff = getovbuff(ov)) == NULL) {
+    if ((ovbuff = getovbuff(ov)) == nullptr) {
         warn("buffindexed: ovsetcurindexblock could not get ovbuff block for"
              " new, %d, %u",
              ov.index, ov.blocknum);
@@ -1690,7 +1691,7 @@ ovsetcurindexblock(GROUPENTRY *ge)
     if (ge->baseindex.index == NULLINDEX) {
         ge->baseindex = ov;
     } else {
-        if ((ovbuff = getovbuff(ge->curindex)) == NULL)
+        if ((ovbuff = getovbuff(ge->curindex)) == nullptr)
             return false;
         if (!ovusedblock(ovbuff, ge->curindex.blocknum, false, false)) {
             warn("buffindexed: block(%u, %u) not occupied (index)",
@@ -1755,7 +1756,7 @@ ovaddrec(GROUPENTRY *ge, ARTNUM artnum, TOKEN token, char *data, int len,
             warn("buffindexed: ovaddrec could not get new block");
             return false;
         }
-        if ((ovbuff = getovbuff(ov)) == NULL) {
+        if ((ovbuff = getovbuff(ov)) == nullptr) {
             warn("buffindexed: ovaddrec could not get ovbuff block for"
                  " new, %d, %u, %lu",
                  ov.index, ov.blocknum, artnum);
@@ -1763,7 +1764,7 @@ ovaddrec(GROUPENTRY *ge, ARTNUM artnum, TOKEN token, char *data, int len,
         }
         ge->curdata = ov;
         ge->curoffset = 0;
-    } else if ((ovbuff = getovbuff(ge->curdata)) == NULL)
+    } else if ((ovbuff = getovbuff(ge->curdata)) == nullptr)
         return false;
     else if (OV_BLOCKSIZE - ge->curoffset < len) {
         /* too short to store data, allocate new block */
@@ -1776,7 +1777,7 @@ ovaddrec(GROUPENTRY *ge, ARTNUM artnum, TOKEN token, char *data, int len,
             warn("buffindexed: ovaddrec could not get new block");
             return false;
         }
-        if ((ovbuff = getovbuff(ov)) == NULL) {
+        if ((ovbuff = getovbuff(ov)) == nullptr) {
             warn("buffindexed: ovaddrec could not get ovbuff block for new, "
                  "%d, %u, %lu",
                  ov.index, ov.blocknum, artnum);
@@ -1825,7 +1826,7 @@ ovaddrec(GROUPENTRY *ge, ARTNUM artnum, TOKEN token, char *data, int len,
             return false;
         }
     }
-    if ((ovbuff = getovbuff(ge->curindex)) == NULL)
+    if ((ovbuff = getovbuff(ge->curindex)) == nullptr)
         return false;
     if (!ovusedblock(ovbuff, ge->curindex.blocknum, false, false)) {
         warn("buffindexed: block(%u, %u) not occupied (index)", ovbuff->index,
@@ -1941,7 +1942,7 @@ freegroupblock(void)
     int i;
     GIBLIST *giblist;
 
-    for (giblist = Giblist; giblist != NULL; giblist = giblist->next) {
+    for (giblist = Giblist; giblist != nullptr; giblist = giblist->next) {
 #ifdef OV_DEBUG
         ovblockfree(giblist->ov, ge);
 #else
@@ -1949,7 +1950,7 @@ freegroupblock(void)
 #endif /* OV_DEBUG */
     }
     for (i = 0; i < GROUPDATAHASHSIZE; i++) {
-        for (gdb = groupdatablock[i]; gdb != NULL; gdb = gdb->next) {
+        for (gdb = groupdatablock[i]; gdb != nullptr; gdb = gdb->next) {
 #ifdef OV_DEBUG
             ovblockfree(gdb->datablk, ge);
 #else
@@ -1967,26 +1968,26 @@ ovgroupunmap(void)
     GIBLIST *giblist, *giblistnext;
 
     for (i = 0; i < GROUPDATAHASHSIZE; i++) {
-        for (gdb = groupdatablock[i]; gdb != NULL; gdb = gdbnext) {
+        for (gdb = groupdatablock[i]; gdb != nullptr; gdb = gdbnext) {
             gdbnext = gdb->next;
             if (gdb->mmapped)
                 munmap(gdb->addr, gdb->len);
             free(gdb);
         }
-        groupdatablock[i] = NULL;
+        groupdatablock[i] = nullptr;
     }
-    for (giblist = Giblist; giblist != NULL; giblist = giblistnext) {
+    for (giblist = Giblist; giblist != nullptr; giblist = giblistnext) {
         giblistnext = giblist->next;
         free(giblist);
     }
-    Giblist = NULL;
-    if (!Cache && (Gib != NULL)) {
+    Giblist = nullptr;
+    if (!Cache && (Gib != nullptr)) {
         free(Gib);
-        Gib = NULL;
-        if (Cachesearch != NULL) {
+        Gib = nullptr;
+        if (Cachesearch != nullptr) {
             free(Cachesearch->group);
             free(Cachesearch);
-            Cachesearch = NULL;
+            Cachesearch = nullptr;
         }
     }
 }
@@ -1999,12 +2000,12 @@ ovgroupunmap_failed(void)
 {
     ovgroupunmap();
     free(Gib);
-    Gib = NULL;
+    Gib = nullptr;
     Gibcount = 0;
-    if (Cachesearch != NULL) {
+    if (Cachesearch != nullptr) {
         free(Cachesearch->group);
         free(Cachesearch);
-        Cachesearch = NULL;
+        Cachesearch = nullptr;
     }
 }
 
@@ -2022,7 +2023,7 @@ searchgdb(OV *ov)
     GROUPDATABLOCK *gdb;
 
     gdb = groupdatablock[(ov->index + ov->blocknum) % GROUPDATAHASHSIZE];
-    for (; gdb != NULL; gdb = gdb->next) {
+    for (; gdb != nullptr; gdb = gdb->next) {
         if (ov->index == gdb->datablk.index
             && ov->blocknum == gdb->datablk.blocknum)
             break;
@@ -2067,7 +2068,7 @@ ovgroupmmap(GROUPENTRY *ge, ARTNUM low, ARTNUM high, bool needov)
     Gib = xmalloc(capacity * sizeof(OVINDEX));
     count = 0;
     while (ov.index != NULLINDEX) {
-        for (giblist = Giblist; giblist != NULL; giblist = giblist->next)
+        for (giblist = Giblist; giblist != nullptr; giblist = giblist->next)
             if (giblist->ov.index == ov.index
                 && giblist->ov.blocknum == ov.blocknum) {
                 warn("buffindexed: loop in overview index blocks");
@@ -2075,7 +2076,7 @@ ovgroupmmap(GROUPENTRY *ge, ARTNUM low, ARTNUM high, bool needov)
                 return false;
             }
         ovbuff = getovbuff(ov);
-        if (ovbuff == NULL || !ovblockvalid(ovbuff, ov.blocknum)) {
+        if (ovbuff == nullptr || !ovblockvalid(ovbuff, ov.blocknum)) {
             warn("buffindexed: invalid index block %d:%u", ov.index,
                  ov.blocknum);
             ovgroupunmap_failed();
@@ -2085,7 +2086,7 @@ ovgroupmmap(GROUPENTRY *ge, ARTNUM low, ARTNUM high, bool needov)
         pagefudge = offset % pagesize;
         mmapoffset = offset - pagefudge;
         len = pagefudge + OV_BLOCKSIZE;
-        if ((addr = mmap(NULL, len, PROT_READ, MAP_SHARED, ovbuff->fd,
+        if ((addr = mmap(nullptr, len, PROT_READ, MAP_SHARED, ovbuff->fd,
                          mmapoffset))
             == MAP_FAILED) {
             syswarn("buffindexed: ovgroupmmap could not mmap index block");
@@ -2144,14 +2145,14 @@ ovgroupmmap(GROUPENTRY *ge, ARTNUM low, ARTNUM high, bool needov)
         ov.index = Gib[i].index;
         ov.blocknum = Gib[i].blocknum;
         gdb = searchgdb(&ov);
-        if (gdb != NULL)
+        if (gdb != nullptr)
             continue;
         ovbuff = getovbuff(ov);
-        if (ovbuff == NULL || !ovblockvalid(ovbuff, ov.blocknum))
+        if (ovbuff == nullptr || !ovblockvalid(ovbuff, ov.blocknum))
             continue;
         gdb = xmalloc(sizeof(GROUPDATABLOCK));
         gdb->datablk = ov;
-        gdb->next = NULL;
+        gdb->next = nullptr;
         gdb->mmapped = false;
         insertgdb(&ov, gdb);
         count++;
@@ -2163,10 +2164,10 @@ ovgroupmmap(GROUPENTRY *ge, ARTNUM low, ARTNUM high, bool needov)
         return true;
     /* Data blocks are being mmapped, not copied. */
     for (i = 0; i < GROUPDATAHASHSIZE; i++) {
-        for (gdb = groupdatablock[i]; gdb != NULL; gdb = gdb->next) {
+        for (gdb = groupdatablock[i]; gdb != nullptr; gdb = gdb->next) {
             ov = gdb->datablk;
             ovbuff = getovbuff(ov);
-            if (ovbuff == NULL || !ovblockvalid(ovbuff, ov.blocknum)) {
+            if (ovbuff == nullptr || !ovblockvalid(ovbuff, ov.blocknum)) {
                 warn("buffindexed: invalid overview data block %d:%u",
                      ov.index, ov.blocknum);
                 ovgroupunmap_failed();
@@ -2176,7 +2177,7 @@ ovgroupmmap(GROUPENTRY *ge, ARTNUM low, ARTNUM high, bool needov)
             pagefudge = offset % pagesize;
             mmapoffset = offset - pagefudge;
             gdb->len = pagefudge + OV_BLOCKSIZE;
-            if ((gdb->addr = mmap(NULL, gdb->len, PROT_READ, MAP_SHARED,
+            if ((gdb->addr = mmap(nullptr, gdb->len, PROT_READ, MAP_SHARED,
                                   ovbuff->fd, mmapoffset))
                 == MAP_FAILED) {
                 syswarn("buffindexed: ovgroupmmap could not mmap data block");
@@ -2197,9 +2198,9 @@ ovopensearch(const char *group, ARTNUM low, ARTNUM high, bool needov)
     GROUPENTRY *ge;
     OVSEARCH *search;
 
-    gloc = GROUPfind(group, false, NULL);
+    gloc = GROUPfind(group, false, nullptr);
     if (GROUPLOCempty(gloc))
-        return NULL;
+        return nullptr;
 
     ge = &GROUPentries[gloc.recno];
     if (low < ge->low)
@@ -2208,7 +2209,7 @@ ovopensearch(const char *group, ARTNUM low, ARTNUM high, bool needov)
         high = ge->high;
 
     if (!ovgroupmmap(ge, low, high, needov)) {
-        return NULL;
+        return nullptr;
     }
 
     search = xmalloc(sizeof(OVSEARCH));
@@ -2229,21 +2230,21 @@ buffindexed_opensearch(const char *group, int low, int high)
     GROUPLOC gloc;
     void *handle;
 
-    if (Gib != NULL) {
+    if (Gib != nullptr) {
         free(Gib);
-        Gib = NULL;
-        if (Cachesearch != NULL) {
+        Gib = nullptr;
+        if (Cachesearch != nullptr) {
             free(Cachesearch->group);
             free(Cachesearch);
-            Cachesearch = NULL;
+            Cachesearch = nullptr;
         }
     }
-    gloc = GROUPfind(group, false, NULL);
+    gloc = GROUPfind(group, false, nullptr);
     if (GROUPLOCempty(gloc)) {
-        return NULL;
+        return nullptr;
     }
     GROUPlock(gloc, INN_LOCK_WRITE);
-    if ((handle = ovopensearch(group, low, high, true)) == NULL)
+    if ((handle = ovopensearch(group, low, high, true)) == nullptr)
         GROUPlock(gloc, INN_LOCK_UNLOCK);
     return (handle);
 }
@@ -2282,7 +2283,7 @@ ovsearch(void *handle, ARTNUM *artnum, char **data, int *len, TOKEN *token,
             srchov.index = Gib[search->cur].index;
             srchov.blocknum = Gib[search->cur].blocknum;
             ovbuff = getovbuff(srchov);
-            if (ovbuff == NULL || !ovblockvalid(ovbuff, srchov.blocknum)
+            if (ovbuff == nullptr || !ovblockvalid(ovbuff, srchov.blocknum)
                 || !ovindexspanvalid(&Gib[search->cur])) {
                 warn("buffindexed: invalid overview entry for article %lu",
                      (unsigned long) Gib[search->cur].artnum);
@@ -2299,7 +2300,7 @@ ovsearch(void *handle, ARTNUM *artnum, char **data, int *len, TOKEN *token,
                 *expires = Gib[search->cur].expires;
             if (data) {
                 gdb = searchgdb(&srchov);
-                if (gdb == NULL) {
+                if (gdb == nullptr) {
                     if (len)
                         *len = 0;
                     search->cur++;
@@ -2321,7 +2322,7 @@ ovsearch(void *handle, ARTNUM *artnum, char **data, int *len, TOKEN *token,
                     if (newblock) {
                         search->gdb.datablk.blocknum = srchov.blocknum;
                         search->gdb.datablk.index = srchov.index;
-                        if (ovbuff == NULL
+                        if (ovbuff == nullptr
                             || !ovblockvalid(ovbuff, srchov.blocknum)) {
                             warn("buffindexed: ovsearch could not get ovbuff"
                                  " block for new, %d, %u",
@@ -2333,7 +2334,7 @@ ovsearch(void *handle, ARTNUM *artnum, char **data, int *len, TOKEN *token,
                         mmapoffset = offset - pagefudge;
                         search->gdb.len = pagefudge + OV_BLOCKSIZE;
                         if ((search->gdb.addr =
-                                 mmap(NULL, search->gdb.len, PROT_READ,
+                                 mmap(nullptr, search->gdb.len, PROT_READ,
                                       MAP_SHARED, ovbuff->fd, mmapoffset))
                             == MAP_FAILED) {
                             syswarn("buffindexed: ovsearch could not mmap "
@@ -2364,7 +2365,7 @@ bool
 buffindexed_search(void *handle, ARTNUM *artnum, char **data, int *len,
                    TOKEN *token, time_t *arrived)
 {
-    return (ovsearch(handle, artnum, data, len, token, arrived, NULL));
+    return (ovsearch(handle, artnum, data, len, token, arrived, nullptr));
 }
 
 static void
@@ -2416,7 +2417,7 @@ gettoken(ARTNUM artnum, TOKEN *token)
 {
     int i, j, offset, limit;
 
-    if (Gib == NULL || Gibcount <= 0)
+    if (Gib == nullptr || Gibcount <= 0)
         return false;
     offset = 0;
     limit = Gibcount;
@@ -2468,24 +2469,24 @@ buffindexed_getartinfo(const char *group, ARTNUM artnum, TOKEN *token)
     void *handle;
     bool retval, grouplocked = false;
 
-    if (Gib != NULL) {
-        if (Cachesearch != NULL && strcmp(Cachesearch->group, group) != 0) {
+    if (Gib != nullptr) {
+        if (Cachesearch != nullptr && strcmp(Cachesearch->group, group) != 0) {
             free(Gib);
-            Gib = NULL;
+            Gib = nullptr;
             free(Cachesearch->group);
             free(Cachesearch);
-            Cachesearch = NULL;
+            Cachesearch = nullptr;
         } else {
             if (gettoken(artnum, token))
                 return true;
             else {
                 /* examine to see if overview index are increased */
-                gloc = GROUPfind(group, false, NULL);
+                gloc = GROUPfind(group, false, nullptr);
                 if (GROUPLOCempty(gloc)) {
                     return false;
                 }
                 GROUPlock(gloc, INN_LOCK_WRITE);
-                if ((Cachesearch != NULL)
+                if ((Cachesearch != nullptr)
                     && (GROUPentries[gloc.recno].count
                         == Cachesearch->count)) {
                     /* no new overview data is stored */
@@ -2494,17 +2495,17 @@ buffindexed_getartinfo(const char *group, ARTNUM artnum, TOKEN *token)
                 } else {
                     grouplocked = true;
                     free(Gib);
-                    Gib = NULL;
-                    if (Cachesearch != NULL) {
+                    Gib = nullptr;
+                    if (Cachesearch != nullptr) {
                         free(Cachesearch->group);
                         free(Cachesearch);
-                        Cachesearch = NULL;
+                        Cachesearch = nullptr;
                     }
                 }
             }
         }
     }
-    gloc = GROUPfind(group, false, NULL);
+    gloc = GROUPfind(group, false, nullptr);
     if (GROUPLOCempty(gloc)) {
         return false;
     }
@@ -2515,7 +2516,8 @@ buffindexed_getartinfo(const char *group, ARTNUM artnum, TOKEN *token)
         GROUPlock(gloc, INN_LOCK_UNLOCK);
         return false;
     }
-    retval = buffindexed_search(handle, NULL, NULL, NULL, token, NULL);
+    retval =
+        buffindexed_search(handle, nullptr, nullptr, nullptr, token, nullptr);
     ovclosesearch(handle, false);
     GROUPlock(gloc, INN_LOCK_UNLOCK);
     return retval;
@@ -2527,7 +2529,7 @@ buffindexed_expiregroup(const char *group, int *lo, struct history *h)
     void *handle;
     GROUPENTRY newge, *ge;
     GROUPLOC gloc, next;
-    char *data = NULL;
+    char *data = nullptr;
     int i;
     int len = 0;
     TOKEN token;
@@ -2538,9 +2540,9 @@ buffindexed_expiregroup(const char *group, int *lo, struct history *h)
     HASH hash;
     time_t arrived = 0;
     time_t expires = 0;
-    OVSEARCH search = {0};
+    OVSEARCH search = {nullptr};
 
-    if (group == NULL) {
+    if (group == nullptr) {
         /* Refresh a mapping that may have been extended by another writer,
            then inspect every slot.  Empty slots have count zero, while -1 in
            the freelist means all slots have been allocated. */
@@ -2566,7 +2568,7 @@ buffindexed_expiregroup(const char *group, int *lo, struct history *h)
             search.lo = ge->low;
             search.cur = 0;
             search.needov = true;
-            while (ovsearch((void *) &search, NULL, &data, &len, &token,
+            while (ovsearch((void *) &search, nullptr, &data, &len, &token,
                             &arrived, &expires)) {
                 if (innconf->groupbaseexpiry)
                     /* assuming "." is not real newsgroup */
@@ -2579,14 +2581,14 @@ buffindexed_expiregroup(const char *group, int *lo, struct history *h)
             freegroupblock();
 #endif
             ovgroupunmap();
-            ge->expired = time(NULL);
+            ge->expired = time(nullptr);
             ge->count = 0;
             ge->baseindex = ge->curindex = ge->curdata = ovnull;
             GROUPlock(gloc, INN_LOCK_UNLOCK);
         }
         return true;
     }
-    gloc = GROUPfind(group, false, NULL);
+    gloc = GROUPfind(group, false, nullptr);
     if (GROUPLOCempty(gloc)) {
         return false;
     }
@@ -2597,9 +2599,9 @@ buffindexed_expiregroup(const char *group, int *lo, struct history *h)
         if (ge->low == 0)
             ge->low = 1;
         ge->high = ge->low - 1;
-        if (lo != NULL)
+        if (lo != nullptr)
             *lo = ge->low;
-        ge->expired = time(NULL);
+        ge->expired = time(nullptr);
         GROUPlock(gloc, INN_LOCK_UNLOCK);
         return true;
     }
@@ -2611,19 +2613,19 @@ buffindexed_expiregroup(const char *group, int *lo, struct history *h)
 
     newge.low = 0;
     setinitialge(&newge, hash, &flag, next, 0, high);
-    if ((handle = ovopensearch(group, low, high, true)) == NULL) {
-        ge->expired = time(NULL);
+    if ((handle = ovopensearch(group, low, high, true)) == nullptr) {
+        ge->expired = time(nullptr);
         GROUPlock(gloc, INN_LOCK_UNLOCK);
         warn("buffindexed: could not open overview for '%s'", group);
         return false;
     }
     while (
         ovsearch(handle, &artnum, &data, &len, &token, &arrived, &expires)) {
-        ah = NULL;
+        ah = nullptr;
         if (len == 0)
             continue;
-        if (!SMprobe(EXPENSIVESTAT, &token, NULL) || OVstatall) {
-            if ((ah = SMretrieve(token, RETR_STAT)) == NULL)
+        if (!SMprobe(EXPENSIVESTAT, &token, nullptr) || OVstatall) {
+            if ((ah = SMretrieve(token, RETR_STAT)) == nullptr)
                 continue;
             SMfreearticle(ah);
         } else {
@@ -2641,7 +2643,7 @@ buffindexed_expiregroup(const char *group, int *lo, struct history *h)
 #endif /* OV_DEBUG */
             /* Old group cannot be freed. */
             ovclosesearch(handle, false);
-            ge->expired = time(NULL);
+            ge->expired = time(nullptr);
             GROUPlock(gloc, INN_LOCK_UNLOCK);
             warn("buffindexed: not enough room to expire overview for group "
                  "'%s'",
@@ -2674,11 +2676,11 @@ buffindexed_expiregroup(const char *group, int *lo, struct history *h)
         newge.high = newge.low - 1;
     }
     *ge = newge;
-    if (lo != NULL) {
+    if (lo != nullptr) {
         *lo = ge->low;
     }
     ovclosesearch(handle, true);
-    ge->expired = time(NULL);
+    ge->expired = time(nullptr);
     GROUPlock(gloc, INN_LOCK_UNLOCK);
     return true;
 }
@@ -2695,7 +2697,7 @@ buffindexed_ctl(OVCTLTYPE type, void *val)
 
     switch (type) {
     case OVSPACE:
-        for (total = used = 0; ovbuff != (OVBUFF *) NULL;
+        for (total = used = 0; ovbuff != (OVBUFF *) nullptr;
              ovbuff = ovbuff->next) {
             ovlock(ovbuff, INN_LOCK_READ);
             ovreadhead(ovbuff);
@@ -2717,7 +2719,7 @@ buffindexed_ctl(OVCTLTYPE type, void *val)
         i = (int *) val;
         *i = true;
         for (j = 0; j < GROUPDATAHASHSIZE; j++) {
-            for (gdb = groupdatablock[j]; gdb != NULL; gdb = gdb->next) {
+            for (gdb = groupdatablock[j]; gdb != nullptr; gdb = gdb->next) {
                 if (gdb->mmapped) {
                     *i = false;
                     return true;
@@ -2731,13 +2733,13 @@ buffindexed_ctl(OVCTLTYPE type, void *val)
     case OVCACHEFREE:
         boolval = (bool *) val;
         *boolval = true;
-        if (Gib != NULL) {
+        if (Gib != nullptr) {
             free(Gib);
-            Gib = NULL;
-            if (Cachesearch != NULL) {
+            Gib = nullptr;
+            if (Cachesearch != nullptr) {
                 free(Cachesearch->group);
                 free(Cachesearch);
-                Cachesearch = NULL;
+                Cachesearch = nullptr;
             }
         }
         return true;
@@ -2750,7 +2752,7 @@ void
 buffindexed_close(void)
 {
     struct stat sb;
-    OVBUFF *ovbuff = NULL;
+    OVBUFF *ovbuff = nullptr;
 #ifdef OV_DEBUG
     FILE *F = NULL;
     pid_t pid;
@@ -2812,13 +2814,13 @@ buffindexed_close(void)
     if (path != NULL)
         free(path);
 #endif /* OV_DEBUG */
-    if (Gib != NULL) {
+    if (Gib != nullptr) {
         free(Gib);
-        Gib = NULL;
-        if (Cachesearch != NULL) {
+        Gib = nullptr;
+        if (Cachesearch != nullptr) {
             free(Cachesearch->group);
             free(Cachesearch);
-            Cachesearch = NULL;
+            Cachesearch = nullptr;
         }
     }
     if (fstat(GROUPfd, &sb) < 0)
@@ -2831,27 +2833,27 @@ buffindexed_close(void)
                     "buffindexed_close");
             return;
         }
-        GROUPheader = NULL;
-        GROUPentries = NULL;
+        GROUPheader = nullptr;
+        GROUPentries = nullptr;
         GROUPmapsize = 0;
     }
 
     /* sync the bit field */
     ovbuff = ovbufftab;
-    for (; ovbuff != (OVBUFF *) NULL; ovbuff = ovbuffnext) {
+    for (; ovbuff != (OVBUFF *) nullptr; ovbuff = ovbuffnext) {
         if (ovbuff->dirty != 0) {
             ovbuff->dirty = OVBUFF_SYNC_COUNT + 1;
             ovflushhead(ovbuff);
         }
         ovbuffnext = ovbuff->next;
-        if (ovbuff->smc != NULL)
+        if (ovbuff->smc != nullptr)
             smcClose(ovbuff->smc);
         if (ovbuff->fd >= 0)
             close(ovbuff->fd);
         free(ovbuff);
     }
-    ovbufftab = NULL;
-    ovbuffnext = NULL;
+    ovbufftab = nullptr;
+    ovbuffnext = nullptr;
 }
 
 #ifdef BUFF_DEBUG

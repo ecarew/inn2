@@ -100,7 +100,7 @@ group_path(const char *group)
         *p++ = '/';
         *p++ = *group;
     }
-    for (gp = strchr(group, '.'); gp != NULL; gp = strchr(gp, '.')) {
+    for (gp = strchr(group, '.'); gp != nullptr; gp = strchr(gp, '.')) {
         gp++;
         if (gp == group + 1)
             continue;
@@ -135,7 +135,7 @@ file_open(const char *base, const char *suffix, bool writable, bool append)
     char *file;
     int flags, fd;
 
-    file = concat(base, ".", suffix, (char *) 0);
+    file = concat(base, ".", suffix, (char *) nullptr);
     flags = writable ? (O_RDWR | O_CREAT) : O_RDONLY;
     if (append)
         flags |= O_APPEND;
@@ -172,7 +172,7 @@ file_open_index(struct group_data *data, const char *suffix)
 {
     struct stat st;
 
-    if (suffix == NULL)
+    if (suffix == nullptr)
         suffix = "IDX";
     if (data->indexfd >= 0)
         close(data->indexfd);
@@ -198,7 +198,7 @@ file_open_index(struct group_data *data, const char *suffix)
 static bool
 file_open_data(struct group_data *data, const char *suffix)
 {
-    if (suffix == NULL)
+    if (suffix == nullptr)
         suffix = "DAT";
     if (data->datafd >= 0)
         close(data->datafd);
@@ -227,8 +227,8 @@ tdx_data_new(const char *group, bool writable)
     data->base = 0;
     data->indexfd = -1;
     data->datafd = -1;
-    data->index = NULL;
-    data->data = NULL;
+    data->index = nullptr;
+    data->data = nullptr;
     data->indexlen = 0;
     data->datalen = 0;
     data->indexinode = 0;
@@ -246,11 +246,11 @@ tdx_data_open_files(struct group_data *data)
 {
     unmap_index(data);
     unmap_data(data);
-    data->index = NULL;
-    data->data = NULL;
-    if (!file_open_index(data, NULL))
+    data->index = nullptr;
+    data->data = nullptr;
+    if (!file_open_index(data, nullptr))
         goto fail;
-    if (!file_open_data(data, NULL))
+    if (!file_open_data(data, nullptr))
         goto fail;
     return true;
 
@@ -281,10 +281,10 @@ map_file(int fd, off_t length, const char *base, const char *suffix)
     if (length < 0 || (uintmax_t) length > SIZE_MAX) {
         errno = EOVERFLOW;
         syswarn("tradindexed: %s.%s is too large", base, suffix);
-        return NULL;
+        return nullptr;
     }
     if (length == 0)
-        return NULL;
+        return nullptr;
     size = (size_t) length;
 
     if (!innconf->tradindexedmmap) {
@@ -292,14 +292,14 @@ map_file(int fd, off_t length, const char *base, const char *suffix)
         if (lseek(fd, 0, SEEK_SET) < 0 || xread(fd, data, length) < 0) {
             syswarn("tradindexed: cannot read data file %s.%s", base, suffix);
             free(data);
-            return NULL;
+            return nullptr;
         }
     } else {
         data = static_cast<char *>(
-            mmap(NULL, size, PROT_READ, MAP_SHARED, fd, 0));
+            mmap(nullptr, size, PROT_READ, MAP_SHARED, fd, 0));
         if (data == MAP_FAILED) {
             syswarn("tradindexed: cannot mmap %s.%s", base, suffix);
-            return NULL;
+            return nullptr;
         }
     }
     return data;
@@ -318,7 +318,7 @@ map_index(struct group_data *data)
     r = fstat(data->indexfd, &st);
     if (r == -1) {
         if (errno == ESTALE) {
-            if (!file_open_index(data, NULL))
+            if (!file_open_index(data, nullptr))
                 return false;
             r = fstat(data->indexfd, &st);
             if (r == -1)
@@ -333,7 +333,7 @@ map_index(struct group_data *data)
     data->indexlen = st.st_size;
     data->index = static_cast<struct index_entry *>(
         map_file(data->indexfd, data->indexlen, data->path, "IDX"));
-    return data->index != NULL || data->indexlen == 0;
+    return data->index != nullptr || data->indexlen == 0;
 }
 
 
@@ -349,7 +349,7 @@ map_data(struct group_data *data)
     r = fstat(data->datafd, &st);
     if (r == -1) {
         if (errno == ESTALE) {
-            if (!file_open_data(data, NULL))
+            if (!file_open_data(data, nullptr))
                 return false;
             r = fstat(data->datafd, &st);
             if (r == -1)
@@ -364,7 +364,7 @@ map_data(struct group_data *data)
     data->datalen = st.st_size;
     data->data = static_cast<char *>(
         map_file(data->datafd, data->datalen, data->path, "DAT"));
-    return data->data != NULL || data->datalen == 0;
+    return data->data != nullptr || data->datalen == 0;
 }
 
 
@@ -376,7 +376,7 @@ map_data(struct group_data *data)
 static void
 unmap_file(void *data, off_t length, const char *base, const char *suffix)
 {
-    if (data == NULL)
+    if (data == nullptr)
         return;
     if (!innconf->tradindexedmmap)
         free(data);
@@ -394,7 +394,7 @@ static void
 unmap_index(struct group_data *data)
 {
     unmap_file(data->index, data->indexlen, data->path, "IDX");
-    data->index = NULL;
+    data->index = nullptr;
 }
 
 
@@ -405,7 +405,7 @@ static void
 unmap_data(struct group_data *data)
 {
     unmap_file(data->data, data->datalen, data->path, "DAT");
-    data->data = NULL;
+    data->data = nullptr;
 }
 
 /*
@@ -457,18 +457,18 @@ tdx_article_entry(struct group_data *data, ARTNUM article, ARTNUM high)
         data->remapoutoforder = true;
     } else if (innconf->nfsreader && stale_index(data))
         unmap_index(data);
-    if (data->index == NULL)
+    if (data->index == nullptr)
         if (!map_index(data))
-            return NULL;
+            return nullptr;
 
     if (article < data->base)
-        return NULL;
+        return nullptr;
     offset = article - data->base;
     if (offset >= data->indexlen / sizeof(struct index_entry))
-        return NULL;
+        return nullptr;
     entry = data->index + offset;
     if (entry->length == 0)
-        return NULL;
+        return nullptr;
     return entry;
 }
 
@@ -485,9 +485,9 @@ tdx_search_open(struct group_data *data, ARTNUM start, ARTNUM end, ARTNUM high)
     struct search *search;
 
     if (end < data->base)
-        return NULL;
+        return nullptr;
     if (end < start)
-        return NULL;
+        return nullptr;
 
     if ((end > data->high && high > data->high) || data->remapoutoforder) {
         data->remapoutoforder = false;
@@ -498,18 +498,18 @@ tdx_search_open(struct group_data *data, ARTNUM start, ARTNUM end, ARTNUM high)
     }
 
     if (start > data->high)
-        return NULL;
+        return nullptr;
 
     if (innconf->nfsreader && stale_index(data))
         unmap_index(data);
-    if (data->index == NULL)
+    if (data->index == nullptr)
         if (!map_index(data))
-            return NULL;
+            return nullptr;
     if (innconf->nfsreader && stale_data(data))
         unmap_data(data);
-    if (data->data == NULL)
+    if (data->data == nullptr)
         if (!map_data(data))
-            return NULL;
+            return nullptr;
 
     search = xmalloc(sizeof(struct search));
     search->limit = end - data->base;
@@ -530,9 +530,9 @@ tdx_search(struct search *search, struct article *artdata)
     struct index_entry *entry;
     size_t count, max;
 
-    if (search == NULL || search->data == NULL)
+    if (search == nullptr || search->data == nullptr)
         return false;
-    if (search->data->index == NULL || search->data->data == NULL)
+    if (search->data->index == nullptr || search->data->data == nullptr)
         return false;
 
     count = search->data->indexlen / sizeof(struct index_entry);
@@ -585,7 +585,7 @@ tdx_search(struct search *search, struct article *artdata)
 void
 tdx_search_close(struct search *search)
 {
-    if (search->data != NULL) {
+    if (search->data != nullptr) {
         search->data->refcount--;
         if (search->data->refcount == 0)
             tdx_data_close(search->data);
@@ -747,7 +747,7 @@ tdx_data_pack_start(struct group_data *data, ARTNUM artnum)
 fail:
     if (fd >= 0)
         close(fd);
-    idxfile = concat(data->path, ".IDX-NEW", (char *) 0);
+    idxfile = concat(data->path, ".IDX-NEW", (char *) nullptr);
     if (unlink(idxfile) < 0)
         syswarn("tradindexed: cannot unlink %s", idxfile);
     free(idxfile);
@@ -767,8 +767,8 @@ tdx_data_pack_finish(struct group_data *data)
 
     if (!data->writable)
         return false;
-    newidx = concat(data->path, ".IDX-NEW", (char *) 0);
-    idx = concat(data->path, ".IDX", (char *) 0);
+    newidx = concat(data->path, ".IDX-NEW", (char *) nullptr);
+    idx = concat(data->path, ".IDX", (char *) nullptr);
     if (rename(newidx, idx) < 0) {
         syswarn("tradindexed: cannot rename %s to %s", newidx, idx);
         unlink(newidx);
@@ -778,7 +778,7 @@ tdx_data_pack_finish(struct group_data *data)
     } else {
         free(newidx);
         free(idx);
-        if (!file_open_index(data, NULL))
+        if (!file_open_index(data, nullptr))
             return false;
         return true;
     }
@@ -808,7 +808,7 @@ tdx_data_rebuild_start(const char *group)
 fail:
     tdx_data_delete(group, "-NEW");
     tdx_data_close(data);
-    return NULL;
+    return nullptr;
 }
 
 
@@ -823,11 +823,11 @@ tdx_data_rebuild_finish(const char *group)
     bool saved = false;
 
     base = group_path(group);
-    idx = concat(base, ".IDX", (char *) 0);
-    newidx = concat(base, ".IDX-NEW", (char *) 0);
-    bakidx = concat(base, ".IDX-BAK", (char *) 0);
-    dat = concat(base, ".DAT", (char *) 0);
-    newdat = concat(base, ".DAT-NEW", (char *) 0);
+    idx = concat(base, ".IDX", (char *) nullptr);
+    newidx = concat(base, ".IDX-NEW", (char *) nullptr);
+    bakidx = concat(base, ".IDX-BAK", (char *) nullptr);
+    dat = concat(base, ".DAT", (char *) nullptr);
+    newdat = concat(base, ".DAT-NEW", (char *) nullptr);
     free(base);
     if (rename(idx, bakidx) < 0) {
         syswarn("tradindexed: cannot rename %s to %s", idx, bakidx);
@@ -877,12 +877,12 @@ tdx_data_expire_start(const char *group, struct group_data *data,
                       struct group_entry *index, struct history *history)
 {
     struct group_data *new_data;
-    struct search *search = NULL;
+    struct search *search = nullptr;
     struct article article;
     ARTNUM high;
 
     new_data = tdx_data_rebuild_start(group);
-    if (new_data == NULL)
+    if (new_data == nullptr)
         return false;
     index->indexinode = new_data->indexinode;
 
@@ -892,7 +892,7 @@ tdx_data_expire_start(const char *group, struct group_data *data,
     new_data->high = high;
     data->refcount++;
     search = tdx_search_open(data, data->base, high, high);
-    if (search == NULL) {
+    if (search == nullptr) {
         data->refcount--;
         goto fail;
     }
@@ -902,9 +902,9 @@ tdx_data_expire_start(const char *group, struct group_data *data,
     while (tdx_search(search, &article)) {
         ARTHANDLE *ah;
 
-        if (!SMprobe(EXPENSIVESTAT, &article.token, NULL) || OVstatall) {
+        if (!SMprobe(EXPENSIVESTAT, &article.token, nullptr) || OVstatall) {
             ah = SMretrieve(article.token, RETR_STAT);
-            if (ah == NULL)
+            if (ah == nullptr)
                 continue;
             SMfreearticle(ah);
         } else {
@@ -934,7 +934,7 @@ tdx_data_expire_start(const char *group, struct group_data *data,
     return true;
 
 fail:
-    if (search != NULL) {
+    if (search != nullptr) {
         tdx_search_close(search);
         data->refcount--;
     }
@@ -973,8 +973,8 @@ tdx_data_delete(const char *group, const char *suffix)
     char *path, *idx, *dat;
 
     path = group_path(group);
-    idx = concat(path, ".IDX", suffix, (char *) 0);
-    dat = concat(path, ".DAT", suffix, (char *) 0);
+    idx = concat(path, ".IDX", suffix, (char *) nullptr);
+    dat = concat(path, ".DAT", suffix, (char *) nullptr);
     if (unlink(idx) < 0 && errno != ENOENT)
         syswarn("tradindexed: cannot unlink %s", idx);
     if (unlink(dat) < 0 && errno != ENOENT)
@@ -1002,7 +1002,7 @@ tdx_data_index_dump(struct group_data *data, FILE *output)
     ARTNUM current;
     struct index_entry *entry, *end;
 
-    if (data->index == NULL)
+    if (data->index == nullptr)
         if (!map_index(data))
             return;
 

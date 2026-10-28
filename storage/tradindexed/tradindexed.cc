@@ -45,10 +45,10 @@ data_cache_open(struct tradindexed *global, const char *group,
     struct group_data *data;
 
     data = tdx_cache_lookup(global->cache, entry->hash);
-    if (data == NULL) {
+    if (data == nullptr) {
         data = tdx_data_open(global->index, group, entry);
-        if (data == NULL)
-            return NULL;
+        if (data == nullptr)
+            return nullptr;
         tdx_cache_insert(global->cache, entry->hash, data);
     }
     return data;
@@ -67,8 +67,8 @@ data_cache_reopen(struct tradindexed *global, const char *group,
 
     tdx_cache_delete(global->cache, entry->hash);
     data = tdx_data_open(global->index, group, entry);
-    if (data == NULL)
-        return NULL;
+    if (data == nullptr)
+        return nullptr;
     tdx_cache_insert(global->cache, entry->hash, data);
     return data;
 }
@@ -82,7 +82,7 @@ tradindexed_open(int mode)
 {
     unsigned long cache_size, fdlimit;
 
-    if (tradindexed != NULL) {
+    if (tradindexed != nullptr) {
         warn("tradindexed: overview method already open");
         return false;
     }
@@ -104,7 +104,7 @@ tradindexed_open(int mode)
     }
     tradindexed->cache = tdx_cache_create(cache_size);
 
-    return (tradindexed->index == NULL) ? false : true;
+    return (tradindexed->index == nullptr) ? false : true;
 }
 
 
@@ -118,20 +118,20 @@ tradindexed_groupstats(const char *group, int *low, int *high, int *count,
 {
     const struct group_entry *entry;
 
-    if (tradindexed == NULL || tradindexed->index == NULL) {
+    if (tradindexed == nullptr || tradindexed->index == nullptr) {
         warn("tradindexed: overview method not initialized");
         return false;
     }
     entry = tdx_index_entry(tradindexed->index, group);
-    if (entry == NULL)
+    if (entry == nullptr)
         return false;
-    if (low != NULL)
+    if (low != nullptr)
         *low = entry->low;
-    if (high != NULL)
+    if (high != nullptr)
         *high = entry->high;
-    if (count != NULL)
+    if (count != nullptr)
         *count = entry->count;
-    if (flag != NULL)
+    if (flag != nullptr)
         *flag = entry->flag;
     return true;
 }
@@ -143,7 +143,7 @@ tradindexed_groupstats(const char *group, int *low, int *high, int *count,
 bool
 tradindexed_groupadd(const char *group, ARTNUM low, ARTNUM high, char *flag)
 {
-    if (tradindexed == NULL || tradindexed->index == NULL) {
+    if (tradindexed == nullptr || tradindexed->index == nullptr) {
         warn("tradindexed: overview method not initialized");
         return false;
     }
@@ -157,7 +157,7 @@ tradindexed_groupadd(const char *group, ARTNUM low, ARTNUM high, char *flag)
 bool
 tradindexed_groupdel(const char *group)
 {
-    if (tradindexed == NULL || tradindexed->index == NULL) {
+    if (tradindexed == nullptr || tradindexed->index == nullptr) {
         warn("tradindexed: overview method not initialized");
         return false;
     }
@@ -178,7 +178,7 @@ tradindexed_add(const char *group, ARTNUM artnum, TOKEN token, char *data,
     struct group_data *group_data;
     struct group_entry *entry;
 
-    if (tradindexed == NULL || tradindexed->index == NULL) {
+    if (tradindexed == nullptr || tradindexed->index == nullptr) {
         warn("tradindexed: overview method not initialized");
         return false;
     }
@@ -186,7 +186,7 @@ tradindexed_add(const char *group, ARTNUM artnum, TOKEN token, char *data,
     /* Get the group index entry and don't do any work if cutoff is set and
        the article number is lower than the low water mark for the group. */
     entry = tdx_index_entry(tradindexed->index, group);
-    if (entry == NULL)
+    if (entry == nullptr)
         return true;
     if (tradindexed->cutoff && entry->low > artnum)
         return true;
@@ -201,7 +201,7 @@ tradindexed_add(const char *group, ARTNUM artnum, TOKEN token, char *data,
 
     /* Open the appropriate data structures, using the cache. */
     group_data = data_cache_open(tradindexed, group, entry);
-    if (group_data == NULL)
+    if (group_data == nullptr)
         return false;
     return tdx_data_add(tradindexed->index, entry, group_data, &article);
 }
@@ -219,19 +219,19 @@ tradindexed_cancel(const char *group, ARTNUM artnum)
     struct group_data *data;
     bool cancelled;
 
-    if (tradindexed == NULL || tradindexed->index == NULL) {
+    if (tradindexed == nullptr || tradindexed->index == nullptr) {
         warn("tradindexed: overview method not initialized");
         return false;
     }
     entry = tdx_index_entry(tradindexed->index, group);
-    if (entry == NULL)
+    if (entry == nullptr)
         return false;
     data = data_cache_open(tradindexed, group, entry);
-    if (data == NULL)
+    if (data == nullptr)
         return false;
     if (artnum > data->high) {
         data = data_cache_reopen(tradindexed, group, entry);
-        if (data == NULL)
+        if (data == nullptr)
             return false;
     }
     cancelled = tdx_data_cancel(data, artnum);
@@ -239,7 +239,7 @@ tradindexed_cancel(const char *group, ARTNUM artnum)
         /* Reopen the data files to make the data inaccessible (it otherwise
          * still shows up on some systems like OpenBSD). */
         data = data_cache_reopen(tradindexed, group, entry);
-        if (data == NULL)
+        if (data == nullptr)
             return false;
     }
     return cancelled;
@@ -256,21 +256,21 @@ tradindexed_opensearch(const char *group, int low, int high)
     struct group_entry *entry;
     struct group_data *data;
 
-    if (tradindexed == NULL || tradindexed->index == NULL) {
+    if (tradindexed == nullptr || tradindexed->index == nullptr) {
         warn("tradindexed: overview method not initialized");
-        return NULL;
+        return nullptr;
     }
     entry = tdx_index_entry(tradindexed->index, group);
-    if (entry == NULL)
-        return NULL;
+    if (entry == nullptr)
+        return nullptr;
     data = data_cache_open(tradindexed, group, entry);
-    if (data == NULL)
-        return NULL;
+    if (data == nullptr)
+        return nullptr;
     if (entry->base != data->base)
         if (data->base > (ARTNUM) low && entry->base < data->base) {
             data = data_cache_reopen(tradindexed, group, entry);
-            if (data == NULL)
-                return NULL;
+            if (data == nullptr)
+                return nullptr;
         }
     return tdx_search_open(data, low, high, entry->high);
 }
@@ -286,21 +286,21 @@ tradindexed_search(void *handle, ARTNUM *artnum, char **data, int *length,
 {
     struct article article;
 
-    if (tradindexed == NULL || tradindexed->index == NULL) {
+    if (tradindexed == nullptr || tradindexed->index == nullptr) {
         warn("tradindexed: overview method not initialized");
         return false;
     }
     if (!tdx_search(static_cast<struct search *>(handle), &article))
         return false;
-    if (artnum != NULL)
+    if (artnum != nullptr)
         *artnum = article.number;
-    if (data != NULL)
+    if (data != nullptr)
         *data = (char *) article.overview;
-    if (length != NULL)
+    if (length != nullptr)
         *length = article.overlen;
-    if (token != NULL)
+    if (token != nullptr)
         *token = article.token;
-    if (arrived != NULL)
+    if (arrived != nullptr)
         *arrived = article.arrived;
     return true;
 }
@@ -327,26 +327,26 @@ tradindexed_getartinfo(const char *group, ARTNUM artnum, TOKEN *token)
     struct group_data *data;
     const struct index_entry *index_entry;
 
-    if (tradindexed == NULL || tradindexed->index == NULL) {
+    if (tradindexed == nullptr || tradindexed->index == nullptr) {
         warn("tradindexed: overview method not initialized");
         return false;
     }
     entry = tdx_index_entry(tradindexed->index, group);
-    if (entry == NULL)
+    if (entry == nullptr)
         return false;
     data = data_cache_open(tradindexed, group, entry);
-    if (data == NULL)
+    if (data == nullptr)
         return false;
     if (entry->base != data->base)
         if (data->base > artnum && entry->base <= artnum) {
             data = data_cache_reopen(tradindexed, group, entry);
-            if (data == NULL)
+            if (data == nullptr)
                 return false;
         }
     index_entry = tdx_article_entry(data, artnum, entry->high);
-    if (index_entry == NULL)
+    if (index_entry == nullptr)
         return false;
-    if (token != NULL)
+    if (token != nullptr)
         *token = index_entry->token;
     return true;
 }
@@ -362,11 +362,11 @@ tradindexed_expiregroup(const char *group, int *low, struct history *history)
     bool status;
 
     /* tradindexed doesn't have any periodic cleanup. */
-    if (group == NULL)
+    if (group == nullptr)
         return true;
 
     status = tdx_expire(group, &new_low, history);
-    if (status && low != NULL)
+    if (status && low != nullptr)
         *low = (int) new_low;
     return status;
 }
@@ -384,7 +384,7 @@ tradindexed_ctl(OVCTLTYPE type, void *val)
     bool *b;
     OVSORTTYPE *sort;
 
-    if (tradindexed == NULL) {
+    if (tradindexed == nullptr) {
         warn("tradindexed: overview method not initialized");
         return false;
     }
@@ -423,12 +423,12 @@ tradindexed_ctl(OVCTLTYPE type, void *val)
 void
 tradindexed_close(void)
 {
-    if (tradindexed != NULL) {
-        if (tradindexed->index != NULL)
+    if (tradindexed != nullptr) {
+        if (tradindexed->index != nullptr)
             tdx_index_close(tradindexed->index);
-        if (tradindexed->cache != NULL)
+        if (tradindexed->cache != nullptr)
             tdx_cache_free(tradindexed->cache);
         free(tradindexed);
-        tradindexed = NULL;
+        tradindexed = nullptr;
     }
 }

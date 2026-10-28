@@ -31,9 +31,9 @@ static const char *const fields[] = {
 const struct cvector *
 overview_fields(void)
 {
-    static struct cvector *list = NULL;
+    static struct cvector *list = nullptr;
 
-    if (list == NULL) {
+    if (list == nullptr) {
         unsigned int field;
 
         list = cvector_new();
@@ -58,7 +58,7 @@ overview_fields(void)
 struct vector *
 overview_extra_fields(bool hidden)
 {
-    struct vector *list = NULL;
+    struct vector *list = nullptr;
     unsigned int i;
 
     list = vector_new();
@@ -72,18 +72,18 @@ overview_extra_fields(bool hidden)
 
     vector_add(list, "Xref");
 
-    if (innconf->extraoverviewadvertised->strings != NULL) {
+    if (innconf->extraoverviewadvertised->strings != nullptr) {
         for (i = 0; i < innconf->extraoverviewadvertised->count; i++) {
-            if (innconf->extraoverviewadvertised->strings[i] != NULL) {
+            if (innconf->extraoverviewadvertised->strings[i] != nullptr) {
                 vector_add(list, innconf->extraoverviewadvertised->strings[i]);
             }
         }
     }
 
     if (hidden) {
-        if (innconf->extraoverviewhidden->strings != NULL) {
+        if (innconf->extraoverviewhidden->strings != nullptr) {
             for (i = 0; i < innconf->extraoverviewhidden->count; i++) {
-                if (innconf->extraoverviewhidden->strings[i] != NULL) {
+                if (innconf->extraoverviewhidden->strings[i] != nullptr) {
                     vector_add(list, innconf->extraoverviewhidden->strings[i]);
                 }
             }
@@ -109,10 +109,10 @@ build_header(const char *article, size_t length, const char *header,
     const char *data, *end, *p;
 
     data = wire_findheader(article, length, header, false);
-    if (data == NULL)
+    if (data == nullptr)
         return;
     end = wire_endheader(data, article + length - 1);
-    if (end == NULL)
+    if (end == nullptr)
         return;
 
     /* Someone managed to break their server so that they were appending
@@ -122,13 +122,13 @@ build_header(const char *article, size_t length, const char *header,
     if (strcasecmp(header, "xref") == 0) {
         const char *next = end + 1;
 
-        while (next != NULL) {
+        while (next != nullptr) {
             next = wire_findheader(next, length - (next - article), header,
                                    false);
-            if (next != NULL) {
+            if (next != nullptr) {
                 data = next;
                 end = wire_endheader(data, article + length - 1);
-                if (end == NULL)
+                if (end == nullptr)
                     return;
             }
         }
@@ -167,7 +167,7 @@ overview_build(ARTNUM number, const char *article, size_t length,
     char buffer[32];
 
     snprintf(buffer, sizeof(buffer), "%lu", number);
-    if (overview == NULL)
+    if (overview == nullptr)
         overview = buffer_new();
     buffer_set(overview, buffer, strlen(buffer));
     for (field = 0; field < ARRAY_SIZE(fields); field++) {
@@ -178,7 +178,7 @@ overview_build(ARTNUM number, const char *article, size_t length,
         } else
             build_header(article, length, fields[field], overview);
     }
-    if (extra != NULL) {
+    if (extra != nullptr) {
         for (field = 0; field < extra->count; field++) {
             buffer_append(overview, "\t", 1);
             buffer_append(overview, extra->strings[field],
@@ -261,7 +261,7 @@ overview_check(const char *data, size_t length, ARTNUM article)
     size_t i;
 
     copy = xstrndup(data, length);
-    overview = cvector_split(copy, '\t', NULL);
+    overview = cvector_split(copy, '\t', nullptr);
 
     /* The actual checks.  We don't verify all of the data, since that data
        may be malformed in the article, but we do check to be sure that the
@@ -272,7 +272,7 @@ overview_check(const char *data, size_t length, ARTNUM article)
         goto fail;
     if (!valid_number(overview->strings[0]))
         goto fail;
-    overnum = strtoul(overview->strings[0], NULL, 10);
+    overnum = strtoul(overview->strings[0], nullptr, 10);
     if (overnum != article)
         goto fail;
     if (!valid_number(overview->strings[6]))
@@ -328,24 +328,24 @@ struct cvector *
 overview_split(const char *line, size_t length, ARTNUM *number,
                struct cvector *vector)
 {
-    const char *p = NULL;
+    const char *p = nullptr;
 
-    if (vector == NULL) {
+    if (vector == nullptr) {
         vector = cvector_new();
     } else {
         cvector_clear(vector);
     }
-    while (line != NULL) {
+    while (line != nullptr) {
         /* The first field is the article number. */
-        if (p == NULL) {
-            if (number != NULL) {
-                *number = strtoul(line, NULL, 10);
+        if (p == nullptr) {
+            if (number != nullptr) {
+                *number = strtoul(line, nullptr, 10);
             }
         } else {
             cvector_add(vector, line);
         }
         p = static_cast<const char *>(memchr(line, '\t', length));
-        if (p != NULL) {
+        if (p != nullptr) {
             /* Skip over the tab. */
             ++p;
             /* And calculate the remaining length. */
@@ -372,7 +372,7 @@ char *
 overview_get_standard_header(const struct cvector *vector,
                              unsigned int element)
 {
-    char *field = NULL;
+    char *field = nullptr;
     size_t len;
     const char *p;
     size_t max = ARRAY_SIZE(fields) - 1;
@@ -381,7 +381,7 @@ overview_get_standard_header(const struct cvector *vector,
        component.  It therefore has a count of elements increased by 1. */
     if ((element + 1) >= vector->count || element > max) {
         warn("request for invalid standard overview field %u", element);
-        return NULL;
+        return nullptr;
     }
 
     p = vector->strings[element];
@@ -400,7 +400,7 @@ overview_get_standard_header(const struct cvector *vector,
 char *
 overview_get_extra_header(const struct cvector *vector, const char *header)
 {
-    char *field = NULL;
+    char *field = nullptr;
     size_t i, len;
     const char *p;
     size_t headerlen = strlen(header);
@@ -421,5 +421,5 @@ overview_get_extra_header(const struct cvector *vector, const char *header)
     }
 
     /* The required header field was not found in the extra overview fields. */
-    return NULL;
+    return nullptr;
 }

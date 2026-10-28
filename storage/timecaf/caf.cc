@@ -207,11 +207,11 @@ CAFGetTOCInfo(const CAFHEADER *head, size_t *countp, size_t *bytesp,
         return false;
 
     count = (size_t) span + 1;
-    if (countp != NULL)
+    if (countp != nullptr)
         *countp = count;
-    if (bytesp != NULL)
+    if (bytesp != nullptr)
         *bytesp = count * sizeof(CAFTOCENT);
-    if (offsetp != NULL)
+    if (offsetp != nullptr)
         *offsetp = file_offset;
     return true;
 }
@@ -226,7 +226,7 @@ CAFSeekTOCEnt(int fd, CAFHEADER *head, ARTNUM art)
     ARTNUM slot;
     off_t offset;
 
-    if (!CAFGetTOCInfo(head, NULL, NULL, &offset) || art < head->Low) {
+    if (!CAFGetTOCInfo(head, nullptr, nullptr, &offset) || art < head->Low) {
         CAFError(CAF_ERR_BADFILE);
         return -1;
     }
@@ -313,13 +313,13 @@ CAFReadFreeBM(int fd, CAFHEADER *h)
     off_t max_offset;
     uintmax_t max_data;
 
-    if (!CAFGetTOCInfo(h, NULL, NULL, NULL)) {
+    if (!CAFGetTOCInfo(h, nullptr, nullptr, nullptr)) {
         CAFError(CAF_ERR_BADFILE);
-        return NULL;
+        return nullptr;
     }
     if (lseek(fd, sizeof(CAFHEADER), SEEK_SET) < 0) {
         CAFError(CAF_ERR_IO);
-        return NULL;
+        return nullptr;
     }
     bm = xmalloc(sizeof(CAFBITMAP));
 
@@ -333,12 +333,12 @@ CAFReadFreeBM(int fd, CAFHEADER *h)
     bm->Blocks = xmalloc(bm->NumBMB * sizeof(CAFBMB *));
     bm->Bits = xmalloc(bm->FreeZoneIndexSize);
     for (i = 0; i < bm->NumBMB; ++i) {
-        bm->Blocks[i] = NULL;
+        bm->Blocks[i] = nullptr;
     }
 
     if (OurRead(fd, bm->Bits, bm->FreeZoneIndexSize) < 0) {
         CAFDisposeBitmap(bm);
-        return NULL;
+        return nullptr;
     }
 
     bm->StartDataBlock = h->StartDataBlock;
@@ -347,27 +347,27 @@ CAFReadFreeBM(int fd, CAFHEADER *h)
         /* it'd odd for this to fail, but paranoia is good for the soul. */
         CAFError(CAF_ERR_IO);
         CAFDisposeBitmap(bm);
-        return NULL;
+        return nullptr;
     }
     /* Round st_size down to a multiple of BlockSize and then point at the
        following block, rejecting an off_t wrap at the top of the file. */
     if (statbuf.st_size < 0) {
         CAFError(CAF_ERR_BADFILE);
         CAFDisposeBitmap(bm);
-        return NULL;
+        return nullptr;
     }
     max_data = ((uintmax_t) statbuf.st_size / bm->BlockSize) * bm->BlockSize;
     if (max_data > UINTMAX_MAX - bm->BlockSize) {
         CAFError(CAF_ERR_BADFILE);
         CAFDisposeBitmap(bm);
-        return NULL;
+        return nullptr;
     }
     max_data += bm->BlockSize;
     max_offset = (off_t) max_data;
     if (max_offset < 0 || (uintmax_t) max_offset != max_data) {
         CAFError(CAF_ERR_BADFILE);
         CAFDisposeBitmap(bm);
-        return NULL;
+        return nullptr;
     }
     bm->MaxDataBlock = max_offset;
     /* (note: MaxDataBlock points to the block *after* the last block of the
@@ -427,19 +427,19 @@ CAFFetchBMB(unsigned int blkno, int fd, CAFBITMAP *bm)
         free(newbmb->BMBBits);
         free(newbmb);
         CAFError(CAF_ERR_BADFILE);
-        return NULL;
+        return nullptr;
     }
     if (lseek(fd, offset, SEEK_SET) < 0) {
         free(newbmb->BMBBits);
         free(newbmb);
         CAFError(CAF_ERR_IO);
-        return NULL;
+        return nullptr;
     }
 
     if (OurRead(fd, newbmb->BMBBits, bm->BlockSize) < 0) {
         free(newbmb->BMBBits);
         free(newbmb);
-        return NULL;
+        return nullptr;
     }
 
     bm->Blocks[blkno] = newbmb;
@@ -458,7 +458,7 @@ CAFFlushBMB(unsigned int blkno, int fd, CAFBITMAP *bm)
 
     ASSERT(blkno < bm->NumBMB);
 
-    if (bm->Blocks[blkno] == NULL)
+    if (bm->Blocks[blkno] == nullptr)
         return 0; /* nothing to do. */
 
     bmb = bm->Blocks[blkno];
@@ -536,7 +536,7 @@ CAFIsBlockFree(CAFBITMAP *bm, int fd, off_t block)
 
     bmb = CAFFetchBMB(blkno, fd, bm);
     /* ick. not a lot we can do here if this fails. */
-    if (bmb == NULL)
+    if (bmb == nullptr)
         return 0;
 
     /* Sanity checking that we have the right BMB. */
@@ -590,7 +590,7 @@ CAFSetBlockFree(CAFBITMAP *bm, int fd, off_t block, int isfree)
 
     bmb = CAFFetchBMB(blkno, fd, bm);
     /* ick. not a lot we can do here if this fails. */
-    if (bmb == NULL)
+    if (bmb == nullptr)
         return;
 
     /* Sanity checking that we have the right BMB. */
@@ -651,7 +651,7 @@ CAFFindFreeBlocks(CAFBITMAP *bm, int fd, unsigned int n)
                 /* found a bit set! fetch the BMB. */
                 bmblkno = k * BYTEWIDTH + l;
                 bmb = CAFFetchBMB(bmblkno, fd, bm);
-                if (bmb == NULL)
+                if (bmb == nullptr)
                     return 0;
 
                 curblk = bmb->StartDataBlock;
@@ -731,7 +731,7 @@ CAFOpenArtRead(const char *path, ARTNUM art, size_t *len)
         close(fd);
         return -1;
     }
-    if (!CAFGetTOCInfo(&head, NULL, NULL, NULL)) {
+    if (!CAFGetTOCInfo(&head, nullptr, nullptr, nullptr)) {
         CAFError(CAF_ERR_BADFILE);
         close(fd);
         return -1;
@@ -870,7 +870,7 @@ CAFCreateCAFFile(char *cfpath, ARTNUM artnum, ARTNUM tocsize, size_t estcfsize,
     head.High = artnum;
     head.NumSlots = tocsize;
     head.Free = 0;
-    head.LastCleaned = time(NULL);
+    head.LastCleaned = time(nullptr);
     head.BlockSize = CAFFindOptimalBlocksize(tocsize, estcfsize);
     head.FreeZoneIndexSize = head.BlockSize - sizeof(CAFHEADER);
     head.FreeZoneTabSize =
@@ -929,7 +929,7 @@ CAFCreateCAFFile(char *cfpath, ARTNUM artnum, ARTNUM tocsize, size_t estcfsize,
     }
 
     if (nolink) {
-        if (temppath != NULL) {
+        if (temppath != nullptr) {
             strlcpy(temppath, path, pathlen);
         }
         return fd;
@@ -988,7 +988,7 @@ CAFOpenArtWrite(char *path, ARTNUM *artp, int waitlock, size_t size)
                 ** article # to 1.
                 */
                 fd = CAFCreateCAFFile(path, (*artp ? *artp : 1),
-                                      CAF_DEFAULT_TOC_SIZE, 0, 0, NULL, 0);
+                                      CAF_DEFAULT_TOC_SIZE, 0, 0, nullptr, 0);
                 /*
                 ** XXX possible race condition here, so we check to see if
                 ** create failed because of EEXIST.  If so, we go back to top
@@ -1055,7 +1055,7 @@ CAFStartWriteFd(int fd, ARTNUM *artp, size_t size)
         close(fd);
         return -1;
     }
-    if (!CAFGetTOCInfo(&head, NULL, NULL, NULL)) {
+    if (!CAFGetTOCInfo(&head, nullptr, nullptr, nullptr)) {
         CAFError(CAF_ERR_BADFILE);
         close(fd);
         return -1;
@@ -1107,14 +1107,14 @@ CAFStartWriteFd(int fd, ARTNUM *artp, size_t size)
     }
 
     startoffset = 0;
-    freebm = NULL;
+    freebm = nullptr;
 
-    if (size != 0 && (freebm = CAFReadFreeBM(fd, &head)) != NULL) {
+    if (size != 0 && (freebm = CAFReadFreeBM(fd, &head)) != nullptr) {
         numblks = (size + head.BlockSize - 1) / head.BlockSize;
         startoffset = CAFFindFreeBlocks(freebm, fd, numblks);
         if (startoffset == 0) {
             CAFDisposeBitmap(freebm);
-            freebm = NULL;
+            freebm = nullptr;
         }
     }
 
@@ -1188,14 +1188,14 @@ CAFFinishArtWrite(int fd)
     }
     tocentry.Offset = CAF_startoffset_write;
     tocentry.Size = curpos - CAF_startoffset_write;
-    tocentry.ModTime = time(NULL);
+    tocentry.ModTime = time(nullptr);
     if (OurWrite(fd, &tocentry, sizeof(CAFTOCENT)) < 0) {
         CAF_fd_write = 0;
         return -1;
     }
 
     /* if needed, update free bitmap. */
-    if (CAF_free_bitmap_write != NULL) {
+    if (CAF_free_bitmap_write != nullptr) {
         /* Paranoia: check to make sure we didn't write more than we said we
          * would. */
         if (tocentry.Size > CAF_numblks_write * headp->BlockSize) {
@@ -1305,7 +1305,7 @@ CAFReadTOC(char *path, CAFHEADER *ch)
     int fd;
 
     if ((fd = CAFOpenReadTOC(path, ch, &tocp)) < 0) {
-        return NULL; /* some sort of error happened */
+        return nullptr; /* some sort of error happened */
     }
 
     close(fd);
@@ -1429,7 +1429,7 @@ CAFRemoveMultArts(char *path, unsigned int narts, ARTNUM *artnums)
         close(fd);
         return -1;
     }
-    if (!CAFGetTOCInfo(&head, NULL, NULL, NULL)) {
+    if (!CAFGetTOCInfo(&head, nullptr, nullptr, nullptr)) {
         CAFError(CAF_ERR_BADFILE);
         close(fd);
         return -1;
@@ -1446,7 +1446,7 @@ CAFRemoveMultArts(char *path, unsigned int narts, ARTNUM *artnums)
         return -1;
     }
 
-    if ((freebitmap = CAFReadFreeBM(fd, &head)) == NULL) {
+    if ((freebitmap = CAFReadFreeBM(fd, &head)) == nullptr) {
         close(fd);
         return -1;
     }
@@ -1747,7 +1747,7 @@ CAFClean(char *path, int verbose, double PercentFreeThreshold)
     */
 
     /* make input file stdio-buffered. */
-    if ((infile = fdopen(fdin, "r+")) == NULL) {
+    if ((infile = fdopen(fdin, "r+")) == nullptr) {
         CAFError(CAF_ERR_IO);
         close(fdin);
         free(newpath);
@@ -1986,7 +1986,7 @@ CAFClean(char *path, int verbose, double PercentFreeThreshold)
         return -1;
     }
 
-    if ((outfile = fdopen(fdout, "w+")) == NULL) {
+    if ((outfile = fdopen(fdout, "w+")) == nullptr) {
         CAFError(CAF_ERR_IO);
         close(fdout);
         fclose(infile);
@@ -2132,7 +2132,7 @@ CAFClean(char *path, int verbose, double PercentFreeThreshold)
     /* Change what we need in new file's header. */
     newhead.Low = newlow;
     newhead.High = head.High;
-    newhead.LastCleaned = time(NULL);
+    newhead.LastCleaned = time(nullptr);
     /*    newhead.NumSlots = newtocsize; */
     /*    newhead.Free = 0; */
 

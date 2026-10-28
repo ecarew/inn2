@@ -103,7 +103,7 @@ entry_find_oldest(void *data, void *cookie)
     struct cache_entry *entry = (struct cache_entry *) data;
     struct cache_entry **oldest = (struct cache_entry **) cookie;
 
-    if (*oldest == NULL) {
+    if (*oldest == nullptr) {
         *oldest = entry;
         return;
     }
@@ -145,11 +145,11 @@ tdx_cache_lookup(struct cache *cache, HASH hash)
     cache->queries++;
     entry = static_cast<struct cache_entry *>(
         hash_lookup(cache->hashtable, &hash));
-    if (entry != NULL) {
+    if (entry != nullptr) {
         cache->hits++;
-        entry->lastused = time(NULL);
+        entry->lastused = time(nullptr);
     }
-    return (entry == NULL) ? NULL : entry->data;
+    return (entry == nullptr) ? nullptr : entry->data;
 }
 
 
@@ -163,10 +163,10 @@ tdx_cache_insert(struct cache *cache, HASH hash, struct group_data *data)
     struct cache_entry *entry;
 
     if (cache->count == cache->max) {
-        struct cache_entry *oldest = NULL;
+        struct cache_entry *oldest = nullptr;
 
         hash_traverse(cache->hashtable, entry_find_oldest, &oldest);
-        if (oldest == NULL) {
+        if (oldest == nullptr) {
             warn("tradindexed: unable to find oldest cache entry");
             return;
         } else {
@@ -180,7 +180,7 @@ tdx_cache_insert(struct cache *cache, HASH hash, struct group_data *data)
     entry = xmalloc(sizeof(struct cache_entry));
     entry->data = data;
     entry->hash = hash;
-    entry->lastused = time(NULL);
+    entry->lastused = time(nullptr);
     if (!hash_insert(cache->hashtable, &entry->hash, entry)) {
         warn("tradindexed: duplicate cache entry for %s", HashToText(hash));
         free(entry);
