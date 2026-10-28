@@ -82,6 +82,29 @@ Add the relevant INN tests when converting a new area (e.g. storage tests for
 `storage/`). Commits before this rule have retroactive `git notes`
 (`git log --notes`) recording checks run after the fact.
 
+## Class design rules
+
+Rationale and the existing C object patterns are in CONVERSION_NOTES.md,
+"Class design approach".  In order:
+
+1. Map the layers and the ownership first: who creates each object, who
+   destroys it, who borrows it (Doxygen include and dependency graphs).
+2. Look for INN's existing C object patterns (method tables, opaque handles,
+   prefix-named functions, callback structs, globals) before inventing classes.
+3. Collect each candidate's operations from Doxygen's "referenced by" lists
+   and call graphs.  The interface is those operations; a getter or setter
+   exists only where callers genuinely need one.
+4. Separate value types (small, copyable, often immutable: `ArtHeader`,
+   `TOKEN`) from entity types (identity and resources: a channel, an open
+   history database; movable, not copyable).
+5. State invariants and ownership: the constructor establishes them, the
+   destructor releases resources, standard containers make most classes Rule
+   of Zero.
+6. C compatibility only where an external consumer demonstrably needs it
+   (Perl/Python embedding, external users of libinn).  Otherwise a header may
+   become C++-only once its last in-tree C user is converted.
+7. Test first: no refactoring without measured coverage; add tests first.
+
 ## Conversion notes
 
 Record every design decision, with its reasoning and the alternatives
@@ -122,6 +145,11 @@ Everything below must be done before the Autoconf/Make build is deleted.
 - Convert `readme.pod` to Markdown (`README.md`), next to `CONVERSION_NOTES.md`.
 
 **Design follow-ups (2026-10-28)**
+- Gate: raise innd/ line coverage to at least 33% (now 2.0%) before any
+  further C++ conversion work.  Start with the innd test plan under "Test
+  coverage" below.
+- Convert innfeed's parser to the C++ outputs of bison (lalr1.cc) and flex
+  (C++ scanner) when innfeed is converted.
 - Benchmark the current header tree against the planned sorted-array
   `HeaderTable` with the 76 real header names (see CONVERSION_NOTES.md); keep
   it as the first test of `HeaderTable`.

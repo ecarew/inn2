@@ -129,6 +129,45 @@ list) are in [CLAUDE.md](CLAUDE.md).  This file is the rationale.
   interface for sites; the ~25,600 lines of Perl are administration tools that
   Perl does well; `INN::Config` is part of INN's Perl interface.
 
+## Class design approach (agreed 2026-10-28)
+
+**Goal:** a class's interface comes from what callers do with the data
+("look up this header", "store this article and return a token"), not
+from its list of fields.  Doxygen's "referenced by" lists and call graphs
+are the tool for finding those operations, used after the architecture is
+mapped, not as the starting point.  No blanket getters and setters.
+
+**INN is already object-oriented, in C.**  Much of the design is finding the
+objects that are there:
+
+| C pattern in INN | Where | C++ form |
+|---|---|---|
+| Tables of function pointers, one per backend | `STORAGE_METHOD` (cnfs, timecaf, timehash, tradspool, trash), `HIS_METHOD` (hisv6, hissqlite), `OV_METHOD` (tradindexed, buffindexed, ovsqlite, ovdb) | abstract base classes, one derived class per backend |
+| Opaque handles with open/close | `struct history *` (`HISopen`/`HISclose`), `struct overview *`, `SMinit`/`SMshutdown` | RAII classes |
+| Struct plus functions sharing a prefix | `ART*`, `NG*`, `SITE*`, `CHAN*` | one class per prefix |
+| Callbacks stored in a struct | `CHANNEL` reader/write-done handlers in innd's event loop | virtual functions or `std::function` |
+| Global state | `innd.h` externs, `innconf` | a context or configuration object |
+
+**Three layers, bottom-up:**
+1. Interfaces at the seams: storage, history and overview.  Clearest objects,
+   best tested, shared by many programs.  First round.
+2. innd's domain objects: articles (`ARTDATA`, `HDRCONTENT`, headers),
+   channels, sites, newsgroups.  Central, but currently almost untested, so
+   **innd needs at least 33% line coverage before further C++ conversion
+   work** (decided 2026-10-28).
+3. Utilities (`lib/vector`, `hashtab`, `buffer`, `list`): replaced by standard
+   containers as the layers above stop needing them.
+
+**C compatibility is not a goal in itself.**  It is kept only where something
+outside INN demonstrably has to compile or link against the code: the Perl
+and Python embedding (callbacks and extension functions need C linkage), and
+any external program linking libinn.  Everything else may become C++-only once
+its last in-tree C user is converted.
+
+**Generated code too:** innfeed's configuration parser should move to the C++
+outputs of bison (`lalr1.cc` skeleton) and flex (C++ scanner) as part of
+converting innfeed.
+
 ## Planned design (not yet implemented)
 
 ### Article header lookup: sorted array instead of a tree (decided 2026-10-28)
