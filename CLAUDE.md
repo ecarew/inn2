@@ -46,7 +46,14 @@ Current verification set:
 - `innd -h` starts and reaches the news-group check
 - `tinyleaf` smoke test: HELP, IHAVE, duplicate IHAVE, unknown command, QUIT
 - INN tap tests built against the CMake libraries: `lib/hissqlite`,
-  `lib/bloom-hiswalk`, `expire/tombstone-hisexpire`
+  `lib/bloom-hiswalk`, `expire/tombstone-hisexpire`, `overview/api`,
+  `overview/buffindexed`, `overview/tradindexed`, `overview/ovsqlite`,
+  `overview/tdx-group`, `overview/xref`, `storage/caf`,
+  `storage/cancel-tombstone`
+
+Not yet covered: shell-driven tests that need INN's command-line programs
+(`overview/ovsqlite-integ`, `overview/overchan`, `storage/sm`,
+`storage/archive`, `storage/makehistory`), until CMake builds those programs.
 
 Add the relevant INN tests when converting a new area (e.g. storage tests for
 `storage/`). Commits before this rule have retroactive `git notes`

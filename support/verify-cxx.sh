@@ -77,9 +77,22 @@ libs=("$build/storage/libinnstorage.a" "$build/history/libinnhist.a"
 cflags=(-g -I"$root/include" -I"$root/tests" -I"$root/history"
         -I"$root/storage")
 cc "${cflags[@]}" -c tests/tap/basic.c -o "$tmp/basic.o" 2>"$tmp/basic.log"
-for t in lib/hissqlite lib/bloom-hiswalk expire/tombstone-hisexpire; do
-    n=$(basename "$t")
-    if ! cc "${cflags[@]}" -c "tests/$t-t.c" -o "$tmp/$n-t.o" 2>"$tmp/$n.log" \
+# Each entry: test-name[:source-without--t.c[:extra-cflag]]
+tests=(
+    lib/hissqlite lib/bloom-hiswalk expire/tombstone-hisexpire
+    overview/api
+    overview/buffindexed:overview/overview:-DOVTYPE=buffindexed
+    overview/tradindexed:overview/overview:-DOVTYPE=tradindexed
+    overview/ovsqlite
+    overview/tdx-group overview/xref
+    storage/caf storage/cancel-tombstone
+)
+for spec in "${tests[@]}"; do
+    IFS=: read -r t src extra <<<"$spec"
+    src=${src:-$t}
+    n=$(echo "$t" | tr / _)
+    if ! cc "${cflags[@]}" $extra -c "tests/$src-t.c" -o "$tmp/$n-t.o" \
+            2>"$tmp/$n.log" \
        || ! c++ "$tmp/$n-t.o" "$tmp/basic.o" "${libs[@]}" -o "$tmp/$n.t" \
                 2>>"$tmp/$n.log"; then
         res "test $t" "FAIL (build)"
