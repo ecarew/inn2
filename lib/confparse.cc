@@ -276,7 +276,7 @@ parameter_free(void *p)
     struct config_parameter *param = static_cast<struct config_parameter *>(p);
 
     free(param->key);
-    if (param->raw_value != NULL)
+    if (param->raw_value != nullptr)
         free(param->raw_value);
     if (param->type == VALUE_STRING)
         free(param->value.string);
@@ -338,7 +338,7 @@ error_unexpected_token(struct config_file *file, const char *expecting)
     }
     if (string) {
         free(file->token.string);
-        file->token.string = NULL;
+        file->token.string = nullptr;
     }
     file->token.type = TOKEN_ERROR;
     file->error = true;
@@ -354,7 +354,7 @@ token_simple(struct config_file *file, enum token_type type)
 {
     file->current++;
     file->token.type = type;
-    file->token.string = NULL;
+    file->token.string = nullptr;
 }
 
 
@@ -398,7 +398,7 @@ token_newline(struct config_file *file)
             return;
     }
     file->token.type = TOKEN_CRLF;
-    file->token.string = NULL;
+    file->token.string = nullptr;
 }
 
 
@@ -628,7 +628,7 @@ token_unquote_string(const char *raw, const char *file, unsigned int line)
 
 fail:
     free(string);
-    return NULL;
+    return nullptr;
 }
 
 
@@ -715,7 +715,7 @@ token_next(struct config_file *file)
        deal with it.  That function can cope with file->current not pointing
        at a newline.  We then return the newline token as the first token in
        the file. */
-    if (file->current == NULL) {
+    if (file->current == nullptr) {
         if (!file_read(file))
             return file->token.type;
         if (!token_skip_whitespace(file))
@@ -773,11 +773,11 @@ file_open(const char *filename)
         oerrno = errno;
         free(file);
         errno = oerrno;
-        return NULL;
+        return nullptr;
     }
     file->buffer = xmalloc(BUFSIZ);
     file->bufsize = BUFSIZ;
-    file->current = NULL;
+    file->current = nullptr;
     file->line = 1;
     file->token.type = TOKEN_ERROR;
     file->error = false;
@@ -901,7 +901,7 @@ parse_list(struct config_group *group, struct config_file *file, char *key)
             string = token_unquote_string(file->token.string, file->filename,
                                           file->line);
             free(file->token.string);
-            if (string == NULL) {
+            if (string == nullptr) {
                 vector_free(vector);
                 free(key);
                 return TOKEN_ERROR;
@@ -916,7 +916,7 @@ parse_list(struct config_group *group, struct config_file *file, char *key)
     if (token == TOKEN_RBRACKET) {
         param = xmalloc(sizeof(*param));
         param->key = key;
-        param->raw_value = NULL;
+        param->raw_value = nullptr;
         param->type = VALUE_LIST;
         param->value.list = vector;
         param->line = file->line;
@@ -1016,7 +1016,7 @@ parse_group_contents(struct config_group *group, struct config_file *file)
     while (!file->error) {
         switch (token) {
         case TOKEN_PARAM:
-            if (group->child != NULL) {
+            if (group->child != nullptr) {
                 warn("%s:%u: parameter specified after nested group",
                      file->filename, file->line);
                 free(file->token.string);
@@ -1088,11 +1088,11 @@ parse_include(struct config_group *group, struct config_file *file)
         path = filename;
     else {
         slash = strrchr(group->file, '/');
-        if (slash == NULL)
+        if (slash == nullptr)
             path = filename;
         else {
             *slash = '\0';
-            path = concat(group->file, "/", filename, (char *) 0);
+            path = concat(group->file, "/", filename, (char *) nullptr);
             *slash = '/';
             free(filename);
         }
@@ -1102,7 +1102,7 @@ parse_include(struct config_group *group, struct config_file *file)
        arbitrary limit of 20 levels in case of something like a recursive
        symlink. */
     levels = 1;
-    for (parent = group; parent != NULL; parent = parent->parent) {
+    for (parent = group; parent != nullptr; parent = parent->parent) {
         if (strcmp(path, parent->file) == 0) {
             warn("%s:%u: file %s recursively included", group->file,
                  group->line, path);
@@ -1118,7 +1118,7 @@ parse_include(struct config_group *group, struct config_file *file)
 
     /* Now, attempt to include the file. */
     included = file_open(path);
-    if (included == NULL) {
+    if (included == nullptr) {
         syswarn("%s:%u: open of %s failed", group->file, group->line, path);
         goto fail;
     }
@@ -1148,7 +1148,7 @@ parse_group(struct config_file *file, struct config_group *parent)
     enum token_type token;
     bool status;
 
-    tag = NULL;
+    tag = nullptr;
     type = file->token.string;
     token = token_next(file);
     if (token == TOKEN_STRING) {
@@ -1157,18 +1157,18 @@ parse_group(struct config_file *file, struct config_group *parent)
     }
     if (token != TOKEN_LBRACE && token != TOKEN_LANGLE) {
         free(type);
-        expected = tag != NULL ? "'{' or '<'" : "group tag, '{', or '<'";
-        if (tag != NULL)
+        expected = tag != nullptr ? "'{' or '<'" : "group tag, '{', or '<'";
+        if (tag != nullptr)
             free(tag);
         error_unexpected_token(file, expected);
         return false;
     }
     group = group_new(file->filename, file->line, type, tag);
     group->parent = parent;
-    if (parent->child == NULL)
+    if (parent->child == nullptr)
         parent->child = group;
     else {
-        for (last = parent->child; last->next != NULL; last = last->next)
+        for (last = parent->child; last->next != nullptr; last = last->next)
             ;
         last->next = group;
     }
@@ -1200,13 +1200,13 @@ group_new(const char *file, unsigned int line, char *type, char *tag)
     group->type = type;
     group->tag = tag;
     group->file = xstrdup(file);
-    group->included = NULL;
+    group->included = nullptr;
     group->line = line;
     group->params = hash_create(4, hash_string, parameter_key, parameter_equal,
                                 parameter_free);
-    group->parent = NULL;
-    group->child = NULL;
-    group->next = NULL;
+    group->parent = nullptr;
+    group->child = nullptr;
+    group->next = nullptr;
     return group;
 }
 
@@ -1218,10 +1218,10 @@ static void
 group_free(struct config_group *group)
 {
     free(group->type);
-    if (group->tag != NULL)
+    if (group->tag != nullptr)
         free(group->tag);
     free(group->file);
-    if (group->included != NULL)
+    if (group->included != nullptr)
         free(group->included);
     hash_free(group->params);
     free(group);
@@ -1261,18 +1261,18 @@ config_parse_file(const char *filename, ...)
     bool success;
 
     file = file_open(filename);
-    if (file == NULL) {
+    if (file == nullptr) {
         syswarn("open of %s failed", filename);
-        return NULL;
+        return nullptr;
     }
-    group = group_new(filename, 1, xstrdup("GLOBAL"), NULL);
+    group = group_new(filename, 1, xstrdup("GLOBAL"), nullptr);
     success = parse_group_contents(group, file);
     file_close(file);
     if (success)
         return group;
     else {
         config_free(group);
-        return NULL;
+        return nullptr;
     }
 }
 
@@ -1287,7 +1287,7 @@ config_free(struct config_group *group)
     struct config_group *child, *last;
 
     child = group->child;
-    while (child != NULL) {
+    while (child != nullptr) {
         last = child;
         child = child->next;
         config_free(last);
@@ -1303,8 +1303,8 @@ config_free(struct config_group *group)
 static bool
 convert_boolean(struct config_parameter *param, const char *file, void *result)
 {
-    static const char *const truevals[] = {"yes", "on", "true", NULL};
-    static const char *const falsevals[] = {"no", "off", "false", NULL};
+    static const char *const truevals[] = {"yes", "on", "true", nullptr};
+    static const char *const falsevals[] = {"no", "off", "false", nullptr};
     bool *value = static_cast<bool *>(result);
     int i;
 
@@ -1316,13 +1316,13 @@ convert_boolean(struct config_parameter *param, const char *file, void *result)
         return false;
     }
     param->type = VALUE_BOOL;
-    for (i = 0; truevals[i] != NULL; i++)
+    for (i = 0; truevals[i] != nullptr; i++)
         if (strcmp(param->raw_value, truevals[i]) == 0) {
             param->value.boolean = true;
             *value = true;
             return true;
         }
-    for (i = 0; falsevals[i] != NULL; i++)
+    for (i = 0; falsevals[i] != nullptr; i++)
         if (strcmp(param->raw_value, falsevals[i]) == 0) {
             param->value.boolean = false;
             *value = false;
@@ -1368,7 +1368,7 @@ convert_signed_number(struct config_parameter *param, const char *file,
 
     /* Do the actual conversion with strtol. */
     errno = 0;
-    param->value.signed_number = strtol(param->raw_value, NULL, 10);
+    param->value.signed_number = strtol(param->raw_value, nullptr, 10);
     if (errno != 0) {
         warn("%s:%u: %s doesn't convert to an integer", file, param->line,
              param->key);
@@ -1417,7 +1417,7 @@ convert_unsigned_number(struct config_parameter *param, const char *file,
 
     /* Do the actual conversion with strtoul. */
     errno = 0;
-    param->value.unsigned_number = strtoul(param->raw_value, NULL, 10);
+    param->value.unsigned_number = strtoul(param->raw_value, nullptr, 10);
     if (errno != 0) {
         warn("%s:%u: %s doesn't convert to a positive integer", file,
              param->line, param->key);
@@ -1478,7 +1478,7 @@ convert_real(struct config_parameter *param, const char *file, void *result)
 
     /* Do the actual conversion with strtod. */
     errno = 0;
-    param->value.real = strtod(param->raw_value, NULL);
+    param->value.real = strtod(param->raw_value, nullptr);
     if (errno != 0) {
         warn("%s:%u: %s doesn't convert to a real number", file, param->line,
              param->key);
@@ -1516,7 +1516,7 @@ convert_string(struct config_parameter *param, const char *file, void *result)
         string = token_unquote_string(param->raw_value, file, param->line);
     else
         string = xstrdup(param->raw_value);
-    if (string == NULL)
+    if (string == nullptr)
         return false;
     param->value.string = string;
     param->type = VALUE_STRING;
@@ -1549,7 +1549,7 @@ convert_list(struct config_parameter *param, const char *file, void *result)
        way config_param_list can be used to read any value. */
     if (*param->raw_value == '"') {
         string = token_unquote_string(param->raw_value, file, param->line);
-        if (string == NULL)
+        if (string == nullptr)
             return false;
         vector = vector_new();
         vector_resize(vector, 1);
@@ -1581,12 +1581,12 @@ group_parameter_get(struct config_group *group, const char *key, void *result,
 {
     struct config_group *current = group;
 
-    while (current != NULL) {
+    while (current != nullptr) {
         struct config_parameter *param;
 
         param = static_cast<struct config_parameter *>(
             hash_lookup(current->params, key));
-        if (param != NULL) {
+        if (param != nullptr) {
             if (param->type == VALUE_INVALID)
                 return false;
             else
@@ -1679,7 +1679,7 @@ config_params(struct config_group *group)
     size_t size;
 
     params = vector_new();
-    for (; group != NULL; group = group->parent) {
+    for (; group != nullptr; group = group->parent) {
         size = hash_count(group->params);
         vector_resize(params, params->allocated + size);
         hash_traverse(group->params, parameter_collect, params);
@@ -1698,24 +1698,24 @@ config_find_group(struct config_group *group, const char *type)
 {
     struct config_group *sib;
 
-    if (group->child != NULL) {
+    if (group->child != nullptr) {
         if (strcmp(group->child->type, type) == 0)
             return group->child;
         else
             return config_find_group(group->child, type);
     }
-    for (; group != NULL; group = group->parent)
-        for (sib = group->next; sib != NULL; sib = sib->next) {
+    for (; group != nullptr; group = group->parent)
+        for (sib = group->next; sib != nullptr; sib = sib->next) {
             if (strcmp(sib->type, type) == 0)
                 return sib;
-            if (sib->child != NULL) {
+            if (sib->child != nullptr) {
                 if (strcmp(sib->child->type, type) == 0)
                     return sib->child;
                 else
                     return config_find_group(sib->child, type);
             }
         }
-    return NULL;
+    return nullptr;
 }
 
 
@@ -1748,10 +1748,10 @@ config_error_param(struct config_group *group, const char *key,
 
     param = static_cast<struct config_parameter *>(
         hash_lookup(group->params, key));
-    if (param == NULL)
+    if (param == nullptr)
         warn("%s", message);
     else {
-        file = (group->included != NULL ? group->included : group->file);
+        file = (group->included != nullptr ? group->included : group->file);
         warn("%s:%u: %s", file, param->line, message);
     }
 
@@ -1883,21 +1883,21 @@ print_string(FILE *file, const char *key, const char *value,
     switch (quoting) {
     case CONFPARSE_QUOTE_NONE:
         /* Do not output NULL values.  They are not empty strings. */
-        if (value == NULL) {
+        if (value == nullptr) {
             return;
         }
         fprintf(file, "%s\n", value);
         break;
     case CONFPARSE_QUOTE_SHELL:
         /* Do not output NULL values.  They are not empty strings. */
-        if (value == NULL) {
+        if (value == nullptr) {
             return;
         }
         upper = xstrdup(key);
         for (p = upper; *p != '\0'; p++)
             *p = (char) toupper((unsigned char) *p);
         fprintf(file, "%s='", upper);
-        for (letter = value; letter != NULL && *letter != '\0'; letter++) {
+        for (letter = value; letter != nullptr && *letter != '\0'; letter++) {
             if (*letter == '\'')
                 fputs("'\\''", file);
             else if (*letter == '\\')
@@ -1909,12 +1909,12 @@ print_string(FILE *file, const char *key, const char *value,
         free(upper);
         break;
     case CONFPARSE_QUOTE_PERL:
-        if (value == NULL) {
+        if (value == nullptr) {
             fprintf(file, "$%s = undef;\n", key);
             return;
         }
         fprintf(file, "$%s = '", key);
-        for (letter = value; letter != NULL && *letter != '\0'; letter++) {
+        for (letter = value; letter != nullptr && *letter != '\0'; letter++) {
             if (*letter == '\'' || *letter == '\\')
                 fputc('\\', file);
             fputc(*letter, file);
@@ -1923,12 +1923,12 @@ print_string(FILE *file, const char *key, const char *value,
         break;
     case CONFPARSE_QUOTE_TCL:
         /* Do not output NULL values.  They are not empty strings. */
-        if (value == NULL) {
+        if (value == nullptr) {
             return;
         }
         fprintf(file, "set inn_%s \"", key);
-        for (letter = value; letter != NULL && *letter != '\0'; letter++) {
-            if (strchr(tcl_unsafe, *letter) != NULL)
+        for (letter = value; letter != nullptr && *letter != '\0'; letter++) {
+            if (strchr(tcl_unsafe, *letter) != nullptr)
                 fputc('\\', file);
             fputc(*letter, file);
         }
@@ -1953,22 +1953,22 @@ print_list(FILE *file, const char *key, const struct vector *value,
     switch (quoting) {
     case CONFPARSE_QUOTE_NONE:
         /* Do not output NULL values.  They are not empty lists. */
-        if (value == NULL || value->strings == NULL) {
+        if (value == nullptr || value->strings == nullptr) {
             return;
         }
         fprintf(file, "[ ");
-        if (value != NULL && value->strings != NULL) {
+        if (value != nullptr && value->strings != nullptr) {
             for (i = 0; i < value->count; i++) {
                 /* No separation between strings. */
                 fprintf(file, "%s ",
-                        value->strings[i] != NULL ? value->strings[i] : "");
+                        value->strings[i] != nullptr ? value->strings[i] : "");
             }
         }
         fprintf(file, "]\n");
         break;
     case CONFPARSE_QUOTE_SHELL:
         /* Do not output NULL values.  They are not empty lists. */
-        if (value == NULL || value->strings == NULL) {
+        if (value == nullptr || value->strings == nullptr) {
             return;
         }
         upper = xstrdup(key);
@@ -1978,11 +1978,11 @@ print_list(FILE *file, const char *key, const struct vector *value,
          * representing an array (pure Bourne shell does not have the notion
          * of an array for instance). */
         fprintf(file, "%s='", upper);
-        if (value != NULL && value->strings != NULL) {
+        if (value != nullptr && value->strings != nullptr) {
             for (i = 0; i < value->count; i++) {
                 fprintf(file, "\"");
                 for (letter = value->strings[i];
-                     letter != NULL && *letter != '\0'; letter++) {
+                     letter != nullptr && *letter != '\0'; letter++) {
                     if (*letter == '\'')
                         fputs("'\\''", file);
                     else if (*letter == '"')
@@ -2004,16 +2004,16 @@ print_list(FILE *file, const char *key, const struct vector *value,
         break;
     case CONFPARSE_QUOTE_PERL:
         /* Consider that an empty list is undefined. */
-        if (value == NULL || value->strings == NULL) {
+        if (value == nullptr || value->strings == nullptr) {
             fprintf(file, "@%s = undef;\n", key);
             return;
         }
         fprintf(file, "@%s = ( ", key);
-        if (value != NULL && value->strings != NULL) {
+        if (value != nullptr && value->strings != nullptr) {
             for (i = 0; i < value->count; i++) {
                 fprintf(file, "'");
                 for (letter = value->strings[i];
-                     letter != NULL && *letter != '\0'; letter++) {
+                     letter != nullptr && *letter != '\0'; letter++) {
                     if (*letter == '\'' || *letter == '\\')
                         fputc('\\', file);
                     fputc(*letter, file);
@@ -2029,16 +2029,16 @@ print_list(FILE *file, const char *key, const struct vector *value,
         break;
     case CONFPARSE_QUOTE_TCL:
         /* Do not output NULL values.  They are not empty lists. */
-        if (value == NULL || value->strings == NULL) {
+        if (value == nullptr || value->strings == nullptr) {
             return;
         }
         fprintf(file, "set inn_%s { ", key);
-        if (value != NULL && value->strings != NULL) {
+        if (value != nullptr && value->strings != nullptr) {
             for (i = 0; i < value->count; i++) {
                 fprintf(file, "\"");
                 for (letter = value->strings[i];
-                     letter != NULL && *letter != '\0'; letter++) {
-                    if (strchr(tcl_unsafe, *letter) != NULL)
+                     letter != nullptr && *letter != '\0'; letter++) {
+                    if (strchr(tcl_unsafe, *letter) != nullptr)
                         fputc('\\', file);
                     fputc(*letter, file);
                 }

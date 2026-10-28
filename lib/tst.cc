@@ -115,7 +115,7 @@ tst_grow_node_free_list(struct tst *tst)
         current_node->middle = &(tst->node_lines->node_line[i]);
         current_node = current_node->middle;
     }
-    current_node->middle = NULL;
+    current_node->middle = nullptr;
 }
 
 
@@ -127,11 +127,11 @@ tst_get_free_node(struct tst *tst, unsigned char value)
 {
     struct node *free_node;
 
-    if (tst->free_list == NULL)
+    if (tst->free_list == nullptr)
         tst_grow_node_free_list(tst);
     free_node = tst->free_list;
     tst->free_list = tst->free_list->middle;
-    free_node->middle = NULL;
+    free_node->middle = nullptr;
     free_node->value = value;
     return free_node;
 }
@@ -151,7 +151,7 @@ tst_init(int width)
     struct tst *tst;
 
     tst = xcalloc(1, sizeof(struct tst));
-    tst->node_lines = NULL;
+    tst->node_lines = nullptr;
     tst->node_line_width = width;
     tst_grow_node_free_list(tst);
     return tst;
@@ -178,26 +178,26 @@ int
 tst_insert(struct tst *tst, const unsigned char *key, void *data, int option,
            void **exist_ptr)
 {
-    struct node *current_node = NULL;
-    struct node **root_node = NULL;
+    struct node *current_node = nullptr;
+    struct node **root_node = nullptr;
     int key_index;
 
-    if (data == NULL)
+    if (data == nullptr)
         return TST_NULL_DATA;
 
-    if (key == NULL || *key == '\0')
+    if (key == nullptr || *key == '\0')
         return TST_NULL_KEY;
 
     key_index = 1;
-    if (tst->head[*key] == NULL)
+    if (tst->head[*key] == nullptr)
         root_node = &tst->head[*key];
     else
         current_node = tst->head[*key];
 
-    while (root_node == NULL) {
+    while (root_node == nullptr) {
         if (key[key_index] == current_node->value) {
             if (key[key_index] == '\0') {
-                if (exist_ptr != NULL)
+                if (exist_ptr != nullptr)
                     *exist_ptr = current_node->middle;
                 if (option == TST_REPLACE) {
                     current_node->middle = static_cast<struct node *>(data);
@@ -205,19 +205,19 @@ tst_insert(struct tst *tst, const unsigned char *key, void *data, int option,
                 } else
                     return TST_DUPLICATE_KEY;
             }
-            if (current_node->middle == NULL)
+            if (current_node->middle == nullptr)
                 root_node = &current_node->middle;
             else {
                 current_node = current_node->middle;
                 key_index++;
             }
         } else if (LEFTP(current_node, key[key_index])) {
-            if (current_node->left == NULL)
+            if (current_node->left == nullptr)
                 root_node = &current_node->left;
             else
                 current_node = current_node->left;
         } else {
-            if (current_node->right == NULL)
+            if (current_node->right == nullptr)
                 root_node = &current_node->right;
             else
                 current_node = current_node->right;
@@ -248,15 +248,15 @@ tst_search(struct tst *tst, const unsigned char *key)
     struct node *current_node;
     int key_index;
 
-    if (key == NULL || *key == '\0')
-        return NULL;
+    if (key == nullptr || *key == '\0')
+        return nullptr;
 
-    if (tst->head[*key] == NULL)
-        return NULL;
+    if (tst->head[*key] == nullptr)
+        return nullptr;
 
     current_node = tst->head[*key];
     key_index = 1;
-    while (current_node != NULL) {
+    while (current_node != nullptr) {
         if (key[key_index] == current_node->value) {
             if (current_node->value == '\0')
                 return current_node->middle;
@@ -270,7 +270,7 @@ tst_search(struct tst *tst, const unsigned char *key)
         else
             current_node = current_node->right;
     }
-    return NULL;
+    return nullptr;
 }
 
 
@@ -290,20 +290,21 @@ tst_delete(struct tst *tst, const unsigned char *key)
     struct node *last_branch_dangling_child;
     int key_index;
 
-    if (key == NULL || *key == '\0')
-        return NULL;
+    if (key == nullptr || *key == '\0')
+        return nullptr;
 
-    if (tst->head[*key] == NULL)
-        return NULL;
+    if (tst->head[*key] == nullptr)
+        return nullptr;
 
-    last_branch = NULL;
-    last_branch_parent = NULL;
+    last_branch = nullptr;
+    last_branch_parent = nullptr;
     current_node = tst->head[*key];
-    current_node_parent = NULL;
+    current_node_parent = nullptr;
     key_index = 1;
-    while (current_node != NULL) {
+    while (current_node != nullptr) {
         if (key[key_index] == current_node->value) {
-            if (current_node->left != NULL || current_node->right != NULL) {
+            if (current_node->left != nullptr
+                || current_node->right != nullptr) {
                 last_branch = current_node;
                 last_branch_parent = current_node_parent;
             }
@@ -326,31 +327,31 @@ tst_delete(struct tst *tst, const unsigned char *key)
             last_branch = current_node;
         }
     }
-    if (current_node == NULL)
-        return NULL;
+    if (current_node == nullptr)
+        return nullptr;
 
-    if (last_branch == NULL) {
+    if (last_branch == nullptr) {
         next_node = tst->head[*key];
-        tst->head[*key] = NULL;
-    } else if (last_branch->left == NULL && last_branch->right == NULL) {
+        tst->head[*key] = nullptr;
+    } else if (last_branch->left == nullptr && last_branch->right == nullptr) {
         if (last_branch_parent->left == last_branch)
-            last_branch_parent->left = NULL;
+            last_branch_parent->left = nullptr;
         else
-            last_branch_parent->right = NULL;
+            last_branch_parent->right = nullptr;
         next_node = last_branch;
     } else {
-        if (last_branch->left != NULL && last_branch->right != NULL) {
+        if (last_branch->left != nullptr && last_branch->right != nullptr) {
             last_branch_replacement = last_branch->right;
             last_branch_dangling_child = last_branch->left;
-        } else if (last_branch->right != NULL) {
+        } else if (last_branch->right != nullptr) {
             last_branch_replacement = last_branch->right;
-            last_branch_dangling_child = NULL;
+            last_branch_dangling_child = nullptr;
         } else {
             last_branch_replacement = last_branch->left;
-            last_branch_dangling_child = NULL;
+            last_branch_dangling_child = nullptr;
         }
 
-        if (last_branch_parent == NULL)
+        if (last_branch_parent == nullptr)
             tst->head[*key] = last_branch_replacement;
         else {
             if (last_branch_parent->left == last_branch)
@@ -361,9 +362,9 @@ tst_delete(struct tst *tst, const unsigned char *key)
                 last_branch_parent->middle = last_branch_replacement;
         }
 
-        if (last_branch_dangling_child != NULL) {
+        if (last_branch_dangling_child != nullptr) {
             current_node = last_branch_replacement;
-            while (current_node->left != NULL)
+            while (current_node->left != nullptr)
                 current_node = current_node->left;
             current_node->left = last_branch_dangling_child;
         }
@@ -375,8 +376,8 @@ tst_delete(struct tst *tst, const unsigned char *key)
         current_node = next_node;
         next_node = current_node->middle;
 
-        current_node->left = NULL;
-        current_node->right = NULL;
+        current_node->left = nullptr;
+        current_node->right = nullptr;
         current_node->middle = tst->free_list;
         tst->free_list = current_node;
     } while (current_node->value != 0);
@@ -401,7 +402,7 @@ tst_cleanup(struct tst *tst)
         next_line = current_line->next;
         free(current_line->node_line);
         free(current_line);
-    } while (next_line != NULL);
+    } while (next_line != nullptr);
 
     free(tst);
 }

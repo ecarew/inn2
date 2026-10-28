@@ -30,7 +30,7 @@
 #include "inn/libinn.h"
 #include "inn/paths.h"
 
-static char *ICCsockname = NULL;
+static char *ICCsockname = nullptr;
 #ifdef HAVE_UNIX_DOMAIN_SOCKETS
 static struct sockaddr_un ICCserv;
 static struct sockaddr_un ICCclient;
@@ -61,8 +61,8 @@ ICCopen(void)
     int size = 65535;
 #endif
 
-    if (innconf == NULL) {
-        if (!innconf_read(NULL)) {
+    if (innconf == nullptr) {
+        if (!innconf_read(nullptr)) {
             ICCfailure = "innconf";
             return -1;
         }
@@ -74,7 +74,7 @@ ICCopen(void)
        (conceivably two processes could end up using the same temporary name
        at the same time, but the worst that will happen is that one process
        will delete the other's temporary socket). */
-    if (ICCsockname == NULL)
+    if (ICCsockname == nullptr)
         ICCsockname = concatpath(innconf->pathrun, INN_PATH_TEMPSOCK);
     fd = mkstemp(ICCsockname);
     if (fd < 0) {
@@ -137,7 +137,7 @@ ICCopen(void)
     }
 #endif /* !HAVE_UNIX_DOMAIN_SOCKETS */
 
-    ICCfailure = NULL;
+    ICCfailure = nullptr;
     return 0;
 }
 
@@ -150,7 +150,7 @@ ICCclose(void)
 {
     int i;
 
-    ICCfailure = NULL;
+    ICCfailure = nullptr;
     i = 0;
     if (close(ICCfd) < 0) {
         ICCfailure = "close";
@@ -179,8 +179,8 @@ ICCserverpid(void)
     path = concatpath(innconf->pathrun, INN_PATH_SERVERPID);
     F = fopen(path, "r");
     free(path);
-    if (F != NULL) {
-        if (fgets(buff, sizeof buff, F) != NULL)
+    if (F != nullptr) {
+        if (fgets(buff, sizeof buff, F) != nullptr)
             pid = atol(buff);
         fclose(F);
     }
@@ -239,7 +239,7 @@ ICCcommand(char cmd, const char *argv[], char **replyp)
     /* Get the length of the buffer. */
     buff = xmalloc(bufsiz);
     if (replyp)
-        *replyp = NULL;
+        *replyp = nullptr;
 
     /* Advance to leave space for length + protocol version info. */
     buff += HEADER_SIZE;
@@ -247,7 +247,7 @@ ICCcommand(char cmd, const char *argv[], char **replyp)
 
     /* Format the message. */
     snprintf(buff, bufsiz, "%s%c%c", ICCsockname, SC_SEP, cmd);
-    for (p = buff + strlen(buff), i = 0; (q = argv[i]) != NULL; i++) {
+    for (p = buff + strlen(buff), i = 0; (q = argv[i]) != nullptr; i++) {
         *p++ = SC_SEP;
         *p = '\0';
         strlcat(buff, q, bufsiz);
@@ -255,7 +255,7 @@ ICCcommand(char cmd, const char *argv[], char **replyp)
     }
 
     /* Send message. */
-    ICCfailure = NULL;
+    ICCfailure = nullptr;
     len = p - buff + HEADER_SIZE;
     rlen = htons(len);
 
@@ -314,7 +314,7 @@ ICCcommand(char cmd, const char *argv[], char **replyp)
         FD_SET(ICCfd, &Rmask);
         T.tv_sec = ICCtimeout ? ICCtimeout : 120;
         T.tv_usec = 0;
-        i = select(ICCfd + 1, &Rmask, NULL, NULL, &T);
+        i = select(ICCfd + 1, &Rmask, nullptr, nullptr, &T);
         if (i < 0) {
             free(buff);
             ICCfailure = "select";
@@ -429,8 +429,8 @@ ICCcancel(const char *msgid)
     const char *args[2];
 
     args[0] = msgid;
-    args[1] = NULL;
-    return ICCcommand(SC_CANCEL, args, NULL);
+    args[1] = nullptr;
+    return ICCcommand(SC_CANCEL, args, nullptr);
 }
 
 
@@ -443,8 +443,8 @@ ICCgo(const char *why)
     const char *args[2];
 
     args[0] = why;
-    args[1] = NULL;
-    return ICCcommand(SC_GO, args, NULL);
+    args[1] = nullptr;
+    return ICCcommand(SC_GO, args, nullptr);
 }
 
 
@@ -457,8 +457,8 @@ ICCpause(const char *why)
     const char *args[2];
 
     args[0] = why;
-    args[1] = NULL;
-    return ICCcommand(SC_PAUSE, args, NULL);
+    args[1] = nullptr;
+    return ICCcommand(SC_PAUSE, args, nullptr);
 }
 
 
@@ -471,6 +471,6 @@ ICCreserve(const char *why)
     const char *args[2];
 
     args[0] = why;
-    args[1] = NULL;
-    return ICCcommand(SC_RESERVE, args, NULL);
+    args[1] = nullptr;
+    return ICCcommand(SC_RESERVE, args, nullptr);
 }

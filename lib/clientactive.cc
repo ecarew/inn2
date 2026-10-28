@@ -26,13 +26,13 @@ CAopen(FILE *FromServer, FILE *ToServer)
     path = concatpath(innconf->pathdb, INN_PATH_CLIENTACTIVE);
     CAfp = fopen(path, "r");
     free(path);
-    if (CAfp != NULL) {
-        CApathname = NULL;
+    if (CAfp != nullptr) {
+        CApathname = nullptr;
         return CAfp;
     }
 
     /* Use the active file from the server */
-    return CAlistopen(FromServer, ToServer, (char *) NULL);
+    return CAlistopen(FromServer, ToServer, (char *) nullptr);
 }
 
 
@@ -50,11 +50,11 @@ CA_listopen(char *pathname, FILE *FromServer, FILE *ToServer,
     FILE *F;
 
     F = fopen(pathname, "w");
-    if (F == NULL)
-        return NULL;
+    if (F == nullptr)
+        return nullptr;
 
     /* Send a LIST command and capture the output. */
-    if (request == NULL)
+    if (request == nullptr)
         fprintf(ToServer, "LIST\r\n");
     else
         fprintf(ToServer, "LIST %s\r\n", request);
@@ -63,7 +63,7 @@ CA_listopen(char *pathname, FILE *FromServer, FILE *ToServer,
     snprintf(expectedanswer, sizeof(expectedanswer), "%d", NNTP_OK_LIST);
 
     /* Get the server's reply to our command. */
-    if (fgets(buff, sizeof buff, FromServer) == NULL
+    if (fgets(buff, sizeof buff, FromServer) == nullptr
         || strncmp(buff, expectedanswer, strlen(expectedanswer)) != 0) {
         oerrno = errno;
         /* Only call CAclose() if opened through CAopen(). */
@@ -71,14 +71,14 @@ CA_listopen(char *pathname, FILE *FromServer, FILE *ToServer,
             CAclose();
         errno = oerrno;
         fclose(F);
-        return NULL;
+        return nullptr;
     }
 
     /* Slurp up the rest of the response. */
-    while (fgets(buff, sizeof buff, FromServer) != NULL) {
-        if ((p = strchr(buff, '\r')) != NULL)
+    while (fgets(buff, sizeof buff, FromServer) != nullptr) {
+        if ((p = strchr(buff, '\r')) != nullptr)
             *p = '\0';
-        if ((p = strchr(buff, '\n')) != NULL)
+        if ((p = strchr(buff, '\n')) != nullptr)
             *p = '\0';
         if (buff[0] == '.' && buff[1] == '\0') {
             if (ferror(F) || fflush(F) == EOF || fclose(F) == EOF)
@@ -93,7 +93,7 @@ CA_listopen(char *pathname, FILE *FromServer, FILE *ToServer,
     fclose(F);
     CAclose();
     errno = oerrno;
-    return NULL;
+    return nullptr;
 }
 
 
@@ -107,9 +107,9 @@ CAlistopen(FILE *FromServer, FILE *ToServer, const char *request)
     int fd, oerrno;
 
     /* Will have to talk to the server -- see if we can. */
-    if (FromServer == NULL || ToServer == NULL) {
+    if (FromServer == nullptr || ToServer == nullptr) {
         errno = EBADF;
-        return NULL;
+        return nullptr;
     }
 
     CApathname = concatpath(innconf->pathtmp, INN_PATH_TEMPACTIVE);
@@ -117,9 +117,9 @@ CAlistopen(FILE *FromServer, FILE *ToServer, const char *request)
     if (fd < 0) {
         oerrno = errno;
         free(CApathname);
-        CApathname = 0;
+        CApathname = nullptr;
         errno = oerrno;
-        return NULL;
+        return nullptr;
     }
     close(fd);
     return CAfp = CA_listopen(CApathname, FromServer, ToServer, request);
@@ -134,10 +134,10 @@ CAclose(void)
 {
     if (CAfp) {
         fclose(CAfp);
-        CAfp = NULL;
+        CAfp = nullptr;
     }
-    if (CApathname != NULL) {
+    if (CApathname != nullptr) {
         unlink(CApathname);
-        CApathname = NULL;
+        CApathname = nullptr;
     }
 }

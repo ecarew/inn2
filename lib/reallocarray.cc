@@ -54,7 +54,7 @@ reallocarray(void *ptr, size_t nmemb, size_t size)
     if (nmemb >= CHECK_THRESHOLD || size >= CHECK_THRESHOLD)
         if (nmemb > 0 && SIZE_MAX / nmemb <= size) {
             errno = ENOMEM;
-            return NULL;
+            return nullptr;
         }
 
     /* Avoid a zero-size allocation. */

@@ -193,7 +193,7 @@ xwritev(int fd, const struct iovec iov[], int iovcnt)
     assert(iovleft > 0);
     tmpiov =
         static_cast<struct iovec *>(calloc(iovleft, sizeof(struct iovec)));
-    if (tmpiov == NULL)
+    if (tmpiov == nullptr)
         return -1;
     memcpy(tmpiov, iov + i, iovleft * sizeof(struct iovec));
 

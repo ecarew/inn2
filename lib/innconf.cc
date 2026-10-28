@@ -37,7 +37,7 @@
 #include "inn/vector.h"
 
 /* Instantiation of the global innconf variable. */
-struct innconf *innconf = NULL;
+struct innconf *innconf = nullptr;
 
 #define K(name) (#name), offsetof(struct innconf, name)
 
@@ -270,86 +270,86 @@ innconf_set_defaults(void)
 
     /* Some environment variables override settings in inn.conf. */
     value = getenv(INN_ENV_FROMHOST);
-    if (value != NULL) {
-        if (innconf->fromhost != NULL)
+    if (value != nullptr) {
+        if (innconf->fromhost != nullptr)
             free(innconf->fromhost);
         innconf->fromhost = xstrdup(value);
     }
     value = getenv(INN_ENV_NNTPSERVER);
-    if (value != NULL) {
-        if (innconf->server != NULL)
+    if (value != nullptr) {
+        if (innconf->server != nullptr)
             free(innconf->server);
         innconf->server = xstrdup(value);
     }
     value = getenv(INN_ENV_ORGANIZATION);
-    if (value != NULL) {
-        if (innconf->organization != NULL)
+    if (value != nullptr) {
+        if (innconf->organization != nullptr)
             free(innconf->organization);
         innconf->organization = xstrdup(value);
     }
     value = getenv(INN_ENV_INNBINDADDR);
-    if (value != NULL) {
-        if (innconf->bindaddress != NULL)
+    if (value != nullptr) {
+        if (innconf->bindaddress != nullptr)
             free(innconf->bindaddress);
         innconf->bindaddress = xstrdup(value);
     }
     value = getenv(INN_ENV_INNBINDADDR6);
-    if (value != NULL) {
-        if (innconf->bindaddress6 != NULL)
+    if (value != nullptr) {
+        if (innconf->bindaddress6 != nullptr)
             free(innconf->bindaddress6);
         innconf->bindaddress6 = xstrdup(value);
     }
 
     /* Some parameters have defaults that depend on other parameters. */
-    if (innconf->fromhost == NULL)
+    if (innconf->fromhost == nullptr)
         innconf->fromhost = inn_getfqdn(innconf->domain);
-    if (innconf->pathhost == NULL)
+    if (innconf->pathhost == nullptr)
         innconf->pathhost = inn_getfqdn(innconf->domain);
-    if (innconf->pathtmp == NULL)
+    if (innconf->pathtmp == nullptr)
         innconf->pathtmp = xstrdup(INN_PATH_TMP);
 
     /* All of the paths are relative to other paths if not set except for
        pathnews, which is required to be set by innconf_validate. */
-    if (innconf->pathbin == NULL)
+    if (innconf->pathbin == nullptr)
         innconf->pathbin = concatpath(innconf->pathnews, "bin");
-    if (innconf->pathcontrol == NULL)
+    if (innconf->pathcontrol == nullptr)
         innconf->pathcontrol = concatpath(innconf->pathbin, "control");
-    if (innconf->pathfilter == NULL)
+    if (innconf->pathfilter == nullptr)
         innconf->pathfilter = concatpath(innconf->pathbin, "filter");
-    if (innconf->pathdb == NULL)
+    if (innconf->pathdb == nullptr)
         innconf->pathdb = concatpath(innconf->pathnews, "db");
-    if (innconf->pathhistory == NULL)
+    if (innconf->pathhistory == nullptr)
         innconf->pathhistory = xstrdup(innconf->pathdb);
-    if (innconf->pathetc == NULL)
+    if (innconf->pathetc == nullptr)
         innconf->pathetc = concatpath(innconf->pathnews, "etc");
-    if (innconf->pathrun == NULL)
+    if (innconf->pathrun == nullptr)
         innconf->pathrun = concatpath(innconf->pathnews, "run");
-    if (innconf->pathlog == NULL)
+    if (innconf->pathlog == nullptr)
         innconf->pathlog = concatpath(innconf->pathnews, "log");
-    if (innconf->pathhttp == NULL)
+    if (innconf->pathhttp == nullptr)
         innconf->pathhttp = concatpath(innconf->pathnews, "http");
-    if (innconf->pathspool == NULL)
+    if (innconf->pathspool == nullptr)
         innconf->pathspool = concatpath(innconf->pathnews, "spool");
-    if (innconf->patharticles == NULL)
+    if (innconf->patharticles == nullptr)
         innconf->patharticles = concatpath(innconf->pathspool, "articles");
-    if (innconf->pathoverview == NULL)
+    if (innconf->pathoverview == nullptr)
         innconf->pathoverview = concatpath(innconf->pathspool, "overview");
-    if (innconf->pathoutgoing == NULL)
+    if (innconf->pathoutgoing == nullptr)
         innconf->pathoutgoing = concatpath(innconf->pathspool, "outgoing");
-    if (innconf->pathincoming == NULL)
+    if (innconf->pathincoming == nullptr)
         innconf->pathincoming = concatpath(innconf->pathspool, "incoming");
-    if (innconf->patharchive == NULL)
+    if (innconf->patharchive == nullptr)
         innconf->patharchive = concatpath(innconf->pathspool, "archive");
 
     /* One other parameter depends on pathbin. */
-    if (innconf->mailcmd == NULL)
+    if (innconf->mailcmd == nullptr)
         innconf->mailcmd = concatpath(innconf->pathbin, "innmail");
 
     /* Create empty vectors of extra overview fields if they haven't already
      * been created. */
-    if (innconf->extraoverviewadvertised == NULL)
+    if (innconf->extraoverviewadvertised == nullptr)
         innconf->extraoverviewadvertised = vector_new();
-    if (innconf->extraoverviewhidden == NULL)
+    if (innconf->extraoverviewhidden == nullptr)
         innconf->extraoverviewhidden = vector_new();
 
     /* Defaults used only if TLS/SSL is supported. */
@@ -363,7 +363,7 @@ innconf_set_defaults(void)
 #endif
 
     /* Default value depending on Cancel-Lock support. */
-    if (innconf->docancels == NULL)
+    if (innconf->docancels == nullptr)
 #if defined(HAVE_CANLOCK)
         innconf->docancels = xstrdup("require-auth");
 #else
@@ -418,7 +418,7 @@ innconf_parse(struct config_group *group)
             if (!config_param_string(group, config_table[i].name, &char_ptr))
                 char_ptr = config_table[i].defaults.string;
             string = CONF_STRING(config, config_table[i].location);
-            *string = (char_ptr == NULL) ? NULL : xstrdup(char_ptr);
+            *string = (char_ptr == nullptr) ? nullptr : xstrdup(char_ptr);
             break;
         case TYPE_LIST:
             /* vector_ptr contains the value taken from inn.conf or the
@@ -430,10 +430,10 @@ innconf_parse(struct config_group *group)
                 vector_ptr = config_table[i].defaults.list;
             list = CONF_LIST(config, config_table[i].location);
             *list = vector_new();
-            if (vector_ptr != NULL && vector_ptr->strings != NULL) {
+            if (vector_ptr != nullptr && vector_ptr->strings != nullptr) {
                 vector_resize(*list, vector_ptr->count);
                 for (j = 0; j < vector_ptr->count; j++) {
-                    if (vector_ptr->strings[j] != NULL) {
+                    if (vector_ptr->strings[j] != nullptr) {
                         vector_add(*list, vector_ptr->strings[j]);
                     }
                 }
@@ -460,34 +460,35 @@ innconf_validate(struct config_group *group)
 
     /* Checks to ensure valid Message-IDs will be generated. */
     fqdn = inn_getfqdn(innconf->domain);
-    if (fqdn == NULL) {
+    if (fqdn == nullptr) {
         warn("fully qualified hostname not found; see domain in inn.conf");
     }
-    if (innconf->domain != NULL && !IsValidDomain(innconf->domain)) {
+    if (innconf->domain != nullptr && !IsValidDomain(innconf->domain)) {
         warn("domain in inn.conf contains invalid characters not suitable for "
              "Message-IDs");
         okay = false;
     }
-    if (innconf->domain == NULL && fqdn != NULL && !IsValidDomain(fqdn)) {
+    if (innconf->domain == nullptr && fqdn != nullptr
+        && !IsValidDomain(fqdn)) {
         warn("the FQDN of the server contains invalid characters not suitable "
              "for Message-IDs; see domain in inn.conf");
         okay = false;
     }
     free(fqdn);
 
-    if (innconf->mta == NULL) {
+    if (innconf->mta == nullptr) {
         warn("must set mta in inn.conf");
         okay = false;
     }
-    if (innconf->pathnews == NULL) {
+    if (innconf->pathnews == nullptr) {
         warn("must set pathnews in inn.conf");
         okay = false;
     }
-    if (innconf->hismethod == NULL) {
+    if (innconf->hismethod == nullptr) {
         warn("must set hismethod in inn.conf");
         okay = false;
     }
-    if (innconf->enableoverview && innconf->ovmethod == NULL) {
+    if (innconf->enableoverview && innconf->ovmethod == nullptr) {
         warn("ovmethod must be set in inn.conf if enableoverview is true");
         okay = false;
     }
@@ -509,7 +510,7 @@ innconf_validate(struct config_group *group)
         innconf->hissqlitepagesize = 4096;
     }
 
-    if (innconf->docancels != NULL
+    if (innconf->docancels != nullptr
         && strcasecmp(innconf->docancels, "require-auth") != 0
         && strcasecmp(innconf->docancels, "auth") != 0
         && strcasecmp(innconf->docancels, "none") != 0
@@ -522,9 +523,9 @@ innconf_validate(struct config_group *group)
      * without being advertised in overview data. */
     if (innconf->keywords) {
         bool found = false;
-        if (innconf->extraoverviewadvertised->strings != NULL) {
+        if (innconf->extraoverviewadvertised->strings != nullptr) {
             for (i = 0; i < innconf->extraoverviewadvertised->count; i++) {
-                if (innconf->extraoverviewadvertised->strings[i] != NULL
+                if (innconf->extraoverviewadvertised->strings[i] != nullptr
                     && (strcasecmp(
                             innconf->extraoverviewadvertised->strings[i],
                             "Keywords")
@@ -534,9 +535,9 @@ innconf_validate(struct config_group *group)
                 }
             }
         }
-        if (innconf->extraoverviewhidden->strings != NULL) {
+        if (innconf->extraoverviewhidden->strings != nullptr) {
             for (i = 0; i < innconf->extraoverviewhidden->count; i++) {
-                if (innconf->extraoverviewhidden->strings[i] != NULL
+                if (innconf->extraoverviewhidden->strings[i] != nullptr
                     && (strcasecmp(innconf->extraoverviewhidden->strings[i],
                                    "Keywords")
                         == 0)) {
@@ -556,9 +557,9 @@ innconf_validate(struct config_group *group)
 
     /* Do not accept deprecated Bytes and Lines header fields in overview data
      * as they are internally treated as metadata items. */
-    if (innconf->extraoverviewadvertised->strings != NULL) {
+    if (innconf->extraoverviewadvertised->strings != nullptr) {
         for (i = 0; i < innconf->extraoverviewadvertised->count; i++) {
-            if (innconf->extraoverviewadvertised->strings[i] != NULL
+            if (innconf->extraoverviewadvertised->strings[i] != nullptr
                 && (strcasecmp(innconf->extraoverviewadvertised->strings[i],
                                "Bytes")
                         == 0
@@ -573,9 +574,9 @@ innconf_validate(struct config_group *group)
             }
         }
     }
-    if (innconf->extraoverviewhidden->strings != NULL) {
+    if (innconf->extraoverviewhidden->strings != nullptr) {
         for (i = 0; i < innconf->extraoverviewhidden->count; i++) {
-            if (innconf->extraoverviewhidden->strings[i] != NULL
+            if (innconf->extraoverviewhidden->strings[i] != nullptr
                 && (strcasecmp(innconf->extraoverviewhidden->strings[i],
                                "Bytes")
                         == 0
@@ -593,9 +594,9 @@ innconf_validate(struct config_group *group)
 
     /* Do not accept header field names beginning with a dot (extra complexity
      * not handled in the code for correctly dot-stuffing them). */
-    if (innconf->extraoverviewadvertised->strings != NULL) {
+    if (innconf->extraoverviewadvertised->strings != nullptr) {
         for (i = 0; i < innconf->extraoverviewadvertised->count; i++) {
-            if (innconf->extraoverviewadvertised->strings[i] != NULL
+            if (innconf->extraoverviewadvertised->strings[i] != nullptr
                 && (*innconf->extraoverviewadvertised->strings[i] == '.')) {
                 config_error_param(group, "extraoverviewadvertised",
                                    "Header field names beginning with a dot "
@@ -605,9 +606,9 @@ innconf_validate(struct config_group *group)
             }
         }
     }
-    if (innconf->extraoverviewhidden->strings != NULL) {
+    if (innconf->extraoverviewhidden->strings != nullptr) {
         for (i = 0; i < innconf->extraoverviewhidden->count; i++) {
-            if (innconf->extraoverviewhidden->strings[i] != NULL
+            if (innconf->extraoverviewhidden->strings[i] != nullptr
                 && (*innconf->extraoverviewhidden->strings[i] == '.')) {
                 config_error_param(group, "extraoverviewhidden",
                                    "Header field names beginning with a dot "
@@ -634,12 +635,12 @@ innconf_read(const char *path)
     struct config_group *group;
     char *tmpdir;
 
-    if (innconf != NULL)
+    if (innconf != nullptr)
         innconf_free(innconf);
-    if (path == NULL)
+    if (path == nullptr)
         path = getenv(INN_ENV_INNCONF);
-    group = config_parse_file(path == NULL ? INN_PATH_CONFIG : path);
-    if (group == NULL)
+    group = config_parse_file(path == nullptr ? INN_PATH_CONFIG : path);
+    if (group == nullptr)
         return false;
 
     innconf = innconf_parse(group);
@@ -651,7 +652,7 @@ innconf_read(const char *path)
     /* It's not clear that this belongs here, but it was done by the old
        configuration parser, so this is a convenient place to do it. */
     tmpdir = getenv(INN_ENV_TMPDIR);
-    if (tmpdir == NULL || strcmp(tmpdir, innconf->pathtmp) != 0)
+    if (tmpdir == nullptr || strcmp(tmpdir, innconf->pathtmp) != 0)
         if (setenv(INN_ENV_TMPDIR, innconf->pathtmp, true) != 0) {
             warn("cannot set TMPDIR in the environment");
             return false;
@@ -679,12 +680,12 @@ innconf_check(const char *path)
     bool found;
     bool okay = true;
 
-    if (innconf != NULL)
+    if (innconf != nullptr)
         innconf_free(innconf);
-    if (path == NULL)
+    if (path == nullptr)
         path = getenv(INN_ENV_INNCONF);
-    group = config_parse_file(path == NULL ? INN_PATH_CONFIG : path);
-    if (group == NULL)
+    group = config_parse_file(path == nullptr ? INN_PATH_CONFIG : path);
+    if (group == nullptr)
         return false;
 
     innconf = innconf_parse(group);
@@ -738,12 +739,12 @@ innconf_free(struct innconf *config)
     for (i = 0; i < ARRAY_SIZE(config_table); i++) {
         if (config_table[i].type == TYPE_STRING) {
             p = *CONF_STRING(config, config_table[i].location);
-            if (p != NULL)
+            if (p != nullptr)
                 free(p);
         }
         if (config_table[i].type == TYPE_LIST) {
             q = *CONF_LIST(config, config_table[i].location);
-            if (q != NULL)
+            if (q != nullptr)
                 vector_free(q);
         }
     }
@@ -875,15 +876,15 @@ innconf_compare(struct innconf *conf1, struct innconf *conf2)
         case TYPE_STRING:
             string1 = *CONF_STRING(conf1, config_table[i].location);
             string2 = *CONF_STRING(conf2, config_table[i].location);
-            if (string1 == NULL && string2 != NULL) {
+            if (string1 == nullptr && string2 != nullptr) {
                 warn("string variable %s differs: NULL != %s",
                      config_table[i].name, string2);
                 okay = false;
-            } else if (string1 != NULL && string2 == NULL) {
+            } else if (string1 != nullptr && string2 == nullptr) {
                 warn("string variable %s differs: %s != NULL",
                      config_table[i].name, string1);
                 okay = false;
-            } else if (string1 != NULL && string2 != NULL) {
+            } else if (string1 != nullptr && string2 != nullptr) {
                 if (strcmp(string1, string2) != 0) {
                     warn("string variable %s differs: %s != %s",
                          config_table[i].name, string1, string2);
@@ -896,18 +897,20 @@ innconf_compare(struct innconf *conf1, struct innconf *conf2)
             list2 = *CONF_LIST(conf2, config_table[i].location);
             /* Vectors are not resized when created in inn.conf.
              * Therefore, we can compare their length. */
-            if ((list1 == NULL && list2 != NULL)
-                || (list1 != NULL && list2 == NULL)) {
+            if ((list1 == nullptr && list2 != nullptr)
+                || (list1 != nullptr && list2 == nullptr)) {
                 warn("list variable %s differs: one is NULL",
                      config_table[i].name);
                 okay = false;
-            } else if (list1 != NULL && list2 != NULL) {
-                if ((list1->strings == NULL && list2->strings != NULL)
-                    || (list1->strings != NULL && list2->strings == NULL)) {
+            } else if (list1 != nullptr && list2 != nullptr) {
+                if ((list1->strings == nullptr && list2->strings != nullptr)
+                    || (list1->strings != nullptr
+                        && list2->strings == nullptr)) {
                     warn("list strings variable %s differs: one is NULL",
                          config_table[i].name);
                     okay = false;
-                } else if (list1->strings != NULL && list2->strings != NULL) {
+                } else if (list1->strings != nullptr
+                           && list2->strings != nullptr) {
                     if (list1->count != list2->count) {
                         warn("list variable %s differs in length: %lu != %lu",
                              config_table[i].name,
@@ -916,20 +919,20 @@ innconf_compare(struct innconf *conf1, struct innconf *conf2)
                         okay = false;
                     } else {
                         for (j = 0; j < list1->count; j++) {
-                            if (list1->strings[j] == NULL
-                                && list2->strings[j] != NULL) {
+                            if (list1->strings[j] == nullptr
+                                && list2->strings[j] != nullptr) {
                                 warn("list variable %s differs: NULL != %s",
                                      config_table[i].name, list2->strings[j]);
                                 okay = false;
                                 break;
-                            } else if (list1->strings[j] != NULL
-                                       && list2->strings[j] == NULL) {
+                            } else if (list1->strings[j] != nullptr
+                                       && list2->strings[j] == nullptr) {
                                 warn("list variable %s differs: %s != NULL",
                                      config_table[i].name, list1->strings[j]);
                                 okay = false;
                                 break;
-                            } else if (list1->strings[j] != NULL
-                                       && list2->strings[j] != NULL) {
+                            } else if (list1->strings[j] != nullptr
+                                       && list2->strings[j] != nullptr) {
                                 if (strcmp(list1->strings[j],
                                            list2->strings[j])
                                     != 0) {

@@ -15,7 +15,7 @@ NNTPsendarticle(char *p, FILE *F, bool Terminate)
 
     for (; p && *p; next[-1] = '\n', p = next) {
         /* Get pointer to next line.  Truncate long lines. */
-        if ((next = strchr(p, '\n')) != NULL)
+        if ((next = strchr(p, '\n')) != nullptr)
             *next++ = '\0';
 
         /* Write line. */
@@ -25,7 +25,7 @@ NNTPsendarticle(char *p, FILE *F, bool Terminate)
             return -1;
 
         /* Done? */
-        if (next == NULL)
+        if (next == nullptr)
             break;
     }
 

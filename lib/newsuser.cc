@@ -24,9 +24,10 @@ int
 get_news_uid_gid(uid_t *uid, gid_t *gid, bool may_die)
 {
     /* NB: get_news_uid_gid() may be called before innconf_read(). */
-    const char *runasuser = innconf != NULL ? innconf->runasuser : RUNASUSER;
+    const char *runasuser =
+        innconf != nullptr ? innconf->runasuser : RUNASUSER;
     const char *runasgroup =
-        innconf != NULL ? innconf->runasgroup : RUNASGROUP;
+        innconf != nullptr ? innconf->runasgroup : RUNASGROUP;
     bool fail = false;
     struct passwd *pwd;
     struct group *grp;
@@ -34,7 +35,7 @@ get_news_uid_gid(uid_t *uid, gid_t *gid, bool may_die)
     /* Resolve runasuser to a UID. */
     if (!uid) {
         /* Do nothing. */
-    } else if ((pwd = getpwnam(runasuser)) != 0) {
+    } else if ((pwd = getpwnam(runasuser)) != nullptr) {
         *uid = pwd->pw_uid;
     } else if (may_die) {
         die("can't resolve %s to a UID"
@@ -47,7 +48,7 @@ get_news_uid_gid(uid_t *uid, gid_t *gid, bool may_die)
     /* Resolve runasgroup to a GID. */
     if (!gid) {
         /* Do nothing. */
-    } else if ((grp = getgrnam(runasgroup)) != 0) {
+    } else if ((grp = getgrnam(runasgroup)) != nullptr) {
         *gid = grp->gr_gid;
     } else if (may_die) {
         die("can't resolve %s to a GID"
@@ -68,12 +69,12 @@ ensure_news_user(bool may_setuid)
 {
     uid_t uid;
 
-    get_news_uid_gid(&uid, NULL, true);
+    get_news_uid_gid(&uid, nullptr, true);
     if (geteuid() == 0) {
         if (!may_setuid) {
             /* NB: mustn't be run as root, unless "may_setuid" is true. */
             die("must be run as %s, not as root",
-                innconf != NULL ? innconf->runasuser : RUNASUSER);
+                innconf != nullptr ? innconf->runasuser : RUNASUSER);
         }
         if (setuid(uid) < 0) {
             sysdie("failed to setuid");
@@ -81,7 +82,7 @@ ensure_news_user(bool may_setuid)
     }
     if (geteuid() != uid || getuid() != uid) {
         die("must be run as %s",
-            innconf != NULL ? innconf->runasuser : RUNASUSER);
+            innconf != nullptr ? innconf->runasuser : RUNASUSER);
     }
 }
 
@@ -93,7 +94,7 @@ ensure_news_grp(bool may_setgid)
 {
     gid_t gid;
 
-    get_news_uid_gid(NULL, &gid, true);
+    get_news_uid_gid(nullptr, &gid, true);
     if (may_setgid && geteuid() == 0) {
         if (setgid(gid) < 0) {
             sysdie("failed to setgid");
@@ -101,7 +102,7 @@ ensure_news_grp(bool may_setgid)
     }
     if (getegid() != gid || getgid() != gid) {
         die("must be run as %s group",
-            innconf != NULL ? innconf->runasgroup : RUNASGROUP);
+            innconf != nullptr ? innconf->runasgroup : RUNASGROUP);
     }
 }
 

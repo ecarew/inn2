@@ -8,8 +8,8 @@
 #include "inn/paths.h"
 
 
-static char *GMApathname = NULL;
-static FILE *GMAfp = NULL;
+static char *GMApathname = nullptr;
+static FILE *GMAfp = nullptr;
 
 
 /*
@@ -20,12 +20,12 @@ GMAclose(void)
 {
     if (GMAfp) {
         fclose(GMAfp);
-        GMAfp = NULL;
+        GMAfp = nullptr;
     }
-    if (GMApathname != NULL) {
+    if (GMApathname != nullptr) {
         unlink(GMApathname);
         free(GMApathname);
-        GMApathname = NULL;
+        GMApathname = nullptr;
     }
 }
 
@@ -42,11 +42,11 @@ GMA_listopen(int fd, FILE *FromServer, FILE *ToServer, const char *request)
     FILE *F;
 
     F = fdopen(fd, "r+");
-    if (F == NULL)
-        return NULL;
+    if (F == nullptr)
+        return nullptr;
 
     /* Send a LIST command to and capture the output. */
-    if (request == NULL)
+    if (request == nullptr)
         fprintf(ToServer, "LIST MODERATORS\r\n");
     else
         fprintf(ToServer, "LIST %s\r\n", request);
@@ -55,20 +55,20 @@ GMA_listopen(int fd, FILE *FromServer, FILE *ToServer, const char *request)
     snprintf(expectedanswer, sizeof(expectedanswer), "%d", NNTP_OK_LIST);
 
     /* Get the server's reply to our command. */
-    if (fgets(buff, sizeof buff, FromServer) == NULL
+    if (fgets(buff, sizeof buff, FromServer) == nullptr
         || strncmp(buff, expectedanswer, strlen(expectedanswer)) != 0) {
         oerrno = errno;
         fclose(F);
         GMAclose();
         errno = oerrno;
-        return NULL;
+        return nullptr;
     }
 
     /* Slurp up the rest of the response. */
-    while (fgets(buff, sizeof buff, FromServer) != NULL) {
-        if ((p = strchr(buff, '\r')) != NULL)
+    while (fgets(buff, sizeof buff, FromServer) != nullptr) {
+        if ((p = strchr(buff, '\r')) != nullptr)
             *p = '\0';
-        if ((p = strchr(buff, '\n')) != NULL)
+        if ((p = strchr(buff, '\n')) != nullptr)
             *p = '\0';
         if (buff[0] == '.' && buff[1] == '\0') {
             if (ferror(F) || fflush(F) == EOF || fseeko(F, 0, SEEK_SET) != 0)
@@ -83,7 +83,7 @@ GMA_listopen(int fd, FILE *FromServer, FILE *ToServer, const char *request)
     fclose(F);
     GMAclose();
     errno = oerrno;
-    return NULL;
+    return nullptr;
 }
 
 /*
@@ -98,12 +98,12 @@ IsValidSubmissionTemplate(const char *string)
     const char *p;
 
     /* Not NULL. */
-    if (string == NULL)
+    if (string == nullptr)
         return false;
 
     p = string;
 
-    while ((p = strchr(p, '%')) != NULL) {
+    while ((p = strchr(p, '%')) != nullptr) {
         /* Look at the next character. */
         p++;
 
@@ -146,7 +146,7 @@ GetModeratorAddress(FILE *FromServer, FILE *ToServer, char *group,
     strlcpy(name, group, sizeof(name));
     address[0] = '\0';
 
-    if (FromServer == NULL || ToServer == NULL) {
+    if (FromServer == nullptr || ToServer == nullptr) {
 
         /*
          *  This should be part of nnrpd or the like running on the server.
@@ -164,26 +164,26 @@ GetModeratorAddress(FILE *FromServer, FILE *ToServer, char *group,
         if (fd >= 0)
             GMAfp = GMA_listopen(fd, FromServer, ToServer, "MODERATORS");
         else
-            GMAfp = NULL;
+            GMAfp = nullptr;
 
         /* Fallback to the local copy if the server doesn't have it */
-        if (GMAfp == NULL) {
+        if (GMAfp == nullptr) {
             path = concatpath(innconf->pathetc, INN_PATH_MODERATORS);
             GMAfp = fopen(path, "r");
             free(path);
         }
     }
 
-    if (GMAfp != NULL) {
-        while (fgets(buff, sizeof buff, GMAfp) != NULL) {
+    if (GMAfp != nullptr) {
+        while (fgets(buff, sizeof buff, GMAfp) != nullptr) {
             /* Skip blank and comment lines. */
-            if ((p = strchr(buff, '\n')) != NULL)
+            if ((p = strchr(buff, '\n')) != nullptr)
                 *p = '\0';
             if (buff[0] == '\0' || buff[0] == '#')
                 continue;
 
             /* Snip off the first word. */
-            if ((p = strchr(buff, ':')) == NULL)
+            if ((p = strchr(buff, ':')) == nullptr)
                 /* Malformed line... */
                 continue;
             *p++ = '\0';
@@ -215,8 +215,8 @@ GetModeratorAddress(FILE *FromServer, FILE *ToServer, char *group,
     }
 
     /* If we don't have an address, see if the config file has a default. */
-    if ((save = moderatormailer) == NULL)
-        return NULL;
+    if ((save = moderatormailer) == nullptr)
+        return nullptr;
 
     for (p = name; *p; p++)
         if (*p == '.')
@@ -231,7 +231,7 @@ GetModeratorAddress(FILE *FromServer, FILE *ToServer, char *group,
 #    pragma GCC diagnostic warning "-Wformat-nonliteral"
 #endif
     } else {
-        return NULL;
+        return nullptr;
     }
 
     return address;

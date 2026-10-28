@@ -36,8 +36,8 @@ cipoint(const char *s, size_t size)
     static int plen = sizeof(post) - 1;
 
     if ((p = static_cast<const char *>(memchr(s, '@', size)))
-        == NULL)     /* no local/domain split */
-        return NULL; /* assume all local */
+        == nullptr)     /* no local/domain split */
+        return nullptr; /* assume all local */
     if ((p - (s + 1) == plen) && !strncasecmp(post, s + 1, plen)) {
         /* crazy -- "postmaster" is case-insensitive */
         return s;
@@ -63,15 +63,15 @@ Hash(const void *value, const size_t len)
 HASH
 HashMessageID(const char *MessageID)
 {
-    char *lowered = NULL;
-    const char *cip, *p = NULL;
+    char *lowered = nullptr;
+    const char *cip, *p = nullptr;
     char *q;
     int len;
     HASH hash;
 
     len = strlen(MessageID);
     cip = cipoint(MessageID, len);
-    if (cip != NULL) {
+    if (cip != nullptr) {
         for (p = cip + 1; *p != '\0'; p++) {
             if (!islower((unsigned char) *p)) {
                 lowered = xstrdup(MessageID);
@@ -79,11 +79,11 @@ HashMessageID(const char *MessageID)
             }
         }
     }
-    if (lowered != NULL)
+    if (lowered != nullptr)
         for (q = lowered + (p - MessageID); *q != '\0'; q++)
             *q = (unsigned char) tolower((unsigned char) *q);
     hash = Hash(lowered ? lowered : MessageID, len);
-    if (lowered != NULL)
+    if (lowered != nullptr)
         free(lowered);
     return hash;
 }

@@ -67,7 +67,7 @@ buffer_new(void)
 void
 buffer_free(struct buffer *buffer)
 {
-    if (buffer == NULL)
+    if (buffer == nullptr)
         return;
     free(buffer->data);
     free(buffer);
@@ -195,7 +195,7 @@ buffer_append_sprintf(struct buffer *buffer, const char *format, ...)
 void
 buffer_vsprintf(struct buffer *buffer, const char *format, va_list args)
 {
-    buffer_set(buffer, NULL, 0);
+    buffer_set(buffer, nullptr, 0);
     buffer_append_vsprintf(buffer, format, args);
 }
 
@@ -245,14 +245,14 @@ buffer_find_string(struct buffer *buffer, const char *string, size_t start,
     const char *terminator;
     size_t length;
 
-    if (buffer->data == NULL)
+    if (buffer->data == nullptr)
         return false;
     length = strlen(string);
     do {
         data = buffer->data + buffer->used + start;
         terminator = static_cast<const char *>(
             memchr(data, string[0], buffer->left - start));
-        if (terminator == NULL)
+        if (terminator == nullptr)
             return false;
         start = (terminator - buffer->data) - buffer->used;
         if (buffer->left - start < length)

@@ -27,24 +27,24 @@ inn_getfqdn(const char *domain)
     /* First, check for a hostname given as an environment variable.
      * Return it if already fully qualified. */
     env = getenv(INN_ENV_HOSTNAME);
-    if (env != NULL && strchr(env, '.') != NULL)
+    if (env != nullptr && strchr(env, '.') != nullptr)
         return xstrdup(env);
 
     /* If gethostname fails, there's nothing we can do. */
     if (gethostname(hostname, sizeof(hostname)) < 0)
-        return NULL;
+        return nullptr;
 
     /* If the local hostname is already fully qualified, just return it. */
-    if (strchr(hostname, '.') != NULL)
+    if (strchr(hostname, '.') != nullptr)
         return xstrdup(hostname);
 
     /* Attempt to canonicalize with DNS. */
     memset(&hints, 0, sizeof(hints));
     hints.ai_family = AF_UNSPEC;
     hints.ai_flags = AI_CANONNAME;
-    if (getaddrinfo(hostname, NULL, &hints, &res) == 0) {
+    if (getaddrinfo(hostname, nullptr, &hints, &res) == 0) {
         canon = res->ai_canonname;
-        if (canon != NULL && strchr(canon, '.') != NULL) {
+        if (canon != nullptr && strchr(canon, '.') != nullptr) {
             fqdn = xstrdup(canon);
             freeaddrinfo(res);
             return fqdn;
@@ -53,8 +53,8 @@ inn_getfqdn(const char *domain)
     }
 
     /* Fall back on canonicalizing with a provided domain. */
-    if (domain == NULL || domain[0] == '\0')
-        return NULL;
-    xasprintf(&fqdn, "%s.%s", env != NULL ? env : hostname, domain);
+    if (domain == nullptr || domain[0] == '\0')
+        return nullptr;
+    xasprintf(&fqdn, "%s.%s", env != nullptr ? env : hostname, domain);
     return fqdn;
 }

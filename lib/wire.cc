@@ -47,14 +47,14 @@ wire_findbody(const char *article, size_t length)
     end = article + length;
     for (p = (char *) article; (size_t) (end - p) >= 4; ++p) {
         p = static_cast<char *>(memchr(p, '\r', end - p - 3));
-        if (p == NULL)
+        if (p == nullptr)
             break;
         if (memcmp(p, "\r\n\r\n", 4) == 0) {
             p += 4;
             return p;
         }
     }
-    return NULL;
+    return nullptr;
 }
 
 
@@ -70,17 +70,17 @@ wire_nextline(const char *article, const char *end)
     char *p;
 
     if (article > end)
-        return NULL;
+        return nullptr;
     for (p = (char *) article; end - p >= 2; ++p) {
         p = static_cast<char *>(memchr(p, '\r', end - p - 1));
-        if (p == NULL)
+        if (p == nullptr)
             break;
         if (p[1] == '\n') {
             p += 2;
             return p;
         }
     }
-    return NULL;
+    return nullptr;
 }
 
 
@@ -116,7 +116,7 @@ skip_fws_bounded(char *text, const char *end)
         if (!ISWHITE(*p))
             return p;
     }
-    return NULL;
+    return nullptr;
 }
 
 
@@ -138,7 +138,7 @@ wire_findheader(const char *article, size_t length, const char *header,
 
     headerlen = strlen(header);
     if (length == 0)
-        return NULL;
+        return nullptr;
     end = article + length - 1;
 
     /* There has to be enough space left in the article for at least the
@@ -146,21 +146,21 @@ wire_findheader(const char *article, size_t length, const char *header,
        character, hence 3, minus 1 since the character pointed to by end
        is part of the article. */
     p = (char *) article;
-    while (p != NULL && end - p > headerlen + 2) {
+    while (p != nullptr && end - p > headerlen + 2) {
         if (p[0] == '\r' && p[1] == '\n')
-            return NULL;
+            return nullptr;
         else if (isheader(p, header, headerlen)) {
             p += headerlen + 2;
             if (stripspaces)
                 p = skip_fws_bounded(p, end);
-            if (p == NULL)
-                return NULL;
+            if (p == nullptr)
+                return nullptr;
             if (p >= end || p[0] != '\r' || p[1] != '\n')
                 return p;
         }
         p = wire_nextline(p, end);
     }
-    return NULL;
+    return nullptr;
 }
 
 
@@ -176,14 +176,14 @@ wire_endheader(const char *header, const char *end)
     char *p;
 
     p = wire_nextline(header, end);
-    while (p != NULL) {
+    while (p != nullptr) {
         if (!ISWHITE(*p))
             return p - 1;
         p = wire_nextline(p, end);
     }
     if (end - header >= 1 && *end == '\n' && *(end - 1) == '\r')
         return (char *) end;
-    return NULL;
+    return nullptr;
 }
 
 
@@ -206,7 +206,7 @@ wire_from_native(const char *article, size_t len, size_t *newlen)
     *newlen = 0;
     if (len > SIZE_MAX - 4) {
         errno = EOVERFLOW;
-        return NULL;
+        return nullptr;
     }
     extra_limit = SIZE_MAX - 4 - len;
 
@@ -223,7 +223,7 @@ wire_from_native(const char *article, size_t len, size_t *newlen)
     }
     if (extra > extra_limit) {
         errno = EOVERFLOW;
-        return NULL;
+        return nullptr;
     }
     bytes = len + extra + 3;
 

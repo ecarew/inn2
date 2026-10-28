@@ -48,21 +48,21 @@ GenerateMessageID(char *domain)
     static char buff[SMBUF];
     static int count;
     char *p;
-    char *fqdn = NULL;
+    char *fqdn = nullptr;
     char sec32[10];
     char pid32[10];
     time_t now;
 
-    now = time(NULL);
+    now = time(nullptr);
     Radix32(now - OFFSET, sec32);
     Radix32(getpid(), pid32);
 
-    if (domain != NULL)
+    if (domain != nullptr)
         p = domain;
     else {
         fqdn = inn_getfqdn(innconf->domain);
         if (!IsValidDomain(fqdn))
-            return NULL;
+            return nullptr;
         p = fqdn;
     }
 
@@ -141,7 +141,7 @@ IsValidMessageID(const char *MessageID, bool stripspaces, bool laxsyntax)
         initialized = true;
     }
 
-    if (MessageID == NULL)
+    if (MessageID == nullptr)
         return false;
 
     p = (const unsigned char *) MessageID;
@@ -153,7 +153,7 @@ IsValidMessageID(const char *MessageID, bool stripspaces, bool laxsyntax)
 
     /* Check the length of the message identifier. */
     q = strchr((const char *) p, '>');
-    if (q == NULL || (const unsigned char *) q - p + 1 > NNTP_MAXLEN_MSGID)
+    if (q == nullptr || (const unsigned char *) q - p + 1 > NNTP_MAXLEN_MSGID)
         return false;
 
     /* Scan local-part: "< dot-atom-text". */
@@ -224,7 +224,7 @@ IsValidRightPartMessageID(const char *domain, bool stripspaces, bool bracket)
         initialized = true;
     }
 
-    if (domain == NULL)
+    if (domain == nullptr)
         return false;
 
     p = (const unsigned char *) domain;

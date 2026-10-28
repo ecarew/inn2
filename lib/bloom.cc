@@ -187,7 +187,7 @@ bloom_check(const struct bloom_filter *bf, const HASH *hash)
 void
 bloom_free(struct bloom_filter *bf)
 {
-    if (bf == NULL)
+    if (bf == nullptr)
         return;
     free(bf->bits);
     free(bf);

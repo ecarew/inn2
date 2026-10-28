@@ -299,7 +299,7 @@ network_bind_all(int type, unsigned short port, socket_type **fds,
         socket_set_errno_einval();
         return false;
     }
-    status = getaddrinfo(NULL, service, &hints, &addrs);
+    status = getaddrinfo(nullptr, service, &hints, &addrs);
     if (status < 0) {
         warn("getaddrinfo for %s failed: %s", service, gai_strerror(status));
         socket_set_errno_einval();
@@ -312,7 +312,7 @@ network_bind_all(int type, unsigned short port, socket_type **fds,
      */
     size = 2;
     *fds = xcalloc(size, sizeof(socket_type));
-    for (addr = addrs; addr != NULL; addr = addr->ai_next) {
+    for (addr = addrs; addr != nullptr; addr = addr->ai_next) {
         network_sockaddr_sprint(name, sizeof(name), addr->ai_addr);
         if (addr->ai_family == AF_INET)
             fd = network_bind_ipv4(type, name, port);
@@ -401,7 +401,7 @@ network_wait_any(socket_type fds[], unsigned int count)
         if (fds[i] > maxfd)
             maxfd = fds[i];
     }
-    status = select(maxfd + 1, &readfds, NULL, NULL, NULL);
+    status = select(maxfd + 1, &readfds, nullptr, nullptr, nullptr);
     if (status < 0)
         return INVALID_SOCKET;
     fd = INVALID_SOCKET;
@@ -454,14 +454,14 @@ network_accept_any(socket_type fds[], unsigned int count,
 static bool
 network_source(socket_type fd, int family, const char *source)
 {
-    if (source == NULL && innconf == NULL)
+    if (source == nullptr && innconf == nullptr)
         return true;
     if (family == AF_INET) {
         struct sockaddr_in saddr;
 
-        if (source == NULL && innconf != NULL)
+        if (source == nullptr && innconf != nullptr)
             source = innconf->sourceaddress;
-        if (source == NULL || strcmp(source, "all") == 0
+        if (source == nullptr || strcmp(source, "all") == 0
             || strcmp(source, "any") == 0)
             return true;
 
@@ -478,9 +478,9 @@ network_source(socket_type fd, int family, const char *source)
         struct sockaddr_in6 saddr;
 
         memset(&saddr, 0, sizeof(saddr));
-        if (source == NULL && innconf != NULL)
+        if (source == nullptr && innconf != nullptr)
             source = innconf->sourceaddress6;
-        if (source == NULL || strcmp(source, "all") == 0
+        if (source == nullptr || strcmp(source, "all") == 0
             || strcmp(source, "any") == 0)
             return true;
 
@@ -524,7 +524,7 @@ connect_wait(socket_type fd, time_t timeout)
         tv.tv_usec = 0;
         FD_ZERO(&set);
         FD_SET(fd, &set);
-        status = select(fd + 1, NULL, &set, NULL, &tv);
+        status = select(fd + 1, nullptr, &set, nullptr, &tv);
     } while (status < 0 && socket_errno == EINTR);
 
     /*
@@ -560,7 +560,7 @@ network_connect(const struct addrinfo *ai, const char *source, time_t timeout)
     socket_type fd = INVALID_SOCKET;
     int oerrno, status;
 
-    for (status = -1; status != 0 && ai != NULL; ai = ai->ai_next) {
+    for (status = -1; status != 0 && ai != nullptr; ai = ai->ai_next) {
         if (fd != INVALID_SOCKET)
             socket_close(fd);
         fd = socket(ai->ai_family, ai->ai_socktype, ai->ai_protocol);
@@ -713,7 +713,7 @@ network_read(socket_type fd, void *buffer, size_t total, time_t timeout)
      * the overall timeout to limit how long we wait without forward
      * progress.
      */
-    start = time(NULL);
+    start = time(nullptr);
     now = start;
     do {
         FD_ZERO(&set);
@@ -722,7 +722,7 @@ network_read(socket_type fd, void *buffer, size_t total, time_t timeout)
         if (tv.tv_sec < 1)
             tv.tv_sec = 1;
         tv.tv_usec = 0;
-        status = select(fd + 1, &set, NULL, NULL, &tv);
+        status = select(fd + 1, &set, nullptr, nullptr, &tv);
         if (status < 0) {
             if (socket_errno == EINTR)
                 continue;
@@ -743,7 +743,7 @@ network_read(socket_type fd, void *buffer, size_t total, time_t timeout)
         got += status;
         if (got == total)
             return true;
-        now = time(NULL);
+        now = time(nullptr);
     } while (now - start < timeout);
     socket_set_errno(ETIMEDOUT);
     return false;
@@ -776,7 +776,7 @@ network_write(socket_type fd, const void *buffer, size_t total, time_t timeout)
      * the overall timeout to limit how long we wait without forward progress.
      */
     fdflag_nonblocking(fd, true);
-    start = time(NULL);
+    start = time(nullptr);
     now = start;
     do {
         FD_ZERO(&set);
@@ -785,7 +785,7 @@ network_write(socket_type fd, const void *buffer, size_t total, time_t timeout)
         if (tv.tv_sec < 1)
             tv.tv_sec = 1;
         tv.tv_usec = 0;
-        status = select(fd + 1, NULL, &set, NULL, &tv);
+        status = select(fd + 1, nullptr, &set, nullptr, &tv);
         if (status < 0) {
             if (socket_errno == EINTR)
                 continue;
@@ -805,7 +805,7 @@ network_write(socket_type fd, const void *buffer, size_t total, time_t timeout)
             fdflag_nonblocking(fd, false);
             return true;
         }
-        now = time(NULL);
+        now = time(nullptr);
     } while (now - start < timeout);
     socket_set_errno(ETIMEDOUT);
 
@@ -840,7 +840,7 @@ network_sockaddr_sprint(char *dst, socklen_t size, const struct sockaddr *addr)
             result = inet_ntop(AF_INET, &in, dst, size);
         } else
             result = inet_ntop(AF_INET6, &sin6->sin6_addr, dst, size);
-        return (result != NULL);
+        return (result != nullptr);
     }
 #endif
     if (addr->sa_family == AF_INET) {
@@ -848,7 +848,7 @@ network_sockaddr_sprint(char *dst, socklen_t size, const struct sockaddr *addr)
 
         sin = (const struct sockaddr_in *) (const void *) addr;
         result = inet_ntop(AF_INET, &sin->sin_addr, dst, size);
-        return (result != NULL);
+        return (result != nullptr);
     } else {
         socket_set_errno(EAFNOSUPPORT);
         return false;
@@ -964,9 +964,9 @@ network_addr_match(const char *a, const char *b, const char *mask)
      * the slash separating it from the address.)
      */
     if (inet_aton(a, &a4) && inet_aton(b, &b4)) {
-        if (mask == NULL)
+        if (mask == nullptr)
             addr_mask = htonl(0xffffffffUL);
-        else if (strchr(mask, '.') == NULL) {
+        else if (strchr(mask, '.') == nullptr) {
             cidr = strtoul(mask, &end, 10);
             if (cidr > 32 || *end != '\0')
                 return false;
@@ -987,7 +987,7 @@ network_addr_match(const char *a, const char *b, const char *mask)
      */
     if (!inet_pton(AF_INET6, a, &a6) || !inet_pton(AF_INET6, b, &b6))
         return false;
-    if (mask == NULL)
+    if (mask == nullptr)
         cidr = 128;
     else {
         cidr = strtoul(mask, &end, 10);

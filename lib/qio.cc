@@ -49,7 +49,7 @@ QIOopen(const char *name)
 
     fd = open(name, O_RDONLY);
     if (fd < 0)
-        return NULL;
+        return nullptr;
     return QIOfdopen(fd);
 }
 
@@ -114,12 +114,12 @@ QIOread(QIOSTATE *qp)
             qp->_end = qp->_buffer;
         } else {
             p = static_cast<char *>(memchr(qp->_start, '\n', nleft));
-            if (p != NULL) {
+            if (p != nullptr) {
                 *p = '\0';
                 qp->_length = p - qp->_start;
                 line = qp->_start;
                 qp->_start = p + 1;
-                return (qp->_flag == QIO_long) ? NULL : line;
+                return (qp->_flag == QIO_long) ? nullptr : line;
             }
 
             /* Not there.  See if our buffer is full.  If so, tag as having
@@ -151,7 +151,7 @@ QIOread(QIOSTATE *qp)
         if (nread <= 0) {
             if (nread < 0)
                 qp->_flag = QIO_error;
-            return NULL;
+            return nullptr;
         }
         qp->_count += nread;
         qp->_end += nread;

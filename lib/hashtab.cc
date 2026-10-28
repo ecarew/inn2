@@ -180,7 +180,7 @@ hash_expand(struct hash *hash)
 static void **
 hash_find_slot(struct hash *hash, const void *key, bool insert)
 {
-    void **deleted_slot = NULL;
+    void **deleted_slot = nullptr;
     void *entry;
     size_t slot;
 
@@ -194,9 +194,9 @@ hash_find_slot(struct hash *hash, const void *key, bool insert)
         entry = hash->table[slot];
         if (entry == HASH_EMPTY) {
             if (!insert)
-                return NULL;
+                return nullptr;
 
-            if (deleted_slot != NULL) {
+            if (deleted_slot != nullptr) {
                 *deleted_slot = HASH_EMPTY;
                 hash->ndeleted--;
                 return deleted_slot;
@@ -228,7 +228,7 @@ hash_lookup(struct hash *hash, const void *key)
     void **slot;
 
     slot = hash_find_slot(hash, key, false);
-    return (slot == NULL) ? NULL : *slot;
+    return (slot == nullptr) ? nullptr : *slot;
 }
 
 
@@ -262,7 +262,7 @@ hash_replace(struct hash *hash, const void *key, void *datum)
     void **slot;
 
     slot = hash_find_slot(hash, key, false);
-    if (slot == NULL)
+    if (slot == nullptr)
         return false;
     (*hash->delete_)(*slot);
     *slot = datum;

@@ -7,7 +7,7 @@ list_new(struct list *list)
 {
     list->head = (struct node *) &list->tail;
     list->tailpred = (struct node *) &list->head;
-    list->tail = NULL;
+    list->tail = nullptr;
 }
 
 struct node *
@@ -49,7 +49,7 @@ list_head(struct list *list)
 {
     if (list->head->succ)
         return list->head;
-    return NULL;
+    return nullptr;
 }
 
 struct node *
@@ -57,7 +57,7 @@ list_tail(struct list *list)
 {
     if (list->tailpred->pred)
         return list->tailpred;
-    return NULL;
+    return nullptr;
 }
 
 struct node *
@@ -65,7 +65,7 @@ list_succ(struct node *node)
 {
     if (node->succ->succ)
         return node->succ;
-    return NULL;
+    return nullptr;
 }
 
 struct node *
@@ -73,7 +73,7 @@ list_pred(struct node *node)
 {
     if (node->pred->pred)
         return node->pred;
-    return NULL;
+    return nullptr;
 }
 
 struct node *

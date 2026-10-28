@@ -48,7 +48,7 @@ dispatch(struct cvector *command, const struct dispatch *table, size_t count,
     rule = static_cast<struct dispatch *>(
         bsearch(command->strings[0], table, count, sizeof(struct dispatch),
                 compare_dispatch));
-    if (rule == NULL)
+    if (rule == nullptr)
         (*unknown)(command, cookie);
     else if (argc < rule->min_args || argc > rule->max_args)
         (*syntax)(command, cookie);

@@ -58,7 +58,7 @@ concat(const char *first, ...)
 
     /* Find the total memory required. */
     va_start(args, first);
-    for (string = first; string != NULL; VA_NEXT(string, const char *)) {
+    for (string = first; string != nullptr; VA_NEXT(string, const char *)) {
         /*
          * Prevent overflow.  We limit the size to INT_MAX so that
          * downstream conversions to int don't generate a vulnerability.
@@ -80,7 +80,7 @@ concat(const char *first, ...)
     result = xmalloc(length);
     p = result;
     va_start(args, first);
-    for (string = first; string != NULL; VA_NEXT(string, const char *))
+    for (string = first; string != nullptr; VA_NEXT(string, const char *))
         while (*string != '\0')
             *p++ = *string++;
     va_end(args);
@@ -100,5 +100,6 @@ concatpath(const char *base, const char *name)
     if (name[0] == '/' || (name[0] == '.' && name[1] == '/'))
         return xstrdup(name);
     else
-        return concat(base != NULL ? base : ".", "/", name, (char *) 0);
+        return concat(base != nullptr ? base : ".", "/", name,
+                      (char *) nullptr);
 }

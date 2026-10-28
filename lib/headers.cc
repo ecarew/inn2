@@ -22,7 +22,7 @@ bool
 IsValidHeaderName(const char *p)
 {
     /* Not NULL and not empty. */
-    if (p == NULL || *p == '\0')
+    if (p == nullptr || *p == '\0')
         return false;
 
     for (; *p != '\0'; p++) {
@@ -50,7 +50,7 @@ IsValidHeaderBody(const char *p)
     const char *start = p;
 
     /* Not NULL and not empty. */
-    if (p == NULL || *p == '\0')
+    if (p == nullptr || *p == '\0')
         return false;
 
     if (!is_valid_utf8(p))
@@ -99,7 +99,7 @@ bool
 IsValidHeaderField(const char *p)
 {
     /* Not NULL, not empty, and does not begin with a colon. */
-    if (p == NULL || *p == '\0' || *p == ':')
+    if (p == nullptr || *p == '\0' || *p == ':')
         return false;
 
     for (; *p != '\0'; p++) {
@@ -212,8 +212,8 @@ spaced_words_without_cfws(const char *p)
     char *buffbegin;
     bool trailingspace = false;
 
-    if (p == NULL)
-        return NULL;
+    if (p == nullptr)
+        return nullptr;
 
     buff = xmalloc(strlen(p) + 1);
     buffbegin = buff;

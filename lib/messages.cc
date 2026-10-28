@@ -101,20 +101,20 @@
 #include "inn/xmalloc.h"
 
 /* The default handler lists. */
-static message_handler_func stdout_handlers[2] = {message_log_stdout, NULL};
-static message_handler_func stderr_handlers[2] = {message_log_stderr, NULL};
+static message_handler_func stdout_handlers[2] = {message_log_stdout, nullptr};
+static message_handler_func stderr_handlers[2] = {message_log_stderr, nullptr};
 
 /* The list of logging functions currently in effect. */
-static message_handler_func *debug_handlers = NULL;
+static message_handler_func *debug_handlers = nullptr;
 static message_handler_func *notice_handlers = stdout_handlers;
 static message_handler_func *warn_handlers = stderr_handlers;
 static message_handler_func *die_handlers = stderr_handlers;
 
 /* If non-NULL, called before exit and its return value passed to exit. */
-int (*message_fatal_cleanup)(void) = NULL;
+int (*message_fatal_cleanup)(void) = nullptr;
 
 /* If non-NULL, prepended (followed by ": ") to messages. */
-const char *message_program_name = NULL;
+const char *message_program_name = nullptr;
 
 
 /*
@@ -131,7 +131,7 @@ message_handlers(message_handler_func **list, unsigned int count, va_list args)
     *list = xcalloc(count + 1, sizeof(message_handler_func));
     for (i = 0; i < count; i++)
         (*list)[i] = (message_handler_func) va_arg(args, message_handler_func);
-    (*list)[count] = NULL;
+    (*list)[count] = nullptr;
 }
 
 
@@ -167,7 +167,7 @@ void
 message_handlers_reset(void)
 {
     free(debug_handlers);
-    debug_handlers = NULL;
+    debug_handlers = nullptr;
     if (notice_handlers != stdout_handlers) {
         free(notice_handlers);
         notice_handlers = stdout_handlers;
@@ -189,7 +189,7 @@ message_handlers_reset(void)
 void
 message_log_stdout(size_t len UNUSED, const char *fmt, va_list args, int err)
 {
-    if (message_program_name != NULL)
+    if (message_program_name != nullptr)
         fprintf(stdout, "%s: ", message_program_name);
     vfprintf(stdout, fmt, args);
     if (err)
@@ -207,7 +207,7 @@ void
 message_log_stderr(size_t len UNUSED, const char *fmt, va_list args, int err)
 {
     fflush(stdout);
-    if (message_program_name != NULL)
+    if (message_program_name != nullptr)
         fprintf(stderr, "%s: ", message_program_name);
     vfprintf(stderr, fmt, args);
     if (err)
@@ -231,7 +231,7 @@ message_log_syslog(int pri, size_t len, const char *fmt, va_list args, int err)
     int status;
 
     buffer = static_cast<char *>(malloc(len + 1));
-    if (buffer == NULL) {
+    if (buffer == nullptr) {
         fprintf(stderr, "failed to malloc %lu bytes at %s line %d: %s",
                 (unsigned long) len + 1, __FILE__, __LINE__, strerror(errno));
         exit(message_fatal_cleanup ? (*message_fatal_cleanup)() : 1);
@@ -295,14 +295,14 @@ debug(const char *format, ...)
     message_handler_func *log;
     ssize_t length;
 
-    if (debug_handlers == NULL)
+    if (debug_handlers == nullptr)
         return;
     va_start(args, format);
-    length = vsnprintf(NULL, 0, format, args);
+    length = vsnprintf(nullptr, 0, format, args);
     va_end(args);
     if (length < 0)
         return;
-    for (log = debug_handlers; *log != NULL; log++) {
+    for (log = debug_handlers; *log != nullptr; log++) {
         va_start(args, format);
         (**log)((size_t) length, format, args, 0);
         va_end(args);
@@ -317,11 +317,11 @@ notice(const char *format, ...)
     ssize_t length;
 
     va_start(args, format);
-    length = vsnprintf(NULL, 0, format, args);
+    length = vsnprintf(nullptr, 0, format, args);
     va_end(args);
     if (length < 0)
         return;
-    for (log = notice_handlers; *log != NULL; log++) {
+    for (log = notice_handlers; *log != nullptr; log++) {
         va_start(args, format);
         (**log)((size_t) length, format, args, 0);
         va_end(args);
@@ -337,11 +337,11 @@ sysnotice(const char *format, ...)
     int error = errno;
 
     va_start(args, format);
-    length = vsnprintf(NULL, 0, format, args);
+    length = vsnprintf(nullptr, 0, format, args);
     va_end(args);
     if (length < 0)
         return;
-    for (log = notice_handlers; *log != NULL; log++) {
+    for (log = notice_handlers; *log != nullptr; log++) {
         va_start(args, format);
         (**log)((size_t) length, format, args, error);
         va_end(args);
@@ -356,11 +356,11 @@ warn(const char *format, ...)
     ssize_t length;
 
     va_start(args, format);
-    length = vsnprintf(NULL, 0, format, args);
+    length = vsnprintf(nullptr, 0, format, args);
     va_end(args);
     if (length < 0)
         return;
-    for (log = warn_handlers; *log != NULL; log++) {
+    for (log = warn_handlers; *log != nullptr; log++) {
         va_start(args, format);
         (**log)((size_t) length, format, args, 0);
         va_end(args);
@@ -376,11 +376,11 @@ syswarn(const char *format, ...)
     int error = errno;
 
     va_start(args, format);
-    length = vsnprintf(NULL, 0, format, args);
+    length = vsnprintf(nullptr, 0, format, args);
     va_end(args);
     if (length < 0)
         return;
-    for (log = warn_handlers; *log != NULL; log++) {
+    for (log = warn_handlers; *log != nullptr; log++) {
         va_start(args, format);
         (**log)((size_t) length, format, args, error);
         va_end(args);
@@ -395,10 +395,10 @@ die(const char *format, ...)
     ssize_t length;
 
     va_start(args, format);
-    length = vsnprintf(NULL, 0, format, args);
+    length = vsnprintf(nullptr, 0, format, args);
     va_end(args);
     if (length >= 0)
-        for (log = die_handlers; *log != NULL; log++) {
+        for (log = die_handlers; *log != nullptr; log++) {
             va_start(args, format);
             (**log)((size_t) length, format, args, 0);
             va_end(args);
@@ -415,10 +415,10 @@ sysdie(const char *format, ...)
     int error = errno;
 
     va_start(args, format);
-    length = vsnprintf(NULL, 0, format, args);
+    length = vsnprintf(nullptr, 0, format, args);
     va_end(args);
     if (length >= 0)
-        for (log = die_handlers; *log != NULL; log++) {
+        for (log = die_handlers; *log != nullptr; log++) {
             va_start(args, format);
             (**log)((size_t) length, format, args, error);
             va_end(args);

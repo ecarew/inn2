@@ -114,7 +114,7 @@ void
 xsignal_mask(void)
 {
     int save_errno = errno;
-    sigprocmask(SIG_SETMASK, &signals_masked, NULL);
+    sigprocmask(SIG_SETMASK, &signals_masked, nullptr);
     errno = save_errno;
 }
 
@@ -123,7 +123,7 @@ void
 xsignal_unmask(void)
 {
     int save_errno = errno;
-    sigprocmask(SIG_SETMASK, &signals_unmasked, NULL);
+    sigprocmask(SIG_SETMASK, &signals_unmasked, nullptr);
     errno = save_errno;
 }
 
@@ -136,8 +136,8 @@ xsignal_unmask(void)
 void
 xsignal_enable_masking(void)
 {
-    sigprocmask(SIG_SETMASK, NULL, &signals_masked);
-    sigprocmask(SIG_SETMASK, NULL, &signals_unmasked);
+    sigprocmask(SIG_SETMASK, nullptr, &signals_masked);
+    sigprocmask(SIG_SETMASK, nullptr, &signals_unmasked);
     signal_masking = true;
 }
 

@@ -91,7 +91,7 @@ network_innbind(int fd, int family, const char *address, unsigned short port)
     int status;
 
     /* We need innconf in order to find innbind. */
-    if (innconf == NULL || innconf->pathbin == NULL)
+    if (innconf == nullptr || innconf->pathbin == nullptr)
         return INVALID_SOCKET;
 
     /* Open a pipe to innbind and run it to bind the socket. */
@@ -118,7 +118,7 @@ network_innbind(int fd, int family, const char *address, unsigned short port)
         socket_close(pipefds[0]);
         if (pipefds[1] != 1)
             socket_close(pipefds[1]);
-        if (execl(path, path, buff, (char *) 0) < 0)
+        if (execl(path, path, buff, (char *) nullptr) < 0)
             sysdie("cannot exec innbind for %s, port %hu", address, port);
     }
     socket_close(pipefds[1]);
@@ -317,7 +317,7 @@ network_innbind_all(int type, unsigned short port, socket_type **fds,
         socket_set_errno_einval();
         return false;
     }
-    status = getaddrinfo(NULL, service, &hints, &addrs);
+    status = getaddrinfo(nullptr, service, &hints, &addrs);
     if (status < 0) {
         warn("getaddrinfo for %s failed: %s", service, gai_strerror(status));
         socket_set_errno_einval();
@@ -330,7 +330,7 @@ network_innbind_all(int type, unsigned short port, socket_type **fds,
      */
     size = 2;
     *fds = xcalloc(size, sizeof(socket_type));
-    for (addr = addrs; addr != NULL; addr = addr->ai_next) {
+    for (addr = addrs; addr != nullptr; addr = addr->ai_next) {
         network_sockaddr_sprint(name, sizeof(name), addr->ai_addr);
         if (addr->ai_family == AF_INET)
             fd = network_innbind_ipv4(type, name, port);

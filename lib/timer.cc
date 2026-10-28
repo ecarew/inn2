@@ -77,8 +77,8 @@ struct timer {
     struct timer *brother;
     struct timer *child;
 };
-static struct timer **timers = NULL;
-static struct timer *timer_current = NULL;
+static struct timer **timers = nullptr;
+static struct timer *timer_current = nullptr;
 static unsigned int timer_count = 0;
 
 /* Names for all of the timers.  These must be given in the same order
@@ -101,7 +101,7 @@ TMRnow_double(void)
 {
     struct timeval tv;
 
-    gettimeofday(&tv, NULL);
+    gettimeofday(&tv, nullptr);
     return ((double) tv.tv_sec + (double) tv.tv_usec * 1.0e-6);
 }
 
@@ -127,7 +127,7 @@ TMRgettime(bool reset)
        arithmetic, this approach is less confusing to follow. */
     static struct timeval base;
 
-    gettimeofday(&tv, NULL);
+    gettimeofday(&tv, nullptr);
     now = (unsigned long) (tv.tv_sec - base.tv_sec) * 1000u;
     usec = tv.tv_usec - base.tv_usec; /* maybe negative */
     msec = usec / 1000;               /* still maybe negative */
@@ -152,7 +152,7 @@ TMRinit(unsigned int count)
     if (count != 0) {
         timers = xmalloc(count * sizeof(struct timer *));
         for (i = 0; i < count; i++)
-            timers[i] = NULL;
+            timers[i] = nullptr;
         TMRgettime(true);
     }
     timer_count = count;
@@ -165,11 +165,11 @@ TMRinit(unsigned int count)
 static void
 TMRfreeone(struct timer *timer)
 {
-    if (timer == NULL)
+    if (timer == nullptr)
         return;
-    if (timer->child != NULL)
+    if (timer->child != nullptr)
         TMRfreeone(timer->child);
-    if (timer->brother != NULL)
+    if (timer->brother != nullptr)
         TMRfreeone(timer->brother);
     free(timer);
 }
@@ -183,11 +183,11 @@ TMRfree(void)
 {
     unsigned int i;
 
-    if (timers != NULL)
+    if (timers != nullptr)
         for (i = 0; i < timer_count; i++)
             TMRfreeone(timers[i]);
     free(timers);
-    timers = NULL;
+    timers = nullptr;
     timer_count = 0;
 }
 
@@ -202,8 +202,8 @@ TMRnew(unsigned int id, struct timer *parent)
 
     timer = xmalloc(sizeof(struct timer));
     timer->parent = parent;
-    timer->brother = NULL;
-    timer->child = NULL;
+    timer->brother = nullptr;
+    timer->child = nullptr;
     timer->id = id;
     timer->start = 0;
     timer->total = 0;
@@ -234,21 +234,21 @@ TMRstart(unsigned int timer)
     }
 
     /* timers will be non-NULL if timer_count > 0. */
-    if (timer_current == NULL) {
-        if (timers[timer] == NULL)
-            timers[timer] = TMRnew(timer, NULL);
+    if (timer_current == nullptr) {
+        if (timers[timer] == nullptr)
+            timers[timer] = TMRnew(timer, nullptr);
         timer_current = timers[timer];
     } else {
         search = timer_current;
 
         /* Go to the "child" level and look for the good "brother"; the
            "brothers" are a simple linked list. */
-        if (search->child == NULL) {
+        if (search->child == nullptr) {
             search->child = TMRnew(timer, search);
             timer_current = search->child;
         } else {
             search = search->child;
-            while (search->id != timer && search->brother != NULL)
+            while (search->id != timer && search->brother != nullptr)
                 search = search->brother;
             if (search->id != timer) {
                 search->brother = TMRnew(timer, search->parent);
@@ -273,7 +273,7 @@ TMRstop(unsigned int timer)
         /* this should happen if innconf->timer == 0 */
         return;
     }
-    if (timer_current == NULL)
+    if (timer_current == nullptr)
         warn("timer %u stopped when no timer was running", timer);
     else if (timer != timer_current->id)
         warn("timer %u stopped doesn't match running timer %u", timer,
@@ -329,7 +329,7 @@ TMRsumone(const char *const *labels, struct timer *timer, char *buf,
        intuitive "parent/child" but it's easy.  Since we ensure sane snprintf
        semantics, it's safe to defer checking for overflow until after
        formatting all of the timer data. */
-    for (node = timer; node != NULL; node = node->parent) {
+    for (node = timer; node != nullptr; node = node->parent) {
         rc = snprintf(buf + off, len - off, "%s/", TMRlabel(labels, node->id));
         if (rc < 0) {
             /* Do nothing. */
@@ -359,9 +359,9 @@ TMRsumone(const char *const *labels, struct timer *timer, char *buf,
 
     timer->total = 0;
     timer->count = 0;
-    if (timer->child != NULL)
+    if (timer->child != nullptr)
         off += TMRsumone(labels, timer->child, buf + off, len - off);
-    if (timer->brother != NULL)
+    if (timer->brother != nullptr)
         off += TMRsumone(labels, timer->brother, buf + off, len - off);
     return off;
 }
@@ -386,10 +386,10 @@ TMRsummary(const char *prefix, const char *const *labels)
        the structure, so this may not be long enough, but this is over-sized
        enough that it shouldn't be a problem.  We use snprintf, so if the
        buffer isn't large enough it will just result in logged errors. */
-    len = 52 * timer_count + 27 + (prefix == NULL ? 0 : strlen(prefix)) + 1;
+    len = 52 * timer_count + 27 + (prefix == nullptr ? 0 : strlen(prefix)) + 1;
     buf = xmalloc(len);
     off = 0;
-    if (prefix == NULL)
+    if (prefix == nullptr)
         rc = 0;
     else
         rc = snprintf(buf, len, "%s ", prefix);
@@ -411,7 +411,7 @@ TMRsummary(const char *prefix, const char *const *labels)
     }
 
     for (i = 0; i < timer_count; i++) {
-        if (timers[i] != NULL) {
+        if (timers[i] != nullptr) {
             off += TMRsumone(labels, timers[i], buf + off, len - off);
         }
     }

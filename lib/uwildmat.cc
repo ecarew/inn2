@@ -94,7 +94,7 @@ utf8_length(const unsigned char *start, const unsigned char *end)
         length++;
     if (length < 2 || length > 6)
         return 1;
-    if (end != NULL && (end - start + 1) < length)
+    if (end != nullptr && (end - start + 1) < length)
         return 1;
     left = length - 1;
     for (p = start + 1; left > 0 && (*p & 0xc0) == 0x80; p++)
@@ -269,7 +269,7 @@ match_pattern(const unsigned char *text, const unsigned char *start,
             break;
 
         case '?':
-            text += ISUTF8(*text) ? utf8_length(text, NULL) : 1;
+            text += ISUTF8(*text) ? utf8_length(text, nullptr) : 1;
             break;
 
         case '*':
@@ -294,14 +294,14 @@ match_pattern(const unsigned char *text, const unsigned char *start,
                function call overhead. */
             ismeta = (*p == '[' || *p == '?' || *p == '\\');
             while (*text) {
-                width = ISUTF8(*text) ? utf8_length(text, NULL) : 1;
+                width = ISUTF8(*text) ? utf8_length(text, nullptr) : 1;
                 if (ismeta) {
                     matched = match_pattern(text, p, end);
                     text += width;
                 } else {
                     while (*text && *text != *p) {
                         text += width;
-                        width = ISUTF8(*text) ? utf8_length(text, NULL) : 1;
+                        width = ISUTF8(*text) ? utf8_length(text, nullptr) : 1;
                     }
                     if (!*text)
                         return ABORT;
@@ -326,7 +326,7 @@ match_pattern(const unsigned char *text, const unsigned char *start,
 
             /* Do the heavy lifting in another function for clarity, since
                character classes are an uncommon case. */
-            text += utf8_decode(text, NULL, &c);
+            text += utf8_decode(text, nullptr, &c);
             if (!match_class(c, p, endclass - 1))
                 return false;
             p = endclass;

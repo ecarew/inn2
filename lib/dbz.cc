@@ -378,10 +378,10 @@ create_truncate(const char *name, const char *pag1)
     char *fn;
     FILE *f;
 
-    fn = concat(name, pag1, (char *) 0);
+    fn = concat(name, pag1, (char *) nullptr);
     f = Fopen(fn, "w", TEMPORARYOPEN);
     free(fn);
-    if (f == NULL) {
+    if (f == nullptr) {
         syswarn("unable to create/truncate %s", pag1);
         return false;
     } else
@@ -415,7 +415,7 @@ dbzfresh(const char *name, off_t size)
     }
 
     /* get default configuration */
-    if (!getconf(NULL, &c))
+    if (!getconf(nullptr, &c))
         return false; /* "can't happen" */
 
 #ifdef DO_TAGGED_HASH
@@ -444,10 +444,10 @@ dbzfresh(const char *name, off_t size)
 #endif
 
     /* write it out */
-    fn = concat(name, dir, (char *) 0);
+    fn = concat(name, dir, (char *) nullptr);
     f = Fopen(fn, "w", TEMPORARYOPEN);
     free(fn);
-    if (f == NULL) {
+    if (f == nullptr) {
         syswarn("dbzfresh: unable to write config");
         return false;
     }
@@ -570,10 +570,10 @@ dbzagain(const char *name, const char *oldname)
     }
 
     /* pick up the old configuration */
-    fn = concat(oldname, dir, (char *) 0);
+    fn = concat(oldname, dir, (char *) nullptr);
     f = Fopen(fn, "r", TEMPORARYOPEN);
     free(fn);
-    if (f == NULL) {
+    if (f == nullptr) {
         syswarn("dbzagain: cannot open old .dir file");
         return false;
     }
@@ -628,10 +628,10 @@ dbzagain(const char *name, const char *oldname)
         c.tsize = newsize;
 
     /* write it out */
-    fn = concat(name, dir, (char *) 0);
+    fn = concat(name, dir, (char *) nullptr);
     f = Fopen(fn, "w", TEMPORARYOPEN);
     free(fn);
-    if (f == NULL) {
+    if (f == nullptr) {
         syswarn("dbzagain: unable to write new .dir");
         return false;
     }
@@ -664,7 +664,7 @@ openhashtable(const char *base, const char *ext, hash_table *tab,
     char *name;
     int oerrno;
 
-    name = concat(base, ext, (char *) 0);
+    name = concat(base, ext, (char *) nullptr);
     if ((tab->fd = open(name, readonly ? O_RDONLY : O_RDWR)) < 0) {
         syswarn("openhashtable: could not open raw");
         oerrno = errno;
@@ -754,14 +754,14 @@ dbzinit(const char *name)
     }
 
     /* open the .dir file */
-    fname = concat(name, dir, (char *) 0);
-    if ((dirf = Fopen(fname, "r+", DBZ_DIR)) == NULL) {
+    fname = concat(name, dir, (char *) nullptr);
+    if ((dirf = Fopen(fname, "r+", DBZ_DIR)) == nullptr) {
         dirf = Fopen(fname, "r", DBZ_DIR);
         readonly = true;
     } else
         readonly = false;
     free(fname);
-    if (dirf == NULL) {
+    if (dirf == nullptr) {
         syswarn("dbzinit: can't open .dir file");
         return false;
     }
@@ -1170,7 +1170,7 @@ getconf(FILE *df, dbzconfig *cp)
     }
     cp->lenfuzzy = (int) (1 << cp->dropbits) - 1;
 #else  /* DO_TAGGED_HASH */
-    if (df == NULL) {
+    if (df == nullptr) {
         cp->tsize = DEFSIZE;
         for (i = 0; i < NUSEDS; i++)
             cp->used[i] = 0;
@@ -1281,9 +1281,9 @@ getcore(hash_table *tab)
                 return false;
             }
         }
-        it = static_cast<char *>(
-            mmap(NULL, length, readonly ? PROT_READ : PROT_WRITE | PROT_READ,
-                 MAP_SHARED, tab->fd, 0));
+        it = static_cast<char *>(mmap(
+            nullptr, length, readonly ? PROT_READ : PROT_WRITE | PROT_READ,
+            MAP_SHARED, tab->fd, 0));
         if (it == (char *) -1) {
             syswarn("dbz: getcore: mmap failed");
             return false;
@@ -1561,7 +1561,7 @@ set(searcher *sp, hash_table *tab, void *value)
         memcpy(where, value, tab->reclen);
         debug("set: incore");
         if (tab->incore == INCORE_MMAP) {
-            if (innconf != NULL && innconf->nfswriter) {
+            if (innconf != nullptr && innconf->nfswriter) {
                 inn_msync_page(where, tab->reclen, MS_ASYNC);
             }
             return true;
@@ -1581,7 +1581,8 @@ set(searcher *sp, hash_table *tab, void *value)
 
             FD_ZERO(&writeset);
             FD_SET(tab->fd, &writeset);
-            if (select(tab->fd + 1, NULL, &writeset, NULL, NULL) < 1) {
+            if (select(tab->fd + 1, nullptr, &writeset, nullptr, nullptr)
+                < 1) {
                 syswarn("dbz: set: select failed");
                 sp->aborted = 1;
                 return false;

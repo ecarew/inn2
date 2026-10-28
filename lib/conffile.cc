@@ -18,7 +18,7 @@ static int
 getconfline(CONFFILE *F, char *buffer, size_t length)
 {
     if (F->f) {
-        if (fgets(buffer, (int) length, F->f) == NULL) {
+        if (fgets(buffer, (int) length, F->f) == nullptr) {
             return 1;
         }
         if (ferror(F->f)) {
@@ -58,26 +58,26 @@ CONFgetword(CONFFILE *F)
     bool comment;
 
     if (!F)
-        return (NULL); /* No conf file */
+        return (nullptr); /* No conf file */
     if (!F->buf || !F->buf[0]) {
         if (cfeof(F))
-            return (NULL);
+            return (nullptr);
         if (!F->buf) {
             F->sbuf = BIG_BUFFER;
             F->buf = xmalloc(F->sbuf);
         }
         if (getconfline(F, F->buf, F->sbuf) != 0)
-            return (NULL); /* Line too long */
+            return (nullptr); /* Line too long */
     }
     do {
         /* Ignore blank and comment lines. */
-        if ((p = strchr(F->buf, '\n')) != NULL)
+        if ((p = strchr(F->buf, '\n')) != nullptr)
             *p = '\0';
         for (p = F->buf; *p == ' ' || *p == '\t'; p++)
             ;
         if ((*p == '\0' || *p == '#') && !cfeof(F)) {
             if (getconfline(F, F->buf, F->sbuf))
-                return (NULL); /* Line too long */
+                return (nullptr); /* Line too long */
             continue;
         }
         break;
@@ -91,18 +91,18 @@ CONFgetword(CONFFILE *F)
                 ;
             if (*t == '\0') {
                 if (strlen(F->buf) >= F->sbuf - 2)
-                    return (NULL); /* Line too long */
+                    return (nullptr); /* Line too long */
                 *t++ = '\n';
                 *t = '\0';
                 if (getconfline(F, t, F->sbuf - strlen(F->buf)))
-                    return (NULL); /* Line too long */
-                if ((s = strchr(t, '\n')) != NULL)
+                    return (nullptr); /* Line too long */
+                if ((s = strchr(t, '\n')) != nullptr)
                     *s = '\0';
             } else
                 break;
         } while (!cfeof(F));
         if (*t != '"')
-            return (NULL);
+            return (nullptr);
         *t++ = '\0';
     } else {
         for (t = p; *t != ' ' && *t != '\t' && *t != '\0'; t++)
@@ -114,7 +114,7 @@ CONFgetword(CONFFILE *F)
             *t++ = '\0';
     }
     if (*p == '\0' && cfeof(F))
-        return (NULL);
+        return (nullptr);
     word = xstrdup(p);
     p = F->buf;
     if (!comment)
@@ -133,18 +133,18 @@ CONFfopen(const char *filename)
 
     f = fopen(filename, "r");
     if (!f)
-        return (0);
+        return (nullptr);
     ret = xmalloc(sizeof(CONFFILE));
     if (!ret) {
         fclose(f);
-        return (0);
+        return (nullptr);
     }
     ret->filename = xstrdup(filename);
-    ret->buf = 0;
+    ret->buf = nullptr;
     ret->sbuf = 0;
     ret->lineno = 0;
     ret->f = f;
-    ret->array = NULL;
+    ret->array = nullptr;
     return (ret);
 }
 
@@ -153,7 +153,7 @@ CONFfclose(CONFFILE *f)
 {
     if (!f)
         return; /* No conf file */
-    if (f->f != NULL)
+    if (f->f != nullptr)
         fclose(f->f);
     if (f->buf)
         free(f->buf);
@@ -166,16 +166,16 @@ CONFTOKEN *
 CONFgettoken(CONFTOKEN *toklist, CONFFILE *file)
 {
     char *word;
-    static CONFTOKEN ret = {CONFstring, 0};
+    static CONFTOKEN ret = {CONFstring, nullptr};
     int i;
 
     if (ret.name) {
         free(ret.name);
-        ret.name = 0;
+        ret.name = nullptr;
     }
     word = CONFgetword(file);
     if (!word)
-        return (0);
+        return (nullptr);
     if (toklist) {
         for (i = 0; toklist[i].type; i++) {
             if (strcmp(word, toklist[i].name) == 0) {

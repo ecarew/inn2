@@ -24,7 +24,7 @@ NNTPconnect(const char *host, int port, FILE **FromServerp, FILE **ToServerp,
     char mybuff[NNTP_MAXLEN_COMMAND + 2];
     char *buff;
     int fd, code, oerrno;
-    FILE *F = NULL;
+    FILE *F = nullptr;
 
     if (errbuff)
         buff = errbuff;
@@ -34,16 +34,16 @@ NNTPconnect(const char *host, int port, FILE **FromServerp, FILE **ToServerp,
     }
     *buff = '\0';
 
-    fd = network_connect_host(host, port, NULL, DEFAULT_TIMEOUT);
+    fd = network_connect_host(host, port, nullptr, DEFAULT_TIMEOUT);
     if (fd < 0)
         return -1;
 
     /* Connected -- now make sure we can post.  If we can't, use EPERM as a
        reasonable error code. */
     F = fdopen(fd, "r");
-    if (F == NULL)
+    if (F == nullptr)
         goto fail;
-    if (fgets(buff, len, F) == NULL)
+    if (fgets(buff, len, F) == nullptr)
         goto fail;
     code = atoi(buff);
     if (code != NNTP_OK_BANNER_POST && code != NNTP_OK_BANNER_NOPOST) {
@@ -52,13 +52,13 @@ NNTPconnect(const char *host, int port, FILE **FromServerp, FILE **ToServerp,
     }
     *FromServerp = F;
     *ToServerp = fdopen(dup(fd), "w");
-    if (*ToServerp == NULL)
+    if (*ToServerp == nullptr)
         goto fail;
     return 0;
 
 fail:
     oerrno = errno;
-    if (F != NULL)
+    if (F != nullptr)
         fclose(F);
     else
         close(fd);
@@ -73,7 +73,7 @@ NNTPremoteopen(int port, FILE **FromServerp, FILE **ToServerp, char *errbuff,
 {
     char *p;
 
-    if ((p = innconf->server) == NULL) {
+    if ((p = innconf->server) == nullptr) {
         if (errbuff)
             strlcpy(errbuff,
                     "What server? (server parameter unset in inn.conf", len);

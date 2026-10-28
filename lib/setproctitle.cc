@@ -46,8 +46,8 @@ setproctitle(const char *format, ...)
 
 #else
 
-static char *title_start = NULL;
-static char *title_end = NULL;
+static char *title_start = nullptr;
+static char *title_end = nullptr;
 
 void
 setproctitle_init(int argc, char *argv[])
@@ -64,7 +64,7 @@ setproctitle(const char *format, ...)
     ssize_t delta;
     char *title;
 
-    if (title_start == NULL || title_end == NULL) {
+    if (title_start == nullptr || title_end == nullptr) {
         warn("setproctitle called without setproctitle_init");
         return;
     }
@@ -82,7 +82,7 @@ setproctitle(const char *format, ...)
 
     /* Now, put in the actual content.  Get the program name from
        message_program_name if it's set. */
-    if (message_program_name != NULL) {
+    if (message_program_name != nullptr) {
         delta = snprintf(title, length, "%s: ", message_program_name);
         if (delta < 0 || (size_t) delta >= length)
             return;

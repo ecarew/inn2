@@ -55,13 +55,13 @@ NNTPlocalopen(FILE **FromServerp, FILE **ToServerp, char *errbuff, size_t len)
     }
 
     /* Connected -- now make sure we can post. */
-    if ((F = fdopen(i, "r")) == NULL) {
+    if ((F = fdopen(i, "r")) == nullptr) {
         oerrno = errno;
         close(i);
         errno = oerrno;
         return -1;
     }
-    if (fgets(buff, len, F) == NULL) {
+    if (fgets(buff, len, F) == nullptr) {
         oerrno = errno;
         fclose(F);
         errno = oerrno;
@@ -76,7 +76,7 @@ NNTPlocalopen(FILE **FromServerp, FILE **ToServerp, char *errbuff, size_t len)
     }
 
     *FromServerp = F;
-    if ((*ToServerp = fdopen(dup(i), "w")) == NULL) {
+    if ((*ToServerp = fdopen(dup(i), "w")) == nullptr) {
         oerrno = errno;
         fclose(F);
         errno = oerrno;

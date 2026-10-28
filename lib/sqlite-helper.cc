@@ -24,7 +24,7 @@ sqlite_helper_init(sqlite_helper_t const *helper, sqlite3_stmt **stmts,
     char const *name, *nameend;
 
     text = helper->text;
-    result = sqlite3_exec(connection, text, 0, NULL, errmsg);
+    result = sqlite3_exec(connection, text, nullptr, nullptr, errmsg);
     if (result != SQLITE_OK)
         return result;
     name = strchr(text, 0) + 1;
@@ -34,7 +34,7 @@ sqlite_helper_init(sqlite_helper_t const *helper, sqlite3_stmt **stmts,
         text = nameend + 1;
         textend = strchr(text, 0);
         result = sqlite3_prepare_v3(connection, text, textend - text,
-                                    prepare_flags, stmts + ix, NULL);
+                                    prepare_flags, stmts + ix, nullptr);
         if (result != SQLITE_OK)
             goto oops;
         name = textend + 1;
@@ -70,7 +70,7 @@ oops:
     }
     while (ix-- > 0) {
         sqlite3_finalize(stmts[ix]);
-        stmts[ix] = NULL;
+        stmts[ix] = nullptr;
     }
     return result;
 }
@@ -83,7 +83,7 @@ sqlite_helper_term(sqlite_helper_t const *helper, sqlite3_stmt **stmts)
     count = helper->stmt_count;
     for (ix = 0; ix < count; ix++) {
         sqlite3_finalize(stmts[ix]);
-        stmts[ix] = NULL;
+        stmts[ix] = nullptr;
     }
 }
 

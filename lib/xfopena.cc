@@ -15,5 +15,5 @@ xfopena(const char *p)
 
     /* We can't trust stdio to really use O_APPEND, so open, then fdopen. */
     fd = open(p, O_WRONLY | O_APPEND | O_CREAT, 0666);
-    return fd >= 0 ? fdopen(fd, "a") : NULL;
+    return fd >= 0 ? fdopen(fd, "a") : nullptr;
 }

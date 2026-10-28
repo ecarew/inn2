@@ -23,7 +23,7 @@
 #include "inn/libinn.h"
 
 
-static FILE **Reserved_fd = NULL;
+static FILE **Reserved_fd = nullptr;
 static int Maxfd = -1;
 
 /*
@@ -46,13 +46,13 @@ fdreserve(int fdnum)
     int i;
 
     if (fdnum <= 0) {
-        if (Reserved_fd != NULL) {
+        if (Reserved_fd != nullptr) {
             for (i = 0; i < Maxfd; i++) {
-                if (Reserved_fd[i] != NULL)
+                if (Reserved_fd[i] != nullptr)
                     fclose(Reserved_fd[i]);
             }
             free(Reserved_fd);
-            Reserved_fd = NULL;
+            Reserved_fd = nullptr;
         }
         Maxfd = -1;
         allocated = 0;
@@ -60,7 +60,7 @@ fdreserve(int fdnum)
     }
 
     /* Allocate Reserved_fd or extend it when needed. */
-    if (Reserved_fd == NULL) {
+    if (Reserved_fd == nullptr) {
         Reserved_fd = xcalloc(fdnum, sizeof(FILE *));
         allocated = fdnum;
     } else {
@@ -71,24 +71,24 @@ fdreserve(int fdnum)
             allocated = fdnum;
         } else if (Maxfd > fdnum) {
             for (i = fdnum; i < Maxfd; i++) {
-                if (Reserved_fd[i] != NULL)
+                if (Reserved_fd[i] != nullptr)
                     fclose(Reserved_fd[i]);
-                Reserved_fd[i] = NULL;
+                Reserved_fd[i] = nullptr;
             }
         }
     }
 
     for (i = 0; i < fdnum; i++) {
-        if (Reserved_fd[i] != NULL)
+        if (Reserved_fd[i] != nullptr)
             continue;
-        if (((Reserved_fd[i] = fopen("/dev/null", "r")) == NULL)) {
+        if (((Reserved_fd[i] = fopen("/dev/null", "r")) == nullptr)) {
             /* In case a file descriptor cannot be reserved,
              * close all of them. */
             for (i = 0; i < fdnum; i++)
-                if (Reserved_fd[i] != NULL)
+                if (Reserved_fd[i] != nullptr)
                     fclose(Reserved_fd[i]);
             free(Reserved_fd);
-            Reserved_fd = NULL;
+            Reserved_fd = nullptr;
             allocated = 0;
             Maxfd = -1;
             return false;
@@ -114,13 +114,13 @@ Fopen(const char *name, const char *mode, int fdindex)
 {
     FILE *nfp;
 
-    if (name == NULL || *name == '\0')
-        return NULL;
+    if (name == nullptr || *name == '\0')
+        return nullptr;
 
-    if (fdindex < 0 || fdindex >= Maxfd || Reserved_fd[fdindex] == NULL)
+    if (fdindex < 0 || fdindex >= Maxfd || Reserved_fd[fdindex] == nullptr)
         return fopen(name, mode);
 
-    if ((nfp = freopen(name, mode, Reserved_fd[fdindex])) == NULL) {
+    if ((nfp = freopen(name, mode, Reserved_fd[fdindex])) == nullptr) {
         int oerrno = errno;
 
         /* A failed freopen closes the original stream, so it cannot be
@@ -128,7 +128,7 @@ Fopen(const char *name, const char *mode, int fdindex)
          * stream instead. */
         Reserved_fd[fdindex] = fopen("/dev/null", "r");
         errno = oerrno;
-        return NULL;
+        return nullptr;
     }
 
     return (Reserved_fd[fdindex] = nfp);
@@ -146,7 +146,7 @@ Fclose(FILE *fp)
     int i;
     FILE *nfp;
 
-    if (fp == NULL)
+    if (fp == nullptr)
         return 0;
 
     for (i = 0; i < Maxfd; i++) {
@@ -158,7 +158,7 @@ Fclose(FILE *fp)
         return fclose(fp);
 
     nfp = freopen("/dev/null", "r", Reserved_fd[i]);
-    if (nfp == NULL) {
+    if (nfp == nullptr) {
         int oerrno = errno;
 
         /* A failed freopen closes the original stream, so replenish the

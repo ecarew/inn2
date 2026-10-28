@@ -50,15 +50,15 @@ ReadInDescriptor(int fd, struct stat *Sbp)
     size_t size;
     int oerrno;
 
-    if (Sbp == NULL)
+    if (Sbp == nullptr)
         Sbp = &mystat;
 
     /* Get the size, and enough memory. */
     if (fstat(fd, Sbp) < 0)
-        return NULL;
+        return nullptr;
     if (Sbp->st_size < 0 || (uintmax_t) Sbp->st_size >= SIZE_MAX) {
         errno = EOVERFLOW;
-        return NULL;
+        return nullptr;
     }
     size = (size_t) Sbp->st_size;
     p = xmalloc(size + 1);
@@ -68,7 +68,7 @@ ReadInDescriptor(int fd, struct stat *Sbp)
         oerrno = errno;
         free(p);
         errno = oerrno;
-        return NULL;
+        return nullptr;
     }
 
     /* Terminate the string; terminate the routine. */
@@ -88,10 +88,10 @@ ReadInFile(const char *name, struct stat *Sbp)
     int fd, oerrno;
 
     if ((fd = open(name, O_RDONLY)) < 0)
-        return NULL;
+        return nullptr;
 
     p = ReadInDescriptor(fd, Sbp);
-    if (p == NULL) {
+    if (p == nullptr) {
         oerrno = errno;
         close(fd);
         errno = oerrno;

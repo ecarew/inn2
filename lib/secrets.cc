@@ -24,7 +24,7 @@
 #include "inn/vector.h"
 
 /* Instantiation of the global secrets variable. */
-struct secrets *secrets = NULL;
+struct secrets *secrets = nullptr;
 
 #define K(name) (#name), offsetof(struct secrets, name)
 
@@ -56,7 +56,7 @@ secrets_parse(struct config_group *group)
             if (!config_param_string(group, config_table[i].name, &char_ptr))
                 char_ptr = config_table[i].defaults.string;
             string = CONF_STRING(config, config_table[i].location);
-            *string = (char_ptr == NULL) ? NULL : xstrdup(char_ptr);
+            *string = (char_ptr == nullptr) ? nullptr : xstrdup(char_ptr);
             break;
         case TYPE_LIST:
             /* vector_ptr contains the value taken from inn-secrets.conf or the
@@ -68,10 +68,10 @@ secrets_parse(struct config_group *group)
                 vector_ptr = config_table[i].defaults.list;
             list = CONF_LIST(config, config_table[i].location);
             *list = vector_new();
-            if (vector_ptr != NULL && vector_ptr->strings != NULL) {
+            if (vector_ptr != nullptr && vector_ptr->strings != nullptr) {
                 vector_resize(*list, vector_ptr->count);
                 for (j = 0; j < vector_ptr->count; j++) {
-                    if (vector_ptr->strings[j] != NULL) {
+                    if (vector_ptr->strings[j] != nullptr) {
                         vector_add(*list, vector_ptr->strings[j]);
                     }
                 }
@@ -94,17 +94,17 @@ bool
 secrets_read(const char *path)
 {
     struct config_group *group;
-    struct config_group *subgroup = NULL;
-    char *configfile = NULL;
+    struct config_group *subgroup = nullptr;
+    char *configfile = nullptr;
     bool parsed = false;
 
-    if (secrets != NULL)
+    if (secrets != nullptr)
         secrets_free(secrets);
     configfile = concatpath(innconf->pathetc, INN_PATH_SECRETS);
-    group = config_parse_file(path == NULL ? configfile : path);
+    group = config_parse_file(path == nullptr ? configfile : path);
     free(configfile);
 
-    if (group != NULL) {
+    if (group != nullptr) {
         parsed = true;
 
         /* We currently only have one type ("cancels").
@@ -126,7 +126,7 @@ secrets_read(const char *path)
     secrets = secrets_parse(subgroup);
 
     /* Free allocated memory (subgroup will be freed at the same time). */
-    if (group != NULL)
+    if (group != nullptr)
         config_free(group);
 
     return parsed;
@@ -149,14 +149,14 @@ secrets_free(struct secrets *config)
     for (i = 0; i < ARRAY_SIZE(config_table); i++) {
         if (config_table[i].type == TYPE_STRING) {
             p = *CONF_STRING(config, config_table[i].location);
-            if (p != NULL) {
+            if (p != nullptr) {
                 explicit_bzero(p, strlen(p));
                 free(p);
             }
         }
         if (config_table[i].type == TYPE_LIST) {
             q = *CONF_LIST(config, config_table[i].location);
-            if (q != NULL) {
+            if (q != nullptr) {
                 size_t j;
 
                 for (j = 0; j < q->count; j++) {

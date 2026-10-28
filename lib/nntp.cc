@@ -58,11 +58,11 @@ nntp_new(int in, int out, size_t maxsize, time_t timeout)
     nntp->out_fd = out;
     nntp->maxsize = maxsize;
     nntp->timeout = timeout;
-    nntp->in.data = NULL;
+    nntp->in.data = nullptr;
     nntp->in.size = 0;
     nntp->in.used = 0;
     nntp->in.left = 0;
-    nntp->out.data = NULL;
+    nntp->out.data = nullptr;
     nntp->out.size = 0;
     nntp->out.used = 0;
     nntp->out.left = 0;
@@ -76,11 +76,11 @@ nntp_new(int in, int out, size_t maxsize, time_t timeout)
 void
 nntp_free(struct nntp *nntp)
 {
-    if (nntp == NULL)
+    if (nntp == nullptr)
         return;
-    if (nntp->in.data != NULL)
+    if (nntp->in.data != nullptr)
         free(nntp->in.data);
-    if (nntp->out.data != NULL)
+    if (nntp->out.data != nullptr)
         free(nntp->out.data);
     if (nntp->in_fd >= 0)
         close(nntp->in_fd);
@@ -102,9 +102,9 @@ nntp_connect(const char *host, unsigned short port, size_t maxsize,
 {
     int fd;
 
-    fd = network_connect_host(host, port, NULL, timeout);
+    fd = network_connect_host(host, port, nullptr, timeout);
     if (fd < 0)
-        return NULL;
+        return nullptr;
     return nntp_new(fd, fd, maxsize, timeout);
 }
 
@@ -156,7 +156,7 @@ nntp_read_data(struct nntp *nntp)
         FD_SET(nntp->in_fd, &mask);
         tv.tv_sec = nntp->timeout;
         tv.tv_usec = 0;
-        status = select(nntp->in_fd + 1, &mask, NULL, NULL, &tv);
+        status = select(nntp->in_fd + 1, &mask, nullptr, nullptr, &tv);
         if (status == -1 && errno != EINTR)
             return NNTP_READ_ERROR;
     } while (status == -1);
@@ -378,7 +378,7 @@ nntp_respond(struct nntp *nntp, enum nntp_code code, const char *format, ...)
 {
     va_list args;
 
-    if (format == NULL)
+    if (format == nullptr)
         buffer_append_sprintf(&nntp->out, "%u\r\n", code);
     else {
         buffer_append_sprintf(&nntp->out, "%u ", code);
@@ -401,7 +401,7 @@ nntp_respond_noflush(struct nntp *nntp, enum nntp_code code,
 {
     va_list args;
 
-    if (format == NULL)
+    if (format == nullptr)
         buffer_append_sprintf(&nntp->out, "%u\r\n", code);
     else {
         buffer_append_sprintf(&nntp->out, "%u ", code);

@@ -220,7 +220,7 @@ makedate(time_t date, bool local, char *buff, size_t buflen)
         return false;
 
     /* Get the current time if the provided time is -1. */
-    realdate = (date == (time_t) -1) ? time(NULL) : date;
+    realdate = (date == (time_t) -1) ? time(nullptr) : date;
 
     /* RFC 5322 says the timezone offset is given as [+-]HHMM, so we have to
        separate the offset into a sign, hours, and minutes.  Dividing the
@@ -274,7 +274,7 @@ makedate(time_t date, bool local, char *buff, size_t buflen)
         tz_name = NULL;
 #endif
     }
-    if (tz_name != NULL && date_length + 4 + strlen(tz_name) <= buflen) {
+    if (tz_name != nullptr && date_length + 4 + strlen(tz_name) <= buflen) {
         snprintf(buff + date_length, buflen - date_length, " (%s)", tz_name);
     }
     return true;
@@ -402,7 +402,7 @@ parsedate_nntp(const char *date, const char *hour, bool local)
         tm.tm_year += (date[0] - '0') * 1000 + (date[1] - '0') * 100;
         tm.tm_year -= 1900;
     } else {
-        now = time(NULL);
+        now = time(nullptr);
         current = local ? localtime(&now) : gmtime(&now);
         century = current->tm_year / 100;
         if (tm.tm_year > current->tm_year % 100)
@@ -439,7 +439,7 @@ parse_number(const char *p, const struct rule *rule, int *value)
         *value = *value * 10 + (*p - '0');
     }
     if (count < rule->min || count > rule->max)
-        return NULL;
+        return nullptr;
     return p;
 }
 
@@ -461,7 +461,7 @@ parse_lookup(const char *p, const struct rule *rule, int *value)
             *value = i;
             return p;
         }
-    return NULL;
+    return nullptr;
 }
 
 
@@ -484,7 +484,7 @@ parse_legacy_month(const char *p, const struct rule *rule UNUSED, int *value)
     if (*end == '.')
         end++;
     if (end == p)
-        return NULL;
+        return nullptr;
     size = end - p;
     if (size == 3 || (size == 4 && p[3] == '.')) {
         for (i = 0; i < ARRAY_SIZE(MONTH); i++)
@@ -504,7 +504,7 @@ parse_legacy_month(const char *p, const struct rule *rule UNUSED, int *value)
             }
         }
     }
-    return NULL;
+    return nullptr;
 }
 
 
@@ -527,7 +527,7 @@ parse_by_rule(const char *p, const struct rule rules[], size_t count,
         switch (rule->type) {
         case TYPE_DELIM:
             if (*p != rule->delimiter)
-                return NULL;
+                return nullptr;
             p++;
             break;
         case TYPE_LOOKUP:
@@ -541,8 +541,8 @@ parse_by_rule(const char *p, const struct rule rules[], size_t count,
             break;
         }
 
-        if (p == NULL)
-            return NULL;
+        if (p == nullptr)
+            return nullptr;
         p = skip_cfws(p);
     }
     return p;
@@ -565,7 +565,7 @@ parse_legacy_timezone(const char *p, long *offset, bool obsolete)
     for (end = p; *end != '\0' && isalpha((unsigned char) *end); end++)
         ;
     if (end == p)
-        return NULL;
+        return nullptr;
     max = end - p;
     for (i = 0; i < ARRAY_SIZE(ZONE_OFFSET); i++)
         if (strncasecmp(ZONE_OFFSET[i].name, p, max) == 0) {
@@ -587,7 +587,7 @@ parse_legacy_timezone(const char *p, long *offset, bool obsolete)
                 return p;
             }
         }
-    return NULL;
+    return nullptr;
 }
 
 
@@ -611,25 +611,25 @@ parsedate_rfc5322(const char *date)
        the week is accurate or not. */
     static const struct rule base_rule[] = {
         { TYPE_LOOKUP, 0,   WEEKDAY,  7, 3, 3 },
-        { TYPE_DELIM,  ',', NULL,     0, 1, 1 },
-        { TYPE_NUMBER, 0,   NULL,     0, 1, 2 },
+        { TYPE_DELIM,  ',', nullptr,     0, 1, 1 },
+        { TYPE_NUMBER, 0,   nullptr,     0, 1, 2 },
         { TYPE_LOOKUP, 0,   MONTH,   12, 3, 3 },
-        { TYPE_NUMBER, 0,   NULL,     0, 2, 4 },
-        { TYPE_NUMBER, 0,   NULL,     0, 2, 2 },
-        { TYPE_DELIM,  ':', NULL,     0, 1, 1 },
-        { TYPE_NUMBER, 0,   NULL,     0, 2, 2 }
+        { TYPE_NUMBER, 0,   nullptr,     0, 2, 4 },
+        { TYPE_NUMBER, 0,   nullptr,     0, 2, 2 },
+        { TYPE_DELIM,  ':', nullptr,     0, 1, 1 },
+        { TYPE_NUMBER, 0,   nullptr,     0, 2, 2 }
     };
 
     /* Optional seconds at the end of the time. */
     static const struct rule seconds_rule[] = {
-        { TYPE_DELIM,  ':', NULL,     0, 1, 1 },
-        { TYPE_NUMBER, 0,   NULL,     0, 2, 2 }
+        { TYPE_DELIM,  ':', nullptr,     0, 1, 1 },
+        { TYPE_NUMBER, 0,   nullptr,     0, 2, 2 }
     };
 
     /* Numeric time zone.  Keep the hours and minutes separate. */
     static const struct rule zone_rule[] = {
-        { TYPE_NUMBER, 0,   NULL,     0, 2, 2 },
-        { TYPE_NUMBER, 0,   NULL,     0, 2, 2 }
+        { TYPE_NUMBER, 0,   nullptr,     0, 2, 2 },
+        { TYPE_NUMBER, 0,   nullptr,     0, 2, 2 }
     };
     /* clang-format on */
 
@@ -645,7 +645,7 @@ parsedate_rfc5322(const char *date)
     else
         p = parse_by_rule(p, base_rule + 2, ARRAY_SIZE(base_rule) - 2,
                           values + 2);
-    if (p == NULL)
+    if (p == nullptr)
         return (time_t) -1;
 
     /* Stash the results into a struct tm.  Values are associated with the
@@ -659,7 +659,7 @@ parsedate_rfc5322(const char *date)
     /* Parse seconds if they're present. */
     if (*p == ':') {
         p = parse_by_rule(p, seconds_rule, ARRAY_SIZE(seconds_rule), values);
-        if (p == NULL)
+        if (p == nullptr)
             return (time_t) -1;
         tm.tm_sec = values[1];
     }
@@ -669,13 +669,13 @@ parsedate_rfc5322(const char *date)
     if (*p == '-' || *p == '+') {
         zone_sign = (*p == '+') ? 1 : -1;
         p = parse_by_rule(p + 1, zone_rule, ARRAY_SIZE(zone_rule), values);
-        if (p == NULL)
+        if (p == nullptr)
             return (time_t) -1;
         zone_offset = (values[0] * 60 + values[1]) * 60;
         zone_offset *= zone_sign;
     } else {
         p = parse_legacy_timezone(p, &zone_offset, false);
-        if (p == NULL)
+        if (p == nullptr)
             return (time_t) -1;
     }
 
@@ -722,26 +722,26 @@ parsedate_rfc5322_lax(const char *date)
        some broken software omits the leading zero and parsedate didn't
        care. */
     static const struct rule base_rule[] = {
-        { TYPE_NUMBER,    0,   NULL,  0, 1, 2 },
-        { TYPE_OBS_MONTH, 0,   NULL, 12, 3, 3 },
-        { TYPE_NUMBER,    0,   NULL,  0, 2, 4 },
-        { TYPE_NUMBER,    0,   NULL,  0, 1, 2 },
-        { TYPE_DELIM,     ':', NULL,  0, 1, 1 },
-        { TYPE_NUMBER,    0,   NULL,  0, 1, 2 }
+        { TYPE_NUMBER,    0,   nullptr,  0, 1, 2 },
+        { TYPE_OBS_MONTH, 0,   nullptr, 12, 3, 3 },
+        { TYPE_NUMBER,    0,   nullptr,  0, 2, 4 },
+        { TYPE_NUMBER,    0,   nullptr,  0, 1, 2 },
+        { TYPE_DELIM,     ':', nullptr,  0, 1, 1 },
+        { TYPE_NUMBER,    0,   nullptr,  0, 1, 2 }
     };
 
     /* Optional seconds at the end of the time.  Similarly, don't require the
        leading zero. */
     static const struct rule seconds_rule[] = {
-        { TYPE_DELIM,     ':', NULL,  0, 1, 1 },
-        { TYPE_NUMBER,    0,   NULL,  0, 1, 2 }
+        { TYPE_DELIM,     ':', nullptr,  0, 1, 1 },
+        { TYPE_NUMBER,    0,   nullptr,  0, 1, 2 }
     };
 
     /* Numeric time zone.  Allow the hour portion to omit the leading zero.
        Unfortunately, our parser is greedy, so we have to parse this as one
        number and then patch it up later. */
     static const struct rule zone_rule[] = {
-        { TYPE_NUMBER,    0,   NULL,  0, 1, 5 }
+        { TYPE_NUMBER,    0,   nullptr,  0, 1, 5 }
     };
     /* clang-format on */
 
@@ -757,7 +757,7 @@ parsedate_rfc5322_lax(const char *date)
     if (*p == ',')
         p = skip_cfws(p + 1);
     p = parse_by_rule(p, base_rule, ARRAY_SIZE(base_rule), values);
-    if (p == NULL)
+    if (p == nullptr)
         return (time_t) -1;
 
     /* Stash the results into a struct tm.  Values are associated with the
@@ -771,7 +771,7 @@ parsedate_rfc5322_lax(const char *date)
     /* Parse seconds if they're present. */
     if (*p == ':') {
         p = parse_by_rule(p, seconds_rule, ARRAY_SIZE(seconds_rule), values);
-        if (p == NULL)
+        if (p == nullptr)
             return (time_t) -1;
         tm.tm_sec = values[1];
     }
@@ -782,12 +782,12 @@ parsedate_rfc5322_lax(const char *date)
        multiple ones were supplied, so emulate that behavior. */
     have_zone = false;
     zone_offset = 0;
-    while (p != NULL && *p != '\0') {
+    while (p != nullptr && *p != '\0') {
         if (*p == '-' || *p == '+') {
             zone_sign = (*p == '+') ? 1 : -1;
             start = p + 1;
             p = parse_by_rule(start, zone_rule, ARRAY_SIZE(zone_rule), values);
-            if (p == NULL)
+            if (p == nullptr)
                 return (time_t) -1;
             if (p - start < 3)
                 zone_offset = values[0] * 60 * 60;
@@ -796,11 +796,11 @@ parsedate_rfc5322_lax(const char *date)
             zone_offset *= zone_sign;
         } else {
             p = parse_legacy_timezone(p, &zone_offset, true);
-            if (p == NULL)
+            if (p == nullptr)
                 zone_offset = 0;
         }
         have_zone = true;
-        if (p != NULL)
+        if (p != nullptr)
             p = skip_cfws(p);
     }
 

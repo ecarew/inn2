@@ -8,8 +8,8 @@
 #include "inn/nntp.h"
 
 /* Initialize variables exported through libinn(3). */
-FILE *ser_rd_fp = NULL;
-FILE *ser_wr_fp = NULL;
+FILE *ser_rd_fp = nullptr;
+FILE *ser_wr_fp = nullptr;
 char ser_line[NNTP_MAXLEN_COMMAND + 2];
 
 
@@ -38,8 +38,8 @@ server_init(char *host, int port)
 
     /* This interface may be used by clients that assume C News behavior and
        won't read inn.conf themselves. */
-    if (innconf == NULL)
-        if (!innconf_read(NULL))
+    if (innconf == nullptr)
+        if (!innconf_read(nullptr))
             return -1;
 
     if (NNTPconnect(host, port, &ser_rd_fp, &ser_wr_fp, ser_line,
@@ -131,7 +131,7 @@ get_server(char *buff, int buffsize)
 {
     char *p;
 
-    if (fgets(buff, buffsize, ser_rd_fp) == NULL)
+    if (fgets(buff, buffsize, ser_rd_fp) == nullptr)
         return -1;
     p = &buff[strlen(buff)];
     if (p >= &buff[2] && p[-2] == '\r' && p[-1] == '\n')
@@ -148,13 +148,13 @@ close_server(void)
 {
     char buff[NNTP_MAXLEN_COMMAND];
 
-    if (ser_wr_fp != NULL && ser_rd_fp != NULL) {
+    if (ser_wr_fp != nullptr && ser_rd_fp != nullptr) {
         put_server("QUIT");
         fclose(ser_wr_fp);
-        ser_wr_fp = NULL;
+        ser_wr_fp = nullptr;
 
         get_server(buff, (int) sizeof buff);
         fclose(ser_rd_fp);
-        ser_rd_fp = NULL;
+        ser_rd_fp = nullptr;
     }
 }

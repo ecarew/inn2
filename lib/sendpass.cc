@@ -28,9 +28,9 @@ NNTPsendpassword(char *server, FILE *FromServer, FILE *ToServer)
 
     /* Default to innconf->server.  If that's not set either, error out.  Fake
        errno since some of our callers rely on it. */
-    if (server == NULL)
+    if (server == nullptr)
         server = innconf->server;
-    if (server == NULL) {
+    if (server == nullptr) {
         errno = EINVAL;
         return -1;
     }
@@ -39,24 +39,24 @@ NNTPsendpassword(char *server, FILE *FromServer, FILE *ToServer)
     path = concatpath(innconf->pathetc, INN_PATH_NNTPPASS);
     F = fopen(path, "r");
     free(path);
-    if (F == NULL)
+    if (F == nullptr)
         return errno == EPERM ? -1 : 0;
 
     /* Scan the file, skipping blank and comment lines. */
-    while (fgets(buff, sizeof buff, F) != NULL) {
-        if ((p = strchr(buff, '\n')) != NULL)
+    while (fgets(buff, sizeof buff, F) != nullptr) {
+        if ((p = strchr(buff, '\n')) != nullptr)
             *p = '\0';
         if (buff[0] == '\0' || buff[0] == '#')
             continue;
 
         /* Parse the line. */
-        if ((user = strchr(buff, ':')) == NULL)
+        if ((user = strchr(buff, ':')) == nullptr)
             continue;
         *user++ = '\0';
-        if ((pass = strchr(user, ':')) == NULL)
+        if ((pass = strchr(user, ':')) == nullptr)
             continue;
         *pass++ = '\0';
-        if ((style = strchr(pass, ':')) != NULL) {
+        if ((style = strchr(pass, ':')) != nullptr) {
             *style++ = '\0';
             if (strcmp(style, "authinfo") != 0) {
                 errno = E2BIG;
@@ -74,7 +74,7 @@ NNTPsendpassword(char *server, FILE *FromServer, FILE *ToServer)
             fprintf(ToServer, "AUTHINFO USER %s\r\n", user);
             if (fflush(ToServer) == EOF || ferror(ToServer))
                 break;
-            if (fgets(input, sizeof input, FromServer) == NULL)
+            if (fgets(input, sizeof input, FromServer) == nullptr)
                 break;
             if (atoi(input) == NNTP_OK_AUTHINFO)
                 authenticated = true;
@@ -87,7 +87,7 @@ NNTPsendpassword(char *server, FILE *FromServer, FILE *ToServer)
             fprintf(ToServer, "AUTHINFO PASS %s\r\n", pass);
             if (fflush(ToServer) == EOF || ferror(ToServer))
                 break;
-            if (fgets(input, sizeof input, FromServer) == NULL
+            if (fgets(input, sizeof input, FromServer) == nullptr
                 || atoi(input) != NNTP_OK_AUTHINFO)
                 break;
         }

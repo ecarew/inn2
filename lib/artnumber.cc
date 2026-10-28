@@ -22,7 +22,7 @@ IsValidArticleNumber(const char *string)
     unsigned long v = 0;
 
     /* Not NULL. */
-    if (string == NULL)
+    if (string == nullptr)
         return false;
 
     p = (const unsigned char *) string;
@@ -63,7 +63,7 @@ IsValidRange(char *string)
     bool valid;
 
     /* Not NULL. */
-    if (string == NULL)
+    if (string == nullptr)
         return false;
 
     /* Just a dash. */
@@ -79,7 +79,7 @@ IsValidRange(char *string)
     }
 
     /* Got just a single number? */
-    if ((p = strchr(string, '-')) == NULL)
+    if ((p = strchr(string, '-')) == nullptr)
         return IsValidArticleNumber(string);
 
     /* "-" becomes "\0" and we parse the low water mark. */

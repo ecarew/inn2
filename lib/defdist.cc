@@ -33,63 +33,63 @@ DDstart(FILE *FromServer, FILE *ToServer)
     char *path;
     int i;
     int fd;
-    char *name = NULL;
+    char *name = nullptr;
 
     /* Open the file. */
     path = concatpath(innconf->pathetc, INN_PATH_DISTPATS);
     F = fopen(path, "r");
     free(path);
-    if (F == NULL) {
+    if (F == nullptr) {
         /* Not available locally; try remotely. */
-        if (FromServer == NULL || ToServer == NULL)
+        if (FromServer == nullptr || ToServer == nullptr)
             /* We're probably nnrpd running on the server and the
              * file isn't installed.  Oh well. */
-            return NULL;
+            return nullptr;
         name = concatpath(innconf->pathtmp, INN_PATH_TEMPACTIVE);
         fd = mkstemp(name);
         if (fd < 0)
-            return NULL;
+            return nullptr;
         close(fd);
         if ((F = CA_listopen(name, FromServer, ToServer, "DISTRIB.PATS"))
-            == NULL)
-            return NULL;
+            == nullptr)
+            return nullptr;
     }
 
     /* Count lines. */
-    for (i = 0; fgets(buff, sizeof buff, F) != NULL; i++)
+    for (i = 0; fgets(buff, sizeof buff, F) != nullptr; i++)
         continue;
 
     /* Allocate space for the handle. */
-    if ((h = xmalloc(sizeof(DDHANDLE))) == NULL) {
+    if ((h = xmalloc(sizeof(DDHANDLE))) == nullptr) {
         i = errno;
         fclose(F);
-        if (name != NULL)
+        if (name != nullptr)
             unlink(name);
         errno = i;
-        return NULL;
+        return nullptr;
     }
     h->Count = 0;
-    h->Current = NULL;
+    h->Current = nullptr;
     if (i == 0) {
-        return NULL;
-    } else if ((h->Entries = xmalloc(sizeof(DDENTRY) * i)) == NULL) {
+        return nullptr;
+    } else if ((h->Entries = xmalloc(sizeof(DDENTRY) * i)) == nullptr) {
         i = errno;
         free(h);
         fclose(F);
-        if (name != NULL)
+        if (name != nullptr)
             unlink(name);
         errno = i;
-        return NULL;
+        return nullptr;
     }
 
     fseeko(F, 0, SEEK_SET);
-    for (ep = h->Entries; fgets(buff, sizeof buff, F) != NULL;) {
-        if ((p = strchr(buff, '\n')) != NULL)
+    for (ep = h->Entries; fgets(buff, sizeof buff, F) != nullptr;) {
+        if ((p = strchr(buff, '\n')) != nullptr)
             *p = '\0';
         if (buff[0] == '\0' || buff[0] == '#')
             continue;
-        if ((p = strchr(buff, ':')) == NULL
-            || (q = strchr(p + 1, ':')) == NULL)
+        if ((p = strchr(buff, ':')) == nullptr
+            || (q = strchr(p + 1, ':')) == nullptr)
             continue;
         *p++ = '\0';
         ep->Weight = atoi(buff);
@@ -102,7 +102,7 @@ DDstart(FILE *FromServer, FILE *ToServer)
     h->Count = ep - h->Entries;
 
     fclose(F);
-    if (name != NULL)
+    if (name != nullptr)
         unlink(name);
     return h;
 }
@@ -115,7 +115,7 @@ DDcheck(DDHANDLE *h, char *group)
     int i;
     int w;
 
-    if (h == NULL || group == NULL)
+    if (h == nullptr || group == nullptr)
         return;
 
     w = h->Current ? h->Current->Weight : -1;
@@ -135,12 +135,12 @@ DDend(DDHANDLE *h)
     int i;
     DDENTRY *ep;
 
-    if (h == NULL) {
+    if (h == nullptr) {
         p = NIL;
         return xstrdup(p);
     }
 
-    if (h->Current == NULL)
+    if (h->Current == nullptr)
         p = NIL;
     else
         p = h->Current->Value;

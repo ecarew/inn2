@@ -178,7 +178,7 @@ cvector_clear(struct cvector *vector)
 void
 vector_free(struct vector *vector)
 {
-    if (vector == NULL)
+    if (vector == nullptr)
         return;
     vector_clear(vector);
     free(vector->strings);
@@ -188,7 +188,7 @@ vector_free(struct vector *vector)
 void
 cvector_free(struct cvector *vector)
 {
-    if (vector == NULL)
+    if (vector == nullptr)
         return;
     cvector_clear(vector);
     free(vector->strings);
@@ -203,7 +203,7 @@ cvector_free(struct cvector *vector)
 static struct vector *
 vector_reuse(struct vector *vector)
 {
-    if (vector == NULL)
+    if (vector == nullptr)
         return vector_new();
     else {
         vector_clear(vector);
@@ -214,7 +214,7 @@ vector_reuse(struct vector *vector)
 static struct cvector *
 cvector_reuse(struct cvector *vector)
 {
-    if (vector == NULL)
+    if (vector == nullptr)
         return cvector_new();
     else {
         cvector_clear(vector);
@@ -331,14 +331,14 @@ split_multi_count(const char *string, const char *seps)
      * another separator (and ignore a separator at the start of the string).
      */
     for (count = 1, p = string + 1; *p != '\0'; p++)
-        if (strchr(seps, *p) != NULL && strchr(seps, p[-1]) == NULL)
+        if (strchr(seps, *p) != nullptr && strchr(seps, p[-1]) == nullptr)
             count++;
 
     /*
      * If the string ends in separators, we've overestimated the number of
      * strings by one.
      */
-    if (strchr(seps, p[-1]) != NULL)
+    if (strchr(seps, p[-1]) != nullptr)
         count--;
     return count;
 }
@@ -369,7 +369,7 @@ vector_split_multi(const char *string, const char *seps, struct vector *vector)
      * tracking a sequence of separators.
      */
     for (start = string, p = string, i = 0; *p != '\0'; p++)
-        if (strchr(seps, *p) != NULL) {
+        if (strchr(seps, *p) != nullptr) {
             if (start != p)
                 vector->strings[i++] = xstrndup(start, p - start);
             start = p + 1;
@@ -408,7 +408,7 @@ cvector_split_multi(char *string, const char *seps, struct cvector *vector)
      * sequence of separators.
      */
     for (start = string, p = string, i = 0; *p != '\0'; p++)
-        if (strchr(seps, *p) != NULL) {
+        if (strchr(seps, *p) != nullptr) {
             if (start != p) {
                 *p = '\0';
                 vector->strings[i++] = start;
@@ -547,7 +547,7 @@ vector_exec(const char *path, struct vector *vector)
     assert(vector != NULL);
     if (vector->allocated == vector->count)
         vector_resize(vector, vector->count + 1);
-    vector->strings[vector->count] = NULL;
+    vector->strings[vector->count] = nullptr;
     return execv(path, (char *const *) vector->strings);
 }
 
@@ -557,6 +557,6 @@ cvector_exec(const char *path, struct cvector *vector)
     assert(vector != NULL);
     if (vector->allocated == vector->count)
         cvector_resize(vector, vector->count + 1);
-    vector->strings[vector->count] = NULL;
+    vector->strings[vector->count] = nullptr;
     return execv(path, (char *const *) vector->strings);
 }

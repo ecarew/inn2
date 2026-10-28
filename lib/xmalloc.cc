@@ -120,7 +120,7 @@ x_malloc(size_t size, const char *file, int line)
 
     real_size = (size > 0) ? size : 1;
     p = malloc(real_size);
-    while (p == NULL) {
+    while (p == nullptr) {
         xmalloc_error_handler("malloc", size, file, line);
         p = malloc(real_size);
     }
@@ -136,7 +136,7 @@ x_calloc(size_t n, size_t size, const char *file, int line)
     n = (n > 0) ? n : 1;
     size = (size > 0) ? size : 1;
     p = calloc(n, size);
-    while (p == NULL) {
+    while (p == nullptr) {
         xmalloc_error_handler("calloc", n * size, file, line);
         p = calloc(n, size);
     }
@@ -163,7 +163,7 @@ x_realloc(void *p, size_t size, const char *file, int line)
 #    pragma GCC diagnostic push
 #    pragma GCC diagnostic ignored "-Wuse-after-free"
 #endif
-    while (newp == NULL) {
+    while (newp == nullptr) {
         xmalloc_error_handler("realloc", size, file, line);
         newp = realloc(p, size);
     }
@@ -194,7 +194,7 @@ x_reallocarray(void *p, size_t n, size_t size, const char *file, int line)
 #    pragma GCC diagnostic push
 #    pragma GCC diagnostic ignored "-Wuse-after-free"
 #endif
-    while (newp == NULL) {
+    while (newp == nullptr) {
         xmalloc_error_handler("reallocarray", n * size, file, line);
         newp = reallocarray(p, n, size);
     }
@@ -213,7 +213,7 @@ x_strdup(const char *s, const char *file, int line)
 
     len = strlen(s) + 1;
     p = static_cast<char *>(malloc(len));
-    while (p == NULL) {
+    while (p == nullptr) {
         xmalloc_error_handler("strdup", len, file, line);
         p = static_cast<char *>(malloc(len));
     }
@@ -239,7 +239,7 @@ x_strndup(const char *s, size_t size, const char *file, int line)
         ;
     length = p - s;
     copy = static_cast<char *>(malloc(length + 1));
-    while (copy == NULL) {
+    while (copy == nullptr) {
         xmalloc_error_handler("strndup", length + 1, file, line);
         copy = static_cast<char *>(malloc(length + 1));
     }
@@ -261,7 +261,7 @@ x_vasprintf(char **strp, const char *fmt, va_list args, const char *file,
     va_end(args_copy);
     while (status < 0) {
         va_copy(args_copy, args);
-        status = vsnprintf(NULL, 0, fmt, args_copy);
+        status = vsnprintf(nullptr, 0, fmt, args_copy);
         va_end(args_copy);
         status = (status < 0) ? 0 : status + 1;
         xmalloc_error_handler("vasprintf", status, file, line);
@@ -285,7 +285,7 @@ x_asprintf(char **strp, const char *file, int line, const char *fmt, ...)
     va_end(args_copy);
     while (status < 0) {
         va_copy(args_copy, args);
-        status = vsnprintf(NULL, 0, fmt, args_copy);
+        status = vsnprintf(nullptr, 0, fmt, args_copy);
         va_end(args_copy);
         status = (status < 0) ? 0 : status + 1;
         xmalloc_error_handler("asprintf", status, file, line);

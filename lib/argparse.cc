@@ -35,7 +35,7 @@ nArgify(char *line, char ***argvp, int n)
 {
     char *p;
 
-    if (*argvp != NULL) {
+    if (*argvp != nullptr) {
         free(*argvp[0]);
         free(*argvp);
     }
@@ -104,7 +104,7 @@ reArgify(char *p, char **argv, int n, bool stripspaces)
         }
     }
 
-    *argv = NULL;
+    *argv = nullptr;
 
     return (int) (argv - save);
 }

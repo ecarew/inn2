@@ -22,7 +22,7 @@ IsValidKeyword(const char *string)
     int len = 0;
 
     /* Not NULL. */
-    if (string == NULL)
+    if (string == nullptr)
         return false;
 
     /* Begins with a letter. */
