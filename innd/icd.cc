@@ -460,8 +460,8 @@ ICDreadactive(char **endp)
     }
     ICDactsize = (int) Sb.st_size;
 
-    ICDactpointer = mmap(NULL, ICDactsize, PROT_READ | PROT_WRITE, MAP_SHARED,
-                         ICDactfd, 0);
+    ICDactpointer = static_cast<char *>(mmap(NULL, ICDactsize, PROT_READ | PROT_WRITE,
+                         MAP_SHARED, ICDactfd, 0));
     if (ICDactpointer == (char *) -1) {
         syslog(L_FATAL, "%s cant mmap %d %s %m", LogName, ICDactfd,
                ICDactpath);
