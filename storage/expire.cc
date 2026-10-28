@@ -146,8 +146,8 @@ NGfind(char *Name)
 static int
 NGcompare(const void *p1, const void *p2)
 {
-    const NEWSGROUP *const *ng1 = p1;
-    const NEWSGROUP *const *ng2 = p2;
+    const NEWSGROUP *const *ng1 = static_cast<const NEWSGROUP *const *>(p1);
+    const NEWSGROUP *const *ng2 = static_cast<const NEWSGROUP *const *>(p2);
 
     return ng1[0]->Last - ng2[0]->Last;
 }
@@ -639,7 +639,7 @@ OVERGetHeader(const char *p, int field)
     static int buffsize;
     int i;
     ARTOVERFIELD *fp;
-    char *next;
+    const char *next;
 
     fp = &ARTfields[field];
 
@@ -749,7 +749,7 @@ OVgroupbasedexpire(TOKEN token, const char *group, const char *data,
     time_t when;
     bool poisoned;
     bool keeper;
-    bool delete;
+    bool dodelete;
     bool purge;
     char *Xref;
 
@@ -812,7 +812,7 @@ OVgroupbasedexpire(TOKEN token, const char *group, const char *data,
     /* First check all postings */
     poisoned = false;
     keeper = false;
-    delete = false;
+    dodelete = false;
     purge = true;
     for (i = 0; i < count; ++i) {
         if ((krps[i] = EXPkeepit(arts[i], when, expires)) == Poison)
@@ -820,14 +820,14 @@ OVgroupbasedexpire(TOKEN token, const char *group, const char *data,
         if (OVkeep && (krps[i] == Keep))
             keeper = true;
         if ((krps[i] == Remove) && strcmp(group, arts[i]) == 0)
-            delete = true;
+            dodelete = true;
         if (krps[i] == Keep)
             purge = false;
     }
     EXPprocessed++;
 
     if (OVearliest) {
-        if (delete || poisoned || token.type == TOKEN_EMPTY) {
+        if (dodelete || poisoned || token.type == TOKEN_EMPTY) {
             /* delete article if this is first entry */
             if (strcmp(group, arts[0]) == 0) {
                 for (i = 0; i < count; i++)
@@ -838,7 +838,7 @@ OVgroupbasedexpire(TOKEN token, const char *group, const char *data,
             return true;
         }
     } else { /* not earliest mode */
-        if ((!keeper && delete) || token.type == TOKEN_EMPTY) {
+        if ((!keeper && dodelete) || token.type == TOKEN_EMPTY) {
             /* delete article if purge is set, indicating that it has
                expired out of every group to which it was posted */
             if (purge) {
