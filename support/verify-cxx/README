@@ -1,0 +1,8 @@
+Reference data for support/verify-cxx.sh.
+
+innd-symbols.txt   Exported symbols of innd as built by the original
+                   Autoconf/Make build (nm -gU, sorted).  The CMake build
+                   must export every one of these under its C name.
+tinyleaf.in        NNTP session fed to tinyleaf (CRLF line endings).
+tinyleaf.expected  tinyleaf's expected replies; the version line is
+                   ignored when comparing.

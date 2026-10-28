@@ -36,6 +36,9 @@ Run the full verification set *before* every commit and record it in the
 commit message as a `Tested:` section listing each check and its result.
 Only list checks that actually ran on the exact tree being committed.
 
+Run `support/verify-cxx.sh` (needs a configured `build/`) and paste its output
+into the `Tested:` section. Its reference data lives in `support/verify-cxx/`.
+
 Current verification set:
 - CMake build of lib, history, storage and innd succeeds
 - `innd` exports every symbol the Makefile-built `innd` does (169)

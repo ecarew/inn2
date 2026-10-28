@@ -1,0 +1,14 @@
+201 tinyfeed ready
+100 tinyfeed from INN 2.8.0 (20260912 prerelease)
+Supported commands:
+ 
+  IHAVE <message-id>
+  HELP
+  QUIT
+.
+335 Send article
+235 Article received
+335 Send article
+435 Duplicate
+500 Unsupported command
+205 Goodbye
