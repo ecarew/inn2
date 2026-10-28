@@ -53,8 +53,8 @@ static int NGHcount;
 static int
 NGcompare(const void *p1, const void *p2)
 {
-    const NEWSGROUP *const *n1 = p1;
-    const NEWSGROUP *const *n2 = p2;
+    const NEWSGROUP *const *n1 = static_cast<const NEWSGROUP *const *>(p1);
+    const NEWSGROUP *const *n2 = static_cast<const NEWSGROUP *const *>(p2);
 
     return n1[0]->Last - n2[0]->Last;
 }
@@ -75,7 +75,9 @@ NGparseentry(NEWSGROUP *ngp, const char *p, char *end)
     int i;
     ARTNUM lo;
 
-    if ((q = strchr(p, ' ')) == NULL)
+    /* p points into the writable in-core active file; q is stored for
+       in-place updates, so it must be non-const as in the C version. */
+    if ((q = const_cast<char *>(strchr(p, ' '))) == NULL)
         return false;
     i = q - p;
 
