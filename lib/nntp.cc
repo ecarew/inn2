@@ -230,7 +230,7 @@ nntp_read_response(struct nntp *nntp, enum nntp_code *code, char **rest)
     status = nntp_read_line(nntp, &line);
     if (status != NNTP_READ_OK)
         return status;
-    *code = strtol(line, rest, 10);
+    *code = static_cast<enum nntp_code>(strtol(line, rest, 10));
     if (*rest != line + 3)
         *code = NNTP_INVALID_CODE;
     else if (isspace((unsigned char) *rest[0]))
