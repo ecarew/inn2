@@ -89,7 +89,7 @@ his_cacheadd(struct history *h, HASH MessageID, bool Found)
     unsigned int i, loc;
 
     his_logger("HIScacheadd begin", S_HIScacheadd);
-    if (h->cache != NULL) {
+    if (h->cache != nullptr) {
         memcpy(&loc, ((char *) &MessageID) + (sizeof(HASH) - sizeof(loc)),
                sizeof(loc));
         i = loc % h->cachesize;
@@ -107,7 +107,7 @@ his_cachelookup(struct history *h, HASH MessageID)
 {
     unsigned int i, loc;
 
-    if (h->cache == NULL)
+    if (h->cache == nullptr)
         return HIScachedne;
     his_logger("HIScachelookup begin", S_HIScachelookup);
     memcpy(&loc, ((char *) &MessageID) + (sizeof(HASH) - sizeof(loc)),
@@ -134,12 +134,12 @@ his_cachelookup(struct history *h, HASH MessageID)
 void
 his_seterror(struct history *h, const char *s)
 {
-    if (h != NULL) {
+    if (h != nullptr) {
         if (h->error)
             free((void *) h->error);
         h->error = s;
     }
-    if (s != NULL)
+    if (s != nullptr)
         warn("%s", s);
 }
 
@@ -155,21 +155,21 @@ HISopen(const char *path, const char *method, int flags)
     }
     if (i == NUM_HIS_METHODS) {
         warn("`%s' isn't a valid history method", method);
-        return NULL;
+        return nullptr;
     }
 
     /* allocate up our structure and start subordinate history
      * manager */
     h = xmalloc(sizeof *h);
     h->methods = &his_methods[i];
-    h->cache = NULL;
-    h->error = NULL;
+    h->cache = nullptr;
+    h->error = nullptr;
     h->cachesize = 0;
     h->stats = nullhist;
     h->sub = (*h->methods->open)(path, flags, h);
-    if (h->sub == NULL) {
+    if (h->sub == nullptr) {
         free(h);
-        h = NULL;
+        h = nullptr;
     }
     return h;
 }
@@ -177,7 +177,7 @@ HISopen(const char *path, const char *method, int flags)
 static bool
 his_checknull(struct history *h)
 {
-    if (h != NULL)
+    if (h != nullptr)
         return false;
     errno = EBADF;
     return true;
@@ -193,11 +193,11 @@ HISclose(struct history *h)
     r = (*h->methods->close)(h->sub);
     if (h->cache) {
         free(h->cache);
-        h->cache = NULL;
+        h->cache = nullptr;
     }
     if (h->error) {
         free((void *) h->error);
-        h->error = NULL;
+        h->error = nullptr;
     }
     free(h);
     return r;
@@ -356,11 +356,11 @@ HISexpire(struct history *h, const char *path, const char *reason,
 void
 HISsetcache(struct history *h, size_t size)
 {
-    if (h == NULL)
+    if (h == nullptr)
         return;
     if (h->cache) {
         free(h->cache);
-        h->cache = NULL;
+        h->cache = nullptr;
     }
     h->cachesize = size / sizeof(struct hiscache);
     if (h->cachesize != 0)
@@ -377,7 +377,7 @@ HISstats(struct history *h)
 {
     struct histstats r;
 
-    if (h == NULL)
+    if (h == nullptr)
         return nullhist;
     r = h->stats;
     h->stats = nullhist;
@@ -391,8 +391,8 @@ HISstats(struct history *h)
 const char *
 HISerror(struct history *h)
 {
-    if (h == NULL)
-        return NULL;
+    if (h == nullptr)
+        return nullptr;
     return h->error;
 }
 
@@ -417,7 +417,7 @@ HISctl(struct history *h, int selector, void *val)
 **  needs migrating to use the new nested timers
 */
 
-static FILE *HISfdlog = NULL; /* filehandle for history logging purpose */
+static FILE *HISfdlog = nullptr; /* filehandle for history logging purpose */
 
 static struct timeval HISstat_start[S_HIS_MAX];
 static struct timeval HISstat_total[S_HIS_MAX];
@@ -426,9 +426,9 @@ static unsigned long HISstat_count[S_HIS_MAX];
 void
 HISlogclose(void)
 {
-    if (HISfdlog != NULL)
+    if (HISfdlog != nullptr)
         Fclose(HISfdlog);
-    HISfdlog = NULL;
+    HISfdlog = nullptr;
 }
 
 void
@@ -437,7 +437,7 @@ HISlogto(const char *s)
     int i;
 
     HISlogclose();
-    if ((HISfdlog = Fopen(s, "a", INND_HISLOG)) == NULL)
+    if ((HISfdlog = Fopen(s, "a", INND_HISLOG)) == nullptr)
         syswarn("cant open %s", s);
     /* initialize our counters */
     for (i = 0; i < S_HIS_MAX; i++) {
@@ -456,10 +456,10 @@ his_logger(const char *s, int code)
     struct tm *tm;
     time_t t;
 
-    if (HISfdlog == NULL) /* do nothing unless HISlogto() has been called */
+    if (HISfdlog == nullptr) /* do nothing unless HISlogto() has been called */
         return;
 
-    gettimeofday(&tv, NULL);
+    gettimeofday(&tv, nullptr);
     t = tv.tv_sec;
     tm = localtime(&t);
     if (HISstat_start[code].tv_sec != 0) {

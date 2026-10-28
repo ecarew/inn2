@@ -231,7 +231,7 @@ hisv6_dbzclose(struct hisv6 *h)
                                      strerror(errno), NULL));
             r = false;
         }
-        hisv6_dbzowner = NULL;
+        hisv6_dbzowner = nullptr;
     }
     return r;
 }
@@ -258,7 +258,7 @@ hisv6_closefiles(struct hisv6 *h)
         h->readfd = -1;
     }
 
-    if (h->writefp != NULL) {
+    if (h->writefp != nullptr) {
         if (ferror(h->writefp) || fflush(h->writefp) == EOF) {
             hisv6_seterror(h, concat("error on history ", h->histpath, " ",
                                      strerror(errno), NULL));
@@ -269,7 +269,7 @@ hisv6_closefiles(struct hisv6 *h)
                                      strerror(errno), NULL));
             r = false;
         }
-        h->writefp = NULL;
+        h->writefp = nullptr;
         h->offset = 0;
     }
 
@@ -311,7 +311,7 @@ hisv6_reopen(struct hisv6 *h)
             mode = "w";
         else
             mode = "r+";
-        if ((h->writefp = Fopen(h->histpath, mode, INND_HISTORY)) == NULL) {
+        if ((h->writefp = Fopen(h->histpath, mode, INND_HISTORY)) == nullptr) {
             hisv6_seterror(h, concat("can't fopen history ", h->histpath, " ",
                                      strerror(errno), NULL));
             hisv6_closefiles(h);
@@ -343,7 +343,7 @@ hisv6_reopen(struct hisv6 *h)
     fdflag_close_exec(h->readfd, true);
 
     /* if there's no current dbz owner, claim it here */
-    if (hisv6_dbzowner == NULL) {
+    if (hisv6_dbzowner == nullptr) {
         hisv6_dbzowner = h;
     }
 
@@ -464,7 +464,7 @@ hisv6_dispose(struct hisv6 *h)
     r = hisv6_closefiles(h);
     if (h->histpath) {
         free(h->histpath);
-        h->histpath = NULL;
+        h->histpath = nullptr;
     }
 
     free(h);
@@ -481,9 +481,9 @@ hisv6_new(const char *path, int flags, struct history *history)
     struct hisv6 *h;
 
     h = xmalloc(sizeof *h);
-    h->histpath = path ? xstrdup(path) : NULL;
+    h->histpath = path ? xstrdup(path) : nullptr;
     h->flags = flags;
-    h->writefp = NULL;
+    h->writefp = nullptr;
     h->offset = 0;
     h->history = history;
     h->readfd = -1;
@@ -524,7 +524,7 @@ hisv6_open(const char *path, int flags, struct history *history)
     if (path) {
         if (!hisv6_reopen(h)) {
             hisv6_dispose(h);
-            h = NULL;
+            h = nullptr;
         }
     }
     his_logger("HISsetup end", S_HISsetup);
@@ -557,7 +557,7 @@ hisv6_sync(void *history)
     struct hisv6 *h = static_cast<struct hisv6 *>(history);
     bool r = true;
 
-    if (h->writefp != NULL) {
+    if (h->writefp != nullptr) {
         his_logger("HISsync begin", S_HISsync);
         if (fflush(h->writefp) == EOF) {
             hisv6_seterror(h, concat("error on history ", h->histpath, " ",
@@ -699,8 +699,8 @@ hisv6_lookup(void *history, const char *key, time_t *arrived, time_t *posted,
         int status;
         const char *error;
 
-        status = hisv6_splitline(buf, &error, NULL, arrived, posted, expires,
-                                 token);
+        status = hisv6_splitline(buf, &error, nullptr, arrived, posted,
+                                 expires, token);
         if (status < 0) {
             char location[HISV6_MAX_LOCATION];
 
@@ -754,7 +754,7 @@ hisv6_formatline(char *s, const HASH *hash, time_t arrived, time_t posted,
     int i;
     const char *hashtext = HashToText(*hash);
 
-    if (token == NULL) {
+    if (token == nullptr) {
         /* Only a line to remember an article.  We keep its arrival
          * and posting time. */
         if (posted <= 0) {
@@ -815,7 +815,7 @@ hisv6_writedbz(struct hisv6 *h, const HASH *hash, off_t offset)
         break;
 
     default:
-        error = NULL;
+        error = nullptr;
         r = true;
         break;
     }
@@ -919,7 +919,7 @@ hisv6_remember(void *history, const char *key, time_t arrived, time_t posted)
 
     his_logger("HISwrite begin", S_HISwrite);
     hash = HashMessageID(key);
-    r = hisv6_writeline(h, &hash, arrived, posted, 0, NULL);
+    r = hisv6_writeline(h, &hash, arrived, posted, 0, nullptr);
     his_logger("HISwrite end", S_HISwrite);
     return r;
 }
@@ -1013,7 +1013,7 @@ hisv6_traverse(struct hisv6 *h, struct hisv6_walkstate *cookie,
     size_t line;
     char location[HISV6_MAX_LOCATION];
 
-    if ((qp = QIOopen(h->histpath)) == NULL) {
+    if ((qp = QIOopen(h->histpath)) == nullptr) {
         hisv6_seterror(h, concat("can't QIOopen history file ", h->histpath,
                                  strerror(errno), NULL));
         return false;
@@ -1024,7 +1024,7 @@ hisv6_traverse(struct hisv6 *h, struct hisv6_walkstate *cookie,
        we pause the server & clean up any lines which sneak through in
        the interim */
 again:
-    while ((p = QIOread(qp)) != NULL) {
+    while ((p = QIOread(qp)) != nullptr) {
         time_t arrived, posted, expires;
         int status;
         TOKEN token;
@@ -1035,7 +1035,7 @@ again:
                                  &token);
         if (status > 0) {
             r = (*callback)(h, cookie, &hash, arrived, posted, expires,
-                            (status & HISV6_HAVE_TOKEN) ? &token : NULL);
+                            (status & HISV6_HAVE_TOKEN) ? &token : nullptr);
             if (r == false)
                 hisv6_seterror(h,
                                concat("callback failed ", h->histpath, NULL));
@@ -1051,7 +1051,7 @@ again:
         ++line;
     }
 
-    if (p == NULL) {
+    if (p == nullptr) {
         /* read or line-format error? */
         if (QIOerror(qp) || QIOtoolong(qp)) {
             hisv6_errloc(location, line, (off_t) -1);
@@ -1123,7 +1123,7 @@ hisv6_walk(void *history, const char *reason, void *cookie,
        wrapper */
     hiscookie.cb.walk = callback;
     hiscookie.cookie = cookie;
-    hiscookie.newhis = NULL;
+    hiscookie.newhis = nullptr;
     hiscookie.paused = false;
     /* Ignore malformed history lines during walk.  The walk is a read-only
        operation (e.g., building a Bloom filter for expireover); aborting
@@ -1171,11 +1171,11 @@ hisv6_expirecb(struct hisv6 *h, void *cookie, const HASH *hash, time_t arrived,
              * token for the time being, else we just remember
              * it. */
             if (keep == false) {
-                t = NULL;
+                t = nullptr;
                 expires = 0;
             }
         } else {
-            t = NULL;
+            t = nullptr;
         }
         /* When t is NULL (no token), the message-ID is removed from
          * history when the posting time of the article is older than
@@ -1183,7 +1183,7 @@ hisv6_expirecb(struct hisv6 *h, void *cookie, const HASH *hash, time_t arrived,
          * We keep the check for the arrival time because some entries
          * might not have one. */
         if (hiscookie->newhis
-            && (t != NULL || posted >= hiscookie->threshold
+            && (t != nullptr || posted >= hiscookie->threshold
                 || (posted <= 0 && arrived >= hiscookie->threshold))) {
             r = hisv6_writeline(hiscookie->newhis, hash, arrived, posted,
                                 expires, t);
@@ -1273,8 +1273,8 @@ hisv6_expire(void *history, const char *path, const char *reason, bool writing,
              void *cookie, time_t threshold,
              bool (*exists)(void *, time_t, time_t, time_t, TOKEN *))
 {
-    struct hisv6 *h = static_cast<struct hisv6 *>(history), *hnew = NULL;
-    char *nhistory = NULL;
+    struct hisv6 *h = static_cast<struct hisv6 *>(history), *hnew = nullptr;
+    char *nhistory = nullptr;
     dbzoptions opt;
     bool r;
     struct hisv6_walkstate hiscookie;
@@ -1296,7 +1296,7 @@ hisv6_expire(void *history, const char *path, const char *reason, bool writing,
 
     if (writing) {
         /* form base name for new history file */
-        if (path != NULL) {
+        if (path != nullptr) {
             nhistory = concat(path, ".n", NULL);
         } else {
             nhistory = concat(h->histpath, ".n", NULL);
@@ -1306,7 +1306,7 @@ hisv6_expire(void *history, const char *path, const char *reason, bool writing,
             hisv6_new(nhistory, HIS_CREAT | HIS_RDWR | HIS_INCORE, h->history);
         if (!hisv6_reopen(hnew)) {
             hisv6_dispose(hnew);
-            hnew = NULL;
+            hnew = nullptr;
             r = false;
             goto fail;
         }
@@ -1375,7 +1375,7 @@ fail:
             /* if the new path was explicitly specified don't move the
                files around, our caller is planning to do it out of
                band */
-            if (path == NULL) {
+            if (path == nullptr) {
                 /* unlink the old files */
                 r = hisv6_unlink(h);
 
@@ -1426,7 +1426,7 @@ hisv6_ctl(void *history, int selector, void *val)
             h->histpath = xstrdup((char *) val);
             if (!hisv6_reopen(h)) {
                 free(h->histpath);
-                h->histpath = NULL;
+                h->histpath = nullptr;
                 r = false;
             }
         }
@@ -1459,7 +1459,7 @@ hisv6_ctl(void *history, int selector, void *val)
         const size_t min_history_line = 37;
         struct stat st;
 
-        if (h->histpath == NULL || stat(h->histpath, &st) != 0)
+        if (h->histpath == nullptr || stat(h->histpath, &st) != 0)
             r = false;
         else {
             uintmax_t estimate = (uintmax_t) st.st_size / min_history_line;

@@ -34,7 +34,7 @@
 static void
 hissqlite_seterror(struct hissqlite *h, const char *context)
 {
-    if (h->history != NULL)
+    if (h->history != nullptr)
         his_seterror(h->history,
                      concat("hissqlite: ", context, ": ",
                             h->db ? sqlite3_errmsg(h->db) : "(no db)", NULL));
@@ -64,9 +64,9 @@ copy_blob(struct hissqlite *h, sqlite3_stmt *stmt, int col, void *dst,
     if (sqlite3_column_bytes(stmt, col) != (int) size) {
         /* A length mismatch is the error itself; the generic seterror would
            append an unrelated sqlite3_errmsg, so report "what" on its own. */
-        if (h->history != NULL)
+        if (h->history != nullptr)
             his_seterror(h->history,
-                         concat("hissqlite: ", what, (char *) NULL));
+                         concat("hissqlite: ", what, (char *) nullptr));
         return false;
     }
     memcpy(dst, sqlite3_column_blob(stmt, col), size);
@@ -104,11 +104,12 @@ batch_commit(struct hissqlite *h)
         return true;
     h->batch_open = false;
     h->batch_pending = 0;
-    if (sqlite3_exec(h->db, "commit", NULL, NULL, NULL) != SQLITE_OK) {
+    if (sqlite3_exec(h->db, "commit", nullptr, nullptr, nullptr)
+        != SQLITE_OK) {
         /* The batch's writes are lost; make that loud, then roll back so the
            connection is not left inside a wedged transaction. */
         hissqlite_seterror(h, "batch commit");
-        sqlite3_exec(h->db, "rollback", NULL, NULL, NULL);
+        sqlite3_exec(h->db, "rollback", nullptr, nullptr, nullptr);
         return false;
     }
     return true;
@@ -122,7 +123,7 @@ batch_begin(struct hissqlite *h)
     /* On failure, no transaction is open, so the write below simply
        autocommits: safe degradation, and the write path reports any real
        database error itself. */
-    if (sqlite3_exec(h->db, "begin", NULL, NULL, NULL) == SQLITE_OK) {
+    if (sqlite3_exec(h->db, "begin", nullptr, nullptr, nullptr) == SQLITE_OK) {
         h->batch_open = true;
         h->batch_pending = 0;
     }
@@ -160,7 +161,7 @@ hissqlite_wal_passive(struct hissqlite *h)
 {
     int log = 0, ckpt = 0, rc;
 
-    rc = sqlite3_wal_checkpoint_v2(h->db, NULL, SQLITE_CHECKPOINT_PASSIVE,
+    rc = sqlite3_wal_checkpoint_v2(h->db, nullptr, SQLITE_CHECKPOINT_PASSIVE,
                                    &log, &ckpt);
     if (rc != SQLITE_OK) {
         /* A real failure (e.g. I/O error): surface it so a WAL that stops
@@ -192,7 +193,7 @@ hissqlite_initialized(struct hissqlite *h)
     if (sqlite3_prepare_v2(h->db,
                            "select 1 from sqlite_master where type = 'table' "
                            "and name = 'hist'",
-                           -1, &stmt, NULL)
+                           -1, &stmt, nullptr)
         == SQLITE_OK) {
         exists = (sqlite3_step(stmt) == SQLITE_ROW);
         sqlite3_finalize(stmt);
@@ -213,7 +214,7 @@ hissqlite_check_version(struct hissqlite *h)
 
     if (sqlite3_prepare_v2(h->db,
                            "select value from misc where key = 'version'", -1,
-                           &stmt, NULL)
+                           &stmt, nullptr)
         != SQLITE_OK) {
         hissqlite_seterror(h, "prepare version check");
         return false;
@@ -241,11 +242,11 @@ hissqlite_is_wal(struct hissqlite *h)
     sqlite3_stmt *stmt;
     bool wal = false;
 
-    if (sqlite3_prepare_v2(h->db, "pragma journal_mode", -1, &stmt, NULL)
+    if (sqlite3_prepare_v2(h->db, "pragma journal_mode", -1, &stmt, nullptr)
         == SQLITE_OK) {
         if (sqlite3_step(stmt) == SQLITE_ROW) {
             const char *mode = (const char *) sqlite3_column_text(stmt, 0);
-            wal = (mode != NULL && strcmp(mode, "wal") == 0);
+            wal = (mode != nullptr && strcmp(mode, "wal") == 0);
         }
         sqlite3_finalize(stmt);
     }
@@ -269,9 +270,9 @@ hissqlite_entryestimate(struct hissqlite *h, size_t *out)
         " from pragma_page_count(), pragma_freelist_count(),"
         " pragma_page_size()";
 
-    if (h->db == NULL)
+    if (h->db == nullptr)
         return false;
-    if (sqlite3_prepare_v2(h->db, query, -1, &stmt, NULL) != SQLITE_OK) {
+    if (sqlite3_prepare_v2(h->db, query, -1, &stmt, nullptr) != SQLITE_OK) {
         hissqlite_seterror(h, "prepare entry estimate");
         return false;
     }
@@ -299,7 +300,7 @@ hissqlite_entryestimate(struct hissqlite *h, size_t *out)
 static bool
 hissqlite_doopen(struct hissqlite *h)
 {
-    char *errmsg = NULL;
+    char *errmsg = nullptr;
     char pragma[64];
     unsigned long pagesize = HISSQLITE_DEF_PAGE_SIZE;
     unsigned long cachesize = HISSQLITE_DEF_CACHE_SIZE;
@@ -311,7 +312,7 @@ hissqlite_doopen(struct hissqlite *h)
        expire, makehistory, the converter); offline callers and unit tests that
        open history without innconf_read() fall back to the built-in defaults.
      */
-    if (innconf != NULL) {
+    if (innconf != nullptr) {
         pagesize = innconf->hissqlitepagesize;
         cachesize = innconf->hissqlitecachesize;
         mmapsize = innconf->hissqlitemmapsize;
@@ -323,7 +324,7 @@ hissqlite_doopen(struct hissqlite *h)
            such as HIS_ONDISK, so test for the absence of HIS_RDWR rather than
            exact equality).  WAL direct reader: open read-only, verify WAL,
            prepare read stmts. */
-        if (sqlite3_open_v2(h->path, &h->db, SQLITE_OPEN_READONLY, NULL)
+        if (sqlite3_open_v2(h->path, &h->db, SQLITE_OPEN_READONLY, nullptr)
             != SQLITE_OK) {
             hissqlite_seterror(h, "open read-only");
             goto fail;
@@ -350,9 +351,9 @@ hissqlite_doopen(struct hissqlite *h)
            overview is); readers lean on the shared OS page cache instead. */
         snprintf(pragma, sizeof(pragma), "pragma cache_size = -%lu;",
                  rcachesize);
-        sqlite3_exec(h->db, pragma, NULL, NULL, NULL);
+        sqlite3_exec(h->db, pragma, nullptr, nullptr, nullptr);
         snprintf(pragma, sizeof(pragma), "pragma mmap_size = %lu;", mmapsize);
-        sqlite3_exec(h->db, pragma, NULL, NULL, NULL);
+        sqlite3_exec(h->db, pragma, nullptr, nullptr, nullptr);
         h->direct_reader = true;
         return true;
     }
@@ -360,7 +361,7 @@ hissqlite_doopen(struct hissqlite *h)
     oflags = SQLITE_OPEN_READWRITE;
     if (h->flags & HIS_CREAT)
         oflags |= SQLITE_OPEN_CREATE;
-    if (sqlite3_open_v2(h->path, &h->db, oflags, NULL) != SQLITE_OK) {
+    if (sqlite3_open_v2(h->path, &h->db, oflags, nullptr) != SQLITE_OK) {
         hissqlite_seterror(h, "open read/write");
         goto fail;
     }
@@ -376,7 +377,7 @@ hissqlite_doopen(struct hissqlite *h)
         /* page_size only takes effect before the first table is written, so
            apply it here, ahead of the DDL.  (innconf validates it.) */
         snprintf(pragma, sizeof(pragma), "pragma page_size = %lu;", pagesize);
-        sqlite3_exec(h->db, pragma, NULL, NULL, NULL);
+        sqlite3_exec(h->db, pragma, nullptr, nullptr, nullptr);
 
         if (sqlite_helper_init(&hissqlite_init_helper, (sqlite3_stmt **) &init,
                                h->db, 0, &errmsg)
@@ -411,9 +412,9 @@ hissqlite_doopen(struct hissqlite *h)
     /* Writer cache + mmap from inn.conf, applied after the .sql WAL pragmas.
      */
     snprintf(pragma, sizeof(pragma), "pragma cache_size = -%lu;", cachesize);
-    sqlite3_exec(h->db, pragma, NULL, NULL, NULL);
+    sqlite3_exec(h->db, pragma, nullptr, nullptr, nullptr);
     snprintf(pragma, sizeof(pragma), "pragma mmap_size = %lu;", mmapsize);
-    sqlite3_exec(h->db, pragma, NULL, NULL, NULL);
+    sqlite3_exec(h->db, pragma, nullptr, nullptr, nullptr);
 
     /* Bulk rebuild (makehistory): batch the writes; see the batch_* helpers
        above. */
@@ -422,11 +423,11 @@ hissqlite_doopen(struct hissqlite *h)
     return true;
 
 fail:
-    if (errmsg != NULL)
+    if (errmsg != nullptr)
         sqlite3_free(errmsg);
-    if (h->db != NULL) {
+    if (h->db != nullptr) {
         sqlite3_close_v2(h->db); /* _v2 zombie-closes even if a stmt lingers */
-        h->db = NULL;
+        h->db = nullptr;
     }
     return false;
 }
@@ -443,14 +444,14 @@ hissqlite_open(const char *path, int flags, struct history *history)
     /* makehistory opens with a NULL path and supplies the real one afterwards
        via HISCTLS_PATH; defer the database open until then.  Until the path is
        set the handle is unusable, exactly as with hisv6. */
-    if (path == NULL)
+    if (path == nullptr)
         return h;
 
-    h->path = concat(path, ".sqlite", (char *) NULL);
+    h->path = concat(path, ".sqlite", (char *) nullptr);
     if (!hissqlite_doopen(h)) {
         free(h->path);
         free(h);
-        return NULL;
+        return nullptr;
     }
     return h;
 }
@@ -494,7 +495,7 @@ hissqlite_close(void *history)
        close; just free it.  Skipping this would call
        sqlite3_wal_checkpoint_v2() on a NULL connection, which is not a no-op
        like sqlite3_close_v2(NULL). */
-    if (h->db == NULL) {
+    if (h->db == nullptr) {
         free(h->path);
         free(h);
         return true;
@@ -511,12 +512,12 @@ hissqlite_close(void *history)
            true is in the database before the final checkpoint. */
         if (!batch_commit(h))
             ok = false;
-        if (sqlite3_wal_checkpoint_v2(h->db, NULL, SQLITE_CHECKPOINT_PASSIVE,
-                                      &log, &ckpt)
+        if (sqlite3_wal_checkpoint_v2(h->db, nullptr,
+                                      SQLITE_CHECKPOINT_PASSIVE, &log, &ckpt)
                 == SQLITE_OK
             && log == ckpt)
-            sqlite3_wal_checkpoint_v2(h->db, NULL, SQLITE_CHECKPOINT_TRUNCATE,
-                                      NULL, NULL);
+            sqlite3_wal_checkpoint_v2(
+                h->db, nullptr, SQLITE_CHECKPOINT_TRUNCATE, nullptr, nullptr);
         sqlite_helper_term(&hissqlite_main_helper, (sqlite3_stmt **) &h->main);
     } else {
         sqlite_helper_term(&hissqlite_read_helper, (sqlite3_stmt **) &h->read);
@@ -547,13 +548,13 @@ hissqlite_lookup(void *history, const char *key, time_t *arrived,
            cancel path and grephistory never see a token-less hit.  HIScheck
            is the existence test that also counts remembered entries. */
         found = true;
-        if (arrived != NULL)
+        if (arrived != nullptr)
             *arrived = (time_t) sqlite3_column_int64(stmt, 0);
-        if (posted != NULL)
+        if (posted != nullptr)
             *posted = (time_t) sqlite3_column_int64(stmt, 1);
-        if (expires != NULL)
+        if (expires != nullptr)
             *expires = (time_t) sqlite3_column_int64(stmt, 2);
-        if (token != NULL
+        if (token != nullptr
             && !copy_blob(h, stmt, 3, token, sizeof(TOKEN),
                           "corrupt token blob in lookup")) {
             /* Wrong-length token = corruption.  Treat as a lookup failure
@@ -603,7 +604,7 @@ hissqlite_write(void *history, const char *key, time_t arrived, time_t posted,
     ok = (sqlite3_step(stmt) == SQLITE_DONE);
     if (!ok)
         hissqlite_seterror(h, "write");
-    else if (sqlite3_changes(h->db) == 0 && h->history != NULL)
+    else if (sqlite3_changes(h->db) == 0 && h->history != nullptr)
         /* The .write INSERT used ON CONFLICT DO NOTHING, so a duplicate hash
            changed nothing.  Report it (his_seterror logs a warning) but still
            return success, so a makehistory rebuild over a spool with duplicate
@@ -611,7 +612,7 @@ hissqlite_write(void *history, const char *key, time_t arrived, time_t posted,
            (hisv6.c hisv6_writedbz, DBZSTORE_EXISTS). */
         his_seterror(h->history,
                      concat("hissqlite: duplicate message-id, write ignored: ",
-                            key, (char *) NULL));
+                            key, (char *) nullptr));
     sqlite3_reset(stmt);
     /* After the sqlite3_changes() check: a batch COMMIT must not slip between
        the INSERT and that read.  A failed write leaves the batch open; its
@@ -654,7 +655,7 @@ hissqlite_replace(void *history, const char *key, time_t arrived,
     sqlite3_bind_int64(stmt, 2, (sqlite3_int64) arrived);
     sqlite3_bind_int64(stmt, 3, (sqlite3_int64) posted);
     sqlite3_bind_int64(stmt, 4, (sqlite3_int64) expires);
-    if (token == NULL)
+    if (token == nullptr)
         sqlite3_bind_null(stmt, 5);
     else
         sqlite3_bind_blob(stmt, 5, token, sizeof(TOKEN), SQLITE_TRANSIENT);
@@ -691,7 +692,7 @@ hissqlite_walk(void *history, const char *reason UNUSED, void *cookie,
         posted = (time_t) sqlite3_column_int64(stmt, 2);
         expires = (time_t) sqlite3_column_int64(stmt, 3);
         if (sqlite3_column_type(stmt, 4) == SQLITE_NULL) {
-            tp = NULL; /* Remembered entry: callback sees no token. */
+            tp = nullptr; /* Remembered entry: callback sees no token. */
         } else {
             if (!copy_blob(h, stmt, 4, &token, sizeof(TOKEN),
                            "corrupt token blob in walk")) {
@@ -909,16 +910,16 @@ hissqlite_ctl(void *history, int selector, void *val)
         /* Deferred-open path (makehistory): HISopen(NULL) left the database
            unopened; set the real path now and perform the open/create.  Refuse
            a second path set, as hisv6 does. */
-        if (h->path != NULL) {
+        if (h->path != nullptr) {
             his_seterror(h->history,
                          concat("hissqlite: path already set in handle",
-                                (char *) NULL));
+                                (char *) nullptr));
             return false;
         }
-        h->path = concat((char *) val, ".sqlite", (char *) NULL);
+        h->path = concat((char *) val, ".sqlite", (char *) nullptr);
         if (!hissqlite_doopen(h)) {
             free(h->path);
-            h->path = NULL;
+            h->path = nullptr;
             return false;
         }
         return true;
