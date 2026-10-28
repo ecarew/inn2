@@ -34,7 +34,7 @@ size_t
 pack_now(buffer_t *dst, void const *bytes, size_t count)
 {
     if (bytes) {
-        buffer_append(dst, bytes, count);
+        buffer_append(dst, static_cast<const char *>(bytes), count);
     } else {
         buffer_resize(dst, dst->used + dst->left + count);
         dst->left += count;
