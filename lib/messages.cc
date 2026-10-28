@@ -111,7 +111,7 @@ static message_handler_func *warn_handlers = stderr_handlers;
 static message_handler_func *die_handlers = stderr_handlers;
 
 /* If non-NULL, called before exit and its return value passed to exit. */
-int (*message_fatal_cleanup)(void) = nullptr;
+int (*message_fatal_cleanup)() = nullptr;
 
 /* If non-NULL, prepended (followed by ": ") to messages. */
 const char *message_program_name = nullptr;

@@ -723,7 +723,7 @@ timecaf_freearticle(ARTHANDLE *article)
 /* Do cancels of all the article ids collected for a given pathname. */
 
 static void
-DoCancels(void)
+DoCancels()
 {
     if (DeletePath != nullptr) {
         if (NumDeleteArtnums != 0) {

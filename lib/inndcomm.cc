@@ -168,7 +168,7 @@ ICCclose(void)
 **  Get the server's pid.
 */
 static pid_t
-ICCserverpid(void)
+ICCserverpid()
 {
     pid_t pid;
     FILE *F;

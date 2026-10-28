@@ -1000,7 +1000,7 @@ CHANwritesleep(CHANNEL *cp, const char *name)
 **  enabled yet; it's been disabled for years, and is expensive.
 */
 static void UNUSED
-CHANdiagnose(void)
+CHANdiagnose()
 {
     fd_set test;
     int fd;

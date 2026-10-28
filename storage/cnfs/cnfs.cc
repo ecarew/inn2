@@ -329,7 +329,7 @@ CNFSshutdowncycbuff(CYCBUFF *cycbuff)
 }
 
 static void
-CNFScleancycbuff(void)
+CNFScleancycbuff()
 {
     CYCBUFF *cycbuff, *nextcycbuff;
 
@@ -343,7 +343,7 @@ CNFScleancycbuff(void)
 }
 
 static void
-CNFScleanmetacycbuff(void)
+CNFScleanmetacycbuff()
 {
     METACYCBUFF *metacycbuff, *nextmetacycbuff;
 
@@ -359,7 +359,7 @@ CNFScleanmetacycbuff(void)
 }
 
 static void
-CNFScleanexpirerule(void)
+CNFScleanexpirerule()
 {
     CNFSEXPIRERULES *metaexprule, *nextmetaexprule;
 
@@ -401,7 +401,7 @@ CNFSgetmetacycbuffbyname(char *name)
 }
 
 static void
-CNFSflushallheads(void)
+CNFSflushallheads()
 {
     CYCBUFF *cycbuff;
 
@@ -618,7 +618,7 @@ CNFSparse_metapart_line(char *l)
 }
 
 static bool
-CNFSparse_groups_line(void)
+CNFSparse_groups_line()
 {
     METACYCBUFF *mrp;
     STORAGE_SUB *sub = (STORAGE_SUB *) nullptr;
@@ -893,7 +893,7 @@ CNFS_setcurrent(METACYCBUFF *metacycbuff)
 */
 
 static bool
-CNFSread_config(void)
+CNFSread_config()
 {
     char *path, *config, *from, *to, **ctab = (char **) nullptr;
     int ctab_free = 0; /* Index to next free slot in ctab */

@@ -154,7 +154,7 @@ CCcopyargv(char *av[])
 **  Return a string representing our operating mode.
 */
 static const char *
-CCcurrmode(void)
+CCcurrmode()
 {
     static char buff[32];
 
@@ -177,7 +177,7 @@ CCcurrmode(void)
 **  Notify systemd of the current operating modes.
 */
 static void
-CCsdnotify(void)
+CCsdnotify()
 {
 #ifdef HAVE_SD_NOTIFY
     int status;

@@ -63,7 +63,7 @@ bool BufferedLogs = true;
 static void catch_terminate(int sig);
 static void xmalloc_abort(const char *what, size_t size, const char *file,
                           int line) __attribute__((__noreturn__));
-static void Usage(void) __attribute__((__noreturn__));
+static void Usage() __attribute__((__noreturn__));
 
 /* header table initialization */
 #define ARTHEADERINIT(name, type) {name, type, sizeof(name) - 1}
@@ -354,7 +354,7 @@ ReopenLog(FILE *F)
 **  Print a usage message and exit.
 */
 static void
-Usage(void)
+Usage()
 {
     fprintf(stderr, "Usage error.\n");
     exit(1);

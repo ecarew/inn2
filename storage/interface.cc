@@ -288,7 +288,7 @@ static CONFTOKEN smtoks[] = {
 
 /* Open the config file and parse it, generating the policy data */
 static bool
-SMreadconfig(void)
+SMreadconfig()
 {
     CONFFILE *f;
     CONFTOKEN *tok;

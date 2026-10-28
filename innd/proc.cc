@@ -18,7 +18,7 @@ static PROCESS PROCnull = {PSfree, 0, 0, 0, 0, 0};
 **  Collect dead processes.
 */
 static void
-PROCreap(void)
+PROCreap()
 {
     int status;
     PROCESS *pp;

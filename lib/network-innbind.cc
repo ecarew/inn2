@@ -40,7 +40,7 @@
  * functions from being run and any buffers from being flushed twice.
  */
 static int
-network_child_fatal(void)
+network_child_fatal()
 {
     _exit(1);
     /* NOTREACHED */

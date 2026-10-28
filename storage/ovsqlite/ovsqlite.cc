@@ -236,7 +236,7 @@ read_misc_int(char const *key, int *value)
 **  Open the overview database directly for read-only access.
 */
 static bool
-direct_open(void)
+direct_open()
 {
     char *path;
     char *confpath;
@@ -428,7 +428,7 @@ fail:
 **  Close the direct reader connection.
 */
 static void
-direct_close(void)
+direct_close()
 {
     if (!read_connection)
         return;
@@ -447,7 +447,7 @@ direct_close(void)
 
 
 static bool
-server_connect(void)
+server_connect()
 {
     char *path;
     int ret;
@@ -532,13 +532,13 @@ start_request(unsigned int code)
 }
 
 static void
-finish_request(void)
+finish_request()
 {
     *(uint32_t *) (void *) request->data = request->left;
 }
 
 static unsigned int
-start_response(void)
+start_response()
 {
     uint8_t code;
 
@@ -548,13 +548,13 @@ start_response(void)
 }
 
 static bool
-finish_response(void)
+finish_response()
 {
     return response->left == 0;
 }
 
 static bool
-write_request(void)
+write_request()
 {
     char *data;
     size_t left;
@@ -581,7 +581,7 @@ write_request(void)
 }
 
 static bool
-read_response(void)
+read_response()
 {
     char *data;
     size_t size, response_size;
@@ -1567,7 +1567,7 @@ expire_one(char const *group, int *low, struct history *h)
 }
 
 static bool
-expire_finish(void)
+expire_finish()
 {
     bool done = false;
 

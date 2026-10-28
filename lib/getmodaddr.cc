@@ -16,7 +16,7 @@ static FILE *GMAfp = nullptr;
 **  Close the file opened by GMAlistopen.
 */
 static void
-GMAclose(void)
+GMAclose()
 {
     if (GMAfp) {
         fclose(GMAfp);

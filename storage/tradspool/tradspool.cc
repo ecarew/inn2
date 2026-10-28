@@ -270,7 +270,7 @@ FindNGByNum(unsigned long ngnumber)
 
 /* dump DB to file. */
 static void
-DumpDB(void)
+DumpDB()
 {
     char *fname, *fnamenew;
     NGTENT *ngtp;
@@ -322,7 +322,7 @@ DumpDB(void)
 */
 
 static bool
-ReadDBFile(void)
+ReadDBFile()
 {
     char *fname;
     QIOSTATE *qp;
@@ -356,7 +356,7 @@ ReadDBFile(void)
 }
 
 static bool
-ReadActiveFile(void)
+ReadActiveFile()
 {
     char *fname;
     QIOSTATE *qp;
@@ -389,7 +389,7 @@ ReadActiveFile(void)
 }
 
 static bool
-InitNGTable(void)
+InitNGTable()
 {
     if (!ReadDBFile())
         return false;
@@ -1320,7 +1320,7 @@ tradspool_next(ARTHANDLE *article, const RETRTYPE amount)
 }
 
 static void
-FreeNGTree(void)
+FreeNGTree()
 {
     unsigned int i;
     NGTENT *ngtp, *nextngtp;

@@ -264,7 +264,7 @@ static const struct config config_table[] = {
 **  to free whatever values are set by the file.
 */
 static void
-innconf_set_defaults(void)
+innconf_set_defaults()
 {
     char *value;
 

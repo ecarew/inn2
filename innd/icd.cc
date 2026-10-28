@@ -52,7 +52,7 @@ ICDiovset(struct iovec *iovp, char *base, int len)
 **  Close the active file, releasing its resources.
 */
 static void
-ICDcloseactive(void)
+ICDcloseactive()
 {
     if (ICDactpointer) {
 #ifdef HAVE_MMAP

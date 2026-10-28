@@ -123,7 +123,7 @@ SITEunlink(SITE *sp)
 **  Find the oldest "file feed" site and buffer it.
 */
 static void
-SITEbufferoldest(void)
+SITEbufferoldest()
 {
     SITE *sp;
     struct buffer *bp;

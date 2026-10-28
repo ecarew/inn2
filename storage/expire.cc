@@ -595,7 +595,7 @@ OVEXPremove(TOKEN token, bool deletedgroups, char **xref, int ngroups)
 **  Read the overview schema.
 */
 static void
-ARTreadschema(void)
+ARTreadschema()
 {
     const struct cvector *standardoverview;
     struct vector *extraoverview;
@@ -685,7 +685,7 @@ OVERGetHeader(const char *p, int field)
 **  Read overview schema and find index for headers.
 */
 static void
-OVfindheaderindex(void)
+OVfindheaderindex()
 {
     FILE *F;
     char *active;

@@ -280,7 +280,7 @@ static OVSEARCH *Cachesearch;
 
 static int ovbuffmode;
 
-static GROUPLOC GROUPnewnode(void);
+static GROUPLOC GROUPnewnode();
 static int GROUPmappingprot(int mode);
 static bool GROUPremapifneeded(GROUPLOC loc, bool hash_locked);
 static void GROUPLOCclear(GROUPLOC *loc);
@@ -420,7 +420,7 @@ ovparse_part_line(char *l)
 */
 
 static bool
-ovbuffread_config(void)
+ovbuffread_config()
 {
     char *path, *config, *from, *to, **ctab = (char **) nullptr;
     int ctab_free = 0; /* Index to next free slot in ctab */
@@ -626,7 +626,7 @@ ovlock(OVBUFF *ovbuff, enum inn_locktype type)
 }
 
 static bool
-ovbuffinit_disks(void)
+ovbuffinit_disks()
 {
     OVBUFF *ovbuff = ovbufftab;
     char buf[64];
@@ -908,7 +908,7 @@ ovblocknew(GROUPENTRY *ge)
 {
 #else
 static OV
-ovblocknew(void)
+ovblocknew()
 {
 #endif /* OV_DEBUG */
     OVBUFF *ovbuff;
@@ -1571,7 +1571,7 @@ GROUPexpand(int mode)
 }
 
 static GROUPLOC
-GROUPnewnode(void)
+GROUPnewnode()
 {
     GROUPLOC loc;
 
@@ -1935,7 +1935,7 @@ freegroupblock(GROUPENTRY *ge)
 {
 #else
 static void
-freegroupblock(void)
+freegroupblock()
 {
 #endif /* OV_DEBUG */
     GROUPDATABLOCK *gdb;
@@ -1961,7 +1961,7 @@ freegroupblock(void)
 }
 
 static void
-ovgroupunmap(void)
+ovgroupunmap()
 {
     GROUPDATABLOCK *gdb, *gdbnext;
     int i;
@@ -1996,7 +1996,7 @@ ovgroupunmap(void)
    A zero Gibcount with a non-NULL, partially filled Gib is not a valid cache
    entry (gettoken expects at least one element whenever Gib is non-NULL). */
 static void
-ovgroupunmap_failed(void)
+ovgroupunmap_failed()
 {
     ovgroupunmap();
     free(Gib);

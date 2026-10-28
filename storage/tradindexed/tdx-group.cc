@@ -1205,7 +1205,7 @@ hashmap_delete(void *entry)
 **  active file.  Returns the constructed hash table.
 */
 static struct hash *
-hashmap_load(void)
+hashmap_load()
 {
     struct hash *hash;
     QIOSTATE *active;

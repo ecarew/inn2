@@ -108,7 +108,7 @@ SITEaddvariable(char *line)
 }
 
 static void
-SITEclearvariables(void)
+SITEclearvariables()
 {
     SITEVARIABLES *v, *w;
 

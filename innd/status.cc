@@ -54,7 +54,7 @@ static unsigned long STATUSlast_time;
 static char start_time[50];
 
 static unsigned long
-STATUSgettime(void)
+STATUSgettime()
 {
     static int init = 0;
     static struct timeval start_tv;
@@ -92,7 +92,7 @@ PrettySize(unsigned long long size, char *str)
 }
 
 static void
-STATUSsummary(void)
+STATUSsummary()
 {
     FILE *F;
     int i;

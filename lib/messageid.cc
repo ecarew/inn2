@@ -78,7 +78,7 @@ GenerateMessageID(char *domain)
 **  (mdtext).
 */
 static void
-InitializeMessageIDcclass(void)
+InitializeMessageIDcclass()
 {
     const unsigned char *p;
     unsigned int i;
