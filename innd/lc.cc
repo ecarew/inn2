@@ -25,7 +25,7 @@ static void
 LCreader(CHANNEL *cp)
 {
     int fd;
-    CHANNEL *new;
+    CHANNEL *newcp;
 
     if (cp != LCchan) {
         syslog(L_ERROR, "%s internal LCreader wrong channel %p not %p",
@@ -47,10 +47,10 @@ LCreader(CHANNEL *cp)
         return;
     }
 
-    if ((new = NCcreate(fd, false, true)) != NULL) {
-        memset(&new->Address, 0, sizeof(new->Address));
-        syslog(L_NOTICE, "%s connected %d", "localhost", new->fd);
-        NCwritereply(new, (char *) NCgreeting);
+    if ((newcp = NCcreate(fd, false, true)) != NULL) {
+        memset(&newcp->Address, 0, sizeof(newcp->Address));
+        syslog(L_NOTICE, "%s connected %d", "localhost", newcp->fd);
+        NCwritereply(newcp, (char *) NCgreeting);
     }
 }
 
