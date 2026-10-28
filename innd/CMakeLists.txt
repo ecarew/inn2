@@ -5,7 +5,6 @@
 
 set(INND_C_SOURCES
     cc.c
-    chan.c
     innd.c
     perl.c
     python.c
@@ -25,6 +24,7 @@ set(INND_CXX_SOURCES
     rc.cc
     site.cc
     icd.cc
+    chan.cc
 )
 
 add_executable(innd ${INND_C_SOURCES} ${INND_CXX_SOURCES})
