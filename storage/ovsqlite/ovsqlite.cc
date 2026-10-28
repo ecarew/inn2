@@ -202,7 +202,7 @@ reader_decompress(uint8_t const *overview, uint32_t overview_len,
 static int
 pragma_callback(void *data, int ncols, char **values, char **names UNUSED)
 {
-    char **result = data;
+    char **result = static_cast<char **>(data);
 
     if (ncols > 0 && values[0])
         *result = xstrdup(values[0]);
@@ -728,7 +728,7 @@ ovsqlite_groupstats(const char *group, int *low, int *high, int *count,
         if (count)
             *count = sqlite3_column_int64(stmt, 2);
         if (flag) {
-            flag_blob = sqlite3_column_blob(stmt, 3);
+            flag_blob = static_cast<const char *>(sqlite3_column_blob(stmt, 3));
             if (flag_blob)
                 *flag = *flag_blob;
         }
@@ -763,7 +763,7 @@ ovsqlite_groupstats(const char *group, int *low, int *high, int *count,
         return false;
     if (!unpack_now(response, &flag_alias_len, sizeof flag_alias_len))
         return false;
-    flag_alias = unpack_later(response, flag_alias_len);
+    flag_alias = static_cast<uint8_t *>(unpack_later(response, flag_alias_len));
     if (!flag_alias)
         return false;
     if (!finish_response())
@@ -1068,7 +1068,7 @@ fill_search_buffer_direct(handle_t *rh)
             uint32_t overview_len;
             size_t size;
 
-            overview = sqlite3_column_blob(stmt, 4);
+            overview = static_cast<const uint8_t *>(sqlite3_column_blob(stmt, 4));
             size = sqlite3_column_bytes(stmt, 4);
             if (!overview || size > MAX_OVDATA_SIZE)
                 continue;
@@ -1113,7 +1113,7 @@ fill_search_buffer_direct(handle_t *rh)
         if (cols & search_col_arrived)
             tmp_arrived[count] = sqlite3_column_int64(stmt, 1);
         if (cols & search_col_token) {
-            TOKEN const *tk = sqlite3_column_blob(stmt, 3);
+            TOKEN const *tk = static_cast<TOKEN const *>(sqlite3_column_blob(stmt, 3));
 
             if (tk && sqlite3_column_bytes(stmt, 3) == sizeof(TOKEN))
                 tmp_token[count] = *tk;
@@ -1302,7 +1302,7 @@ ovsqlite_search(void *handle, ARTNUM *artnum, char **data, int *len,
         warn("ovsqlite: not connected to server");
         return false;
     }
-    rh = handle;
+    rh = static_cast<handle_t *>(handle);
     if (!rh)
         return false;
     ix = rh->index;
@@ -1376,7 +1376,7 @@ ovsqlite_getartinfo(const char *group, ARTNUM artnum, TOKEN *token)
             sqlite3_clear_bindings(stmt);
             return false;
         }
-        db_token = sqlite3_column_blob(stmt, 0);
+        db_token = static_cast<const TOKEN *>(sqlite3_column_blob(stmt, 0));
         if (!db_token || sqlite3_column_bytes(stmt, 0) != sizeof(TOKEN)) {
             sqlite3_reset(stmt);
             sqlite3_clear_bindings(stmt);
@@ -1496,7 +1496,7 @@ expire_one(char const *group, int *low, struct history *h)
             TOKEN token;
             char *overview;
             uint32_t overview_len;
-            bool delete = false;
+            bool dodelete = false;
             ARTHANDLE *ah = NULL;
 
             if (!unpack_now(response, &artnum, sizeof artnum))
@@ -1511,7 +1511,7 @@ expire_one(char const *group, int *low, struct history *h)
                 return false;
             if (!unpack_now(response, &overview_len, sizeof overview_len))
                 return false;
-            overview = unpack_later(response, overview_len);
+            overview = static_cast<char *>(unpack_later(response, overview_len));
             if (!overview)
                 return false;
 
@@ -1520,16 +1520,16 @@ expire_one(char const *group, int *low, struct history *h)
                 if (ah) {
                     SMfreearticle(ah);
                 } else {
-                    delete = true;
+                    dodelete = true;
                 }
             } else {
-                delete = !OVhisthasmsgid(h, overview);
+                dodelete = !OVhisthasmsgid(h, overview);
             }
-            if (!delete && innconf->groupbaseexpiry) {
-                delete = OVgroupbasedexpire(token, group, overview,
+            if (!dodelete && innconf->groupbaseexpiry) {
+                dodelete = OVgroupbasedexpire(token, group, overview,
                                             overview_len, arrived, expires);
             }
-            if (delete) {
+            if (dodelete) {
                 pack_now(request, &artnum, sizeof artnum);
                 delcount++;
             }
