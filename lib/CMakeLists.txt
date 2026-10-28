@@ -7,7 +7,7 @@ add_library(inn STATIC
     argparse.cc artnumber.cc bloom.cc buffer.cc cleanfrom.cc clientactive.cc
     clientlib.cc commands.cc concat.cc conffile.cc confparse.c date.cc dbz.c
     defdist.cc dispatch.cc fdflag.cc fdlimit.cc getfqdn.cc getmodaddr.cc hash.cc
-    hashtab.cc headers.cc hex.cc innconf.c inndcomm.cc list.cc localopen.cc
+    hashtab.cc headers.cc hex.cc innconf.cc inndcomm.cc list.cc localopen.cc
     lockfile.cc makedir.cc md5.cc messageid.cc messages.cc mmap.cc network.c
     network-innbind.cc newsuser.cc nntp.cc qio.cc radix32.cc readin.cc remopen.cc
     reservedfd.cc resource.cc secrets.cc sendarticle.cc sendpass.cc sequence.cc
