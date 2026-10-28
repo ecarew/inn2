@@ -12,6 +12,8 @@
 #include "config.h"
 #include "portable/macros.h"
 
+BEGIN_DECLS
+
 #if !HAVE_SETPROCTITLE || !HAVE_DECL_SETPROCTITLE
 void setproctitle(const char *format, ...)
     __attribute__((__format__(printf, 1, 2)));
@@ -22,5 +24,7 @@ void setproctitle(const char *format, ...)
 #else
 void setproctitle_init(int argc, char *argv[]);
 #endif
+
+END_DECLS
 
 #endif /* !PORTABLE_SETPROCTITLE_H */
