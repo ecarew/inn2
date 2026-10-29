@@ -310,10 +310,7 @@ a document so the rounds can be compared.
   innd/, nnrpd/, backends/, frontends/, expire/, control/ and authprogs/
   (except auth_krb5) is run by a test; innfeed and the storage/history
   tools other than tdx-util and makehistory are not yet.
-- Tooling (2026-10-29): when commit-verified.sh refuses because a change is
-  left unstaged, the paths it already staged stay staged, so the next run
-  commits them too (this merged two ovdb fixes into one commit, split again
-  before pushing).  It should unstage what it staged when it refuses.
+
 - Kerberos (auth_krb5) is found through `krb5-config`, which on this Mac is
   Anaconda's (`/opt/anaconda3`), matching what configure picked.
 - Upstream bug, control/gencancel.c: without -n, gencancel copies the
@@ -346,6 +343,11 @@ a document so the rounds can be compared.
   (CMake-only goal items 4, 7 and 8).
 
 **Resolved**
+- 2026-10-29: commit-verified.sh left the paths it had staged staged when it
+  refused (unstaged changes left, verification or live test failed), so the
+  next run committed them too; this merged two ovdb fixes into one commit
+  (split again before pushing).  It now restores the index as it was before
+  the run whenever it does not commit.
 - 2026-10-29: frontends/ converted to C++, all 12 built programs
   (`a1363a6fe` through `efb8bfd9b`), the ovdb tools' Berkeley DB code
   fixed after a syntax check (`57e431e0b`, `74499a1fa`), then nullptr,
