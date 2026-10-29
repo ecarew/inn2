@@ -64,6 +64,28 @@ add_compile_definitions($<$<NOT:$<CONFIG:Debug>>:_FORTIFY_SOURCE=2>)
 add_compile_options(-fstack-protector-strong)
 add_link_options(-fstack-protector-strong)
 
+# CMake's own copy of configure's config.h, first on the include path, so
+# build options can override values in it.  INN_RUNAS_USER/INN_RUNAS_GROUP
+# replace RUNASUSER/RUNASGROUP, the account innd requires and switches to
+# before it reads inn.conf (configure's --with-news-user/--with-news-group).
+# Used for test builds that run innd as the tester (support/live-innd.sh);
+# production builds leave them empty and keep configure's value (news).
+set(INN_RUNAS_USER "" CACHE STRING "Override RUNASUSER (default: configure's)")
+set(INN_RUNAS_GROUP "" CACHE STRING "Override RUNASGROUP (default: configure's)")
+
+file(READ ${CMAKE_SOURCE_DIR}/include/config.h _config_h)
+if(INN_RUNAS_USER)
+    string(REGEX REPLACE "#define RUNASUSER \"[^\"]*\""
+           "#define RUNASUSER \"${INN_RUNAS_USER}\"" _config_h "${_config_h}")
+endif()
+if(INN_RUNAS_GROUP)
+    string(REGEX REPLACE "#define RUNASGROUP \"[^\"]*\""
+           "#define RUNASGROUP \"${INN_RUNAS_GROUP}\"" _config_h "${_config_h}")
+endif()
+file(WRITE ${CMAKE_BINARY_DIR}/config.h.new "${_config_h}")
+configure_file(${CMAKE_BINARY_DIR}/config.h.new
+               ${CMAKE_BINARY_DIR}/include/config.h COPYONLY)
+include_directories(BEFORE ${CMAKE_BINARY_DIR}/include)
 include_directories(${CMAKE_SOURCE_DIR}/include)
 
 find_package(ZLIB REQUIRED)

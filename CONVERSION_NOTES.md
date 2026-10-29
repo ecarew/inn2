@@ -43,8 +43,9 @@ list) are in [CLAUDE.md](CLAUDE.md).  This file is the rationale.
   Make-built C libraries.  When a test failed on both, the test was wrong, not
   the conversion (see `26928139d`, `b55ea92a1`).
 - **Coverage is measured, not assumed** (`support/coverage-report.sh`).  As of
-  2026-10-29: lib 73.4%, history 60.3%, storage 36.4%, **innd 9.5%** (2.0%
-  before INN's innd/artparse and innd/chan tests were added).  Code
+  2026-10-29: lib 77.0%, history 63.9%, storage 37.5%, **innd 33.9%** (2.0%
+  originally; 9.5% with innd/artparse and innd/chan; 33.9% with the live innd
+  test, support/live-innd.sh).  Code
   with no coverage is not refactored until it has tests.
 
 ## Decisions
@@ -133,6 +134,54 @@ list) are in [CLAUDE.md](CLAUDE.md).  This file is the rationale.
   innbind qualifies: it only runs for the news user, binds the allowed
   ports, hands back the sockets and exits.  The next task after the innd
   coverage gate is an audit confirming this holds everywhere, with tests.
+
+### Running innd as the tester for live tests (decided 2026-10-29)
+
+**What the code does.**  innd calls `ensure_news_user_grp()` (innd.cc, near
+line 408) **before** it reads inn.conf (`innconf_read()`, line 433).  At that
+point `innconf` is still null, so `ensure_news_user()` and `ensure_news_grp()`
+(lib/newsuser.cc) fall back to the compiled-in `RUNASUSER` and `RUNASGROUP`
+from `config.h` (`"news"`), which configure sets from `--with-news-user` and
+`--with-news-group`.  So the `runasuser`/`runasgroup` keys in inn.conf cannot
+make innd run as another account: the account is fixed when innd is built.
+(An earlier statement in this conversion that inn.conf controlled it was
+wrong; the live test showed `can't resolve news to a GID`.)  The ordering is
+deliberate: if innd is started as root it drops privileges before reading
+any configuration file.
+
+**Options considered.**
+1. A CMake option for test builds only (chosen).
+2. Rerun `./configure --with-news-user=<tester>`: changes `config.h` for every
+   build, including production.
+3. Make innd read inn.conf before checking the user: a behavior change to
+   upstream code made only for testing, and it would read configuration files
+   as root before dropping privileges, against the security policy above.
+
+**What was done.**  CMake now always writes its own copy of configure's
+`config.h` to `<build>/include/config.h`, first on the include path, and
+replaces `RUNASUSER`/`RUNASGROUP` there when `-DINN_RUNAS_USER` /
+`-DINN_RUNAS_GROUP` are set.  With the options unset the copy is
+byte-identical to configure's, so production builds are unchanged.  The code
+under test is the same; only the compiled-in account differs, as configure
+already allows.  Two details made this safe:
+- `config.h` has no include guard, so two copies in one compilation would
+  silently redefine each other.  All 200 compile commands were checked to put
+  `<build>/include` before `include/`.
+- 79 of the 80 files including `"config.h"` resolve it through the include
+  path; `include/innperl.h`, being next to the original, would have found it
+  first.  It now uses `#include <config.h>` (inside `#if DO_PERL`).
+
+**Live test.**  `support/live-innd.sh <build>` builds a scratch installation
+(inn.conf with every path in a temporary directory, 127.0.0.1 on an
+unprivileged port, so neither root nor innbind is involved), starts the real
+innd as the tester, feeds five articles with rnews, checks history (grephistory),
+the spool (sm), a file feed and duplicate refusal, runs ctlinnd newgroup,
+throttle/go and rmgroup, and shuts down.  Use a build configured with
+`-DINN_RUNAS_USER=$(id -un) -DINN_RUNAS_GROUP=$(id -gn)` (e.g. build-live).
+
+**Result.**  innd line coverage 9.5% -> 33.9% (art.cc 45%, chan.cc 56%,
+newsfeeds 35%, rc 26%, cc 25%, site 21%, nc 20%), passing the 33% gate;
+overall 47.5%.
 
 ### Not converted
 

@@ -7,9 +7,10 @@
 #
 #  Stages the given paths (plus all modified tracked files with -u if none are
 #  given), refuses if any change is left unstaged, runs support/verify-cxx.sh
-#  on build/ and, if configured, build-asan/, and commits with a Tested:
-#  section for each.  Uses your normal git identity; set COMMIT_TRAILER to add
-#  a trailer line such as a Co-Authored-By.
+#  on build/ and, if configured, build-asan/, plus support/live-innd.sh on
+#  build-live/ if configured, and commits with a Tested: section for each.
+#  Uses your normal git identity; set COMMIT_TRAILER to add a trailer line
+#  such as a Co-Authored-By.
 
 tools=$(cd "$(dirname "$0")" && pwd)
 root=$(cd "$tools/../.." && pwd)
@@ -40,6 +41,14 @@ for b in "${builds[@]}"; do
         exit 1
     fi
 done
+live=false
+if [ -f build-live/CMakeCache.txt ]; then
+    live=true
+    cmake --build build-live -j8 >"$tmp/build-live.log" 2>&1 \
+        && support/live-innd.sh build-live >"$tmp/live.txt" 2>&1 \
+        || { echo "LIVE INND TEST FAILED; not committing"; \
+             grep -vE 'PASS' "$tmp/live.txt"; exit 1; }
+fi
 
 {
     echo "$subject"; echo; cat "$body"; echo
@@ -47,5 +56,9 @@ done
         echo "Tested (before commit, $(date +%F), support/verify-cxx.sh $b):"
         cat "$tmp/$b.txt"; echo
     done
+    if $live; then
+        echo "Tested (before commit, $(date +%F), support/live-innd.sh build-live):"
+        cat "$tmp/live.txt"; echo
+    fi
     [ -n "$COMMIT_TRAILER" ] && echo "$COMMIT_TRAILER"
 } | git commit -q -F - && git log -1 --format='%h %s'

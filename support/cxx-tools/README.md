@@ -9,7 +9,7 @@ locate the repository themselves.  The workflow they support is described in
 |---|---|
 | `convert-file.sh <dir> <path>` | `git mv` one `.c` to `.cc`, update the directory's `CMakeLists.txt`, rename the `class`/`private` keywords in code, build, and list the remaining errors.  Does not commit. |
 | `autocast.sh <file>` | Add `static_cast`s for the compiler's "`void *` to `T`" errors in a file. |
-| `commit-verified.sh <subject> <body-file> [paths]` | Run `support/verify-cxx.sh` on `build/` (and `build-asan/` if configured) and commit only if everything passes, with the results as `Tested:` sections. |
+| `commit-verified.sh <subject> <body-file> [paths]` | Run `support/verify-cxx.sh` on `build/` (and `build-asan/` if configured), plus `support/live-innd.sh` on `build-live/` if configured, and commit only if everything passes, with the results as `Tested:` sections. |
 | `tidy-fix.sh <dir-regex> <check>` | Apply one clang-tidy check's fixes to `.cc` files only, then `clang-format` them.  Does not commit. |
 | `check-rename-collision.sh <path> <old> <new>` | Report functions that already use `<new>` before renaming `<old>` to it. |
 | `fixkw.pl <file> <keyword> <field-name> <ident-name>` | Rename a C++ keyword used as a name, in code only (never comments or strings): `.kw`/`->kw` become `<field-name>`, other uses `<ident-name>`. |

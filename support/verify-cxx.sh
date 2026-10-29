@@ -68,10 +68,19 @@ else
     res "C linkage kept (no mangled exports)" "FAIL ($mangled mangled)"
 fi
 
-if "$build/innd/innd" -h 2>&1 | grep -q "can't resolve news to a GID"; then
-    res "innd starts (reaches news-group check)" PASS
+# innd checks its user and group first, against RUNASUSER/RUNASGROUP compiled
+# in.  A normal build (news) stops there on a machine without a news group; a
+# build for the current user (INN_RUNAS_USER) gets past it to reading inn.conf.
+runas=$(sed -n 's/^#define RUNASUSER "\(.*\)"/\1/p' "$build/include/config.h")
+if [ "$runas" = "$(id -un)" ]; then
+    expect="open of .*inn.conf failed"
 else
-    res "innd starts (reaches news-group check)" FAIL
+    expect="can't resolve $runas to a [GU]ID"
+fi
+if "$build/innd/innd" -h 2>&1 | grep -qE "$expect"; then
+    res "innd starts (passes or reaches user check)" PASS
+else
+    res "innd starts (passes or reaches user check)" FAIL
 fi
 
 # tinyleaf names each article file by the MD5 of its message-ID.
@@ -93,7 +102,7 @@ if [ ! -f samples/inn.conf ]; then
 fi
 libs=("$build/innd/libinnd_core.a" "$build/storage/libinnstorage.a" "$build/history/libinnhist.a"
       "$build/lib/libinn.a" -lz -lsqlite3)
-cflags=(-g -I"$root/include" -I"$root/tests" -I"$root/history"
+cflags=(-g -I"$build/include" -I"$root/include" -I"$root/tests" -I"$root/history"
         -I"$root/storage")
 cflags+=("${covcflags[@]}")
 # A build configured with -DINN_SANITIZE=ON needs its test programs built

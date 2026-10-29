@@ -12,7 +12,7 @@
 /* Skip this entire file if DO_PERL (./configure --with-perl) isn't set. */
 #if DO_PERL
 
-#    include "config.h"
+#    include <config.h> /* via the include path, so a build's config.h wins */
 
 /* Suppress warnings triggered by Perl macros like PUSHMARK or POPp. */
 #    if defined(__llvm__) || defined(__clang__)

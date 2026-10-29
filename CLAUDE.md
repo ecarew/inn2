@@ -41,6 +41,11 @@ into the `Tested:` section.  `support/cxx-tools/commit-verified.sh` does both;
 the conversion helpers are listed in `support/cxx-tools/README.md`.  The
 reference data lives in `support/verify-cxx/`.
 
+Live innd test: configure a test build with
+`cmake -S . -B build-live -DINN_RUNAS_USER=$(id -un) -DINN_RUNAS_GROUP=$(id -gn)`
+and run `support/live-innd.sh build-live`; commit-verified.sh runs it when
+build-live/ exists.  Never set INN_RUNAS_* on a production build.
+
 Also run it against a sanitizer build when a change touches memory handling:
 `cmake -S . -B build-asan -DINN_SANITIZE=ON -DCMAKE_BUILD_TYPE=Debug`, then
 `support/verify-cxx.sh build-asan` (AddressSanitizer + UBSan; the script builds
@@ -165,11 +170,6 @@ coverage gate)**
 - Convert `readme.pod` to Markdown (`README.md`), next to `CONVERSION_NOTES.md`.
 
 **Design follow-ups (2026-10-28)**
-- Gate: raise innd/ line coverage to at least 33% (now 9.5%) before any
-  further C++ conversion work anywhere in the tree, not just innd (decided
-  2026-10-28), so no change lands without tests that would catch lost
-  compatibility with existing INN installations.  Start with the innd test
-  plan under "Test coverage" below.
 - Convert innfeed's parser to the C++ outputs of bison (lalr1.cc) and flex
   (C++ scanner) when innfeed is converted.
 - Benchmark the current header tree against the planned sorted-array
@@ -177,14 +177,9 @@ coverage gate)**
   it as the first test of `HeaderTable`.
 
 **Test coverage (2026-10-28, support/coverage-report.sh)**
-- innd/ is 9.5% line-covered (2026-10-29; was 2.0%).  With innd/artparse and
-  innd/chan in verify-cxx.sh: chan.cc 40.8%, innd.cc 30.7%, art.cc 19.6%,
-  util.cc 16.6%.  Still 0%: rc.cc, nc.cc, cc.cc, site.cc, newsfeeds.cc, ng.cc,
-  icd.cc, wip.cc, lc.cc.
-- Even then nc.cc, cc.cc, rc.cc and site.cc stay untested: they only run in a
-  live innd.  Needs a scratch-configuration innd driven over NNTP (separate
-  piece of work).
-- Overall 35.8% of lines: lib/ 72.5%, history/ 59.8%, storage/ 36.2%.
+- innd/ is 33.9% line-covered (2026-10-29), past the 33% gate.  Lowest:
+  status.cc 7.9%, nc.cc 20.2%, site.cc 21.4%, cc.cc 25.2%, rc.cc 26.2%.
+- Overall 47.5% of lines: lib/ 77.0%, history/ 63.9%, storage/ 37.5%.
   0% also in storage/overdata.cc, lib/inndcomm.cc, lib/network-innbind.cc.
 
 **Deferred modernization (on hold by decision, 2026-10-28)**
@@ -233,7 +228,10 @@ coverage gate)**
   (CMake-only goal items 4, 7 and 8).
 
 **Resolved**
-- (none yet)
+- 2026-10-29: innd coverage gate passed: innd/ 33.9% (from 2.0%) with
+  innd/artparse, innd/chan and the live test support/live-innd.sh.  The gate
+  (33% before further C++ conversion anywhere, decided 2026-10-28) no longer
+  blocks; keep innd above it by adding tests with changes.
 
 ## void* allocations
 
