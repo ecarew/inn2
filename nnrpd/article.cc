@@ -73,7 +73,8 @@ PushIOvHelper(struct iovec *vec, int *countp)
                 /* Time to flush the compressed output stream. */
                 zstream_flush_needed = true;
             }
-            write_buffer(vec[i].iov_base, vec[i].iov_len);
+            write_buffer(static_cast<const char *>(vec[i].iov_base),
+                         vec[i].iov_len);
         }
 
         *countp = 0;
@@ -88,7 +89,8 @@ PushIOvHelper(struct iovec *vec, int *countp)
         int i;
 
         for (i = 0; i < *countp; i++) {
-            write_buffer(vec[i].iov_base, vec[i].iov_len);
+            write_buffer(static_cast<const char *>(vec[i].iov_base),
+                         vec[i].iov_len);
         }
     } else {
 #endif /* HAVE_SASL */
@@ -540,7 +542,9 @@ ARTsendmmap(SENDTYPE what)
             ARTget++;
             return;
         }
-        if ((r = memchr(xref, ' ', p - xref)) == NULL || r == p) {
+        if ((r = static_cast<const char *>(memchr(xref, ' ', p - xref)))
+                == NULL
+            || r == p) {
             SendIOv(".\r\n", 3);
             ARTgetsize += 3;
             PushIOv();
@@ -722,7 +726,8 @@ GetHeader(const char *header, bool stripspaces)
                         *(retval + (int) (q - p) + VirtualPathlen + 1) = '\0';
                     }
                 } else if (xrefheader && (VirtualPathlen > 0)) {
-                    if ((r = memchr(p, ' ', q - p)) == NULL)
+                    if ((r = static_cast<const char *>(memchr(p, ' ', q - p)))
+                        == NULL)
                         return NULL;
                     for (; (r < q) && isspace((unsigned char) *r); r++)
                         ;
@@ -1230,7 +1235,7 @@ CMDover(int ac, char *av[])
             p = vector->strings[overhdr_xref] + sizeof("Xref: ") - 1;
             while ((p < data + len) && *p == ' ')
                 ++p;
-            q = memchr(p, ' ', data + len - p);
+            q = static_cast<const char *>(memchr(p, ' ', data + len - p));
             if (q == NULL) {
                 if (PERMaccessconf->nnrpdoverstats) {
                     gettimeofday(&stv, NULL);
