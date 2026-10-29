@@ -16,7 +16,8 @@ LIBM_LDFLAGS    = '-lm'
 ##  list.  If they need other things compiled, those other things should be
 ##  added to EXTRA.
 
-TESTS	= authprogs/ident.t authprogs/identport.t expire/tombstone.t \
+TESTS	= authprogs/ident.t authprogs/identport.t authprogs/radius.t \
+	expire/tombstone.t \
 	expire/tombstone-hisexpire.t \
 	innd/artparse.t innd/chan.t lib/artnumber.t \
 	lib/asprintf.t lib/bloom.t lib/bloom-hiswalk.t lib/buffer.t \
@@ -108,6 +109,9 @@ authprogs/ident.t: authprogs/ident-t.o tap/basic.o $(LIBINN)
 
 authprogs/identport.t: authprogs/identport-t.o tap/basic.o $(LIBINN)
 	$(LINK) authprogs/identport-t.o tap/basic.o $(LIBINN) $(LIBS)
+
+authprogs/radius.t: authprogs/radius-t.o tap/basic.o $(LIBINN)
+	$(LINK) authprogs/radius-t.o tap/basic.o $(LIBINN) $(LIBS)
 
 expire/tombstone.t: expire/tombstone-t.o tap/basic.o $(STORAGEDEPS)
 	$(LINKDEPS) expire/tombstone-t.o tap/basic.o $(STORAGELIBS) $(LIBS)

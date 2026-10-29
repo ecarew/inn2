@@ -2,6 +2,7 @@ authprogs/ckpasswd
 authprogs/domain
 authprogs/ident
 authprogs/identport
+authprogs/radius
 clients/getlist
 docs/pod
 expire/tombstone
