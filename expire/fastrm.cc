@@ -96,14 +96,14 @@ file_compare(const void *a, const void *b)
 static filelist *
 filelist_new(char *dir)
 {
-    filelist *new;
+    filelist *list;
 
-    new = xmalloc(sizeof(filelist));
-    new->count = 0;
-    new->size = 0;
-    new->dir = dir;
-    new->files = NULL;
-    return new;
+    list = xmalloc(sizeof(filelist));
+    list->count = 0;
+    list->size = 0;
+    list->dir = dir;
+    list->files = NULL;
+    return list;
 }
 
 
@@ -137,7 +137,8 @@ filelist_lookup(filelist *list, const char *name)
 {
     char **p;
 
-    p = bsearch(&name, list->files, list->count, sizeof(char *), file_compare);
+    p = static_cast<char **>(
+        bsearch(&name, list->files, list->count, sizeof(char *), file_compare));
     return (p == NULL ? NULL : *p);
 }
 
@@ -634,7 +635,8 @@ int
 main(int argc, char *argv[])
 {
     const char *name;
-    char *p, **arg;
+    const char *p;
+    char **arg;
     QIOSTATE *qp;
     filelist *list;
     int filecount, deleted;
