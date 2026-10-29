@@ -169,6 +169,22 @@ coverage gate)**
 - Alternatives if ever wanted: systemd socket activation (innd accepts
   `sd_listen_fds` sockets), launchd sockets, Linux `CAP_NET_BIND_SERVICE`.
 
+**Comparative analysis, original C vs C++ (asked 2026-10-29)**
+Two rounds: (1) when the conversion is complete, before refactoring;
+(2) again after the modern-C++ refactoring phase.  Same machine, compiler and
+optimization flags for both sides; original C built from `main` with its
+Autoconf/Make build, C++ from `cmake-build`.  Record method and raw numbers in
+a document so the rounds can be compared.
+- Lines of code written by the developers only: exclude machine-generated
+  code (configure output, `config.h`, buildconfig and sqlite-helper-gen
+  output, bison/flex output, the Perl `.in` scripts' substitutions) and
+  count comments and blank lines separately.
+- Size of the generated executables and libraries (stripped and unstripped,
+  `size` text/data/bss).
+- Performance from the tests: wall-clock time of each test run and of the
+  live innd test, and peak memory (`/usr/bin/time -l` maximum resident set
+  size on macOS); repeat runs and report the spread, not a single number.
+
 **Housekeeping (later)**
 - Once the class work no longer needs them as references, remove the
   "Branches kept for reference" bullet from CONVERSION_NOTES.md and delete
