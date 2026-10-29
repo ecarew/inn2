@@ -45,6 +45,21 @@ else
     exit 1
 fi
 
+# Every C++ file must compile as C++20 (CLAUDE.md, "Build system"); per-target
+# settings once left most of the tree on the compiler default without notice.
+not20=$(python3 - "$build/compile_commands.json" <<'PY' 2>/dev/null
+import json, sys
+db = json.load(open(sys.argv[1]))
+print(sum(1 for e in db if e["file"].endswith(".cc")
+          and "-std=c++20" not in e["command"].split()))
+PY
+)
+if [ "$not20" = 0 ]; then
+    res "every .cc compiles as -std=c++20" PASS
+else
+    res "every .cc compiles as -std=c++20" "FAIL (${not20:-?} files)"
+fi
+
 # Every symbol the Makefile-built innd exports (innd-symbols.txt) must still
 # be exported, under its C name, by the CMake build.
 nm -gU "$build/innd/innd" | awk '{print $3}' | sort >"$tmp/syms"
