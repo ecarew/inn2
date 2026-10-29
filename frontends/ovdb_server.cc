@@ -174,7 +174,7 @@ do_groupstats(struct reader *r)
 static void
 do_opensrch(struct reader *r)
 {
-    struct rs_cmd *cmd = r->buf;
+    struct rs_cmd *cmd = static_cast<struct rs_cmd *>(r->buf);
     struct rs_opensrch *reply;
     char *group = (char *) (r->buf) + sizeof(struct rs_cmd);
     reply = xmalloc(sizeof(struct rs_opensrch));
@@ -203,7 +203,7 @@ do_opensrch(struct reader *r)
 static void
 do_srch(struct reader *r)
 {
-    struct rs_cmd *cmd = r->buf;
+    struct rs_cmd *cmd = static_cast<struct rs_cmd *>(r->buf);
     struct rs_srch *reply;
     ARTNUM artnum;
     TOKEN token;
@@ -234,7 +234,7 @@ do_srch(struct reader *r)
 static void
 do_closesrch(struct reader *r)
 {
-    struct rs_cmd *cmd = r->buf;
+    struct rs_cmd *cmd = static_cast<struct rs_cmd *>(r->buf);
 
     ovdb_closesearch(cmd->handle);
     free(r->buf);
@@ -247,7 +247,7 @@ do_closesrch(struct reader *r)
 static void
 do_artinfo(struct reader *r)
 {
-    struct rs_cmd *cmd = r->buf;
+    struct rs_cmd *cmd = static_cast<struct rs_cmd *>(r->buf);
     struct rs_artinfo *reply;
     char *group = (char *) (r->buf) + sizeof(struct rs_cmd);
     TOKEN token;
@@ -273,7 +273,7 @@ do_artinfo(struct reader *r)
 static int
 process_cmd(struct reader *r)
 {
-    struct rs_cmd *cmd = r->buf;
+    struct rs_cmd *cmd = static_cast<struct rs_cmd *>(r->buf);
 
     if (r->state == STATE_READCMD) {
         switch (cmd->what) {
@@ -699,7 +699,8 @@ main(int argc, char *argv[])
     xsignal_norestart(SIGCHLD, childsig);
     parent = getpid();
 
-    children = sharemem(sizeof(struct child) * (ovdb_conf.numrsprocs + 1));
+    children = static_cast<struct child *>(
+        sharemem(sizeof(struct child) * (ovdb_conf.numrsprocs + 1)));
 
     if (children == NULL)
         sysdie("cannot mmap shared memory");
