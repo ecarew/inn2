@@ -66,7 +66,7 @@ cache_add(const HASH h, const TOKEN t)
         p = (unsigned char *) HashToText(h);
         if (tst_insert(msgidcache, p, entry, 0, &exist) == TST_DUPLICATE_KEY) {
             free(entry);
-            old = exist;
+            old = static_cast<struct cache_entry *>(exist);
             list_remove(&old->node);
             list_addtail(&unused, &old->node);
         } else {
@@ -108,7 +108,8 @@ cache_get(const HASH h, bool final)
     if (msgidcache) {
         struct cache_entry *entry;
 
-        entry = tst_search(msgidcache, (unsigned char *) HashToText(h));
+        entry = static_cast<struct cache_entry *>(
+            tst_search(msgidcache, (unsigned char *) HashToText(h)));
         if (entry != NULL) {
             list_remove(&entry->node);
             if (!final)
