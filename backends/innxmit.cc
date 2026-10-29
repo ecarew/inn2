@@ -1085,7 +1085,7 @@ article_open(const char *path, const char *id)
             return NULL;
         }
         close(fd);
-        p = memchr(data, '\n', article->len);
+        p = static_cast<char *>(memchr(data, '\n', article->len));
         if (p == NULL || p == data) {
             warn("requeue %s: cannot find headers", path);
             free(data);
