@@ -312,7 +312,8 @@ void
 CMDhelp(int ac UNUSED, char *av[] UNUSED)
 {
     CMDENT *cp;
-    char *p, *q;
+    const char *p;
+    char *q;
     static const char *newsmaster = NEWSMASTER;
 
     Reply("%d Legal commands\r\n", NNTP_INFO_HELP);

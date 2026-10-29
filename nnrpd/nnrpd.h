@@ -180,13 +180,13 @@ EXTERN bool PERMneedauth;
 EXTERN bool PERMspecified;
 EXTERN bool PERMgroupmadeinvalid;
 EXTERN ACCESSGROUP *PERMaccessconf;
-EXTERN bool Tracing;
+extern bool Tracing;
 EXTERN bool Offlinepost;
 EXTERN bool initialSSL;
 #if defined(HAVE_BLACKLIST) || defined(HAVE_BLOCKLIST)
 EXTERN bool BlocklistEnabled;
 #endif
-EXTERN bool hasSentCapabilities;
+extern bool hasSentCapabilities;
 EXTERN char **PERMreadlist;
 EXTERN char **PERMpostlist;
 EXTERN struct client Client;
