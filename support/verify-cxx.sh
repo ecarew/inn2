@@ -211,7 +211,11 @@ extra_obj() {
         else
             cc "${cflags[@]}" -DTESTING -c "$src.c" -o "$out"
         fi ;;
-    *)  cc "${cflags[@]}" -c "$src.c" -o "$out" ;;
+    *)  if [ -f "$src.cc" ]; then
+            c++ -std=c++20 "${cflags[@]}" -c "$src.cc" -o "$out"
+        else
+            cc "${cflags[@]}" -c "$src.c" -o "$out"
+        fi ;;
     esac
 }
 
@@ -237,6 +241,7 @@ tests=(
     lib/vector lib/wire lib/xwrite:::lib/xwrite,tests/lib/fakewrite
     authprogs/ident authprogs/identport authprogs/radius authprogs/ckpasswd.t
     authprogs/domain.t
+    nnrpd/auth-ext:::nnrpd/auth-ext
     innd/artparse:::tests/innd/fakeinnd,@lib/CMakeFiles/inn_canlock.dir/canlock.cc.o,@lib/CMakeFiles/inn_perl.dir/perl.cc.o
     innd/chan:::tests/innd/fakeinnd,@lib/CMakeFiles/inn_canlock.dir/canlock.cc.o,@lib/CMakeFiles/inn_perl.dir/perl.cc.o
     expire/tombstone expire/tombstone-e2e.t

@@ -15,12 +15,20 @@
 root=$(cd "$(dirname "$0")/.." && pwd)
 build=$root/${1:-build}
 bin=$build
+
+# On a coverage build, add this run's profiles to the ones verify-cxx.sh
+# collected (run it first; it clears the directory).
+if grep -q '^INN_COVERAGE:BOOL=ON' "$build/CMakeCache.txt" 2>/dev/null; then
+    mkdir -p "$build/coverage/raw"
+    export LLVM_PROFILE_FILE="$build/coverage/raw/%m-%p.profraw"
+fi
 # Canonical path: TMPDIR may end in "/", and fastrm rejects a base path
 # containing "//" ("bad base path").
 tmp=$(cd "$(mktemp -d "${TMPDIR:-/tmp}/live-innd.XXXXXX")" && pwd -P)
 port=${LIVE_INND_PORT:-11119}
 fail=0
 innd_pid=
+nnrpd_pid=
 
 res() {
     printf '  %-42s %s\n' "$1" "$2"
@@ -28,6 +36,7 @@ res() {
 }
 
 cleanup() {
+    [ -n "$nnrpd_pid" ] && kill "$nnrpd_pid" 2>/dev/null
     if [ -n "$innd_pid" ] && kill -0 "$innd_pid" 2>/dev/null; then
         kill "$innd_pid" 2>/dev/null
         sleep 1
@@ -320,6 +329,126 @@ label="ctlinnd hangup refuses a bad channel"
 ok sh -c "! '$bin/frontends/ctlinnd' -s hangup 999"
 label="ctlinnd readers and logmode"
 ok sh -c "'$bin/frontends/ctlinnd' -s readers n 'live test' && '$bin/frontends/ctlinnd' -s readers y '' && '$bin/frontends/ctlinnd' -s logmode"
+
+# --- nnrpd (readers) ------------------------------------------------------------
+
+# nnrpd refuses a pipe on stdin ("Can't get your name"), so run it as a
+# daemon on the next port and talk NNTP to it with nc.  readers.conf lets
+# 127.0.0.1 in unauthenticated and checks AUTHINFO with the built ckpasswd
+# against INN's test passwd file (foo/foopass).
+rport=$((port + 1))
+cp "$root/tests/data/etc/passwd" "$tmp/etc/passwd"
+# Reader tracking (track.c): nnrpd reads inn.conf at startup, so turn it on
+# for this section and name the client in nnrpd.track (host:identity).
+sed -i '' 's/^readertrack:.*/readertrack: true/' "$INNCONF"
+printf 'localhost:tracker@live.test\n127.0.0.1:tracker@live.test\n' >"$tmp/etc/nnrpd.track"
+cat >"$tmp/etc/readers.conf" <<EOF
+auth "localhost" {
+    hosts: "127.0.0.1"
+    auth: "$bin/authprogs/ckpasswd -f $tmp/etc/passwd"
+    default: "<local>"
+}
+access "everyone" {
+    users: "*"
+    newsgroups: "*"
+}
+EOF
+"$bin/nnrpd/nnrpd" -D -f -p "$rport" >"$tmp/nnrpd.out" 2>&1 &
+nnrpd_pid=$!
+for _ in $(seq 1 25); do
+    nc -z 127.0.0.1 "$rport" 2>/dev/null && break
+    sleep 0.2
+done
+# nntp FILE: send the CRLF-terminated commands in $cmds, then QUIT; output
+# goes to $tmp/FILE.
+nntp() {
+    { printf '%s' "$cmds" | sed 's/$/\r/'; printf 'QUIT\r\n'; } \
+        | nc -w 10 127.0.0.1 "$rport" >"$tmp/$1" 2>&1
+}
+has() { grep -q "$2" "$tmp/$1"; }
+
+cmds='CAPABILITIES
+MODE READER
+GROUP test.live
+LISTGROUP test.live
+ARTICLE <live2@live.test>
+HEAD <live2@live.test>
+BODY <live2@live.test>
+STAT <live2@live.test>
+OVER 1-
+XOVER 1-
+HDR Subject 1-
+LIST NEWSGROUPS
+LIST ACTIVE test.*
+LIST OVERVIEW.FMT
+LIST HEADERS
+NEWGROUPS 20000101 000000
+NEWNEWS * 20000101 000000
+DATE
+HELP
+GROUP no.such.group
+BOGUS
+'
+nntp reader.out
+label="nnrpd greets and lists capabilities"
+ok sh -c "grep -q '^200 .*ready' '$tmp/reader.out' && grep -q '^READER' '$tmp/reader.out' && grep -q '^OVER' '$tmp/reader.out'"
+label="nnrpd GROUP and LISTGROUP"
+ok sh -c "grep -qE '^211 [1-9][0-9]* [0-9]+ [0-9]+ test.live' '$tmp/reader.out'"
+label="nnrpd ARTICLE, HEAD, BODY, STAT by message-ID"
+ok sh -c "grep -q '^220 ' '$tmp/reader.out' && grep -q '^221 ' '$tmp/reader.out' && grep -q '^222 ' '$tmp/reader.out' && grep -q '^223 ' '$tmp/reader.out' && grep -q 'Body of live test article 2' '$tmp/reader.out'"
+label="nnrpd OVER, XOVER and HDR"
+ok sh -c "[ \$(grep -c '^224 ' '$tmp/reader.out') = 2 ] && grep -q '^225 ' '$tmp/reader.out' && grep -q 'live test 2' '$tmp/reader.out'"
+label="nnrpd LIST variants"
+ok sh -c "[ \$(grep -c '^215 ' '$tmp/reader.out') -ge 4 ] && grep -qE '^test.live[[:space:]]+live test group' '$tmp/reader.out'"
+label="nnrpd NEWGROUPS and NEWNEWS"
+ok sh -c "grep -q '^231 ' '$tmp/reader.out' && grep -q '^230 ' '$tmp/reader.out' && grep -q '^<live2@live.test>' '$tmp/reader.out'"
+label="nnrpd DATE and HELP"
+ok sh -c "grep -qE '^111 [0-9]{14}' '$tmp/reader.out' && grep -q '^100 ' '$tmp/reader.out'"
+label="nnrpd rejects an unknown group and command"
+ok sh -c "grep -q '^411 ' '$tmp/reader.out' && grep -q '^500 ' '$tmp/reader.out'"
+
+cmds='AUTHINFO USER foo
+AUTHINFO PASS foopass
+'
+nntp auth-good.out
+cmds='AUTHINFO USER foo
+AUTHINFO PASS barpass
+'
+nntp auth-bad.out
+label="nnrpd AUTHINFO accepts a valid password (ckpasswd)"
+ok has auth-good.out '^281 '
+label="nnrpd AUTHINFO rejects a wrong password"
+ok has auth-bad.out '^481 '
+
+cmds='POST
+Path: live.test!not-for-mail
+From: reader@live.test
+Newsgroups: test.live
+Subject: posted through nnrpd
+Message-ID: <nnrpdpost@live.test>
+
+Posted through nnrpd.
+.
+'
+nntp post.out
+sleep 1
+label="nnrpd POST reaches innd"
+ok sh -c "grep -q '^340 ' '$tmp/post.out' && grep -q '^240 ' '$tmp/post.out' && '$bin/expire/grephistory' '<nnrpdpost@live.test>' >/dev/null 2>&1"
+
+# COMPRESS DEFLATE (zlib.c): after the 206 reply the stream is compressed,
+# which nc cannot speak, so only the reply is checked.
+cmds='COMPRESS DEFLATE
+'
+nntp compress.out
+label="nnrpd COMPRESS DEFLATE is accepted"
+ok has compress.out '^206 '
+label="nnrpd readertrack logs the tracked session"
+ok sh -c "grep -qs 'Tracking Enabled (tracker@live.test)' '$tmp'/log/tracklogs/log-*"
+label="nnrpd readertrack copies tracked posts to trackposts"
+ok sh -c "grep -qs 'posttrack ok' '$tmp'/log/tracklogs/log-* && ls '$tmp'/log/trackposts/track.* >/dev/null"
+
+kill "$nnrpd_pid" 2>/dev/null
+wait "$nnrpd_pid" 2>/dev/null
 
 # --- expire tools -------------------------------------------------------------
 
