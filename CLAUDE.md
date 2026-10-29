@@ -143,6 +143,19 @@ Everything below must be done before the Autoconf/Make build is deleted.
 9. Tests: run them through CTest instead of only support/verify-cxx.sh.
 10. Portability: build and test on Linux and a BSD, not just macOS.
 
+**Security: no root at run time (decided 2026-10-29; next task after the
+coverage gate)**
+- Goal: no INN executable runs as root in production; they run as an
+  unprivileged account such as `news`.  Tests run as the tester's own user.
+- Current state: innd switches to the news user if started as root
+  (`ensure_news_user_grp()`, innd.cc), and programs install owned by news
+  (0550/0555).  The exception is `innbind`, installed setuid root (4550, group
+  news, `LI_SPRI`) solely to bind ports below 1024 for innd and nnrpd.
+- Options to remove it: systemd socket activation (innd already accepts
+  `sd_listen_fds` sockets), launchd sockets on macOS, Linux
+  `CAP_NET_BIND_SERVICE` instead of setuid, or an unprivileged port.  Also
+  decide whether starting as root should be refused rather than dropped.
+
 **Documentation (2026-10-28)**
 - Convert `readme.pod` to Markdown (`README.md`), next to `CONVERSION_NOTES.md`.
 

@@ -123,6 +123,14 @@ list) are in [CLAUDE.md](CLAUDE.md).  This file is the rationale.
 - **On hold by decision:** C-style casts, uninitialized variables, implicit
   bool conversions (CLAUDE.md, "Deferred modernization").
 
+### Security (decided 2026-10-29)
+
+- No INN executable should run as root in production; they run as an
+  unprivileged account such as `news` (tests run as the tester).  Upstream INN
+  already drops to news and installs programs as news; the remaining root
+  component is the setuid-root `innbind` port-binding helper.  Removing it is
+  the next task after the innd coverage gate (options in CLAUDE.md).
+
 ### Not converted
 
 - **Perl and Python stay** (2026-10-28).  The Python in `samples/` and the
