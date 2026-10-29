@@ -241,7 +241,7 @@ handle_output(struct client *client, struct process *process)
     buffer_resize(errorbuf, 1024);
 
     /* Loop until we get an error or end of file. */
-    while (1) {
+    while (true) {
         tv.tv_sec = 5;
         tv.tv_usec = 0;
         rfds = fds;

@@ -1579,7 +1579,7 @@ CMDpat(int ac, char *av[])
         }
         PushIOb();
         OVclosesearch(handle);
-    } while (0);
+    } while (false);
 
     if (vector)
         cvector_free(vector);
