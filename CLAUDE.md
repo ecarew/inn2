@@ -147,7 +147,7 @@ Everything below must be done before the Autoconf/Make build is deleted.
 - Convert `readme.pod` to Markdown (`README.md`), next to `CONVERSION_NOTES.md`.
 
 **Design follow-ups (2026-10-28)**
-- Gate: raise innd/ line coverage to at least 33% (now 2.0%) before any
+- Gate: raise innd/ line coverage to at least 33% (now 9.5%) before any
   further C++ conversion work anywhere in the tree, not just innd (decided
   2026-10-28), so no change lands without tests that would catch lost
   compatibility with existing INN installations.  Start with the innd test
@@ -159,14 +159,10 @@ Everything below must be done before the Autoconf/Make build is deleted.
   it as the first test of `HeaderTable`.
 
 **Test coverage (2026-10-28, support/coverage-report.sh)**
-- innd/ is 2.0% line-covered: every file except innd.cc startup is 0%
-  (art, nc, cc, rc, site, chan, newsfeeds, ...).  INN's innd tests
-  (tests/innd/artparse-t.c, chan-t.c, fakeinnd) are not in verify-cxx.sh yet;
-  add them before any further innd changes.
-  Plan: split innd's objects (all but innd.cc) into an internal innd_core
-  library that innd and the tests both link; build artparse and chan with
-  tests/innd/fakeinnd.c in verify-cxx.sh; baseline them against the original
-  Make-built innd objects to separate test problems from regressions.
+- innd/ is 9.5% line-covered (2026-10-29; was 2.0%).  With innd/artparse and
+  innd/chan in verify-cxx.sh: chan.cc 40.8%, innd.cc 30.7%, art.cc 19.6%,
+  util.cc 16.6%.  Still 0%: rc.cc, nc.cc, cc.cc, site.cc, newsfeeds.cc, ng.cc,
+  icd.cc, wip.cc, lc.cc.
 - Even then nc.cc, cc.cc, rc.cc and site.cc stay untested: they only run in a
   live innd.  Needs a scratch-configuration innd driven over NNTP (separate
   piece of work).

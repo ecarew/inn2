@@ -91,7 +91,7 @@ fi
 if [ ! -f samples/inn.conf ]; then
     make -C samples inn.conf >"$tmp/samples.log" 2>&1
 fi
-libs=("$build/storage/libinnstorage.a" "$build/history/libinnhist.a"
+libs=("$build/innd/libinnd_core.a" "$build/storage/libinnstorage.a" "$build/history/libinnhist.a"
       "$build/lib/libinn.a" -lz -lsqlite3)
 cflags=(-g -I"$root/include" -I"$root/tests" -I"$root/history"
         -I"$root/storage")
@@ -127,7 +127,9 @@ extra_obj() {
 }
 
 # Each entry: test-name[:source-without--t.c[:extra-cflag[:extra-sources]]]
-# with extra-sources separated by commas.
+# with extra-sources separated by commas.  An extra source starting with "@" is an
+# object already built in the build directory.  innd tests link innd_core
+# with tests/innd/fakeinnd.c in place of innd.cc, as tests/Makefile does.
 tests=(
     lib/artnumber lib/asprintf:::lib/asprintf lib/bloom lib/bloom-hiswalk
     lib/buffer lib/canlock lib/concat lib/conffile lib/confparse lib/date
@@ -143,6 +145,8 @@ tests=(
     lib/setenv:::lib/setenv lib/snprintf:::lib/snprintf
     lib/strlcat:::lib/strlcat lib/strlcpy:::lib/strlcpy lib/tst lib/uwildmat
     lib/vector lib/wire lib/xwrite:::lib/xwrite,tests/lib/fakewrite
+    innd/artparse:::tests/innd/fakeinnd,@lib/CMakeFiles/inn_canlock.dir/canlock.cc.o,@lib/CMakeFiles/inn_perl.dir/perl.cc.o
+    innd/chan:::tests/innd/fakeinnd,@lib/CMakeFiles/inn_canlock.dir/canlock.cc.o,@lib/CMakeFiles/inn_perl.dir/perl.cc.o
     expire/tombstone-hisexpire
     overview/api
     overview/buffindexed:overview/overview:-DOVTYPE=buffindexed
@@ -181,6 +185,10 @@ for spec in "${tests[@]}"; do
     built=true
     IFS=, read -ra extras <<<"$srcs"
     for e in "${extras[@]}"; do
+        if [[ "$e" == @* ]]; then
+            objs+=("$build/${e#@}")
+            continue
+        fi
         o="$tmp/$n-$(basename "$e").o"
         extra_obj "$e" "$o" 2>>"$tmp/$n.log" || built=false
         objs+=("$o")

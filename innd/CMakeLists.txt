@@ -3,10 +3,10 @@
 
 # ── innd ──────────────────────────────────────────────────────────────────────
 
-set(INND_C_SOURCES
-)
-
-set(INND_CXX_SOURCES
+# innd_core is everything except innd.cc (main() and innd's global data), so
+# the innd tests can link it with tests/innd/fakeinnd.c in place of innd.cc,
+# as tests/Makefile does with INNOBJS.
+add_library(innd_core STATIC
     art.cc
     wip.cc
     util.cc
@@ -22,15 +22,17 @@ set(INND_CXX_SOURCES
     icd.cc
     chan.cc
     cc.cc
-    innd.cc
     perl.cc
     python.cc
 )
+target_compile_features(innd_core PUBLIC cxx_std_20)
+set_target_properties(innd_core PROPERTIES CXX_EXTENSIONS OFF)
 
-add_executable(innd ${INND_C_SOURCES} ${INND_CXX_SOURCES})
-
-target_compile_features(innd PRIVATE cxx_std_20)
+add_executable(innd innd.cc)
 set_target_properties(innd PROPERTIES CXX_EXTENSIONS OFF)
+# Whole archive, so innd keeps every object as the Make build linked them
+# (some, like KEYgenerate and the canlock stubs, are not referenced).
+target_link_libraries(innd PRIVATE "$<LINK_LIBRARY:WHOLE_ARCHIVE,innd_core>")
 
 # perl.cc and python.cc need extra include flags
 set_source_files_properties(perl.cc PROPERTIES
@@ -40,11 +42,11 @@ set_source_files_properties(python.cc PROPERTIES
     COMPILE_OPTIONS "${INN_PYTHON_CPPFLAGS}"
 )
 
-target_compile_options(innd PRIVATE
+target_compile_options(innd_core PUBLIC
     ${INN_SYSTEMD_CFLAGS}
 )
 
-target_link_libraries(innd PRIVATE
+target_link_libraries(innd_core PUBLIC
     INN::storage
     INN::hist
     INN::inn

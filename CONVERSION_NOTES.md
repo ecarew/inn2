@@ -37,13 +37,14 @@ list) are in [CLAUDE.md](CLAUDE.md).  This file is the rationale.
 - **Verification before every commit** (`support/verify-cxx.sh`): build, the
   `innd` program still exports all 169 symbols of the original Make build,
   no C++ name mangling in the libraries' exported functions, `innd` starts,
-  a `tinyleaf` NNTP session, and 63 of INN's own test programs (2 skip).  Also
+  a `tinyleaf` NNTP session, and 65 of INN's own test programs (2 skip).  Also
   run on an AddressSanitizer + UBSan build.
 - **Differential testing:** new tests were also run against the original
   Make-built C libraries.  When a test failed on both, the test was wrong, not
   the conversion (see `26928139d`, `b55ea92a1`).
 - **Coverage is measured, not assumed** (`support/coverage-report.sh`).  As of
-  2026-10-28: lib 72.5%, history 59.8%, storage 36.2%, **innd 2.0%**.  Code
+  2026-10-29: lib 73.4%, history 60.3%, storage 36.4%, **innd 9.5%** (2.0%
+  before INN's innd/artparse and innd/chan tests were added).  Code
   with no coverage is not refactored until it has tests.
 
 ## Decisions
