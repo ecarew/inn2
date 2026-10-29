@@ -1,7 +1,7 @@
 # authprogs/ programs — converted from authprogs/Makefile.  Each links the
 # small libinnauth helper object as well as libinn.
 
-add_library(innauth OBJECT libinnauth.c)
+add_library(innauth OBJECT libinnauth.cc)
 target_include_directories(innauth PRIVATE ${CMAKE_CURRENT_SOURCE_DIR})
 
 set(_pam)
