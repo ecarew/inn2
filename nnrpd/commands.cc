@@ -479,8 +479,8 @@ CMDmode(int ac UNUSED, char *av[])
 static int
 GroupCompare(const void *a1, const void *b1)
 {
-    const GROUPDATA *a = a1;
-    const GROUPDATA *b = b1;
+    const GROUPDATA *a = static_cast<const GROUPDATA *>(a1);
+    const GROUPDATA *b = static_cast<const GROUPDATA *>(b1);
 
     return strcmp(a->name, b->name);
 }
@@ -599,8 +599,9 @@ CMDnewgroups(int ac, char *av[])
             continue;
         q++;
         key.name = p;
-        if ((gd = bsearch(&key, grouplist, numgroups, sizeof(GROUPDATA),
-                          GroupCompare))
+        if ((gd = static_cast<GROUPDATA *>(
+                 bsearch(&key, grouplist, numgroups, sizeof(GROUPDATA),
+                         GroupCompare)))
             == NULL)
             continue;
         Printf("%s %lu %lu %s\r\n", p, gd->high, gd->low, q);
@@ -841,9 +842,12 @@ CMDpost(int ac, char *av[])
               ihave ? NNTP_OK_IHAVE : NNTP_OK_POST, idbuff);
         POSTreceived++;
     } else {
-        if ((p = strchr(response, '\r')) != NULL)
+        /* A CR or LF can only come from innd's reply, which ARTpost copies
+           into post.c's writable Error buffer, so the writes never reach the
+           string literals it also returns. */
+        if ((p = const_cast<char *>(strchr(response, '\r'))) != NULL)
             *p = '\0';
-        if ((p = strchr(response, '\n')) != NULL)
+        if ((p = const_cast<char *>(strchr(response, '\n'))) != NULL)
             *p = '\0';
         notice("%s %s failed %s", Client.host, ihave ? "ihave" : "post",
                response);
