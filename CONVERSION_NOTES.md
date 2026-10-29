@@ -238,6 +238,79 @@ and is covered only by its argument check.
   ports, hands back the sockets and exits.  The next task after the innd
   coverage gate is an audit confirming this holds everywhere, with tests.
 
+### Security audit, first pass (2026-10-29)
+
+Scope: every call that changes user or group IDs, every root check, the
+install modes, the startup script, and which programs check their user at
+all.  Method: `git grep -P` for `setuid`, `setgid`, `seteuid`, `setgroups`,
+`initgroups`, `chroot` and for `getuid()`/`geteuid() == 0`; the `LI_*`
+install macros in `Makefile.global.in` and `m4/modes.m4`;
+`scripts/rc.news.in`; each program's `main` for a user check.
+
+**What holds.**
+- **innbind**, the only setuid-root program (`LI_SPRI`, mode 4550, owner
+  root, group news): when privileged, it dies unless the real UID is the
+  news user's, which it takes from the compiled-in `RUNASUSER` (it never
+  reads inn.conf, so `INNCONF` in the environment cannot change it).  It
+  binds only ports 1024 and up, or 119, 433, 563 and the configured innd
+  port (innbind.cc:182), passes each socket back and exits.
+- **innd** drops to news as its first real step (`ensure_news_user_grp`,
+  innd.cc:408; only `openlog` runs before it) and binds its ports through
+  innbind afterwards.
+- **nnrpd -D** binds its sockets, as root if started as root, then drops to
+  news before serving anyone (nnrpd.cc:1180).
+- **rc.news** refuses to run as anyone but the news user.
+- **expire, expireover, makedbz, makehistory, sm, tdx-util** drop to news
+  if run as root; the **ovdb** tools and ovdb_server refuse to open the
+  database unless running as the news user (`ovdb_check_user`).
+- **Optional install modes** never involve root: `--enable-setgid-inews`
+  installs inews setgid news (02555), `--enable-uucp-rnews` installs rnews
+  setuid news, group uucp (04550).  The CMake install rules (goal item 5)
+  must offer the same choices with the same defaults (inews 0550, rnews
+  0500).
+
+**Findings.**
+1. **Supplementary groups are kept when dropping root.**
+   `ensure_news_grp`/`ensure_news_user` (lib/newsuser.cc) call `setgid`
+   then `setuid`, in the right order, but never `setgroups`, so a process
+   started as root keeps root's supplementary groups (on macOS typically
+   `wheel`, `kmem`, `tty`, `admin` and others) after the drop: an
+   incomplete privilege drop (CWE-271).  Affects every program in "What
+   holds" that drops from root.  `configure.ac` already checks for
+   `setgroups`; nothing calls it.  Fix: `setgroups(1, &gid)` (or
+   `initgroups` for the news user) before `setgid`, failing hard on error.
+2. **nnrpd started as root without -D keeps root.**  The drop is inside
+   the daemon-mode block only.  Run from inetd/xinetd as root (the docs say
+   to use the news user, but nothing enforces it), nnrpd serves the whole
+   reader session as root.  Fix: drop (or refuse) in every mode, before
+   reading readers.conf or talking to the client.
+3. **rnews started as root drops only its UID.**  It calls `setuid(news)`
+   but not `setgid` or `setgroups` (rnews.cc:870), so it keeps group 0 and
+   root's supplementary groups while it processes batches from the network.
+   It avoids `ensure_news_user` on purpose, to allow rnews installed setuid
+   news; the group drop can still be done when the real UID is root.
+4. **innfeed and ovsqlite-server never check their user.**  Both are
+   long-running servers normally started by innd or rc.news as news; run
+   directly as root, each keeps root for its lifetime.  Fix: drop to news
+   (or refuse) at startup, like innd.
+5. **Most other programs never check their user** (ctlinnd, inews, innxmit,
+   batcher, the authenticators, ...).  Run as root by an administrator they
+   act as root, and may leave root-owned files in news-owned directories.
+   That is a correctness and hygiene issue more than an escalation (root is
+   already root); a candidate policy is that programs which write INN's
+   data refuse root, as rc.news does.
+
+**Test builds.**  build-live and build-cov compile in the tester's account
+as `RUNASUSER` (INN_RUNAS_USER), so an innbind from those builds would
+accept the tester; they must never be installed.
+
+**Testing the fixes.**  The policy runs tests as the tester, so the
+started-as-root paths cannot run in the normal checks.  Options: refusal
+and wrong-user paths in the normal tests; the root paths in a separate
+test run under sudo by hand, recorded in the commit; or a helper whose
+privilege calls can be replaced in a unit test.  To be decided before
+fixing.
+
 ### Running innd as the tester for live tests (decided 2026-10-29)
 
 **What the code does.**  innd calls `ensure_news_user_grp()` (innd.cc, near
