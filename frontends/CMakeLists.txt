@@ -6,7 +6,7 @@
 inn_program(ctlinnd      SOURCES ctlinnd.c    INNONLY)
 inn_program(decode       SOURCES decode.cc     INNONLY)
 inn_program(encode       SOURCES encode.cc     NOLIBS)
-inn_program(getlist      SOURCES getlist.c    INNONLY)
+inn_program(getlist      SOURCES getlist.cc    INNONLY)
 inn_program(inews        SOURCES inews.c      INNONLY)
 inn_program(innconfval   SOURCES innconfval.cc INNONLY)
 inn_program(ovdb_init    SOURCES ovdb_init.c)
