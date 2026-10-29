@@ -9,7 +9,20 @@ if(HAVE_PAM)
     set(_pam ${INN_PAM_LIB})
 endif()
 
-inn_program(ckpasswd SOURCES ckpasswd.cc INNONLY LIBS innauth ${_pam})
+# crypt() is in libc on macOS and the BSDs but in libcrypt on glibc systems,
+# as configure's INN_SEARCH_AUX_LIBS([crypt], [crypt], [CRYPT_LIBS]) finds.
+include(CheckFunctionExists)
+include(CheckLibraryExists)
+check_function_exists(crypt INN_CRYPT_IN_LIBC)
+set(_crypt)
+if(NOT INN_CRYPT_IN_LIBC)
+    check_library_exists(crypt crypt "" INN_HAVE_LIBCRYPT)
+    if(INN_HAVE_LIBCRYPT)
+        set(_crypt crypt)
+    endif()
+endif()
+
+inn_program(ckpasswd SOURCES ckpasswd.cc INNONLY LIBS innauth ${_pam} ${_crypt})
 inn_program(domain   SOURCES domain.cc   INNONLY LIBS innauth)
 inn_program(ident    SOURCES ident.cc    INNONLY LIBS innauth)
 inn_program(radius   SOURCES radius.cc   INNONLY LIBS innauth)
