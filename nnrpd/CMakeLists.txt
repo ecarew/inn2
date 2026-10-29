@@ -1,4 +1,4 @@
-# nnrpd — converted from nnrpd/Makefile.  perl.cc and python.c compile to
+# nnrpd — converted from nnrpd/Makefile.  perl.cc and python.cc compile to
 # almost nothing while those embeddings are off.
 
 set(_sasl)
@@ -8,7 +8,7 @@ endif()
 
 inn_program(nnrpd
     SOURCES article.cc auth-ext.cc cache.cc commands.cc group.cc line.cc list.cc
-            misc.cc newnews.cc nnrpd.cc perl.cc perm.cc post.cc python.c sasl.cc
+            misc.cc newnews.cc nnrpd.cc perl.cc perm.cc post.cc python.cc sasl.cc
             tls.cc track.cc zlib.cc
     LIBS ${INN_CANLOCK_LIBS} ${INN_PERL_LIBS} ${INN_PYTHON_LIBS} ${_sasl}
          ZLIB::ZLIB)

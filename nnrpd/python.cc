@@ -553,7 +553,7 @@ PY_close_python(void)
 void
 file_trav(void *data, void *null UNUSED)
 {
-    PyFile *fp = data;
+    PyFile *fp = static_cast<PyFile *>(data);
     int j;
     PyObject *result, *func;
 
@@ -826,7 +826,7 @@ PY_setup(int type, int method, char *file)
     PyObject *result;
 
     /* Check to see if this file is in files. */
-    if ((fp = hash_lookup(files, file)) == NULL) {
+    if ((fp = static_cast<PyFile *>(hash_lookup(files, file))) == NULL) {
         fp = xmalloc(sizeof(PyFile));
         fp->file = xstrdup(file);
 
@@ -868,7 +868,7 @@ PY_setup(int type, int method, char *file)
 static const void *
 file_key(const void *p)
 {
-    const struct PyFile *f = p;
+    const struct PyFile *f = static_cast<const struct PyFile *>(p);
 
     return f->file;
 }
@@ -881,8 +881,8 @@ file_key(const void *p)
 static bool
 file_equal(const void *k, const void *p)
 {
-    const char *key = k;
-    const struct PyFile *f = p;
+    const char *key = static_cast<const char *>(k);
+    const struct PyFile *f = static_cast<const struct PyFile *>(p);
 
     return strcmp(key, f->file) == 0;
 }
@@ -894,7 +894,7 @@ file_equal(const void *k, const void *p)
 static void
 file_free(void *p)
 {
-    struct PyFile *fp = p;
+    struct PyFile *fp = static_cast<struct PyFile *>(p);
     int i, j;
 
     free(fp->file);

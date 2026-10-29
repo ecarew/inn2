@@ -329,7 +329,7 @@ int PY_dynamic(char *Username, char *NewsGroup, int PostFlag,
                char **reply_message);
 void PY_dynamic_init(char *file);
 #    if PY_MAJOR_VERSION >= 3
-extern PyMODINIT_FUNC PyInit_nnrpd(void);
+PyMODINIT_FUNC PyInit_nnrpd(void);
 #    else
 extern void PyInit_nnrpd(void);
 #    endif
