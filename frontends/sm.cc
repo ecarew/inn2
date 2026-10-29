@@ -46,7 +46,7 @@ line.\n\
 struct options {
     bool artinfo;   /* Show newsgroup and article number. */
     bool clearinfo; /* Show clear information about a token. */
-    bool delete;    /* Delete articles instead of showing them. */
+    bool dodelete;  /* Delete articles instead of showing them. */
     bool header;    /* Display article headers only. */
     bool raw;       /* Display or consume wire-format articles. */
     bool rnews;     /* Output articles as rnews batch files. */
@@ -263,7 +263,7 @@ process_token(const char *id, const struct options *options)
         text = SMexplaintoken(token);
         printf("%s %s\n", id, text);
         free(text);
-    } else if (options->delete) {
+    } else if (options->dodelete) {
         if (!SMcancel(token)) {
             warn("could not remove %s: %s", id, SMerrorstr);
             return false;
@@ -318,7 +318,7 @@ main(int argc, char *argv[])
             break;
         case 'd':
         case 'r':
-            options.delete = true;
+            options.dodelete = true;
             break;
         case 'H':
             options.header = true;
@@ -346,28 +346,28 @@ main(int argc, char *argv[])
     }
 
     /* Check options for consistency. */
-    if (options.artinfo && options.delete)
+    if (options.artinfo && options.dodelete)
         die("-i cannot be used with -r or -d");
     if (options.artinfo && (options.header || options.raw || options.rnews))
         die("-i cannot be used with -H, -R, or -S");
-    if (options.delete && (options.header || options.rnews))
+    if (options.dodelete && (options.header || options.rnews))
         die("-r or -d cannot be used with -H or -S");
     if (options.raw && options.rnews)
         die("-R cannot be used with -S");
     if (options.header && options.rnews)
         die("-H cannot be used with -S");
     if (store
-        && (options.artinfo || options.delete || options.header
+        && (options.artinfo || options.dodelete || options.header
             || options.rnews))
         die("-s cannot be used with -i, -r, -d, -H, or -S");
     if (options.clearinfo
-        && (options.artinfo || options.delete || options.header || options.raw
-            || options.rnews || store))
+        && (options.artinfo || options.dodelete || options.header
+            || options.raw || options.rnews || store))
         die("-c cannot be used with -i, -r, -d, -H, -R, -S, or -s");
 
     /* Initialize the storage manager.  If we're doing article deletions, we
        need to open it read/write. */
-    if (store || options.delete) {
+    if (store || options.dodelete) {
         bool value = true;
 
         if (!SMsetup(SM_RDWR, &value))
@@ -381,7 +381,7 @@ main(int argc, char *argv[])
      * can run sm without a real news user on the system.  All other
      * sm modes (-i, -c, -H, -R, -s, retrieval) preserve the
      * historical behaviour of running as the invoking user. */
-    if (options.delete && innconf->expiretombstone
+    if (options.dodelete && innconf->expiretombstone
         && getenv(INN_ENV_TESTSUITE) == NULL)
         ensure_news_user_grp(true, true);
     if (!SMinit())
