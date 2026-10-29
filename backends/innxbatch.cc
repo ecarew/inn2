@@ -228,7 +228,7 @@ REMread(char *start, int size)
 **  Handle the interrupt.
 */
 __attribute__((__noreturn__)) static void
-Interrupted(void)
+Interrupted()
 {
     warn("interrupted");
     ExitWithStats(1);
@@ -328,7 +328,7 @@ CATCHalarm(int s UNUSED)
 **  Print a usage message and exit.
 */
 __attribute__((__noreturn__)) static void
-Usage(void)
+Usage()
 {
     warn("Usage: innxbatch [-Dv] [-t#] [-T#] host file ...");
 #ifdef FROMSTDIN

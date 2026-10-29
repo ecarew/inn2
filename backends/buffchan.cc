@@ -83,7 +83,7 @@ static time_t Now;
 **  Free the map.
 */
 static void
-MAPfree(void)
+MAPfree()
 {
     PAIR *mp;
 
@@ -159,7 +159,7 @@ MAPname(char *p)
 **  Set up the site information.  Basically creating empty buckets.
 */
 static void
-SITEsetup(void)
+SITEsetup()
 {
     SITEHASH *shp;
 
@@ -191,7 +191,7 @@ SITEclose(SITE *sp)
 **  Close all open sites.
 */
 static void
-SITEcloseall(void)
+SITEcloseall()
 {
     SITEHASH *shp;
     SITE *sp;
@@ -304,7 +304,7 @@ SITEflush(SITE *sp)
 **  Flush all open sites.
 */
 static void
-SITEflushall(void)
+SITEflushall()
 {
     SITEHASH *shp;
     SITE *sp;

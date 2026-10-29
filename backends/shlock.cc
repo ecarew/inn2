@@ -17,7 +17,7 @@
 
 static bool BinaryLock;
 static bool JustChecking;
-static void Usage(void) __attribute__((__noreturn__));
+static void Usage() __attribute__((__noreturn__));
 
 #define CANTUNLINK   "shlock: Can't unlink \"%s\", %s"
 #define CANTOPEN     "shlock: Can't open \"%s\", %s"
@@ -116,7 +116,7 @@ Unlink(char *name)
 **  Print a usage message and exit.
 */
 static void
-Usage(void)
+Usage()
 {
     fprintf(stderr, "Usage: shlock [-b|-c|-u] -f file -p pid\n");
     exit(1);

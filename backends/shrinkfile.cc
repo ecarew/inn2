@@ -35,14 +35,14 @@
 
 #define MAX_SIZE 0x7fffffffUL
 
-static void Usage(void) __attribute__((__noreturn__));
+static void Usage() __attribute__((__noreturn__));
 
 
 /*
 **  Open a safe unique temporary file that will go away when closed.
 */
 static FILE *
-OpenTemp(void)
+OpenTemp()
 {
     FILE *F;
     char *filename;
@@ -303,7 +303,7 @@ ParseSize(char *p)
 **  Print usage message and exit.
 */
 static void
-Usage(void)
+Usage()
 {
     fprintf(
         stderr,

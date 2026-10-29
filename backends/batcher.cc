@@ -47,7 +47,7 @@ static char *ERRLOG;
 **  Start a batch process.
 */
 static FILE *
-BATCHstart(void)
+BATCHstart()
 {
     FILE *F;
     char buff[SMBUF];

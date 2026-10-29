@@ -167,7 +167,7 @@ static double STATrejectedsize;
 */
 static ARTHANDLE *article_open(const char *path, const char *id);
 static void article_free(ARTHANDLE *);
-static void Usage(void) __attribute__((__noreturn__));
+static void Usage() __attribute__((__noreturn__));
 static void RequeueRestAndExit(char *, char *) __attribute__((__noreturn__));
 static void ExitWithStats(int) __attribute__((__noreturn__));
 
@@ -186,7 +186,7 @@ Expired(char *MessageID)
 **  Flush and reset the site's output buffer.  Return false on error.
 */
 static bool
-REMflush(void)
+REMflush()
 {
     int i;
 
@@ -390,7 +390,7 @@ ExitWithStats(int x)
 **  to be the batchfile.
 */
 static void
-CloseAndRename(void)
+CloseAndRename()
 {
     /* Close the files, rename the temporary. */
     if (BATCHqp) {
@@ -870,7 +870,7 @@ takethis(int i)
 ** errors by rewriting the batch file and exiting.
 */
 static bool
-strlisten(void)
+strlisten()
 {
     int resp;
     int i;
@@ -1021,7 +1021,7 @@ strlisten(void)
 **  Print a usage message and exit.
 */
 static void
-Usage(void)
+Usage()
 {
     die("Usage: innxmit [-acdHlprs] [-t#] [-T#] host file");
 }
