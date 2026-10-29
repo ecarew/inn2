@@ -224,6 +224,7 @@ tests=(
     authprogs/domain.t
     innd/artparse:::tests/innd/fakeinnd,@lib/CMakeFiles/inn_canlock.dir/canlock.cc.o,@lib/CMakeFiles/inn_perl.dir/perl.cc.o
     innd/chan:::tests/innd/fakeinnd,@lib/CMakeFiles/inn_canlock.dir/canlock.cc.o,@lib/CMakeFiles/inn_perl.dir/perl.cc.o
+    expire/tombstone expire/tombstone-e2e.t
     expire/tombstone-hisexpire
     overview/api
     overview/buffindexed:overview/overview:-DOVTYPE=buffindexed
@@ -231,6 +232,7 @@ tests=(
     overview/ovsqlite
     overview/tdx-group overview/xref
     storage/caf storage/cancel-tombstone storage/methods
+    storage/makehistory.t storage/sm.t storage/archive.t
 )
 # buffindexed creates a System V shared memory segment and never removes it
 # (same in the original C), and macOS allows only 32.  Remove unattached
@@ -244,13 +246,15 @@ shm_cleanup() {
     done
 }
 
-# INN's authprogs tests run programs as ../../authprogs/<prog> relative to
-# tests/data, the Make build's in-tree layout.  Give them a sandbox with a
+# INN's program tests (authprogs, and the shell tests) run programs as
+# ../../<dir>/<prog> relative to tests/data, the Make build's in-tree layout.  Give them a sandbox with a
 # real copy of tests/data (a symlink would resolve ../.. from its target)
 # and authprogs pointing at the CMake-built programs.
 sb=$tmp/sandbox
-mkdir -p "$sb/tests" && cp -R tests/data "$sb/tests/data" \
-    && ln -s "$build/authprogs" "$sb/authprogs"
+mkdir -p "$sb/tests" && cp -R tests/data "$sb/tests/data"
+for d in authprogs backends control expire frontends innfeed nnrpd; do
+    [ -d "$build/$d" ] && ln -s "$build/$d" "$sb/$d"
+done
 
 base_cflags=("${cflags[@]}")
 for spec in "${tests[@]}"; do
@@ -270,7 +274,7 @@ for spec in "${tests[@]}"; do
         t=${t%.t}
     fi
     rundir=tests
-    [[ "$t" == authprogs/* ]] && rundir=$sb/tests
+    { [[ "$t" == authprogs/* ]] || $shell; } && rundir=$sb/tests
     src=${src:-$t}
     n=$(echo "$t" | tr / _)
     objs=()
