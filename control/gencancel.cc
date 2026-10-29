@@ -59,11 +59,11 @@ getNewsgroups(char *mid)
     HistoryText = concatpath(innconf->pathhistory, INN_PATH_HISTORY);
     History = HISopen(HistoryText, innconf->hismethod, HIS_RDONLY);
 
-    if (History == NULL) {
+    if (History == nullptr) {
         die("Cannot open history; you may want to use -n\n");
     }
 
-    if (!HISlookup(History, mid, NULL, NULL, NULL, &token)) {
+    if (!HISlookup(History, mid, nullptr, nullptr, nullptr, &token)) {
         HISclose(History);
         die("Cannot find article %s in history; you may want to use -n\n",
             mid);
@@ -80,7 +80,7 @@ getNewsgroups(char *mid)
             SMerrorstr);
     }
 
-    if ((art = SMretrieve(token, RETR_HEAD)) == NULL) {
+    if ((art = SMretrieve(token, RETR_HEAD)) == nullptr) {
         SMshutdown();
         HISclose(History);
         die("Cannot retrieve the article; you may want to use -n\n");
@@ -89,7 +89,7 @@ getNewsgroups(char *mid)
     /* Extract the Newsgroups header field. */
     start = wire_findheader(art->data, art->len, "Newsgroups", true);
 
-    if (start == NULL) {
+    if (start == nullptr) {
         SMfreearticle(art);
         SMshutdown();
         HISclose(History);
@@ -99,7 +99,7 @@ getNewsgroups(char *mid)
 
     end = wire_endheader(start, art->data + art->len - 1);
 
-    if (end == NULL) {
+    if (end == nullptr) {
         SMfreearticle(art);
         SMshutdown();
         HISclose(History);
@@ -122,16 +122,16 @@ main(int ac, char *av[])
 {
     int option;
     bool approved = true;
-    char *body = NULL;
-    char *charset = NULL;
+    char *body = nullptr;
+    char *charset = nullptr;
     char datebuff[40];
-    char *from = NULL;
+    char *from = nullptr;
     bool genmid = true;
     bool localtime = true;
     char *mid;
-    char *newsgroups = NULL;
+    char *newsgroups = nullptr;
     char *originalmid;
-    char *subject = NULL;
+    char *subject = nullptr;
 #if defined(HAVE_CANLOCK)
     bool cancelkeyonly = false;
     char *cankeybuff = NULL;
@@ -142,13 +142,13 @@ main(int ac, char *av[])
     message_program_name = "gencancel";
 
     /* Load inn.conf. */
-    if (!innconf_read(NULL))
+    if (!innconf_read(nullptr))
         exit(1);
 
     /* Read our secrets, if available.
      * Even if we fail reading them, we can just go on.  Don't bail out, the
      * related features will just not be activated. */
-    secrets_read(NULL);
+    secrets_read(nullptr);
 
     /* Parse command-line arguments. */
     while ((option = getopt(ac, av, "ab:c:df:kLmn:s:")) != EOF) {
@@ -232,19 +232,19 @@ main(int ac, char *av[])
 
     /* Try to find the newsgroup(s) the article has been posted to.
      * getNewsgroups() will die if it cannot retrieve the information. */
-    if (newsgroups == NULL)
+    if (newsgroups == nullptr)
         newsgroups = getNewsgroups(originalmid);
 
     /* Write on standard output the cancel control message, header field
      * by header field. */
-    if (from == NULL && innconf->complaints == NULL)
+    if (from == nullptr && innconf->complaints == nullptr)
         die("complaints unset in inn.conf; you may want to use -f\n");
-    printf("From: %s\n", from == NULL ? innconf->complaints : from);
+    printf("From: %s\n", from == nullptr ? innconf->complaints : from);
 
     /* Taken from either -n or the original article. */
     printf("Newsgroups: %s\n", newsgroups);
 
-    if (subject == NULL)
+    if (subject == nullptr)
         printf("Subject: cmsg cancel %s\n", originalmid);
     else
         printf("Subject: %s\n", subject);
@@ -256,19 +256,19 @@ main(int ac, char *av[])
     printf("Date: %s\n", datebuff);
 
     if (approved) {
-        printf("Approved: %s\n", from == NULL ? innconf->complaints : from);
+        printf("Approved: %s\n", from == nullptr ? innconf->complaints : from);
     }
 
     if (genmid) {
-        mid = GenerateMessageID(NULL);
-        if (mid == NULL)
+        mid = GenerateMessageID(nullptr);
+        if (mid == nullptr)
             die("Cannot generate Message-ID\n");
         printf("Message-ID: %s\n", mid);
     }
 
     printf("MIME-Version: 1.0\n");
     printf("Content-Type: text/plain; charset=\"%s\"\n",
-           charset == NULL ? "ISO-8859-1" : charset);
+           charset == nullptr ? "ISO-8859-1" : charset);
     printf("Content-Transfer-Encoding: 8bit\n");
 
 #if defined(HAVE_CANLOCK)
@@ -277,7 +277,7 @@ main(int ac, char *av[])
     }
 #endif
 
-    printf("\n%s\n", body == NULL ? "Admin cancel." : body);
+    printf("\n%s\n", body == nullptr ? "Admin cancel." : body);
 
     exit(0);
 }
