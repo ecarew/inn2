@@ -210,6 +210,15 @@ a document so the rounds can be compared.
   `HeaderTable` with the 76 real header names (see CONVERSION_NOTES.md); keep
   it as the first test of `HeaderTable`.
 
+**authprogs (2026-10-29)**
+- auth_krb5.c is the only authprogs file not converted: it has no test, and a
+  meaningful one needs a Kerberos KDC (e.g. a scratch MIT krb5kdc with a test
+  realm and keytab).  Until then only argument and error paths could be
+  tested.  Its Kerberos is the Anaconda krb5 found by krb5-config.  Run the
+  modernization passes on authprogs/ once it is converted.
+- ident's INN test needs an identd on port 113 (tests 2 and 4); the new
+  authprogs/identport test covers ident with a stand-in server instead.
+
 **Test coverage (2026-10-28, support/coverage-report.sh)**
 - innd/ is 42.3% line-covered (2026-10-29).  Lowest: nc.cc 21.1% (no NNTP
   streaming, MODE READER or error responses yet), rc.cc 26.2%, site.cc 33.0%
