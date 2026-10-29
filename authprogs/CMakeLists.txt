@@ -9,7 +9,7 @@ if(HAVE_PAM)
     set(_pam ${INN_PAM_LIB})
 endif()
 
-inn_program(ckpasswd SOURCES ckpasswd.c INNONLY LIBS innauth ${_pam})
+inn_program(ckpasswd SOURCES ckpasswd.cc INNONLY LIBS innauth ${_pam})
 inn_program(domain   SOURCES domain.cc   INNONLY LIBS innauth)
 inn_program(ident    SOURCES ident.c    INNONLY LIBS innauth)
 inn_program(radius   SOURCES radius.c   INNONLY LIBS innauth)

@@ -93,7 +93,7 @@ pass_conv(int num_msg, PAM_CONST struct pam_message **msgm UNUSED,
 {
     int i;
 
-    *response = malloc(num_msg * sizeof(struct pam_response));
+    *response = static_cast<struct pam_response *>(malloc(num_msg * sizeof(struct pam_response)));
     if (*response == NULL)
         return PAM_CONV_ERR;
     for (i = 0; i < num_msg; i++) {
@@ -183,7 +183,7 @@ password_dbm(char *name, const char *file)
         dbm_close(database);
         return NULL;
     }
-    password = xstrndup(value.dptr, value.dsize);
+    password = xstrndup(static_cast<const char *>(value.dptr), value.dsize);
     dbm_close(database);
     return password;
 }
