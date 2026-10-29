@@ -95,6 +95,56 @@ else
     res "tinyleaf HELP/IHAVE/duplicate/QUIT" FAIL
 fi
 
+# gencancel (control/) has no INN test.  Check the cancel articles it writes
+# for several option sets; Date and Message-ID vary per run and are masked.
+gencancel_runs() {
+    local g=$1
+    export INNCONF=$root/tests/data/etc/inn.conf
+    "$g" -n test.group -f admin@live.test -s 'cancel test' -b 'Body.' \
+        '<orig@live.test>'
+    echo "--"; "$g" -a -n test.group -f admin@live.test '<orig@live.test>'
+    echo "--"; "$g" -m -c UTF-8 -n test.group -f admin@live.test '<o@l.t>'
+    echo "--"; "$g" -d -n a.b,c.d -f admin@live.test '<o@l.t>'
+    echo "--"; "$g" -k -n x '<a@b>' 2>&1 | grep -v inn-secrets; echo "exit $?"
+    echo "--"; "$g" -L -n x '<a@b>' 2>&1 | grep -v inn-secrets; echo "exit $?"
+}
+mask='s/^(Date|Message-ID): .*/\1: (masked)/'
+gencancel_runs "$build/control/gencancel" 2>/dev/null | sed -E "$mask" \
+    >"$tmp/gencancel.out"
+g=$tmp/gencancel.out
+if grep -q '^Control: cancel <orig@live.test>$' "$g" \
+   && grep -q '^Subject: cancel test$' "$g" \
+   && grep -q '^Subject: cmsg cancel <o@l.t>$' "$g" \
+   && grep -q '^Newsgroups: a.b,c.d$' "$g" \
+   && grep -q '^Content-Type: text/plain; charset="UTF-8"$' "$g" \
+   && [ "$(grep -c '^Approved: ' "$g")" = 3 ] \
+   && [ "$(grep -c '^Message-ID: ' "$g")" = 3 ] \
+   && [ "$(grep -c 'not built with Cancel-Lock support' "$g")" = 2 ] \
+   && grep -q '^Body\.$' "$g"; then
+    res "gencancel output (6 option sets)" PASS
+else
+    res "gencancel output (6 option sets)" FAIL
+fi
+# Differential check against the original C gencancel from main, built with
+# the original Autoconf/Make libraries when they are present.
+if [ -f lib/.libs/libinn.a ] && [ -f storage/.libs/libinnstorage.a ] \
+   && git show main:control/gencancel.c >"$tmp/gencancel-orig.c" 2>/dev/null \
+   && cc -g -I"$root/include" -c "$tmp/gencancel-orig.c" -o "$tmp/gco.o" \
+        2>"$tmp/gco.log" \
+   && cc "$tmp/gco.o" lib/.libs/libinn.a history/.libs/libinnhist.a \
+        storage/.libs/libinnstorage.a lib/.libs/libinn.a lib/canlock.o \
+        -lz -lsqlite3 -o "$tmp/gencancel-orig" 2>>"$tmp/gco.log"; then
+    gencancel_runs "$tmp/gencancel-orig" 2>/dev/null | sed -E "$mask" \
+        >"$tmp/gencancel-orig.out"
+    if cmp -s "$tmp/gencancel.out" "$tmp/gencancel-orig.out"; then
+        res "gencancel matches original C" PASS
+    else
+        res "gencancel matches original C" FAIL
+    fi
+else
+    res "gencancel matches original C" "SKIP (no original Make build)"
+fi
+
 # INN tap tests, built against the CMake libraries.
 # lib/innconf reads samples/inn.conf, generated from inn.conf.in by fixconfig.
 if [ ! -f samples/inn.conf ]; then

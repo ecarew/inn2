@@ -52,6 +52,7 @@ sed -e "s|/usr/local/news|$tmp|g" \
     -e "s|^pathhistory:.*|pathhistory: $tmp/db|" \
     -e "s|^port:.*|port: $port|" \
     -e "s|^noreader:.*|noreader: true|" \
+    -e "s|^docancels:.*|docancels: \"auth\"|" \
     "$root/samples/inn.conf" >"$INNCONF"
 cat >>"$INNCONF" <<EOF
 runasuser:   $user
@@ -221,6 +222,27 @@ tok2=$("$bin/expire/grephistory" "<live2@live.test>" 2>/dev/null)
 ctl addhist "<added@live.test>" "$now" 0 "$now" "$tok2"
 label="ctlinnd addhist adds a history entry"
 ok inhist added
+
+# gencancel without -n reads the original article from history and the
+# spool to find its newsgroups; innd then processes the cancel it generates.
+tok3=$("$bin/expire/grephistory" "<live3@live.test>" 2>/dev/null)
+"$bin/control/gencancel" -f tester@live.test "<live3@live.test>" \
+    >"$tmp/cancel3" 2>>"$tmp/ctlinnd.log"
+# The scratch inn.conf sets docancels: "auth": the default "require-auth"
+# acts like "none" without Cancel-Lock support, so cancels would be accepted
+# but never processed (inn.conf(5)).
+# Upstream bug (same in the original C): gencancel copies the Newsgroups
+# value from the wire-format spool with its trailing \r, and innd refuses the
+# resulting header.  Accept the \r here and strip it before sending, so the
+# test still checks innd's cancel processing.
+label="gencancel finds the article's newsgroups"
+ok grep -qE $'^Newsgroups: test\\.live\r?$' "$tmp/cancel3"
+canart=$(printf 'Path: live.test!not-for-mail\n'; tr -d '\r' <"$tmp/cancel3")
+printf '#! rnews %d\n%s\n' "$(( ${#canart} + 1 ))" "$canart" \
+    | "$bin/frontends/rnews" >>"$tmp/rnews.log" 2>&1
+sleep 1
+label="innd honors the gencancel article"
+ok sh -c "! '$bin/frontends/sm' '$tok3' >/dev/null 2>&1"
 
 # Newsgroups.
 ctl changegroup test.live m

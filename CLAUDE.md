@@ -240,6 +240,11 @@ a document so the rounds can be compared.
   encode/decode and convdate have been run; the rest are untested.
 - Kerberos (auth_krb5) is found through `krb5-config`, which on this Mac is
   Anaconda's (`/opt/anaconda3`), matching what configure picked.
+- Upstream bug, control/gencancel.c: without -n, gencancel copies the
+  Newsgroups value from the wire-format spool with its trailing \r, so the
+  cancel article it writes has a malformed header that innd refuses.  Same in
+  the original C (checked 2026-10-29).  Strip the \r when converting or
+  fixing gencancel; support/live-innd.sh works around it.
 - Upstream bug, innfeed/article.c:37: `#define VALIDATE_HASH_TABLE() (void(0))`
   is C++ syntax and does not compile as C when NDEBUG is defined.  Latent,
   since NDEBUG is no longer defined; fix when innfeed is converted.
