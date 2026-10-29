@@ -9,9 +9,12 @@ code must follow the rules below.
 
 - CMake minimum version: 4.3
 - C++ standard: C++20, set per target with `target_compile_features(<tgt> PRIVATE cxx_std_20)`
-  and `CXX_EXTENSIONS OFF`. Chosen because Apple Clang supports it fully; C++23 support
-  in Apple's libc++ is still partial. Don't use C++23-only features.
-- C headers included from C++ translation units must be wrapped in `extern "C" { … }`
+  and `CXX_EXTENSIONS OFF`.  C++20 has far fewer gaps than C++23 in Apple's
+  libc++; don't use C++23-only features, or the C++20 features libc++ lists as
+  incomplete (modules, chrono time zones, `jthread`, execution policies).
+  Details and sources: CONVERSION_NOTES.md, "Build system".
+- C linkage comes from `BEGIN_DECLS`/`END_DECLS` in the headers, not from
+  `extern "C"` blocks in source files (see "Inclusion of C headers").
 - Per-file compile flags (Perl, Python) use `set_source_files_properties … COMPILE_OPTIONS`
 
 ## Inclusion of C headers
@@ -166,6 +169,14 @@ coverage gate)**
 - Alternatives if ever wanted: systemd socket activation (innd accepts
   `sd_listen_fds` sockets), launchd sockets, Linux `CAP_NET_BIND_SERVICE`.
 
+**Housekeeping (later)**
+- Once the class work no longer needs them as references, remove the
+  "Branches kept for reference" bullet from CONVERSION_NOTES.md and delete
+  the `cxx-conversion-wip` and `legacy-2020` branches, locally and on GitHub
+  (asked 2026-10-29).  `cxx-conversion-wip` has the first `ArtHeader` /
+  `ARTfields` attempt; `legacy-2020` the 2020 storage renames.  Deleting a
+  pushed branch is irreversible for others: confirm with the user first.
+
 **Documentation (2026-10-28)**
 - Convert `readme.pod` to Markdown (`README.md`), next to `CONVERSION_NOTES.md`.
 
@@ -220,6 +231,11 @@ coverage gate)**
   `lib/hissqlite-util`, `lib/xmalloc` (need the programs above).
 
 **Decisions**
+- 2026-10-29: CONVERSION_NOTES.md records the conversion only.  C++-specific
+  design and refactoring beyond it (classes, memory management, containers)
+  gets a separate document, started after the conversion is complete and
+  working to both the user's and Claude's satisfaction.  Its "Planned design"
+  section is the seed for that document.
 - 2026-10-28: INN's Perl and Python code is not converted to C++.  The Python
   in `samples/` and the embedded Perl/Python filter and auth hooks are a
   site-extension interface; the ~25,600 lines of Perl admin scripts are

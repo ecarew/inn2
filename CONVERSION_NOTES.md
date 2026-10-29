@@ -33,7 +33,9 @@ list) are in [CLAUDE.md](CLAUDE.md).  This file is the rationale.
   compile as C++ with the smallest change (casts, keyword renames), and only
   later modernized in separate, single-purpose commits (`nullptr`, `using`, ...).
   A reviewer can therefore read the conversion commits as "same behavior,
-  different language".
+  different language".  Tools used to modernize included, but were not
+  limited to, clang-tidy (`modernize-*` checks, applied to `.cc` files only)
+  and clang-format (INN's `.clang-format` style), both from LLVM 23.1.4, ...
 - **Verification before every commit** (`support/verify-cxx.sh`): build, the
   `innd` program still exports all 169 symbols of the original Make build,
   no C++ name mangling in the libraries' exported functions, `innd` starts,
@@ -56,8 +58,23 @@ list) are in [CLAUDE.md](CLAUDE.md).  This file is the rationale.
   remaining steps are listed in CLAUDE.md, "Goal: CMake-only build".  Until
   they are done, CMake reuses `./configure`'s `config.h` and the generated
   sources from one Make pass (`dc61d2089`).
-- **C++20**, not C++23: Apple Clang supports C++20 fully; its C++23 library
-  support is still partial.
+- **C++20**, not C++23.  Neither standard is fully implemented in Clang/libc++
+  (Apple's toolchain), but C++20 has only a few remaining gaps, none of
+  which INN++ needs.  libc++ lists C++20 papers still partial: calendars and
+  time zones (P0355R7), the execution-policy overloads of
+  `shift_left`/`shift_right` (P0769R2), and parts of uses-allocator
+  construction (P0591R4); `std::jthread`/`stop_token` (P0660R10) needs
+  `-fexperimental-library`.  cppreference's table (which covers Apple Clang
+  only up to version 16) shows modules and coroutines as partial and
+  `std::osyncstream` and `jthread` missing.  C++23 has more gaps: about 25
+  libc++ papers have no status, including `std::generator` (P2502R2) and
+  stacktrace (P0881R7).  Avoid the features listed as incomplete (modules,
+  chrono time zones, `jthread`, execution policies) until they are complete.
+  Sources (read 2026-10-29): <https://libcxx.llvm.org/Status/Cxx20.html>,
+  <https://libcxx.llvm.org/Status/Cxx23.html>,
+  <https://en.cppreference.com/w/cpp/compiler_support/20>.  Apple publishes no
+  per-feature table for Apple Clang, so the LLVM libc++ pages are the closest
+  authoritative source; this project builds with Apple Clang 21.
 - **Assertions stay on in every build** (`13a7720aa`).  CMake's Release-type
   defaults add `-DNDEBUG`, which silently disabled INN's 28 `assert()` calls;
   configure's `-g -O2` never did.  `-DNDEBUG` is stripped.
@@ -183,6 +200,14 @@ throttle/go and rmgroup, and shuts down.  Use a build configured with
 newsfeeds 35%, rc 26%, cc 25%, site 21%, nc 20%), passing the 33% gate;
 overall 47.5%.
 
+**Found a test gap?**  If you notice innd behavior that none of these tests
+exercises (a command, a feed type, an error path), please report it as a bug
+in the project's issue tracker
+(<https://github.com/ecarew/inn2/issues>), saying what is untested and, if
+you can, how to reproduce it, so it can be reviewed and worked into the
+tests.  `support/coverage-report.sh build-cov --html` shows line by line what
+the tests reach.
+
 ### Not converted
 
 - **Perl and Python stay** (2026-10-28).  The Python in `samples/` and the
@@ -233,6 +258,11 @@ converting innfeed.
 
 ## Planned design (not yet implemented)
 
+This section is a starting point only.  Further C++-specific design and
+refactoring (classes, memory management, containers) will get its own
+document once the conversion is complete and working (decided 2026-10-29);
+this file stays the record of the conversion itself.
+
 ### Article header lookup: sorted array instead of a tree (decided 2026-10-28)
 
 `innd/art.cc` finds each header line's entry among the 76 known headers
@@ -268,6 +298,47 @@ Why the sorted array:
 This is analysis, not measurement.  A benchmark of both with the 76 real
 header names is on the open-items list and would double as the first test of
 `HeaderTable`.
+
+### Memory management: from C to standard C++ (goal, 2026-10-29)
+
+**Goal.**  Move C-style memory management to standard C++ practice wherever
+possible: RAII ownership, `std::string` and `std::string_view`, `std::vector`
+and the other standard containers, and `std::unique_ptr` (with custom
+deleters for C resources such as `FILE *`, file descriptors and `mmap`
+regions).  If this works completely, the memory-management compatibility code
+goes away: the `xmalloc` family and `inn_void_ptr` (`include/inn/xmalloc.h`,
+`lib/xmalloc.cc`), `concat`/`concatpath`, the `reallocarray` fallback, and
+INN's C containers (`lib/buffer`, `lib/vector`, `lib/hashtab`, `lib/list`)
+with their headers.
+
+**Scale** (2026-10-29, `.cc` files): about 650 allocations through
+`xmalloc`, `xcalloc`, `xrealloc`, `xreallocarray`, `xstrdup`, `xstrndup`,
+`xasprintf`, `concat` and `concatpath`; 13 direct `malloc`/`calloc`/`realloc`;
+934 `free()` calls; plus `buffer_new` (6), `vector_new` (16), `cvector_new` (5)
+and `hash_create` (6).  Track these counts as the work proceeds.
+
+**Constraints that shape it.**
+- **External C consumers** (the Perl and Python embedding, external users of
+  libinn) may still need a C API; keep thin C entry points there rather than
+  the C internals.
+- **Out-of-memory behavior.**  `xmalloc` never returns null: on failure it
+  calls `xmalloc_error_handler`, which logs and exits.  `operator new` throws
+  `std::bad_alloc` instead, and INN has no exception handling.  Decide the
+  policy before converting (e.g. a `std::set_new_handler` that keeps today's
+  log-and-exit, or catching at the boundaries); exceptions must never cross
+  into C code or callbacks.
+- **Ownership crosses function boundaries.**  Many functions return memory
+  the caller must `free()`; convert callee and callers together, layer by
+  layer, following the three-layer order above.
+- **Mapped and shared memory stays a view.**  Spools and overview files that
+  are `mmap`ed or in System V shared memory (cnfs, buffindexed, tradindexed,
+  timecaf) are not heap objects; wrap the mapping in RAII and use
+  non-owning views (`std::span`, `std::string_view`) into it.
+- **Hot paths.**  Article parsing and feeding are performance-sensitive;
+  prefer `std::string_view` and reusable buffers over per-call `std::string`
+  copies, and measure where it matters.
+- **Tests first**, as for all class work: no conversion of code without
+  coverage.
 
 ### Other first classes (proposed)
 
