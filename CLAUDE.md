@@ -341,6 +341,16 @@ a document so the rounds can be compared.
   `lib/hissqlite-util`, `lib/xmalloc` (need the programs above).
 
 **Decisions**
+- 2026-10-29: INN++ must compile and pass its tests on both macOS and
+  Linux.  Platform differences are chosen by feature tests, not platform
+  names: the code tests `HAVE_*` macros from `config.h` (written by
+  configure today; by CMake checks such as `check_symbol_exists` through
+  `configure_file` once configure is gone, goal item 1), and CMake chooses
+  link libraries from its own checks (e.g. libcrypt only where `crypt()` is
+  not in libc).  Avoid `if(APPLE)` and `#ifdef __APPLE__`/`__linux__` except
+  for a real quirk no feature test can detect, and say why where used.
+  Linux is built and checked with support/docker-root-checks.sh (Debian
+  trixie in Docker).
 - 2026-10-29: INN's test programs in `tests/` stay C, as a standing check of
   the C/C++ boundary and so the same test source runs against the original C
   and the C++ builds (CONVERSION_NOTES.md, "Not converted").  New tests are
