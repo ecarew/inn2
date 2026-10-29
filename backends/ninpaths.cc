@@ -83,7 +83,7 @@ hhost(const char *n)
         if (!strcmp(n, h->id))
             return h;
     /* not there - allocate */
-    h = wmalloc(sizeof(struct nrec));
+    h = static_cast<struct nrec *>(wmalloc(sizeof(struct nrec)));
     if (!h)
         return NULL;
     h->id = strdup(n);
@@ -107,7 +107,7 @@ tallyrec(struct nrec *r, struct nrec *h)
     for (t = r->rlink; t; t = t->rlink)
         if (t->linkid == h)
             return t;
-    t = wmalloc(sizeof(struct trec));
+    t = static_cast<struct trec *>(wmalloc(sizeof(struct trec)));
     if (!t)
         return NULL;
     t->rlink = r->rlink;
@@ -247,7 +247,8 @@ readdump(FILE *f)
     if (sit <= 0 || (unsigned long) sit > SIZE_MAX / sizeof(struct nrec *))
         formerr(0);
 
-    n = calloc((size_t) sit, sizeof(struct nrec *));
+    n = static_cast<struct nrec **>(
+        calloc((size_t) sit, sizeof(struct nrec *)));
     if (!n) {
         fprintf(stderr, "error: out of memory\n");
         goto error;
