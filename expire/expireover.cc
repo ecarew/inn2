@@ -66,7 +66,7 @@ build_bloom_cb(void *cookie, const HASH *hash, time_t arrived UNUSED,
                time_t posted UNUSED, time_t expires UNUSED, const TOKEN *token)
 {
     if (token != NULL)
-        bloom_add(cookie, hash);
+        bloom_add(static_cast<struct bloom_filter *>(cookie), hash);
     return true;
 }
 
