@@ -45,9 +45,10 @@ list) are in [CLAUDE.md](CLAUDE.md).  This file is the rationale.
   Make-built C libraries.  When a test failed on both, the test was wrong, not
   the conversion (see `26928139d`, `b55ea92a1`).
 - **Coverage is measured, not assumed** (`support/coverage-report.sh`).  As of
-  2026-10-29: lib 77.0%, history 63.9%, storage 37.5%, **innd 33.9%** (2.0%
+  2026-10-29: lib 77.3%, history 64.8%, storage 38.1%, **innd 42.3%** (2.0%
   originally; 9.5% with innd/artparse and innd/chan; 33.9% with the live innd
-  test, support/live-innd.sh).  Code
+  test, support/live-innd.sh; 42.3% once it covered 22 more ctlinnd
+  commands).  Code
   with no coverage is not refactored until it has tests.
 
 ## Decisions
@@ -192,8 +193,15 @@ already allows.  Two details made this safe:
 (inn.conf with every path in a temporary directory, 127.0.0.1 on an
 unprivileged port, so neither root nor innbind is involved), starts the real
 innd as the tester, feeds five articles with rnews, checks history (grephistory),
-the spool (sm), a file feed and duplicate refusal, runs ctlinnd newgroup,
-throttle/go and rmgroup, and shuts down.  Use a build configured with
+the spool (sm), a file feed and duplicate refusal, then exercises 28 of
+ctlinnd's 37 commands with a check of each one's effect (state: throttle,
+pause, reserve, go; articles: cancel, addhist; groups: newgroup, rmgroup,
+changegroup, renumber, lowmark; feeds: checkfile, name, feedinfo, flush,
+flushlogs, drop, begin, send to an exploder feed, reload, param; status:
+status, stathist, timer; connections: reject, allow, hangup, readers,
+logmode), and shuts down.  Not exercised: perl and python (off in this
+build), signal, trace, xabort and xexec.  innd runs with -f, logging to
+files as in production.  Use a build configured with
 `-DINN_RUNAS_USER=$(id -un) -DINN_RUNAS_GROUP=$(id -gn)` (e.g. build-live).
 
 **Result.**  innd line coverage 9.5% -> 33.9% (art.cc 45%, chan.cc 56%,

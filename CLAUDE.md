@@ -204,9 +204,10 @@ a document so the rounds can be compared.
   it as the first test of `HeaderTable`.
 
 **Test coverage (2026-10-28, support/coverage-report.sh)**
-- innd/ is 33.9% line-covered (2026-10-29), past the 33% gate.  Lowest:
-  status.cc 7.9%, nc.cc 20.2%, site.cc 21.4%, cc.cc 25.2%, rc.cc 26.2%.
-- Overall 47.5% of lines: lib/ 77.0%, history/ 63.9%, storage/ 37.5%.
+- innd/ is 42.3% line-covered (2026-10-29).  Lowest: nc.cc 21.1% (no NNTP
+  streaming, MODE READER or error responses yet), rc.cc 26.2%, site.cc 33.0%
+  (only file and exploder feeds), newsfeeds.cc 38.1%.
+- Overall 50.5% of lines: lib/ 77.3%, history/ 64.8%, storage/ 38.1%.
   0% also in storage/overdata.cc, lib/inndcomm.cc, lib/network-innbind.cc.
 
 **Deferred modernization (on hold by decision, 2026-10-28)**

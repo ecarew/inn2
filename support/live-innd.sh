@@ -62,9 +62,14 @@ domain:      live.test
 fromhost:    live.test
 EOF
 
-cat >"$tmp/etc/newsfeeds" <<'EOF'
+# An exploder (Tx) feed runs a program that receives text from innd; this
+# one appends everything to explode.out, so ctlinnd send can be checked.
+printf '#!/bin/sh\ncat >>%s/explode.out\n' "$tmp" >"$tmp/explode.sh"
+chmod +x "$tmp/explode.sh"
+cat >"$tmp/etc/newsfeeds" <<EOF
 ME:*::
 filefeed:*:Tf,Wnm:filefeed
+explode:!*:Tx:$tmp/explode.sh
 EOF
 cat >"$tmp/etc/incoming.conf" <<'EOF'
 streaming: true
@@ -95,7 +100,7 @@ printf '%s\tlive test group\n' control control.cancel junk test.live \
 
 # --- Start innd ---------------------------------------------------------------
 
-"$bin/innd/innd" -d -f >"$tmp/innd.out" 2>&1 &
+"$bin/innd/innd" -f >"$tmp/innd.out" 2>&1 &
 innd_pid=$!
 up=false
 for _ in $(seq 1 50); do
@@ -110,7 +115,8 @@ if $up; then
     res "innd starts and answers ctlinnd" PASS
 else
     res "innd starts and answers ctlinnd" FAIL
-    sed 's/^/    /' "$tmp/innd.out" | tail -20
+    cat "$tmp/innd.out" "$tmp"/log/errlog "$tmp"/log/news 2>/dev/null \
+        | sed 's/^/    /' | tail -20
     echo "RESULT: FAIL"
     exit 1
 fi
@@ -180,6 +186,116 @@ ctl rmgroup test.created
 grep -q '^test.created ' "$tmp/db/active" \
     && res "ctlinnd rmgroup removes from active" FAIL \
     || res "ctlinnd rmgroup removes from active" PASS
+
+# --- More ctlinnd commands ----------------------------------------------------
+
+# send_one ID: send one article <ID@live.test> to test.live through rnews.
+send_one() {
+    local art
+    art=$(printf 'Path: live.test!not-for-mail\nFrom: tester@live.test\nNewsgroups: test.live\nSubject: %s\nMessage-ID: <%s@live.test>\nDate: %s\n\nBody of %s.\n' \
+          "$1" "$1" "$(date -u '+%a, %d %b %Y %H:%M:%S +0000')" "$1")
+    printf '#! rnews %d\n%s\n' "$(( ${#art} + 1 ))" "$art" \
+        | "$bin/frontends/rnews" >>"$tmp/rnews.log" 2>&1
+}
+inhist() { "$bin/expire/grephistory" "<$1@live.test>" >/dev/null 2>&1; }
+infeed() { ctl flush filefeed; sleep 1
+           grep -q "<$1@live.test>" "$tmp/spool/outgoing/filefeed"; }
+mode() { "$bin/frontends/ctlinnd" mode 2>&1 | head -1; }
+ok() { if "$@" 2>>"$tmp/ctlinnd.log"; then res "$label" PASS; else res "$label" FAIL; fi; }
+
+# Server state: pause; reserve then throttle with the reserved reason.
+label="ctlinnd pause and go"
+ok sh -c "'$bin/frontends/ctlinnd' -s pause r1 && '$bin/frontends/ctlinnd' mode | head -1 | grep -qi paused && '$bin/frontends/ctlinnd' -s go r1 && '$bin/frontends/ctlinnd' mode | head -1 | grep -qi running"
+label="ctlinnd reserve, then throttle"
+ok sh -c "'$bin/frontends/ctlinnd' -s reserve r2 && '$bin/frontends/ctlinnd' -s throttle r2 && '$bin/frontends/ctlinnd' mode | head -1 | grep -qi throttled && '$bin/frontends/ctlinnd' -s go r2"
+label="ctlinnd throttle refused while reserved"
+ok sh -c "'$bin/frontends/ctlinnd' -s reserve r3 && ! '$bin/frontends/ctlinnd' -s throttle other; '$bin/frontends/ctlinnd' -s reserve ''"
+
+# Articles and history.
+tok1=$("$bin/expire/grephistory" "<live1@live.test>" 2>/dev/null)
+ctl cancel "<live1@live.test>"
+label="ctlinnd cancel removes the article"
+ok sh -c "! '$bin/frontends/sm' '$tok1' >/dev/null 2>&1"
+now=$(date +%s)
+tok2=$("$bin/expire/grephistory" "<live2@live.test>" 2>/dev/null)
+ctl addhist "<added@live.test>" "$now" 0 "$now" "$tok2"
+label="ctlinnd addhist adds a history entry"
+ok inhist added
+
+# Newsgroups.
+ctl changegroup test.live m
+label="ctlinnd changegroup sets the group flag"
+ok grep -q '^test.live [0-9]* [0-9]* m$' "$tmp/db/active"
+ctl changegroup test.live y
+label="ctlinnd renumber"
+ok ctl renumber test.live
+printf 'test.live 3\n' >"$tmp/lowmark"
+ctl lowmark "$tmp/lowmark"
+label="ctlinnd lowmark sets the low mark"
+ok grep -q '^test.live [0-9]* 0*3 y$' "$tmp/db/active"
+
+# Feeds: inspection, drop and begin, exploder send, reload.
+label="ctlinnd checkfile accepts newsfeeds"
+ok ctl checkfile
+label="ctlinnd name lists the feed channels"
+ok sh -c "'$bin/frontends/ctlinnd' name '' | grep -q filefeed"
+label="ctlinnd feedinfo describes a feed"
+ok sh -c "'$bin/frontends/ctlinnd' feedinfo filefeed | grep -q filefeed"
+label="ctlinnd flushlogs"
+ok ctl flushlogs
+ctl drop filefeed
+send_one whiledropped
+label="ctlinnd drop stops a feed"
+ok sh -c "inhist() { '$bin/expire/grephistory' \"<\$1@live.test>\" >/dev/null 2>&1; }; inhist whiledropped && ! grep -q '<whiledropped@live.test>' '$tmp/spool/outgoing/filefeed'"
+ctl begin filefeed
+send_one afterbegin
+label="ctlinnd begin restarts a feed"
+ok infeed afterbegin
+ctl send explode "live send test"
+sleep 1
+label="ctlinnd send reaches an exploder feed"
+ok grep -q 'live send test' "$tmp/explode.out"
+printf 'newfeed:*:Tf,Wnm:newfeed\n' >>"$tmp/etc/newsfeeds"
+ctl reload newsfeeds "live reload"
+label="ctlinnd reload picks up a new feed"
+ok sh -c "'$bin/frontends/ctlinnd' feedinfo newfeed | grep -q newfeed"
+label="ctlinnd param changes a setting"
+ok ctl param c 14
+
+# Status reporting.
+label="ctlinnd status writes a status file"
+# innd writes the status file from its main loop (STATUSmainloophook, run
+# when select() returns) once the interval has passed, so wait past the
+# interval and then cause activity.
+rm -f "$tmp/http/inn_status.html"
+ctl status 1
+sleep 1.5
+send_one statusping
+for _ in $(seq 1 10); do
+    [ -s "$tmp/http/inn_status.html" ] && break
+    sleep 0.5
+done
+ctl status off
+label="ctlinnd status writes a status file"
+ok test -s "$tmp/http/inn_status.html"
+label="ctlinnd stathist logs history statistics"
+ok sh -c "'$bin/frontends/ctlinnd' -s stathist '$tmp/stathist.out' && '$bin/expire/grephistory' '<live2@live.test>' >/dev/null; '$bin/frontends/ctlinnd' -s stathist off; test -e '$tmp/stathist.out'"
+label="ctlinnd timer on and off"
+ok sh -c "'$bin/frontends/ctlinnd' -s timer 1 && '$bin/frontends/ctlinnd' -s timer off"
+
+# Connections.
+ctl reject "live reject"
+send_one whilerejected
+label="ctlinnd reject refuses new connections"
+ok sh -c "! '$bin/expire/grephistory' '<whilerejected@live.test>' >/dev/null 2>&1"
+ctl allow "live reject"
+send_one afterallow
+label="ctlinnd allow accepts them again"
+ok inhist afterallow
+label="ctlinnd hangup refuses a bad channel"
+ok sh -c "! '$bin/frontends/ctlinnd' -s hangup 999"
+label="ctlinnd readers and logmode"
+ok sh -c "'$bin/frontends/ctlinnd' -s readers n 'live test' && '$bin/frontends/ctlinnd' -s readers y '' && '$bin/frontends/ctlinnd' -s logmode"
 
 # --- Shut down ------------------------------------------------------------------
 
