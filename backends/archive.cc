@@ -306,7 +306,8 @@ process_article(ARTHANDLE *art, const char *token, struct config *config)
     first = NULL;
     for (i = 1; i < groups->count; i++) {
         group = groups->strings[i];
-        delim = strchr(group, ':');
+        /* The cvector's strings point into xref, our own writable copy. */
+        delim = const_cast<char *>(strchr(group, ':'));
         if (delim == NULL) {
             warn("bogus Xref entry %s in %s", group, token);
             continue;
