@@ -200,7 +200,7 @@ main(int ac, char *av[])
     bool Silent;
     bool NeedHelp;
     char *reply;
-    char *new;
+    char *glued;
     int length;
     char *nv[4];
     struct stat Sb;
@@ -278,14 +278,14 @@ main(int ac, char *av[])
         /* Glue any extra words together. */
         for (length = 0, i = cp->argc - 1; (p = av[i++]) != NULL;)
             length += strlen(p) + 1;
-        new = xmalloc(length);
-        *new = '\0';
+        glued = xmalloc(length);
+        *glued = '\0';
         for (i = cp->argc - 1; av[i]; i++) {
             if (i >= cp->argc)
-                strlcat(new, " ", length);
-            strlcat(new, av[i], length);
+                strlcat(glued, " ", length);
+            strlcat(glued, av[i], length);
         }
-        av[cp->argc - 1] = new;
+        av[cp->argc - 1] = glued;
         av[cp->argc] = NULL;
     } else if (ac != cp->argc)
         /* All other commands must have the right number of arguments. */

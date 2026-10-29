@@ -3,7 +3,7 @@
 # feedone/sys2nf are not built here yet.  The ovdb_* programs build as stubs
 # while Berkeley DB support is off.
 
-inn_program(ctlinnd      SOURCES ctlinnd.c    INNONLY)
+inn_program(ctlinnd      SOURCES ctlinnd.cc    INNONLY)
 inn_program(decode       SOURCES decode.cc     INNONLY)
 inn_program(encode       SOURCES encode.cc     NOLIBS)
 inn_program(getlist      SOURCES getlist.cc    INNONLY)
