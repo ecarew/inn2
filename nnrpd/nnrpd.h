@@ -34,6 +34,8 @@
 #    include <zlib.h>
 #endif
 
+BEGIN_DECLS
+
 /*
 **  A range of article numbers.
 */
@@ -368,3 +370,5 @@ extern size_t zbuf_out_size;
 
 bool zlib_init(void);
 #endif /* HAVE_ZLIB */
+
+END_DECLS
