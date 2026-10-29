@@ -289,7 +289,7 @@ static void
 GrowArray(void *data, void *el)
 {
     int i;
-    void ***array = data;
+    void ***array = static_cast<void ***>(data);
 
     if (*array == NULL) {
         *array = xmalloc(2 * sizeof(void *));
