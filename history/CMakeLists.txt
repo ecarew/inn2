@@ -9,6 +9,12 @@ add_library(innhist STATIC
 )
 target_include_directories(innhist PRIVATE ${CMAKE_CURRENT_SOURCE_DIR})
 target_link_libraries(innhist PUBLIC INN::inn SQLite3::SQLite3)
+# hisv6 uses libinnstorage's token functions (IsToken, TextToToken,
+# TokenToText), and libinnstorage's expire.cc uses HISlookup: the two
+# libraries depend on each other.  Declaring both directions lets CMake repeat
+# them on the link line, which GNU ld needs for a cycle between static
+# libraries (Apple's ld resolves them in any order).
+target_link_libraries(innhist PUBLIC innstorage)
 add_library(INN::hist ALIAS innhist)
 
 # History tools (history/Make.methods).  hissqlite-util is a script generated

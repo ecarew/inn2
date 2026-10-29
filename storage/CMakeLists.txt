@@ -17,6 +17,9 @@ add_library(innstorage STATIC
 )
 target_include_directories(innstorage PRIVATE ${CMAKE_CURRENT_SOURCE_DIR})
 target_link_libraries(innstorage PUBLIC INN::inn ZLIB::ZLIB SQLite3::SQLite3)
+# expire.cc uses HISlookup from libinnhist, which in turn uses this
+# library's token functions; see history/CMakeLists.txt.
+target_link_libraries(innstorage PUBLIC innhist)
 add_library(INN::storage ALIAS innstorage)
 
 # innd/CMakeLists.txt links this for the libraries libinnstorage needs.
