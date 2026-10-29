@@ -13,14 +13,14 @@
 
 
 #ifdef HAVE_SASL
-sasl_conn_t *sasl_conn = NULL;
+sasl_conn_t *sasl_conn = nullptr;
 int sasl_ssf = 0;
 int sasl_maxout = NNTP_MAXLEN_COMMAND;
 
 sasl_callback_t sasl_callbacks[] = {
     /* XXX Do we want a proxy callback? */
     /* XXX Add a getopt callback? */
-    {SASL_CB_LIST_END, NULL, NULL}
+    {SASL_CB_LIST_END, nullptr, nullptr}
 };
 
 #    define BASE64_BUF_SIZE                         \
@@ -33,14 +33,14 @@ sasl_callback_t sasl_callbacks[] = {
 void
 SASLnewserver(void)
 {
-    if (sasl_conn != NULL) {
+    if (sasl_conn != nullptr) {
         sasl_dispose(&sasl_conn);
-        sasl_conn = NULL;
+        sasl_conn = nullptr;
         sasl_ssf = 0;
         sasl_maxout = NNTP_MAXLEN_COMMAND;
     }
 
-    if (sasl_server_new("nntp", NULL, NULL, NULL, NULL, NULL,
+    if (sasl_server_new("nntp", nullptr, nullptr, nullptr, nullptr, nullptr,
                         SASL_SUCCESS_DATA, &sasl_conn)
         != SASL_OK) {
         syslog(L_FATAL, "sasl_server_new() failed");
@@ -78,15 +78,15 @@ void
 SASLauth(int ac, char *av[])
 {
     const char *mech;
-    const char *clientin = NULL;
+    const char *clientin = nullptr;
     unsigned int clientinlen = 0;
     size_t tclientinlen = 0;
-    const char *serverout = NULL;
+    const char *serverout = nullptr;
     unsigned int serveroutlen = 0;
     char base64[BASE64_BUF_SIZE + 1];
-    const char *canon_user = NULL;
-    const int *ssfp = NULL;
-    const int *maxoutp = NULL;
+    const char *canon_user = nullptr;
+    const int *ssfp = nullptr;
+    const int *maxoutp = nullptr;
     const void *property;
     int r = SASL_OK;
     int r1;
@@ -159,7 +159,7 @@ SASLauth(int ac, char *av[])
              * In sasl_encode64() calls, the fourth argument is the length
              * of the third including the null terminator. */
             r1 = sasl_encode64(serverout, serveroutlen, base64,
-                               BASE64_BUF_SIZE + 1, NULL);
+                               BASE64_BUF_SIZE + 1, nullptr);
             if (r1 != SASL_OK)
                 r = r1;
         }
@@ -174,7 +174,7 @@ SASLauth(int ac, char *av[])
 
         /* Get the response from the client. */
         r1 = line_read(&NNTPline, PERMaccessconf->clienttimeout, &clientin,
-                       &tclientinlen, NULL);
+                       &tclientinlen, nullptr);
         clientinlen = tclientinlen;
 
         switch (r1) {
@@ -282,7 +282,7 @@ SASLauth(int ac, char *av[])
                 GRPreport();
                 OVctl(OVCACHEFREE, &boolval);
                 free(GRPcur);
-                GRPcur = NULL;
+                GRPcur = nullptr;
                 if (ARTcount) {
                     syslog(L_NOTICE,
                            "%s exit for AUTHINFO SASL articles %lu groups %ld",
@@ -314,7 +314,7 @@ SASLauth(int ac, char *av[])
     } else {
         /* Failure. */
         int resp_code;
-        const char *errstring = sasl_errstring(r, NULL, NULL);
+        const char *errstring = sasl_errstring(r, nullptr, nullptr);
 
         syslog(L_NOTICE, "%s bad_auth", Client.host);
 

@@ -24,11 +24,11 @@ FindHeader(ARTHANDLE *art, const char **pp, const char **qp, const char *hdr,
     bool Nocr = true;
 
     p = wire_findheader(art->data, art->len, hdr, true);
-    if (p == NULL)
+    if (p == nullptr)
         return false;
     q = p;
-    for (p1 = NULL; p < art->data + art->len; p++) {
-        if (p1 != NULL && *p1 == '\r' && *p == '\n') {
+    for (p1 = nullptr; p < art->data + art->len; p++) {
+        if (p1 != nullptr && *p1 == '\r' && *p == '\n') {
             Nocr = false;
             break;
         }
@@ -57,7 +57,7 @@ GetXref(ARTHANDLE *art)
     const char *p, *q;
 
     if (!FindHeader(art, &p, &q, "xref", sizeof("xref")))
-        return NULL;
+        return nullptr;
     return xstrndup(q, p - q);
 }
 
@@ -72,7 +72,7 @@ GetGroups(char *p)
     static char **list;
     int i;
     char *q;
-    static char *Xrefbuf = NULL;
+    static char *Xrefbuf = nullptr;
     char *Xref = p;
 
     if (size == 0) {
@@ -82,14 +82,14 @@ GetGroups(char *p)
     Xref = p;
     for (Xref++; *Xref == ' '; Xref++)
         ;
-    if ((Xref = strchr(Xref, ' ')) == NULL)
-        return NULL;
+    if ((Xref = strchr(Xref, ' ')) == nullptr)
+        return nullptr;
     for (Xref++; *Xref == ' '; Xref++)
         ;
     if (!Xrefbuf)
         Xrefbuf = xmalloc(BIG_BUFFER);
     strlcpy(Xrefbuf, Xref, BIG_BUFFER);
-    if ((q = strchr(Xrefbuf, '\t')) != NULL)
+    if ((q = strchr(Xrefbuf, '\t')) != nullptr)
         *q = '\0';
     p = Xrefbuf;
 
@@ -110,8 +110,8 @@ GetGroups(char *p)
         if (*p)
             *p++ = '\0';
     }
-    list[i] = NULL;
-    return i ? list : NULL;
+    list[i] = nullptr;
+    return i ? list : nullptr;
 }
 
 static bool
@@ -119,7 +119,7 @@ HaveSeen(bool AllGroups, char *group, char **groups, char **xrefs)
 {
     char *list[2];
 
-    list[1] = NULL;
+    list[1] = nullptr;
     for (; *xrefs; xrefs++) {
         list[0] = *xrefs;
         if ((!AllGroups && PERMmatch(groups, list))
@@ -145,7 +145,7 @@ process_newnews(char *group, bool AllGroups, time_t date)
     void *handle;
     char *p;
     time_t arrived;
-    ARTHANDLE *art = NULL;
+    ARTHANDLE *art = nullptr;
     TOKEN token;
     char *data;
     int len;
@@ -153,19 +153,19 @@ process_newnews(char *group, bool AllGroups, time_t date)
     time_t now = 0;
 
     grplist[0] = group;
-    grplist[1] = NULL;
+    grplist[1] = nullptr;
     if (PERMspecified && !PERMmatch(PERMreadlist, grplist))
         return;
     if (!AllGroups && !PERMmatch(groups, grplist))
         return;
-    if (!OVgroupstats(group, &low, &high, &count, NULL))
+    if (!OVgroupstats(group, &low, &high, &count, nullptr))
         return;
     ARTlow = low;
     ARThigh = high;
-    if ((handle = OVopensearch(group, ARTlow, ARThigh)) != NULL) {
+    if ((handle = OVopensearch(group, ARTlow, ARThigh)) != nullptr) {
         ARTNUM artnum;
         unsigned long artcount = 0;
-        struct cvector *vector = NULL;
+        struct cvector *vector = nullptr;
 
         if (innconf->nfsreader) {
             time(&now);
@@ -181,9 +181,9 @@ process_newnews(char *group, bool AllGroups, time_t date)
             if (len == 0 || date > arrived)
                 continue;
 
-            vector = overview_split(data, len, NULL, vector);
+            vector = overview_split(data, len, nullptr, vector);
             if (overhdr_xref == -1) {
-                if ((art = SMretrieve(token, RETR_HEAD)) == NULL)
+                if ((art = SMretrieve(token, RETR_HEAD)) == nullptr)
                     continue;
                 p = GetXref(art);
                 SMfreearticle(art);
@@ -194,16 +194,16 @@ process_newnews(char *group, bool AllGroups, time_t date)
                  * hosting isn't relevant. */
                 p = overview_get_extra_header(vector, xref_header);
             }
-            if (p == NULL)
+            if (p == nullptr)
                 continue;
             xrefs = GetGroups(p);
             free(p);
-            if (xrefs == NULL)
+            if (xrefs == nullptr)
                 continue;
             if (HaveSeen(AllGroups, group, groups, xrefs))
                 continue;
             p = overview_get_standard_header(vector, OVERVIEW_MESSAGE_ID);
-            if (p == NULL)
+            if (p == nullptr)
                 continue;
 
             ++artcount;
@@ -309,7 +309,7 @@ CMDnewnews(int ac, char *av[])
     } else {
         path = concatpath(innconf->pathdb, INN_PATH_ACTIVE);
         qp = QIOopen(path);
-        if (qp == NULL) {
+        if (qp == nullptr) {
             if (errno == ENOENT) {
                 Reply("%d Can't open active\r\n", NNTP_FAIL_ACTION);
             } else {
@@ -324,7 +324,7 @@ CMDnewnews(int ac, char *av[])
 
         Reply("%d New news follows\r\n", NNTP_OK_NEWNEWS);
 
-        while ((p = QIOread(qp)) != NULL) {
+        while ((p = QIOread(qp)) != nullptr) {
             for (q = p; *q != '\0'; q++) {
                 if (*q == ' ' || *q == '\t') {
                     *q = '\0';

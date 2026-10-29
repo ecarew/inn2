@@ -30,50 +30,50 @@ static const char *const BadDistribs[] = {BAD_DISTRIBS};
 */
 HEADER Table[] = {
     /* Name                      CanSet  Type Size Value Body Len */
-    {"Path",                      true,  HTstd, 0, NULL, NULL, 0},
-    {"From",                      true,  HTreq, 0, NULL, NULL, 0},
-    {"Newsgroups",                true,  HTreq, 0, NULL, NULL, 0},
-    {"Subject",                   true,  HTreq, 0, NULL, NULL, 0},
-    {"Control",                   true,  HTstd, 0, NULL, NULL, 0},
-    {"Supersedes",                true,  HTstd, 0, NULL, NULL, 0},
-    {"Followup-To",               true,  HTstd, 0, NULL, NULL, 0},
-    {"Date",                      true,  HTstd, 0, NULL, NULL, 0},
-    {"Organization",              true,  HTstd, 0, NULL, NULL, 0},
-    {"Lines",                     true,  HTstd, 0, NULL, NULL, 0},
-    {"Sender",                    true,  HTstd, 0, NULL, NULL, 0},
-    {"Approved",                  true,  HTstd, 0, NULL, NULL, 0},
-    {"Archive",                   true,  HTstd, 0, NULL, NULL, 0},
-    {"Distribution",              true,  HTstd, 0, NULL, NULL, 0},
-    {"Expires",                   true,  HTstd, 0, NULL, NULL, 0},
-    {"Message-ID",                true,  HTstd, 0, NULL, NULL, 0},
-    {"References",                true,  HTstd, 0, NULL, NULL, 0},
-    {"Reply-To",                  true,  HTstd, 0, NULL, NULL, 0},
-    {"NNTP-Posting-Host",         false, HTobs, 0, NULL, NULL, 0},
-    {"MIME-Version",              true,  HTstd, 0, NULL, NULL, 0},
-    {"Content-Type",              true,  HTstd, 0, NULL, NULL, 0},
-    {"Content-Transfer-Encoding", true,  HTstd, 0, NULL, NULL, 0},
-    {"X-Trace",                   false, HTobs, 0, NULL, NULL, 0},
-    {"X-Complaints-To",           false, HTobs, 0, NULL, NULL, 0},
-    {"NNTP-Posting-Date",         false, HTobs, 0, NULL, NULL, 0},
-    {"Xref",                      false, HTstd, 0, NULL, NULL, 0},
-    {"Injection-Date",            true,  HTstd, 0, NULL, NULL, 0},
-    {"Injection-Info",            false, HTstd, 0, NULL, NULL, 0},
-    {"Summary",                   true,  HTstd, 0, NULL, NULL, 0},
-    {"Keywords",                  true,  HTstd, 0, NULL, NULL, 0},
-    {"User-Agent",                true,  HTstd, 0, NULL, NULL, 0},
-    {"Date-Received",             false, HTobs, 0, NULL, NULL, 0},
-    {"Posting-Version",           false, HTobs, 0, NULL, NULL, 0},
-    {"Relay-Version",             false, HTobs, 0, NULL, NULL, 0},
-    {"Cc",                        true,  HTstd, 0, NULL, NULL, 0},
-    {"Bcc",                       true,  HTstd, 0, NULL, NULL, 0},
-    {"To",                        true,  HTstd, 0, NULL, NULL, 0},
-    {"Archived-At",               true,  HTstd, 0, NULL, NULL, 0},
-    {"Also-Control",              false, HTobs, 0, NULL, NULL, 0},
-    {"Article-Names",             false, HTobs, 0, NULL, NULL, 0},
-    {"Article-Updates",           false, HTobs, 0, NULL, NULL, 0},
-    {"See-Also",                  false, HTobs, 0, NULL, NULL, 0},
-    {"Cancel-Key",                true,  HTstd, 0, NULL, NULL, 0},
-    {"Cancel-Lock",               true,  HTstd, 0, NULL, NULL, 0},
+    {"Path",                      true,  HTstd, 0, nullptr, nullptr, 0},
+    {"From",                      true,  HTreq, 0, nullptr, nullptr, 0},
+    {"Newsgroups",                true,  HTreq, 0, nullptr, nullptr, 0},
+    {"Subject",                   true,  HTreq, 0, nullptr, nullptr, 0},
+    {"Control",                   true,  HTstd, 0, nullptr, nullptr, 0},
+    {"Supersedes",                true,  HTstd, 0, nullptr, nullptr, 0},
+    {"Followup-To",               true,  HTstd, 0, nullptr, nullptr, 0},
+    {"Date",                      true,  HTstd, 0, nullptr, nullptr, 0},
+    {"Organization",              true,  HTstd, 0, nullptr, nullptr, 0},
+    {"Lines",                     true,  HTstd, 0, nullptr, nullptr, 0},
+    {"Sender",                    true,  HTstd, 0, nullptr, nullptr, 0},
+    {"Approved",                  true,  HTstd, 0, nullptr, nullptr, 0},
+    {"Archive",                   true,  HTstd, 0, nullptr, nullptr, 0},
+    {"Distribution",              true,  HTstd, 0, nullptr, nullptr, 0},
+    {"Expires",                   true,  HTstd, 0, nullptr, nullptr, 0},
+    {"Message-ID",                true,  HTstd, 0, nullptr, nullptr, 0},
+    {"References",                true,  HTstd, 0, nullptr, nullptr, 0},
+    {"Reply-To",                  true,  HTstd, 0, nullptr, nullptr, 0},
+    {"NNTP-Posting-Host",         false, HTobs, 0, nullptr, nullptr, 0},
+    {"MIME-Version",              true,  HTstd, 0, nullptr, nullptr, 0},
+    {"Content-Type",              true,  HTstd, 0, nullptr, nullptr, 0},
+    {"Content-Transfer-Encoding", true,  HTstd, 0, nullptr, nullptr, 0},
+    {"X-Trace",                   false, HTobs, 0, nullptr, nullptr, 0},
+    {"X-Complaints-To",           false, HTobs, 0, nullptr, nullptr, 0},
+    {"NNTP-Posting-Date",         false, HTobs, 0, nullptr, nullptr, 0},
+    {"Xref",                      false, HTstd, 0, nullptr, nullptr, 0},
+    {"Injection-Date",            true,  HTstd, 0, nullptr, nullptr, 0},
+    {"Injection-Info",            false, HTstd, 0, nullptr, nullptr, 0},
+    {"Summary",                   true,  HTstd, 0, nullptr, nullptr, 0},
+    {"Keywords",                  true,  HTstd, 0, nullptr, nullptr, 0},
+    {"User-Agent",                true,  HTstd, 0, nullptr, nullptr, 0},
+    {"Date-Received",             false, HTobs, 0, nullptr, nullptr, 0},
+    {"Posting-Version",           false, HTobs, 0, nullptr, nullptr, 0},
+    {"Relay-Version",             false, HTobs, 0, nullptr, nullptr, 0},
+    {"Cc",                        true,  HTstd, 0, nullptr, nullptr, 0},
+    {"Bcc",                       true,  HTstd, 0, nullptr, nullptr, 0},
+    {"To",                        true,  HTstd, 0, nullptr, nullptr, 0},
+    {"Archived-At",               true,  HTstd, 0, nullptr, nullptr, 0},
+    {"Also-Control",              false, HTobs, 0, nullptr, nullptr, 0},
+    {"Article-Names",             false, HTobs, 0, nullptr, nullptr, 0},
+    {"Article-Updates",           false, HTobs, 0, nullptr, nullptr, 0},
+    {"See-Also",                  false, HTobs, 0, nullptr, nullptr, 0},
+    {"Cancel-Key",                true,  HTstd, 0, nullptr, nullptr, 0},
+    {"Cancel-Lock",               true,  HTstd, 0, nullptr, nullptr, 0},
     /* The Comments and Original-Sender header fields can appear more than once
      * in the headers of an article.  Consequently, we MUST NOT put them here.
      */
@@ -112,7 +112,7 @@ MaxLength(char *p, char *q)
 
 
     /* Return an empty string when p is NULL. */
-    if (p == NULL) {
+    if (p == nullptr) {
         *buff = '\0';
         return buff;
     }
@@ -127,7 +127,7 @@ MaxLength(char *p, char *q)
         q = p;
 
     /* Simple case of just want the beginning? */
-    if (q == NULL || (size_t) (q - p) < sizeof(buff) - 4) {
+    if (q == nullptr || (size_t) (q - p) < sizeof(buff) - 4) {
         strlcpy(buff, p, sizeof(buff) - 3);
         strlcat(buff, "...", sizeof(buff));
     } else if ((p + i) - q < 10) {
@@ -171,13 +171,13 @@ static char *
 NextHeader(char *p)
 {
     char *q;
-    for (q = p; (p = strchr(p, '\n')) != NULL; p++) {
+    for (q = p; (p = strchr(p, '\n')) != nullptr; p++) {
         /* Note that '\r\n' has temporarily been internally replaced by '\n'.
          * Therefore, the count takes it into account (+1, besides the
          * length (p-q+1) of the string). */
         if (p - q + 2 > MAXARTLINELENGTH) {
             strlcpy(Error, "Header line too long", sizeof(Error));
-            return NULL;
+            return nullptr;
         }
         /* Check if there is a continuation line for the header field body. */
         if (ISWHITE(p[1])) {
@@ -188,7 +188,7 @@ NextHeader(char *p)
         return p + 1;
     }
     strlcpy(Error, "Article has no body -- just headers", sizeof(Error));
-    return NULL;
+    return nullptr;
 }
 
 
@@ -215,12 +215,12 @@ StripOffHeaders(char *article)
                 if (hp->Type == HTobs) {
                     snprintf(Error, sizeof(Error), "Obsolete %s header field",
                              hp->Name);
-                    return NULL;
+                    return nullptr;
                 }
                 if (hp->Value) {
                     snprintf(Error, sizeof(Error), "Duplicate %s header field",
                              hp->Name);
-                    return NULL;
+                    return nullptr;
                 }
                 hp->Value = &p[hp->Size + 1];
                 /* '\r\n' is replaced with '\n', and unnecessary to consider
@@ -246,9 +246,9 @@ StripOffHeaders(char *article)
 
         /* Get start of next header field; if it's a blank line, we hit
          * the end. */
-        if ((p = NextHeader(p)) == NULL) {
+        if ((p = NextHeader(p)) == nullptr) {
             /* Error set in NextHeader(). */
-            return NULL;
+            return nullptr;
         }
         if (*p == '\n')
             break;
@@ -296,7 +296,7 @@ CheckControl(char *ctrl)
         return Error;
     }
     *p = save;
-    return NULL;
+    return nullptr;
 }
 
 
@@ -309,7 +309,7 @@ CheckDistribution(char *p)
     static char SEPS[] = " \t,";
     const char *const *dp;
 
-    if ((p = strtok(p, SEPS)) == NULL)
+    if ((p = strtok(p, SEPS)) == nullptr)
         return "Can't parse Distribution header field";
     do {
         for (dp = BadDistribs; *dp; dp++)
@@ -318,8 +318,8 @@ CheckDistribution(char *p)
                          MaxLength(p, p));
                 return Error;
             }
-    } while ((p = strtok((char *) NULL, SEPS)) != NULL);
-    return NULL;
+    } while ((p = strtok((char *) nullptr, SEPS)) != nullptr);
+    return nullptr;
 }
 
 
@@ -345,11 +345,11 @@ ProcessHeaders(char *idbuff, bool needmoderation)
     static char *cankeybuff = NULL;
     char *identity = NULL;
 #endif
-    static char *newpath = NULL;
+    static char *newpath = nullptr;
     HEADER *hp;
     char *p;
     char *bad_header;
-    char *fqdn = NULL;
+    char *fqdn = nullptr;
     time_t t, now;
     const char *error;
     pid_t pid;
@@ -357,7 +357,7 @@ ProcessHeaders(char *idbuff, bool needmoderation)
     size_t i;
 
     /* Get the current time, used for creating and checking dates. */
-    now = time(NULL);
+    now = time(nullptr);
 
     /* datebuff is used for both Injection-Date and Date header fields
      * so we have to set it now, and it has to be the UTC date (unless
@@ -381,7 +381,7 @@ ProcessHeaders(char *idbuff, bool needmoderation)
              * to RFC 5537 may someday allow again that existing and useful
              * feature.) */
             if (hp->Len == 0) {
-                hp->Value = hp->Body = NULL;
+                hp->Value = hp->Body = nullptr;
             } else if (!IsValidHeaderBody(hp->Value)) {
                 snprintf(Error, sizeof(Error),
                          "Invalid syntax encountered in %s header field "
@@ -397,11 +397,12 @@ ProcessHeaders(char *idbuff, bool needmoderation)
      * the article already contains both Message-ID and Date
      * header fields (possibility of multiple injection, see Sections 3.4.2
      * and 3.5 of RFC 5537). */
-    if (HDR(HDR__INJECTION_DATE) == NULL) {
+    if (HDR(HDR__INJECTION_DATE) == nullptr) {
         /* If moderation is needed, do not add an Injection-Date header field.
          */
         if (!needmoderation && PERMaccessconf->addinjectiondate) {
-            if ((HDR(HDR__MESSAGEID) == NULL) || (HDR(HDR__DATE) == NULL)) {
+            if ((HDR(HDR__MESSAGEID) == nullptr)
+                || (HDR(HDR__DATE) == nullptr)) {
                 HDR_SET(HDR__INJECTION_DATE, datebuff);
             }
         }
@@ -419,7 +420,7 @@ ProcessHeaders(char *idbuff, bool needmoderation)
     if (PERMaccessconf->nnrpdauthsender) {
         if (PERMauthorized && PERMuser[0] != '\0') {
             p = strchr(PERMuser, '@');
-            if (p == NULL) {
+            if (p == nullptr) {
                 snprintf(sendbuff, sizeof(sendbuff), "%s@%s", PERMuser,
                          Client.host);
             } else {
@@ -432,7 +433,7 @@ ProcessHeaders(char *idbuff, bool needmoderation)
     }
 
     /* Set the Date header field. */
-    if (HDR(HDR__DATE) == NULL) {
+    if (HDR(HDR__DATE) == nullptr) {
         if (PERMaccessconf->localtime) {
             if (!makedate(-1, true, localdatebuff, sizeof(localdatebuff)))
                 return "Can't generate local Date header field body";
@@ -459,25 +460,25 @@ ProcessHeaders(char *idbuff, bool needmoderation)
 
     /* The Newsgroups header field is checked later. */
 
-    if (HDR(HDR__CONTROL) != NULL) {
-        if ((error = CheckControl(HDR(HDR__CONTROL))) != NULL)
+    if (HDR(HDR__CONTROL) != nullptr) {
+        if ((error = CheckControl(HDR(HDR__CONTROL))) != nullptr)
             return error;
     }
 
     /* Set the Message-ID header field. */
-    if (HDR(HDR__MESSAGEID) == NULL) {
+    if (HDR(HDR__MESSAGEID) == nullptr) {
         HDR_SET(HDR__MESSAGEID, idbuff);
     }
     if (!IsValidMessageID(HDR(HDR__MESSAGEID), true, laxmid)) {
         return "Can't parse Message-ID header field body";
     }
     /* Do not accept a Message-ID without an '@', even if laxmid is set. */
-    if (laxmid && strchr(HDR(HDR__MESSAGEID), '@') == NULL) {
+    if (laxmid && strchr(HDR(HDR__MESSAGEID), '@') == nullptr) {
         return "Missing @ in Message-ID header field body";
     }
 
     /* Set the Path header field. */
-    if (HDR(HDR__PATH) == NULL || PERMaccessconf->strippath) {
+    if (HDR(HDR__PATH) == nullptr || PERMaccessconf->strippath) {
         /* Note that innd will put host name here for us. */
         /* If moderation is needed, do not update the Path header field. */
         if (!needmoderation)
@@ -501,7 +502,7 @@ ProcessHeaders(char *idbuff, bool needmoderation)
 
         /* Check whether the virtual host name is required. */
         if ((VirtualPathlen > 0)
-            && (p = strchr(HDR(HDR__PATH), '!')) != NULL) {
+            && (p = strchr(HDR(HDR__PATH), '!')) != nullptr) {
             *p = '\0';
             if (strcasecmp(HDR(HDR__PATH), PERMaccessconf->pathhost) != 0)
                 addvirtual = true;
@@ -510,22 +511,22 @@ ProcessHeaders(char *idbuff, bool needmoderation)
             addvirtual = true;
     }
 
-    if (newpath != NULL)
+    if (newpath != nullptr)
         free(newpath);
     if (PERMaccessconf->addinjectionpostinghost) {
         if (addvirtual) {
             newpath = concat(VirtualPath, ".POSTED.", Client.host, "!",
-                             HDR(HDR__PATH), (char *) 0);
+                             HDR(HDR__PATH), (char *) nullptr);
         } else {
             newpath = concat(".POSTED.", Client.host, "!", HDR(HDR__PATH),
-                             (char *) 0);
+                             (char *) nullptr);
         }
     } else {
         if (addvirtual) {
-            newpath =
-                concat(VirtualPath, ".POSTED!", HDR(HDR__PATH), (char *) 0);
+            newpath = concat(VirtualPath, ".POSTED!", HDR(HDR__PATH),
+                             (char *) nullptr);
         } else {
-            newpath = concat(".POSTED!", HDR(HDR__PATH), (char *) 0);
+            newpath = concat(".POSTED!", HDR(HDR__PATH), (char *) nullptr);
         }
     }
     /* If moderation is needed, do not update the Path header field. */
@@ -543,17 +544,17 @@ ProcessHeaders(char *idbuff, bool needmoderation)
     /* The Control header field is checked above. */
 
     /* Check the Distribution header field. */
-    if ((p = HDR(HDR__DISTRIBUTION)) != NULL) {
+    if ((p = HDR(HDR__DISTRIBUTION)) != nullptr) {
         p = xstrdup(p);
         error = CheckDistribution(p);
         free(p);
-        if (error != NULL)
+        if (error != nullptr)
             return error;
     }
 
     /* Set the Organization header field. */
-    if (HDR(HDR__ORGANIZATION) == NULL
-        && (p = PERMaccessconf->organization) != NULL) {
+    if (HDR(HDR__ORGANIZATION) == nullptr
+        && (p = PERMaccessconf->organization) != nullptr) {
         strlcpy(orgbuff, p, sizeof(orgbuff));
         HDR_SET(HDR__ORGANIZATION, orgbuff);
     }
@@ -574,14 +575,14 @@ ProcessHeaders(char *idbuff, bool needmoderation)
         p = PERMaccessconf->domain;
     } else {
         fqdn = inn_getfqdn(PERMaccessconf->domain);
-        if (fqdn == NULL)
+        if (fqdn == nullptr)
             p = (char *) "unknown";
         else
             p = fqdn;
     }
     snprintf(pathidentitybuff, sizeof(pathidentitybuff), "%s", p);
     free(fqdn);
-    p = NULL;
+    p = nullptr;
 
     /* Set the posting-account value. */
     if (PERMaccessconf->addinjectionpostingaccount && PERMuser[0] != '\0') {
@@ -611,13 +612,13 @@ ProcessHeaders(char *idbuff, bool needmoderation)
     pid = getpid();
 
     /* Set the mail-complaints-to attribute. */
-    if ((p = PERMaccessconf->complaints) != NULL) {
+    if ((p = PERMaccessconf->complaints) != nullptr) {
         snprintf(complaintsbuff, sizeof(complaintsbuff), "%s", p);
     } else {
         static const char newsmaster[] = NEWSMASTER;
 
-        if ((p = PERMaccessconf->fromhost) != NULL
-            && strchr(newsmaster, '@') == NULL) {
+        if ((p = PERMaccessconf->fromhost) != nullptr
+            && strchr(newsmaster, '@') == nullptr) {
             snprintf(complaintsbuff, sizeof(complaintsbuff), "%s@%s",
                      newsmaster, p);
         } else {
@@ -710,7 +711,7 @@ ProcessHeaders(char *idbuff, bool needmoderation)
 
     /* Now make sure everything is there. */
     for (hp = Table; hp < ARRAY_END(Table); hp++)
-        if (hp->Type == HTreq && hp->Value == NULL) {
+        if (hp->Type == HTreq && hp->Value == nullptr) {
             snprintf(Error, sizeof(Error), "Missing required %s header field",
                      hp->Name);
             return Error;
@@ -720,7 +721,7 @@ ProcessHeaders(char *idbuff, bool needmoderation)
     for (i = 0; i < OtherCount; i++) {
         if (!IsValidHeaderField(OtherHeaders[i])) {
             p = strchr(OtherHeaders[i], ':');
-            if (p == NULL || p == OtherHeaders[i])
+            if (p == nullptr || p == OtherHeaders[i])
                 bad_header = xstrdup(OtherHeaders[i]);
             else
                 bad_header = xstrndup(OtherHeaders[i], p - OtherHeaders[i]);
@@ -733,7 +734,7 @@ ProcessHeaders(char *idbuff, bool needmoderation)
         }
     }
 
-    return NULL;
+    return nullptr;
 }
 
 
@@ -767,7 +768,7 @@ CheckIncludedText(const char *p, int lines)
     int i;
 
     if (lines < 20)
-        return NULL;
+        return nullptr;
     for (i = 0;; p++) {
         /* clang-format off */
         switch (*p) {
@@ -779,12 +780,12 @@ CheckIncludedText(const char *p, int lines)
         }
         /* clang-format on */
         p = strchr(p, '\n');
-        if (p == NULL)
+        if (p == nullptr)
             break;
     }
     if (i * 2 > lines)
         return "Article not posted -- more included text than new text";
-    return NULL;
+    return nullptr;
 }
 
 
@@ -803,9 +804,9 @@ MailArticle(char *group, char *article)
     char buff[SMBUF];
 
     /* Try to get the address first. */
-    if ((address = GetModeratorAddress(NULL, NULL, group,
+    if ((address = GetModeratorAddress(nullptr, nullptr, group,
                                        PERMaccessconf->moderatormailer))
-        == NULL) {
+        == nullptr) {
         snprintf(Error, sizeof(Error), "No mailing address for \"%s\" -- %s",
                  group, "ask your news administrator to fix this");
         free(group);
@@ -815,7 +816,7 @@ MailArticle(char *group, char *article)
 
     /* Now build up the command (ignore format/argument mismatch errors,
      * in case %s isn't in inconf->mta) and send the headers. */
-    if (innconf->mta == NULL)
+    if (innconf->mta == nullptr)
         return "Can't start mailer -- mta not set";
 #if __GNUC__ > 4 || defined(__llvm__) || defined(__clang__)
 #    pragma GCC diagnostic ignored "-Wformat-nonliteral"
@@ -824,7 +825,7 @@ MailArticle(char *group, char *article)
 #if __GNUC__ > 4 || defined(__llvm__) || defined(__clang__)
 #    pragma GCC diagnostic warning "-Wformat-nonliteral"
 #endif
-    if ((F = popen(buff, "w")) == NULL)
+    if ((F = popen(buff, "w")) == nullptr)
         return "Can't start mailer";
     fprintf(F, "To: %s\n", address);
     /* Do not add an Auto-Submitted header field when forwarding a message to
@@ -871,7 +872,7 @@ MailArticle(char *group, char *article)
                  status, "Article might not have been mailed");
         return Error;
     }
-    return NULL;
+    return nullptr;
 }
 
 
@@ -900,7 +901,7 @@ ValidNewsgroups(char *hdr, char **modgroup)
     p = HDR(HDR__CONTROL);
     IsNewgroup = (p && strncasecmp(p, "newgroup", 8) == 0);
     groups = xstrdup(hdr);
-    if ((p = strtok(groups, NGSEPS)) == NULL) {
+    if ((p = strtok(groups, NGSEPS)) == nullptr) {
         free(groups);
         return "Can't parse Newsgroups header field body";
     }
@@ -910,26 +911,26 @@ ValidNewsgroups(char *hdr, char **modgroup)
      * allowed to add them, even to unmoderated or local groups.  We want to
      * reject them to unmoderated groups in case there's a disagreement of
      * opinion between various sites as to the moderation status. */
-    approved = HDR(HDR__APPROVED) != NULL;
+    approved = HDR(HDR__APPROVED) != nullptr;
     if (approved && !PERMaccessconf->allowapproved) {
         snprintf(Error, sizeof(Error),
                  "You are not allowed to approve postings");
     }
 
     FoundOne = false;
-    h = DDstart((FILE *) NULL, (FILE *) NULL);
+    h = DDstart((FILE *) nullptr, (FILE *) nullptr);
     do {
         if (innconf->mergetogroups && strncmp(p, "to.", 3) == 0)
             p = (char *) "to";
         if (!hookpresent && PERMspecified) {
             grplist[0] = p;
-            grplist[1] = NULL;
+            grplist[1] = nullptr;
             if (!PERMmatch(PERMpostlist, grplist)) {
                 snprintf(Error, sizeof(Error),
                          "You are not allowed to post to %s\r\n", p);
             }
         }
-        if (!OVgroupstats(p, NULL, NULL, NULL, &flag))
+        if (!OVgroupstats(p, nullptr, nullptr, nullptr, &flag))
             continue;
         FoundOne = true;
         DDcheck(h, p);
@@ -958,7 +959,7 @@ ValidNewsgroups(char *hdr, char **modgroup)
 #endif /* DO_PYTHON */
             break;
         case NF_FLAG_MODERATED:
-            if (!approved && modgroup != NULL && !*modgroup)
+            if (!approved && modgroup != nullptr && !*modgroup)
                 *modgroup = xstrdup(p);
             break;
         case NF_FLAG_IGNORE:
@@ -973,7 +974,7 @@ ValidNewsgroups(char *hdr, char **modgroup)
                      "The newsgroup \"%s\" has been renamed\n", p);
             break;
         }
-    } while ((p = strtok((char *) NULL, NGSEPS)) != NULL);
+    } while ((p = strtok((char *) nullptr, NGSEPS)) != nullptr);
     free(groups);
 
     if (!FoundOne && !IsNewgroup)
@@ -982,20 +983,20 @@ ValidNewsgroups(char *hdr, char **modgroup)
     if (Error[0]) {
         tmpPtr = DDend(h);
         free(tmpPtr);
-        if (modgroup != NULL && *modgroup != NULL) {
+        if (modgroup != nullptr && *modgroup != nullptr) {
             free(*modgroup);
-            *modgroup = NULL;
+            *modgroup = nullptr;
         }
         return Error;
     }
 
     p = DDend(h);
-    if (HDR(HDR__DISTRIBUTION) == NULL && *p) {
+    if (HDR(HDR__DISTRIBUTION) == nullptr && *p) {
         strlcpy(distbuff, p, sizeof(distbuff));
         HDR_SET(HDR__DISTRIBUTION, distbuff);
     }
     free(p);
-    return NULL;
+    return nullptr;
 }
 
 
@@ -1010,7 +1011,7 @@ SendQuit(FILE *FromServer, FILE *ToServer)
     fprintf(ToServer, "QUIT\r\n");
     fflush(ToServer);
     fclose(ToServer);
-    if (fgets(buff, sizeof buff, FromServer) == NULL) {
+    if (fgets(buff, sizeof buff, FromServer) == nullptr) {
         /* ignore: we don't care if we don't get the server reply */
     }
     fclose(FromServer);
@@ -1025,7 +1026,8 @@ OfferArticle(char *buff, int buffsize, FILE *FromServer, FILE *ToServer)
 {
     /* We have a valid message-ID here (checked beforehand). */
     fprintf(ToServer, "IHAVE %s\r\n", HDR(HDR__MESSAGEID));
-    if (FLUSH_ERROR(ToServer) || fgets(buff, buffsize, FromServer) == NULL) {
+    if (FLUSH_ERROR(ToServer)
+        || fgets(buff, buffsize, FromServer) == nullptr) {
         snprintf(buff, buffsize, "Can't send %s to server, %s", "IHAVE",
                  strerror(errno));
         return -1;
@@ -1042,11 +1044,11 @@ SpoolitTo(char *article, char *err, char *SpoolDir)
 {
     static char CANTSPOOL[NNTP_MAXLEN_COMMAND + 2];
     HEADER *hp;
-    FILE *F = NULL;
+    FILE *F = nullptr;
     size_t i;
     int fd;
-    char *tmpspool = NULL;
-    char *spoolfile = NULL;
+    char *tmpspool = nullptr;
+    char *spoolfile = nullptr;
     char *q;
 
     /* Initialize the returned error message. */
@@ -1061,7 +1063,7 @@ SpoolitTo(char *article, char *err, char *SpoolDir)
         goto fail;
     }
     F = fdopen(fd, "w");
-    if (F == NULL) {
+    if (F == nullptr) {
         syslog(L_FATAL, "can't open %s %m", tmpspool);
         goto fail;
     }
@@ -1118,12 +1120,12 @@ SpoolitTo(char *article, char *err, char *SpoolDir)
     /* Article has been spooled. */
     free(tmpspool);
     free(spoolfile);
-    return NULL;
+    return nullptr;
 
 fail:
-    if (tmpspool != NULL)
+    if (tmpspool != nullptr)
         free(tmpspool);
-    if (spoolfile != NULL)
+    if (spoolfile != nullptr)
         free(spoolfile);
     return CANTSPOOL;
 }
@@ -1159,7 +1161,7 @@ Towire(char *p)
             } else {
                 /* This should not happen. */
                 free(s);
-                return NULL;
+                return nullptr;
             }
         }
         *q++ = *r++;
@@ -1189,7 +1191,7 @@ ARTpost(char *article, char *idbuff, bool *permanent)
     FILE *ToServer;
     FILE *FromServer;
     char buff[NNTP_MAXLEN_COMMAND + 2], frombuf[SMBUF];
-    char *modgroup = NULL;
+    char *modgroup = nullptr;
     const char *error;
     char *TrackID;
     char *DirTrackID;
@@ -1199,7 +1201,7 @@ ARTpost(char *article, char *idbuff, bool *permanent)
     *permanent = true;
 
     /* Set up the other header fields list. */
-    if (OtherHeaders == NULL) {
+    if (OtherHeaders == nullptr) {
         OtherSize = HEADER_DELTA;
         OtherHeaders = xmalloc(OtherSize * sizeof(char *));
     }
@@ -1208,15 +1210,15 @@ ARTpost(char *article, char *idbuff, bool *permanent)
     OtherCount = 0;
     for (hp = Table; hp < ARRAY_END(Table); hp++) {
         hp->Size = strlen(hp->Name);
-        hp->Value = hp->Body = NULL;
+        hp->Value = hp->Body = nullptr;
     }
-    if ((article = StripOffHeaders(article)) == NULL)
+    if ((article = StripOffHeaders(article)) == nullptr)
         return Error;
     for (i = 0, p = article; p; i++, p = next + 1)
-        if ((next = strchr(p, '\n')) == NULL)
+        if ((next = strchr(p, '\n')) == nullptr)
             break;
     if (PERMaccessconf->checkincludedtext) {
-        if ((error = CheckIncludedText(article, i)) != NULL)
+        if ((error = CheckIncludedText(article, i)) != nullptr)
             return error;
     }
 
@@ -1228,19 +1230,20 @@ ARTpost(char *article, char *idbuff, bool *permanent)
      * Be sure to check that a Newsgroups header field exists
      * because ProcessHeaders() still has not been called.  It would
      * have rejected the message. */
-    if (HDR(HDR__NEWSGROUPS) != NULL) {
-        if ((error = ValidNewsgroups(HDR(HDR__NEWSGROUPS), &modgroup)) != NULL)
+    if (HDR(HDR__NEWSGROUPS) != nullptr) {
+        if ((error = ValidNewsgroups(HDR(HDR__NEWSGROUPS), &modgroup))
+            != nullptr)
             return error;
     }
 
-    if ((error = ProcessHeaders(idbuff, modgroup != NULL)) != NULL) {
-        if (modgroup != NULL)
+    if ((error = ProcessHeaders(idbuff, modgroup != nullptr)) != nullptr) {
+        if (modgroup != nullptr)
             free(modgroup);
         return error;
     }
 
-    if (i == 0 && HDR(HDR__CONTROL) == NULL) {
-        if (modgroup != NULL)
+    if (i == 0 && HDR(HDR__CONTROL) == nullptr) {
+        if (modgroup != nullptr)
             free(modgroup);
         return "Article is empty";
     }
@@ -1248,7 +1251,7 @@ ARTpost(char *article, char *idbuff, bool *permanent)
     strlcpy(frombuf, HDR(HDR__FROM), sizeof(frombuf));
     /* Unfold the From header field. */
     for (p = frombuf; p < frombuf + sizeof(frombuf);)
-        if ((p = strchr(p, '\n')) == NULL)
+        if ((p = strchr(p, '\n')) == nullptr)
             break;
         else
             *p++ = ' ';
@@ -1261,9 +1264,9 @@ ARTpost(char *article, char *idbuff, bool *permanent)
         p++;
     }
     p = strchr(p, '@');
-    if (p != NULL) {
+    if (p != nullptr) {
         p = strrchr(p + 1, '.');
-        if (p == NULL) {
+        if (p == nullptr) {
             if (modgroup)
                 free(modgroup);
             return "Address in From header field not in Internet syntax";
@@ -1273,8 +1276,8 @@ ARTpost(char *article, char *idbuff, bool *permanent)
             free(modgroup);
         return "Address in From header field not in Internet syntax";
     }
-    if ((p = HDR(HDR__FOLLOWUPTO)) != NULL && strcmp(p, "poster") != 0
-        && (error = ValidNewsgroups(p, (char **) NULL)) != NULL) {
+    if ((p = HDR(HDR__FOLLOWUPTO)) != nullptr && strcmp(p, "poster") != 0
+        && (error = ValidNewsgroups(p, (char **) nullptr)) != nullptr) {
         if (modgroup)
             free(modgroup);
         return error;
@@ -1338,7 +1341,7 @@ ARTpost(char *article, char *idbuff, bool *permanent)
     /* Handle mailing to moderated groups. */
 
     if (modgroup) {
-        if (idbuff != NULL) {
+        if (idbuff != nullptr) {
             const char *retstr;
             retstr = MailArticle(modgroup, article);
             /* MailArticle frees modgroup. */
@@ -1348,7 +1351,7 @@ ARTpost(char *article, char *idbuff, bool *permanent)
         return MailArticle(modgroup, article);
     }
 
-    if (idbuff != NULL && HDR(HDR__MESSAGEID) != idbuff) {
+    if (idbuff != nullptr && HDR(HDR__MESSAGEID) != idbuff) {
         strlcpy(idbuff, HDR(HDR__MESSAGEID), SMBUF);
     }
 
@@ -1359,7 +1362,7 @@ ARTpost(char *article, char *idbuff, bool *permanent)
         return Spoolit(article, Error);
 
     /* Open a local connection to the server. */
-    if (PERMaccessconf->nnrpdposthost != NULL)
+    if (PERMaccessconf->nnrpdposthost != nullptr)
         i = NNTPconnect(PERMaccessconf->nnrpdposthost,
                         PERMaccessconf->nnrpdpostport, &FromServer, &ToServer,
                         buff, sizeof(buff));
@@ -1428,8 +1431,8 @@ ARTpost(char *article, char *idbuff, bool *permanent)
     for (hp = Table; hp < ARRAY_END(Table); hp++)
         if (hp->Value) {
             q = xstrndup(hp->Value, hp->Body - hp->Value + hp->Len);
-            if (strchr(q, '\n') != NULL) {
-                if ((p = Towire(q)) != NULL) {
+            if (strchr(q, '\n') != nullptr) {
+                if ((p = Towire(q)) != nullptr) {
                     /* There is no white space, if hp->Value and hp->Body are
                      * the same. */
                     if (*hp->Value == ' ' || *hp->Value == '\t')
@@ -1449,8 +1452,8 @@ ARTpost(char *article, char *idbuff, bool *permanent)
             free(q);
         }
     for (j = 0; j < OtherCount; j++) {
-        if (strchr(OtherHeaders[j], '\n') != NULL) {
-            if ((p = Towire(OtherHeaders[j])) != NULL) {
+        if (strchr(OtherHeaders[j], '\n') != nullptr) {
+            if ((p = Towire(OtherHeaders[j])) != nullptr) {
                 /* Dot-stuff if needed. */
                 if (*OtherHeaders[j] == '.')
                     fprintf(ToServer, ".");
@@ -1475,7 +1478,7 @@ ARTpost(char *article, char *idbuff, bool *permanent)
 
     /* Send the article, get the server's reply. */
     if (NNTPsendarticle(article, ToServer, true) < 0
-        || fgets(buff, sizeof buff, FromServer) == NULL) {
+        || fgets(buff, sizeof buff, FromServer) == nullptr) {
         snprintf(Error, sizeof(Error), "Can't send article to server, %s",
                  strerror(errno));
         fclose(FromServer);
@@ -1503,23 +1506,23 @@ ARTpost(char *article, char *idbuff, bool *permanent)
     /* Tracking. */
     if (PERMaccessconf->readertrack) {
         TrackID = concat(innconf->pathlog, "/trackposts/track.",
-                         HDR(HDR__MESSAGEID), (char *) 0);
-        if ((ftd = fopen(TrackID, "w")) == NULL) {
+                         HDR(HDR__MESSAGEID), (char *) nullptr);
+        if ((ftd = fopen(TrackID, "w")) == nullptr) {
             DirTrackID = concatpath(innconf->pathlog, "trackposts");
             MakeDirectory(DirTrackID, false);
             free(DirTrackID);
         }
-        if (ftd == NULL && (ftd = fopen(TrackID, "w")) == NULL) {
+        if (ftd == nullptr && (ftd = fopen(TrackID, "w")) == nullptr) {
             syslog(L_ERROR, "%s (%s) open %s: %m", Client.host, Username,
                    TrackID);
             free(TrackID);
-            return NULL;
+            return nullptr;
         }
         for (hp = Table; hp < ARRAY_END(Table); hp++)
             if (hp->Value) {
                 q = xstrndup(hp->Value, hp->Body - hp->Value + hp->Len);
-                if (strchr(q, '\n') != NULL) {
-                    if ((p = Towire(q)) != NULL) {
+                if (strchr(q, '\n') != nullptr) {
+                    if ((p = Towire(q)) != nullptr) {
                         /* There is no white space, if hp->Value and hp->Body
                          * are the same. */
                         if (*hp->Value == ' ' || *hp->Value == '\t')
@@ -1539,8 +1542,8 @@ ARTpost(char *article, char *idbuff, bool *permanent)
                 free(q);
             }
         for (j = 0; j < OtherCount; j++) {
-            if (strchr(OtherHeaders[j], '\n') != NULL) {
-                if ((p = Towire(OtherHeaders[j])) != NULL) {
+            if (strchr(OtherHeaders[j], '\n') != nullptr) {
+                if ((p = Towire(OtherHeaders[j])) != nullptr) {
                     /* Dot-stuff if needed. */
                     if (*OtherHeaders[j] == '.')
                         fprintf(ftd, ".");
@@ -1569,5 +1572,5 @@ ARTpost(char *article, char *idbuff, bool *permanent)
         free(TrackID);
     }
 
-    return NULL;
+    return nullptr;
 }

@@ -29,7 +29,7 @@
 void
 line_free(struct line *line)
 {
-    static const struct line nullline = {0, 0, 0, 0};
+    static const struct line nullline = {nullptr, nullptr, 0, 0};
 
     if (line && line->start) {
         free(line->start);
@@ -101,8 +101,8 @@ line_doread(void *p, size_t len, int timeout)
 
             if (!(r == Z_OK || r == Z_BUF_ERROR || r == Z_STREAM_END)) {
                 sysnotice("inflate() failed: %d; %s", r,
-                          zstream_in->msg != NULL ? zstream_in->msg
-                                                  : "no detail");
+                          zstream_in->msg != nullptr ? zstream_in->msg
+                                                     : "no detail");
                 n = -1;
                 break;
             }
@@ -180,7 +180,7 @@ line_doread(void *p, size_t len, int timeout)
                 t.tv_sec = timeout;
                 t.tv_usec = 0;
                 TMRstart(TMR_IDLE);
-                i = select(STDIN_FILENO + 1, &rmask, NULL, NULL, &t);
+                i = select(STDIN_FILENO + 1, &rmask, nullptr, nullptr, &t);
                 TMRstop(TMR_IDLE);
                 if (i == -1 && errno != EINTR) {
                     syswarn("%s can't select", Client.host);
@@ -204,7 +204,7 @@ line_doread(void *p, size_t len, int timeout)
             break; /* EOF or error. */
 
 #if defined(HAVE_SASL)
-        if (sasl_conn != NULL && sasl_ssf > 0) {
+        if (sasl_conn != nullptr && sasl_ssf > 0) {
             /* Security layer in place, decode the data.
              * The incoming data is always encoded in chunks of length
              * inferior or equal to NNTP_MAXLEN_COMMAND (the maxbufsize value
@@ -230,8 +230,8 @@ line_doread(void *p, size_t len, int timeout)
                 const char *ed = sasl_errdetail(sasl_conn);
 
                 sysnotice("sasl_decode() failed: %s; %s",
-                          sasl_errstring(r, NULL, NULL),
-                          ed != NULL ? ed : "no detail");
+                          sasl_errstring(r, nullptr, nullptr),
+                          ed != nullptr ? ed : "no detail");
                 n = -1;
             }
         }
@@ -288,11 +288,11 @@ line_read(struct line *line, int timeout, const char **p, size_t *len,
           size_t *stripped)
 {
     char *where;
-    char *lf = NULL;
+    char *lf = nullptr;
     READTYPE r = RTok;
 
-    assert(line != NULL);
-    assert(line->start != NULL);
+    assert(line != nullptr);
+    assert(line->start != nullptr);
     /* Shuffle any trailing portion not yet processed to the start of
      * the buffer. */
     if (line->remaining != 0) {
@@ -305,7 +305,7 @@ line_read(struct line *line, int timeout, const char **p, size_t *len,
 
     /* If we found a line terminator in the data we have, we don't need
      * to ask for any more. */
-    if (lf == NULL) {
+    if (lf == nullptr) {
         do {
             ssize_t count;
 
@@ -360,7 +360,7 @@ line_read(struct line *line, int timeout, const char **p, size_t *len,
              * drop out and return the line for processing. */
             lf = static_cast<char *>(memchr(where, '\n', count));
             where += count;
-        } while (lf == NULL);
+        } while (lf == nullptr);
     }
 
     /* Remember where we've processed up to, so we can start off there
@@ -374,11 +374,11 @@ line_read(struct line *line, int timeout, const char **p, size_t *len,
          * we'll accept that too (debugging INN can then be less annoying). */
         if (lf > line->start && lf[-1] == '\r') {
             --lf;
-            if (stripped != NULL)
+            if (stripped != nullptr)
                 (*stripped)++;
         }
         *lf = '\0';
-        if (stripped != NULL)
+        if (stripped != nullptr)
             (*stripped)++;
         *len = lf - line->start;
         *p = line->start;

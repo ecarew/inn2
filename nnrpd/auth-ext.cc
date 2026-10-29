@@ -51,15 +51,15 @@ start_process(struct client *client, const char *command, const char *dir)
     int er[2] = {-1, -1};
     pid_t pid;
     const char *path;
-    char *allocated_path = NULL;
+    char *allocated_path = nullptr;
     struct vector *args;
 
     /* Parse the command and find the path to the binary. */
-    args = vector_split_space(command, NULL);
+    args = vector_split_space(command, nullptr);
     if (args->count == 0) {
         warn("%s auth: empty external command", client->host);
         vector_free(args);
-        return NULL;
+        return nullptr;
     }
     path = args->strings[0];
     if (path[0] != '/') {
@@ -122,7 +122,7 @@ fail:
         close(er[1]);
     free(allocated_path);
     vector_free(args);
-    return NULL;
+    return nullptr;
 }
 
 
@@ -135,7 +135,7 @@ static void
 handle_result(struct client *client UNUSED, const char *line, char **user)
 {
     if (strncasecmp(line, "User:", strlen("User:")) == 0) {
-        if (*user != NULL)
+        if (*user != nullptr)
             free(*user);
         *user = xstrdup(line + strlen("User:"));
     }
@@ -190,7 +190,7 @@ output(struct client *client, int fd, struct buffer *buffer,
     /* Otherwise, break what we got up into lines and process each one. */
     start = buffer->data + buffer->used;
     line = static_cast<char *>(memchr(start, '\n', buffer->left));
-    while (line != NULL) {
+    while (line != nullptr) {
         *line = '\0';
         if (line > start && line[-1] == '\r')
             line[-1] = '\0';
@@ -228,7 +228,7 @@ handle_output(struct client *client, struct process *process)
     bool error_done = false;
     bool killed = false;
     bool errored = false;
-    char *user = NULL;
+    char *user = nullptr;
 
     FD_ZERO(&fds);
     FD_SET(process->read_fd, &fds);
@@ -246,7 +246,7 @@ handle_output(struct client *client, struct process *process)
         tv.tv_usec = 0;
         rfds = fds;
         start = TMRnow_double();
-        status = select(maxfd + 1, &rfds, NULL, NULL, &tv);
+        status = select(maxfd + 1, &rfds, nullptr, nullptr, &tv);
         end = TMRnow_double();
         IDLEtime += end - start;
 
@@ -324,9 +324,9 @@ handle_output(struct client *client, struct process *process)
     }
 
 fail:
-    if (user != NULL)
+    if (user != nullptr)
         free(user);
-    return NULL;
+    return nullptr;
 }
 
 
@@ -367,15 +367,15 @@ auth_external(struct client *client, const char *command,
 
     /* Start the program. */
     process = start_process(client, command, directory);
-    if (process == NULL)
-        return NULL;
+    if (process == nullptr)
+        return nullptr;
 
     /* Feed it data. */
     input = buffer_new();
     append_client_info(client, input);
-    if (username != NULL)
+    if (username != nullptr)
         buffer_append_sprintf(input, "ClientAuthname: %s\r\n", username);
-    if (password != NULL)
+    if (password != nullptr)
         buffer_append_sprintf(input, "ClientPassword: %s\r\n", password);
     buffer_append_sprintf(input, ".\r\n");
     xwrite(process->write_fd, input->data, input->left);

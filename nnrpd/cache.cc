@@ -76,9 +76,9 @@ cache_add(const HASH h, const TOKEN t)
         if (msgcachecount >= innconf->msgidcachesize) {
             /* Need to throw away a node. */
             entry = (struct cache_entry *) list_remhead(&used);
-            if (entry == NULL)
+            if (entry == nullptr)
                 entry = (struct cache_entry *) list_remhead(&unused);
-            if (entry != NULL) {
+            if (entry != nullptr) {
                 tst_delete(msgidcache,
                            (unsigned char *) HashToText(entry->hash));
                 free(entry);
@@ -110,7 +110,7 @@ cache_get(const HASH h, bool final)
 
         entry = static_cast<struct cache_entry *>(
             tst_search(msgidcache, (unsigned char *) HashToText(h)));
-        if (entry != NULL) {
+        if (entry != nullptr) {
             list_remove(&entry->node);
             if (!final)
                 list_addtail(&unused, &entry->node);

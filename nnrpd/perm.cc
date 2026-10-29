@@ -281,7 +281,7 @@ static CONFTOKEN PERMtoks[] = {
 #if defined(HAVE_OPENSSL) || defined(HAVE_SASL)
     {PERMrequire_encryption,         (char *) "require_encryption:"        },
 #endif
-    {0,                              (char *) NULL                         }
+    {0,                              (char *) nullptr                      }
 };
 
 /* Function definitions. */
@@ -291,7 +291,7 @@ GrowArray(void *data, void *el)
     int i;
     void ***array = static_cast<void ***>(data);
 
-    if (*array == NULL) {
+    if (*array == nullptr) {
         *array = xmalloc(2 * sizeof(void *));
         i = 0;
     } else {
@@ -300,7 +300,7 @@ GrowArray(void *data, void *el)
         *array = xrealloc(*array, (i + 2) * sizeof(void *));
     }
     (*array)[i++] = el;
-    (*array)[i] = 0;
+    (*array)[i] = nullptr;
 }
 
 static METHOD *
@@ -313,17 +313,17 @@ copy_method(METHOD *orig)
     memset(ConfigBit, '\0', ConfigBitsize);
 
     ret->name = xstrdup(orig->name);
-    if (orig->program != NULL) {
+    if (orig->program != nullptr) {
         ret->program = xstrdup(orig->program);
     } else {
-        ret->program = NULL;
+        ret->program = nullptr;
     }
     if (orig->users)
         ret->users = xstrdup(orig->users);
     else
-        ret->users = 0;
+        ret->users = nullptr;
 
-    ret->extra_logs = 0;
+    ret->extra_logs = nullptr;
     if (orig->extra_logs) {
         for (i = 0; orig->extra_logs[i]; i++)
             GrowArray(&ret->extra_logs, xstrdup(orig->extra_logs[i]));
@@ -359,36 +359,36 @@ copy_authgroup(AUTHGROUP *orig)
     int i;
 
     if (!orig)
-        return (0);
+        return (nullptr);
     ret = xmalloc(sizeof(AUTHGROUP));
     memset(ConfigBit, '\0', ConfigBitsize);
 
     if (orig->name)
         ret->name = xstrdup(orig->name);
     else
-        ret->name = 0;
+        ret->name = nullptr;
 
     if (orig->key)
         ret->key = xstrdup(orig->key);
     else
-        ret->key = 0;
+        ret->key = nullptr;
 
     if (orig->hosts)
         ret->hosts = xstrdup(orig->hosts);
     else
-        ret->hosts = 0;
+        ret->hosts = nullptr;
 
 #if defined(HAVE_OPENSSL) || defined(HAVE_SASL)
     ret->require_encryption = orig->require_encryption;
 #endif
 
-    ret->res_methods = 0;
+    ret->res_methods = nullptr;
     if (orig->res_methods) {
         for (i = 0; orig->res_methods[i]; i++)
             GrowArray(&ret->res_methods, copy_method(orig->res_methods[i]));
     }
 
-    ret->auth_methods = 0;
+    ret->auth_methods = nullptr;
     if (orig->auth_methods) {
         for (i = 0; orig->auth_methods[i]; i++)
             GrowArray(&ret->auth_methods, copy_method(orig->auth_methods[i]));
@@ -397,22 +397,22 @@ copy_authgroup(AUTHGROUP *orig)
     if (orig->default_user)
         ret->default_user = xstrdup(orig->default_user);
     else
-        ret->default_user = 0;
+        ret->default_user = nullptr;
 
     if (orig->default_domain)
         ret->default_domain = xstrdup(orig->default_domain);
     else
-        ret->default_domain = 0;
+        ret->default_domain = nullptr;
 
     if (orig->localaddress)
         ret->localaddress = xstrdup(orig->localaddress);
     else
-        ret->localaddress = 0;
+        ret->localaddress = nullptr;
 
     if (orig->access_script)
         ret->access_script = xstrdup(orig->access_script);
     else
-        ret->access_script = 0;
+        ret->access_script = nullptr;
 
     if (orig->access_type)
         ret->access_type = orig->access_type;
@@ -422,7 +422,7 @@ copy_authgroup(AUTHGROUP *orig)
     if (orig->dynamic_script)
         ret->dynamic_script = xstrdup(orig->dynamic_script);
     else
-        ret->dynamic_script = 0;
+        ret->dynamic_script = nullptr;
 
     if (orig->dynamic_type)
         ret->dynamic_type = orig->dynamic_type;
@@ -438,7 +438,7 @@ copy_accessgroup(ACCESSGROUP *orig)
     ACCESSGROUP *ret;
 
     if (!orig)
-        return (0);
+        return (nullptr);
     ret = xmalloc(sizeof(ACCESSGROUP));
     memset(ConfigBit, '\0', ConfigBitsize);
     /* Copy all anyway, and update for local strings. */
@@ -498,23 +498,23 @@ SetDefaultAccess(ACCESSGROUP *curaccess)
     curaccess->strippath = false;
     curaccess->nnrpdperlfilter = true;
     curaccess->nnrpdpythonfilter = true;
-    curaccess->fromhost = NULL;
+    curaccess->fromhost = nullptr;
     if (innconf->fromhost)
         curaccess->fromhost = xstrdup(innconf->fromhost);
-    curaccess->pathhost = NULL;
+    curaccess->pathhost = nullptr;
     if (innconf->pathhost)
         curaccess->pathhost = xstrdup(innconf->pathhost);
-    curaccess->organization = NULL;
+    curaccess->organization = nullptr;
     if (innconf->organization)
         curaccess->organization = xstrdup(innconf->organization);
-    curaccess->moderatormailer = NULL;
+    curaccess->moderatormailer = nullptr;
     if (innconf->moderatormailer)
         curaccess->moderatormailer = xstrdup(innconf->moderatormailer);
-    curaccess->domain = NULL;
+    curaccess->domain = nullptr;
     if (innconf->domain)
         curaccess->domain = xstrdup(innconf->domain);
     curaccess->domainoverriden = false;
-    curaccess->complaints = NULL;
+    curaccess->complaints = nullptr;
     if (innconf->complaints)
         curaccess->complaints = xstrdup(innconf->complaints);
     curaccess->spoolfirst = innconf->spoolfirst;
@@ -532,7 +532,7 @@ SetDefaultAccess(ACCESSGROUP *curaccess)
     curaccess->nnrpdpostport = innconf->nnrpdpostport;
     curaccess->nnrpdoverstats = innconf->nnrpdoverstats;
     curaccess->backoff_auth = innconf->backoffauth;
-    curaccess->backoff_db = NULL;
+    curaccess->backoff_db = nullptr;
     if (innconf->backoffdb && *innconf->backoffdb != '\0')
         curaccess->backoff_db = xstrdup(innconf->backoffdb);
     curaccess->backoff_k = innconf->backoffk;
@@ -542,7 +542,7 @@ SetDefaultAccess(ACCESSGROUP *curaccess)
     curaccess->nnrpdcheckart = innconf->nnrpdcheckart;
     curaccess->nnrpdauthsender = innconf->nnrpdauthsender;
     curaccess->virtualhost = false;
-    curaccess->newsmaster = NULL;
+    curaccess->newsmaster = nullptr;
     curaccess->maxbytespersecond = 0;
     curaccess->groupexactcount = 5;
 }
@@ -635,9 +635,9 @@ method_parse(METHOD *method, CONFFILE *f, CONFTOKEN *tok, int auth)
     int oldtype;
 
     oldtype = tok->type;
-    tok = CONFgettoken(0, f);
+    tok = CONFgettoken(nullptr, f);
 
-    if (tok == NULL) {
+    if (tok == nullptr) {
         ReportError(f, "Expected value.");
     }
 
@@ -682,7 +682,7 @@ authdecl_parse(AUTHGROUP *curauth, CONFFILE *f, CONFTOKEN *tok)
 
     tok = CONFgettoken(PERMtoks, f);
 
-    if (tok == NULL) {
+    if (tok == nullptr) {
         ReportError(f, "Expected value.");
     }
     TEST_CONFIG(oldtype, bit);
@@ -748,22 +748,22 @@ authdecl_parse(AUTHGROUP *curauth, CONFFILE *f, CONFTOKEN *tok)
         else {
             m->name = xstrdup(tok->name);
             tok = CONFgettoken(PERMtoks, f);
-            if (tok == NULL || tok->type != PERMlbrace) {
+            if (tok == nullptr || tok->type != PERMlbrace) {
                 ReportError(f, "Expected '{' after 'res'.");
             }
 
             tok = CONFgettoken(PERMtoks, f);
 
-            while (tok != NULL && tok->type != PERMrbrace) {
+            while (tok != nullptr && tok->type != PERMrbrace) {
                 method_parse(m, f, tok, 0);
                 tok = CONFgettoken(PERMtoks, f);
             }
 
-            if (m->program == NULL) {
+            if (m->program == nullptr) {
                 ReportError(f, "Missing 'program:' key.");
             }
 
-            if (tok == NULL) {
+            if (tok == nullptr) {
                 ReportError(f, "Unexpected EOF.");
             }
         }
@@ -798,18 +798,18 @@ authdecl_parse(AUTHGROUP *curauth, CONFFILE *f, CONFTOKEN *tok)
             m->name = xstrdup(tok->name);
             tok = CONFgettoken(PERMtoks, f);
 
-            if (tok == NULL || tok->type != PERMlbrace) {
+            if (tok == nullptr || tok->type != PERMlbrace) {
                 ReportError(f, "Expected '{' after 'auth'.");
             }
 
             tok = CONFgettoken(PERMtoks, f);
 
-            while (tok != NULL && tok->type != PERMrbrace) {
+            while (tok != nullptr && tok->type != PERMrbrace) {
                 method_parse(m, f, tok, 1);
                 tok = CONFgettoken(PERMtoks, f);
             }
 
-            if (tok == NULL) {
+            if (tok == nullptr) {
                 ReportError(f, "Unexpected EOF.");
             }
         }
@@ -865,9 +865,9 @@ accessdecl_parse(ACCESSGROUP *curaccess, CONFFILE *f, CONFTOKEN *tok)
     oldtype = tok->type;
     oldname = tok->name;
 
-    tok = CONFgettoken(0, f);
+    tok = CONFgettoken(nullptr, f);
 
-    if (tok == NULL) {
+    if (tok == nullptr) {
         ReportError(f, "Expected value.");
     }
     TEST_CONFIG(oldtype, bit);
@@ -934,21 +934,21 @@ accessdecl_parse(ACCESSGROUP *curaccess, CONFFILE *f, CONFTOKEN *tok)
         break;
     case PERMaccessrp:
         TEST_CONFIG(PERMread, bit);
-        if (bit && strchr(tok->name, 'R') == NULL) {
+        if (bit && strchr(tok->name, 'R') == nullptr) {
             free(curaccess->read);
-            curaccess->read = 0;
+            curaccess->read = nullptr;
             CLEAR_CONFIG(PERMread);
         }
         TEST_CONFIG(PERMpost, bit);
-        if (bit && strchr(tok->name, 'P') == NULL) {
+        if (bit && strchr(tok->name, 'P') == nullptr) {
             free(curaccess->post);
-            curaccess->post = 0;
+            curaccess->post = nullptr;
             CLEAR_CONFIG(PERMpost);
         }
-        curaccess->allowapproved = (strchr(tok->name, 'A') != NULL);
-        curaccess->allownewnews = (strchr(tok->name, 'N') != NULL);
-        curaccess->allowihave = (strchr(tok->name, 'I') != NULL);
-        curaccess->locpost = (strchr(tok->name, 'L') != NULL);
+        curaccess->allowapproved = (strchr(tok->name, 'A') != nullptr);
+        curaccess->allownewnews = (strchr(tok->name, 'N') != nullptr);
+        curaccess->allowihave = (strchr(tok->name, 'I') != nullptr);
+        curaccess->locpost = (strchr(tok->name, 'L') != nullptr);
         SET_CONFIG(oldtype);
         break;
     case PERMlocaltime:
@@ -1034,7 +1034,7 @@ accessdecl_parse(ACCESSGROUP *curaccess, CONFFILE *f, CONFTOKEN *tok)
         SET_CONFIG(oldtype);
         break;
     case PERMlocalmaxartsize:
-        curaccess->localmaxartsize = strtoul(tok->name, NULL, 10);
+        curaccess->localmaxartsize = strtoul(tok->name, nullptr, 10);
         SET_CONFIG(oldtype);
         break;
     case PERMreadertrack:
@@ -1048,7 +1048,7 @@ accessdecl_parse(ACCESSGROUP *curaccess, CONFFILE *f, CONFTOKEN *tok)
         SET_CONFIG(oldtype);
         break;
     case PERMaddcanlockuser:
-        if (curaccess->addcanlockuser != NULL)
+        if (curaccess->addcanlockuser != nullptr)
             free(curaccess->addcanlockuser);
         curaccess->addcanlockuser = xstrdup(tok->name);
         SET_CONFIG(oldtype);
@@ -1075,7 +1075,7 @@ accessdecl_parse(ACCESSGROUP *curaccess, CONFFILE *f, CONFTOKEN *tok)
         SET_CONFIG(oldtype);
         break;
     case PERMnnrpdpostport:
-        curaccess->nnrpdpostport = strtoul(tok->name, NULL, 10);
+        curaccess->nnrpdpostport = strtoul(tok->name, nullptr, 10);
         SET_CONFIG(oldtype);
         break;
     case PERMnnrpdoverstats:
@@ -1095,19 +1095,19 @@ accessdecl_parse(ACCESSGROUP *curaccess, CONFFILE *f, CONFTOKEN *tok)
         SET_CONFIG(oldtype);
         break;
     case PERMbackoff_k:
-        curaccess->backoff_k = strtoul(tok->name, NULL, 10);
+        curaccess->backoff_k = strtoul(tok->name, nullptr, 10);
         SET_CONFIG(oldtype);
         break;
     case PERMbackoff_postfast:
-        curaccess->backoff_postfast = strtoul(tok->name, NULL, 10);
+        curaccess->backoff_postfast = strtoul(tok->name, nullptr, 10);
         SET_CONFIG(oldtype);
         break;
     case PERMbackoff_postslow:
-        curaccess->backoff_postslow = strtoul(tok->name, NULL, 10);
+        curaccess->backoff_postslow = strtoul(tok->name, nullptr, 10);
         SET_CONFIG(oldtype);
         break;
     case PERMbackoff_trigger:
-        curaccess->backoff_trigger = strtoul(tok->name, NULL, 10);
+        curaccess->backoff_trigger = strtoul(tok->name, nullptr, 10);
         SET_CONFIG(oldtype);
         break;
     case PERMnnrpdcheckart:
@@ -1136,7 +1136,7 @@ accessdecl_parse(ACCESSGROUP *curaccess, CONFFILE *f, CONFTOKEN *tok)
         SET_CONFIG(oldtype);
         break;
     case PERMgroupexactcount:
-        curaccess->groupexactcount = strtoul(tok->name, NULL, 10);
+        curaccess->groupexactcount = strtoul(tok->name, nullptr, 10);
         SET_CONFIG(oldtype);
         break;
     default:
@@ -1149,7 +1149,7 @@ static void
 PERMvectortoaccess(ACCESSGROUP *acc, const char *name,
                    struct vector *access_vec)
 {
-    CONFTOKEN *tok = NULL;
+    CONFTOKEN *tok = nullptr;
     CONFFILE *file;
     char *str;
     unsigned int i;
@@ -1168,7 +1168,7 @@ PERMvectortoaccess(ACCESSGROUP *acc, const char *name,
     for (i = 0; i <= access_vec->count; i++) {
         tok = CONFgettoken(PERMtoks, file);
 
-        if (tok != NULL) {
+        if (tok != nullptr) {
             accessdecl_parse(acc, file, tok);
         }
     }
@@ -1182,39 +1182,39 @@ PERMvectortoaccess(ACCESSGROUP *acc, const char *name,
 static void
 PERMreadfile(char *filename)
 {
-    CONFCHAIN *cf = NULL, *hold = NULL;
-    CONFTOKEN *tok = NULL;
+    CONFCHAIN *cf = nullptr, *hold = nullptr;
+    CONFTOKEN *tok = nullptr;
     int inwhat;
-    GROUP *curgroup = NULL, *newgroup = NULL;
-    ACCESSGROUP *curaccess = NULL;
-    AUTHGROUP *curauth = NULL;
+    GROUP *curgroup = nullptr, *newgroup = nullptr;
+    ACCESSGROUP *curaccess = nullptr;
+    AUTHGROUP *curauth = nullptr;
     int oldtype;
-    char *str = NULL;
-    char *path = NULL;
+    char *str = nullptr;
+    char *path = nullptr;
     char buff[SMBUF];
 
-    if (filename != NULL) {
+    if (filename != nullptr) {
         syslog(L_TRACE, "Reading access from %s",
-               filename == NULL ? "(NULL)" : filename);
+               filename == nullptr ? "(NULL)" : filename);
     }
 
     cf = xmalloc(sizeof(CONFCHAIN));
-    if ((cf->f = CONFfopen(filename)) == NULL) {
+    if ((cf->f = CONFfopen(filename)) == nullptr) {
         syslog(L_ERROR, "%s cannot open %s: %m", Client.host, filename);
         Reply("%d NNTP server unavailable.  Try later!\r\n",
               NNTP_FAIL_TERMINATING);
         ExitWithStats(1, true);
     }
-    cf->parent = 0;
+    cf->parent = nullptr;
 
     /* Are we editing an auth or access group? */
 
     inwhat = 0;
-    curgroup = 0;
+    curgroup = nullptr;
 
     tok = CONFgettoken(PERMtoks, cf->f);
 
-    while (tok != NULL) {
+    while (tok != nullptr) {
         if (inwhat == 0) {
             /* Top-level parser. */
 
@@ -1222,9 +1222,9 @@ PERMreadfile(char *filename)
                 /* Include a child file. */
 
             case PERMinclude:
-                tok = CONFgettoken(0, cf->f);
+                tok = CONFgettoken(nullptr, cf->f);
 
-                if (tok == NULL) {
+                if (tok == nullptr) {
                     ReportError(cf->f, "Expected filename after 'include'.");
                 }
 
@@ -1237,7 +1237,7 @@ PERMreadfile(char *filename)
                 hold->f = CONFfopen(path);
                 free(path);
 
-                if (hold->f == NULL) {
+                if (hold->f == nullptr) {
                     ReportError(cf->f, "Could not open 'include' filename.");
                 }
 
@@ -1249,7 +1249,7 @@ PERMreadfile(char *filename)
             case PERMgroup:
                 tok = CONFgettoken(PERMtoks, cf->f);
 
-                if (tok == NULL) {
+                if (tok == nullptr) {
                     ReportError(cf->f, "Unexpected EOF at group name.");
                 }
 
@@ -1260,7 +1260,7 @@ PERMreadfile(char *filename)
 
                 tok = CONFgettoken(PERMtoks, cf->f);
 
-                if (tok == NULL || tok->type != PERMlbrace) {
+                if (tok == nullptr || tok->type != PERMlbrace) {
                     ReportError(cf->f, "Expected '{' after group name.");
                 }
 
@@ -1269,8 +1269,8 @@ PERMreadfile(char *filename)
                     newgroup->auth = copy_authgroup(curgroup->auth);
                     newgroup->access = copy_accessgroup(curgroup->access);
                 } else {
-                    newgroup->auth = 0;
-                    newgroup->access = 0;
+                    newgroup->auth = nullptr;
+                    newgroup->access = nullptr;
                 }
 
                 curgroup = newgroup;
@@ -1281,7 +1281,7 @@ PERMreadfile(char *filename)
             case PERMaccess:
                 oldtype = tok->type;
 
-                if ((tok = CONFgettoken(PERMtoks, cf->f)) == NULL) {
+                if ((tok = CONFgettoken(PERMtoks, cf->f)) == nullptr) {
                     ReportError(cf->f, "Expected identifier.");
                 }
 
@@ -1289,7 +1289,7 @@ PERMreadfile(char *filename)
 
                 tok = CONFgettoken(PERMtoks, cf->f);
 
-                if (tok == NULL || tok->type != PERMlbrace) {
+                if (tok == nullptr || tok->type != PERMlbrace) {
                     ReportError(cf->f, "Expected '{'.");
                 }
 
@@ -1325,7 +1325,7 @@ PERMreadfile(char *filename)
                 /* End of a group declaration. */
 
             case PERMrbrace:
-                if (curgroup == NULL) {
+                if (curgroup == nullptr) {
                     ReportError(cf->f, "Unmatched '}'.");
                 }
 
@@ -1348,11 +1348,11 @@ PERMreadfile(char *filename)
             case PERMresprog:
             case PERMdefuser:
             case PERMdefdomain:
-                if (curgroup == NULL) {
+                if (curgroup == nullptr) {
                     curgroup = xcalloc(1, sizeof(GROUP));
                     memset(ConfigBit, '\0', ConfigBitsize);
                 }
-                if (curgroup->auth == NULL) {
+                if (curgroup->auth == nullptr) {
                     curgroup->auth = xcalloc(1, sizeof(AUTHGROUP));
                     memset(ConfigBit, '\0', ConfigBitsize);
                     SetDefaultAuth(curgroup->auth);
@@ -1429,8 +1429,8 @@ PERMreadfile(char *filename)
                         syslog(L_TRACE,
                                "Auth strategy '%s' does not match localhost.  "
                                "Removing.",
-                               curauth->name == NULL ? "(NULL)"
-                                                     : curauth->name);
+                               curauth->name == nullptr ? "(NULL)"
+                                                        : curauth->name);
                         free_authgroup(curauth);
                     } else
                         add_authgroup(curauth);
@@ -1438,10 +1438,10 @@ PERMreadfile(char *filename)
                     syslog(
                         L_TRACE,
                         "Auth strategy '%s' does not match client.  Removing.",
-                        curauth->name == NULL ? "(NULL)" : curauth->name);
+                        curauth->name == nullptr ? "(NULL)" : curauth->name);
                     free_authgroup(curauth);
                 }
-                curauth = NULL;
+                curauth = nullptr;
                 goto again;
             }
 
@@ -1455,7 +1455,7 @@ PERMreadfile(char *filename)
                     add_accessgroup(curaccess);
                 else
                     free_accessgroup(curaccess);
-                curaccess = NULL;
+                curaccess = nullptr;
                 goto again;
             }
 
@@ -1470,7 +1470,7 @@ PERMreadfile(char *filename)
         /* Go back up the 'include' chain. */
         tok = CONFgettoken(PERMtoks, cf->f);
 
-        while (tok == NULL && cf) {
+        while (tok == nullptr && cf) {
             hold = cf;
             cf = hold->parent;
             CONFfclose(hold->f);
@@ -1489,9 +1489,9 @@ PERMgetinitialaccess(char *readersconf)
 {
     int i;
 
-    auth_realms = NULL;
-    access_realms = NULL;
-    success_auth = NULL;
+    auth_realms = nullptr;
+    access_realms = nullptr;
+    success_auth = nullptr;
 
 #ifdef HAVE_SASL
     PERMcanauthenticate = true;
@@ -1504,10 +1504,10 @@ PERMgetinitialaccess(char *readersconf)
     PERMgroupmadeinvalid = false;
     PERMcanpostgreeting = false;
     PERMcanread = PERMcanpost = false;
-    PERMreadlist = PERMpostlist = NULL;
-    PERMaccessconf = NULL;
+    PERMreadlist = PERMpostlist = nullptr;
+    PERMaccessconf = nullptr;
 
-    if (ConfigBit == NULL) {
+    if (ConfigBit == nullptr) {
         if (PERMMAX % 8 == 0) {
             ConfigBitsize = PERMMAX / 8;
         } else {
@@ -1522,7 +1522,7 @@ PERMgetinitialaccess(char *readersconf)
     /* Remove unused access groups. */
     strip_accessgroups();
 
-    if (auth_realms == NULL) {
+    if (auth_realms == nullptr) {
         /* No one can talk, empty file. */
         syslog(L_NOTICE, "%s no_permission", Client.host);
         Reply("%d You have no permission to talk.  Goodbye!\r\n",
@@ -1532,8 +1532,8 @@ PERMgetinitialaccess(char *readersconf)
 
     /* auth_realms are all expected to match the user.
      * Be careful whether an encryption layer is required, though. */
-    for (i = 0; auth_realms[i] != NULL; i++) {
-        if (auth_realms[i]->auth_methods != NULL) {
+    for (i = 0; auth_realms[i] != nullptr; i++) {
+        if (auth_realms[i]->auth_methods != nullptr) {
             PERMcanauthenticate = true;
 #if defined(HAVE_OPENSSL) || defined(HAVE_SASL)
             if (!auth_realms[i]->require_encryption)
@@ -1543,8 +1543,8 @@ PERMgetinitialaccess(char *readersconf)
         /* We assume that an access or dynamic script will allow
          * the user to post when authenticated, so that a 200 greeting
          * code can be sent. */
-        if (auth_realms[i]->access_script != NULL
-            || auth_realms[i]->dynamic_script != NULL)
+        if (auth_realms[i]->access_script != nullptr
+            || auth_realms[i]->dynamic_script != nullptr)
             PERMcanpostgreeting = true;
     }
 }
@@ -1555,7 +1555,7 @@ PERMgetaccess(bool initialconnection)
     char *uname;
     int i;
 
-    if (ConfigBit == NULL) {
+    if (ConfigBit == nullptr) {
         if (PERMMAX % 8 == 0) {
             ConfigBitsize = PERMMAX / 8;
         } else {
@@ -1564,15 +1564,15 @@ PERMgetaccess(bool initialconnection)
         ConfigBit = xcalloc(ConfigBitsize, 1);
     }
 
-    if (auth_realms == NULL) {
+    if (auth_realms == nullptr) {
         return;
     }
 
-    for (i = 0; auth_realms[i] != NULL; i++)
+    for (i = 0; auth_realms[i] != nullptr; i++)
         ;
 
-    uname = NULL;
-    while (uname == NULL && i-- > 0) {
+    uname = nullptr;
+    while (uname == nullptr && i-- > 0) {
 #if defined(HAVE_OPENSSL) || defined(HAVE_SASL)
         /* If an encryption layer is required, check that the connection
          * really uses one. */
@@ -1580,18 +1580,18 @@ PERMgetaccess(bool initialconnection)
             continue;
         }
 #endif
-        if ((uname = ResolveUser(auth_realms[i])) != NULL) {
+        if ((uname = ResolveUser(auth_realms[i])) != nullptr) {
             PERMauthorized = true;
         }
-        if (uname == NULL && auth_realms[i]->default_user != NULL) {
+        if (uname == nullptr && auth_realms[i]->default_user != nullptr) {
             uname = xstrdup(auth_realms[i]->default_user);
         }
     }
-    if (uname != NULL) {
+    if (uname != nullptr) {
         strlcpy(PERMuser, uname, sizeof(PERMuser));
         free(uname);
         uname = strchr(PERMuser, '@');
-        if (uname == NULL && auth_realms[i]->default_domain != NULL) {
+        if (uname == nullptr && auth_realms[i]->default_domain != nullptr) {
             /* Append the default domain to the username. */
             strlcat(PERMuser, "@", sizeof(PERMuser));
             strlcat(PERMuser, auth_realms[i]->default_domain,
@@ -1613,15 +1613,15 @@ PERMgetaccess(bool initialconnection)
     if (initialconnection) {
         /* Check maximum allowed permissions for any host that matches (for
          * the greeting string). */
-        for (i = 0; access_realms[i] != NULL; i++) {
+        for (i = 0; access_realms[i] != nullptr; i++) {
             if (!PERMcanread) {
-                PERMcanread = (access_realms[i]->read != NULL);
+                PERMcanread = (access_realms[i]->read != nullptr);
             }
             if (!PERMcanpost) {
-                PERMcanpost = (access_realms[i]->post != NULL);
+                PERMcanpost = (access_realms[i]->post != nullptr);
             }
             if (!PERMcanpostgreeting) {
-                PERMcanpostgreeting = (access_realms[i]->post != NULL);
+                PERMcanpostgreeting = (access_realms[i]->post != nullptr);
             }
         }
         if (i == 0) {
@@ -1638,7 +1638,7 @@ PERMlogin(char *uname, char *pass, int *code, char *errorstr)
     int i = 0;
     char *runame;
 
-    if (ConfigBit == NULL) {
+    if (ConfigBit == nullptr) {
         if (PERMMAX % 8 == 0)
             ConfigBitsize = PERMMAX / 8;
         else
@@ -1650,25 +1650,25 @@ PERMlogin(char *uname, char *pass, int *code, char *errorstr)
      * succeed. */
     PERMneedauth = true;
 
-    if (auth_realms != NULL) {
+    if (auth_realms != nullptr) {
         for (i = 0; auth_realms[i]; i++)
             ;
     }
 
-    runame = NULL;
+    runame = nullptr;
 
-    while (runame == NULL && i-- > 0)
+    while (runame == nullptr && i-- > 0)
         runame = AuthenticateUser(auth_realms[i], uname, pass, code, errorstr);
 
 #if defined(HAVE_BLACKLIST) || defined(HAVE_BLOCKLIST)
     BlocklistReport(runame);
 #endif
 
-    if (runame != NULL) {
+    if (runame != nullptr) {
         strlcpy(PERMuser, runame, sizeof(PERMuser));
         free(runame);
         uname = strchr(PERMuser, '@');
-        if (uname == NULL && auth_realms[i]->default_domain != NULL) {
+        if (uname == nullptr && auth_realms[i]->default_domain != nullptr) {
             /* Append the default domain to the username. */
             strlcat(PERMuser, "@", sizeof(PERMuser));
             strlcat(PERMuser, auth_realms[i]->default_domain,
@@ -1693,10 +1693,10 @@ MatchUser(char *pat, char *user)
     if (!user || !*user)
         return (0);
     cp = xstrdup(pat);
-    list = 0;
+    list = nullptr;
     NGgetlist(&list, cp);
     userlist[0] = user;
-    userlist[1] = 0;
+    userlist[1] = nullptr;
     ret = PERMmatch(list, userlist);
     free(cp);
     free(list[0]);
@@ -1713,10 +1713,10 @@ PERMgetpermissions(void)
     static ACCESSGROUP *noaccessconf;
 
     free(VirtualPath);
-    VirtualPath = NULL;
+    VirtualPath = nullptr;
     VirtualPathlen = 0;
 
-    if (ConfigBit == NULL) {
+    if (ConfigBit == nullptr) {
         if (PERMMAX % 8 == 0)
             ConfigBitsize = PERMMAX / 8;
         else
@@ -1814,7 +1814,7 @@ PERMgetpermissions(void)
         for (i = 0; access_realms[i]; i++)
             ;
         user[0] = PERMuser;
-        user[1] = 0;
+        user[1] = nullptr;
         while (i--) {
             if ((!success_auth->key && !access_realms[i]->key)
                 || (access_realms[i]->key && success_auth->key
@@ -1825,7 +1825,7 @@ PERMgetpermissions(void)
                 else if (!*PERMuser)
                     continue;
                 cp = xstrdup(access_realms[i]->users);
-                list = 0;
+                list = nullptr;
                 NGgetlist(&list, cp);
                 if (PERMmatch(list, user)) {
                     syslog(L_TRACE, "%s match_user %s %s", Client.host,
@@ -1875,7 +1875,7 @@ PERMgetpermissions(void)
         PERMaccessconf = access_realms[i];
         MaxBytesPerSecond = PERMaccessconf->maxbytespersecond;
         if (PERMaccessconf->virtualhost) {
-            if (PERMaccessconf->domain == NULL) {
+            if (PERMaccessconf->domain == nullptr) {
                 syslog(L_ERROR, "%s virtualhost needs domain parameter (%s).",
                        Client.host, PERMaccessconf->name);
                 Reply("%d NNTP server unavailable.  Try later!\r\n",
@@ -1885,7 +1885,7 @@ PERMgetpermissions(void)
             if (strcasecmp(innconf->pathhost, PERMaccessconf->pathhost) == 0) {
                 /* Use domain, if pathhost in access realm matches one in
                  * inn.conf to differentiate virtual host. */
-                if (innconf->domain != NULL
+                if (innconf->domain != nullptr
                     && strcasecmp(innconf->domain, PERMaccessconf->domain)
                            == 0) {
                     syslog(L_ERROR,
@@ -1897,10 +1897,11 @@ PERMgetpermissions(void)
                           NNTP_FAIL_TERMINATING);
                     ExitWithStats(1, true);
                 }
-                VirtualPath = concat(PERMaccessconf->domain, "!", (char *) 0);
+                VirtualPath =
+                    concat(PERMaccessconf->domain, "!", (char *) nullptr);
             } else {
                 VirtualPath =
-                    concat(PERMaccessconf->pathhost, "!", (char *) 0);
+                    concat(PERMaccessconf->pathhost, "!", (char *) nullptr);
             }
             VirtualPathlen = strlen(VirtualPath);
         }
@@ -1928,7 +1929,7 @@ CompressList(char *list)
     bool inword = false;
 
     for (cpto = list; *list;) {
-        if (strchr("\n \t,", *list) != NULL) {
+        if (strchr("\n \t,", *list) != nullptr) {
             list++;
             if (inword) {
                 *cpto++ = ',';
@@ -1947,18 +1948,18 @@ MatchHost(char *hostlist, char *host, char *ip)
 {
     int i;
     char *cp, *pat, *mask;
-    char **list = NULL;
+    char **list = nullptr;
     bool match = false;
 
     /* If no hostlist are specified, by default they match. */
-    if (hostlist == NULL)
+    if (hostlist == nullptr)
         return true;
 
     cp = xstrdup(hostlist);
     NGgetlist(&list, cp);
 
     /* Start searching from the end of the list.  The default is no access. */
-    for (i = 0; list[i] != NULL; i++)
+    for (i = 0; list[i] != nullptr; i++)
         ;
     while (!match && i-- > 0) {
         pat = list[i];
@@ -1966,12 +1967,12 @@ MatchHost(char *hostlist, char *host, char *ip)
         if (*pat == '!')
             pat++;
         match = uwildmat(host, pat);
-        if (!match && ip != NULL && *ip != '\0') {
+        if (!match && ip != nullptr && *ip != '\0') {
             match = uwildmat(ip, pat);
             if (match)
                 break;
             mask = strchr(pat, '/');
-            if (mask == NULL)
+            if (mask == nullptr)
                 continue;
             *mask = '\0';
             mask++;
@@ -1994,7 +1995,7 @@ add_authgroup(AUTHGROUP *group)
 {
     int i;
 
-    if (auth_realms == NULL) {
+    if (auth_realms == nullptr) {
         i = 0;
         auth_realms = xmalloc(2 * sizeof(AUTHGROUP *));
     } else {
@@ -2003,7 +2004,7 @@ add_authgroup(AUTHGROUP *group)
         auth_realms = xrealloc(auth_realms, (i + 2) * sizeof(AUTHGROUP *));
     }
     auth_realms[i] = group;
-    auth_realms[i + 1] = 0;
+    auth_realms[i + 1] = nullptr;
 }
 
 static void
@@ -2011,7 +2012,7 @@ add_accessgroup(ACCESSGROUP *group)
 {
     int i;
 
-    if (access_realms == NULL) {
+    if (access_realms == nullptr) {
         i = 0;
         access_realms = xmalloc(2 * sizeof(ACCESSGROUP *));
     } else {
@@ -2021,7 +2022,7 @@ add_accessgroup(ACCESSGROUP *group)
             xrealloc(access_realms, (i + 2) * sizeof(ACCESSGROUP *));
     }
     access_realms[i] = group;
-    access_realms[i + 1] = 0;
+    access_realms[i + 1] = nullptr;
 }
 
 
@@ -2034,8 +2035,8 @@ strip_accessgroups(void)
     int i, j;
 
     /* Flag the access group as used or not. */
-    if (access_realms != NULL) {
-        for (j = 0; access_realms[j] != NULL; j++) {
+    if (access_realms != nullptr) {
+        for (j = 0; access_realms[j] != nullptr; j++) {
             access_realms[j]->used = 0;
         }
     } else {
@@ -2044,11 +2045,11 @@ strip_accessgroups(void)
     }
 
     /* If there are auth realms to check... */
-    if (auth_realms != NULL) {
+    if (auth_realms != nullptr) {
         /* ... Then for each auth realm... */
-        for (i = 0; auth_realms[i] != NULL; i++) {
+        for (i = 0; auth_realms[i] != nullptr; i++) {
             /* ... for each access realm... */
-            for (j = 0; access_realms[j] != NULL; j++) {
+            for (j = 0; access_realms[j] != nullptr; j++) {
                 /* If the access realm isn't already in use... */
                 if (!access_realms[j]->used) {
                     /* Check to see if both the access_realm key and
@@ -2078,7 +2079,7 @@ strip_accessgroups(void)
     /* Strip out unused access groups. */
     i = j = 0;
 
-    while (access_realms[i] != NULL) {
+    while (access_realms[i] != nullptr) {
         if (access_realms[i]->used)
             access_realms[j++] = access_realms[i];
         else
@@ -2086,7 +2087,7 @@ strip_accessgroups(void)
                    Client.host, access_realms[i]->name);
         i++;
     }
-    access_realms[j] = 0;
+    access_realms[j] = nullptr;
 }
 
 
@@ -2099,18 +2100,18 @@ ResolveUser(AUTHGROUP *auth)
 {
     int i, j;
     char *command;
-    char *user = NULL;
+    char *user = nullptr;
     char *resdir;
     char *tmp;
 
-    if (auth->res_methods == NULL)
-        return NULL;
+    if (auth->res_methods == nullptr)
+        return nullptr;
 
 #if defined(HAVE_OPENSSL) || defined(HAVE_SASL)
     /* If an encryption layer is required, check that the connection
      * really uses one. */
     if (auth->require_encryption && !encryption_layer_on)
-        return NULL;
+        return nullptr;
 #endif
 
     tmp = concatpath(innconf->pathbin, INN_PATH_AUTHDIR);
@@ -2125,8 +2126,8 @@ ResolveUser(AUTHGROUP *auth)
                 syslog(L_NOTICE, "%s res also-log: %s", Client.host,
                        auth->res_methods[i]->extra_logs[j]);
         }
-        user = auth_external(&Client, command, resdir, NULL, NULL);
-        if (user == NULL)
+        user = auth_external(&Client, command, resdir, nullptr, nullptr);
+        if (user == nullptr)
             syslog(L_TRACE, "%s res resolver failed", Client.host);
         else {
             syslog(L_TRACE, "%s res resolver successful, user %s", Client.host,
@@ -2150,18 +2151,18 @@ AuthenticateUser(AUTHGROUP *auth, char *username, char *password,
 {
     int i, j;
     char *command;
-    char *user = NULL;
+    char *user = nullptr;
     char *resdir;
     char *tmp;
 
-    if (auth->auth_methods == NULL)
-        return NULL;
+    if (auth->auth_methods == nullptr)
+        return nullptr;
 
 #if defined(HAVE_OPENSSL) || defined(HAVE_SASL)
     /* If an encryption layer is required, check that the connection
      * really uses one. */
     if (auth->require_encryption && !encryption_layer_on)
-        return NULL;
+        return nullptr;
 #endif
 
     tmp = concatpath(innconf->pathbin, INN_PATH_AUTHDIR);
@@ -2257,7 +2258,7 @@ AuthenticateUser(AUTHGROUP *auth, char *username, char *password,
                            auth->auth_methods[i]->extra_logs[j]);
             }
             user = auth_external(&Client, command, resdir, username, password);
-            if (user == NULL)
+            if (user == nullptr)
                 syslog(L_TRACE, "%s auth authenticator failed", Client.host);
             else {
                 syslog(L_TRACE, "%s auth authenticator successful, user %s",

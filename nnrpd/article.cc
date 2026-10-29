@@ -37,7 +37,7 @@ typedef struct _SENDDATA {
     const char *Item;
 } SENDDATA;
 
-static ARTHANDLE *ARThandle = NULL;
+static ARTHANDLE *ARThandle = nullptr;
 
 /* clang-format off */
 static SENDDATA SENDbody = {
@@ -174,7 +174,7 @@ PushIOvRateLimited(void)
             waittime.tv_sec = 0;
             waittime.tv_usec = (long) ((target - elapsed) * 1e6);
             start = TMRnow_double();
-            if (select(0, NULL, NULL, NULL, &waittime) != 0)
+            if (select(0, nullptr, nullptr, nullptr, &waittime) != 0)
                 syswarn("%s: select in PushIOvRateLimit failed", Client.host);
             end = TMRnow_double();
             IDLEtime += end - start;
@@ -216,7 +216,7 @@ SendIOv(const char *p, int len)
         PushIOv();
 }
 
-static char *_IO_buffer_ = NULL;
+static char *_IO_buffer_ = nullptr;
 static int highwater = 0;
 
 static void
@@ -237,7 +237,7 @@ SendIOb(const char *p, int len)
 {
     int tocopy;
 
-    if (_IO_buffer_ == NULL)
+    if (_IO_buffer_ == nullptr)
         _IO_buffer_ = xmalloc(BIG_BUFFER);
 
     while (len > 0) {
@@ -261,7 +261,7 @@ ARTclose(void)
 {
     if (ARThandle) {
         SMfreearticle(ARThandle);
-        ARThandle = NULL;
+        ARThandle = nullptr;
     }
 }
 
@@ -279,8 +279,8 @@ ARTclose(void)
 **  change.  Memory cost is ~50 bytes per cancel; typical sites have
 **  hundreds of entries.  Falls through to SMretrieve on load failure.
 */
-static struct hash *nnrpd_tombstone = NULL;
-static char *nnrpd_tombstone_path = NULL;
+static struct hash *nnrpd_tombstone = nullptr;
+static char *nnrpd_tombstone_path = nullptr;
 static time_t nnrpd_tombstone_mtime = 0;
 static off_t nnrpd_tombstone_size = 0;
 
@@ -317,16 +317,16 @@ nnrpd_tombstone_refresh(void)
     struct stat sb;
     bool read_error = false;
 
-    if (nnrpd_tombstone_path == NULL)
+    if (nnrpd_tombstone_path == nullptr)
         nnrpd_tombstone_path =
             concatpath(innconf->pathdb, "cancels.tombstone");
 
     /* If the file has gone away since our last load, drop our cache
      * and fall through to the slow path. */
     if (stat(nnrpd_tombstone_path, &sb) < 0) {
-        if (nnrpd_tombstone != NULL) {
+        if (nnrpd_tombstone != nullptr) {
             hash_free(nnrpd_tombstone);
-            nnrpd_tombstone = NULL;
+            nnrpd_tombstone = nullptr;
             nnrpd_tombstone_mtime = 0;
             nnrpd_tombstone_size = 0;
         }
@@ -334,12 +334,12 @@ nnrpd_tombstone_refresh(void)
     }
 
     /* Fresh enough? */
-    if (nnrpd_tombstone != NULL && sb.st_mtime == nnrpd_tombstone_mtime
+    if (nnrpd_tombstone != nullptr && sb.st_mtime == nnrpd_tombstone_mtime
         && sb.st_size == nnrpd_tombstone_size)
         return true;
 
     /* (Re)load. */
-    if (nnrpd_tombstone != NULL)
+    if (nnrpd_tombstone != nullptr)
         hash_free(nnrpd_tombstone);
     nnrpd_tombstone = tombstone_hash_create(initial_buckets);
     tombstone_read(nnrpd_tombstone, nnrpd_tombstone_path, &read_error);
@@ -381,16 +381,17 @@ ARTinstorebytoken(TOKEN token)
      * only that probe (a static per-method attribute, no I/O) and
      * skip both the hash lookup and the cache refresh. */
     if (innconf->expiretombstone && PERMaccessconf->nnrpdcheckart
-        && !SMprobe(SELFEXPIRE, &token, NULL) && nnrpd_tombstone_refresh()) {
+        && !SMprobe(SELFEXPIRE, &token, nullptr)
+        && nnrpd_tombstone_refresh()) {
         return !tombstone_present(nnrpd_tombstone, &token);
     }
 
     /* XXX This isn't really overstats, is it? */
     if (PERMaccessconf->nnrpdoverstats)
-        gettimeofday(&stv, NULL);
+        gettimeofday(&stv, nullptr);
     art = SMretrieve(token, RETR_STAT);
     if (PERMaccessconf->nnrpdoverstats) {
-        gettimeofday(&etv, NULL);
+        gettimeofday(&etv, nullptr);
         OVERartcheck += (etv.tv_sec - stv.tv_sec) * 1000;
         OVERartcheck += (etv.tv_usec - stv.tv_usec) / 1000;
     }
@@ -423,7 +424,7 @@ ARTopen(ARTNUM artnum)
     TMRstart(TMR_READART);
     ARThandle = SMretrieve(token, RETR_ALL);
     TMRstop(TMR_READART);
-    if (ARThandle == NULL) {
+    if (ARThandle == nullptr) {
         return false;
     }
 
@@ -443,7 +444,7 @@ ARTopenbyid(char *msg_id, ARTNUM *ap, bool final)
     *ap = 0;
     token = cache_get(HashMessageID(msg_id), final);
     if (token.type == TOKEN_EMPTY) {
-        if (History == NULL) {
+        if (History == nullptr) {
             time_t statinterval;
 
             /* Do lazy opens of the history database: lots of clients
@@ -459,7 +460,7 @@ ARTopenbyid(char *msg_id, ARTNUM *ap, bool final)
             statinterval = 30;
             HISctl(History, HISCTLS_STATINTERVAL, &statinterval);
         }
-        if (!HISlookup(History, msg_id, NULL, NULL, NULL, &token))
+        if (!HISlookup(History, msg_id, nullptr, nullptr, nullptr, &token))
             return false;
     }
     if (token.type == TOKEN_EMPTY)
@@ -467,7 +468,7 @@ ARTopenbyid(char *msg_id, ARTNUM *ap, bool final)
     TMRstart(TMR_READART);
     ARThandle = SMretrieve(token, RETR_ALL);
     TMRstop(TMR_READART);
-    if (ARThandle == NULL) {
+    if (ARThandle == nullptr) {
         return false;
     }
 
@@ -517,7 +518,7 @@ ARTsendmmap(SENDTYPE what)
     /* q points to the start of the article buffer, p to the end of it. */
     if (VirtualPathlen > 0 && (what != STbody)) {
         path = wire_findheader(ARThandle->data, ARThandle->len, "Path", true);
-        if (path == NULL) {
+        if (path == nullptr) {
             SendIOv(".\r\n", 3);
             ARTgetsize += 3;
             PushIOv();
@@ -526,7 +527,7 @@ ARTsendmmap(SENDTYPE what)
         } else {
             xref =
                 wire_findheader(ARThandle->data, ARThandle->len, "Xref", true);
-            if (xref == NULL) {
+            if (xref == nullptr) {
                 SendIOv(".\r\n", 3);
                 ARTgetsize += 3;
                 PushIOv();
@@ -535,7 +536,7 @@ ARTsendmmap(SENDTYPE what)
             }
         }
         endofpath = wire_endheader(path, ARThandle->data + ARThandle->len - 1);
-        if (endofpath == NULL) {
+        if (endofpath == nullptr) {
             SendIOv(".\r\n", 3);
             ARTgetsize += 3;
             PushIOv();
@@ -543,7 +544,7 @@ ARTsendmmap(SENDTYPE what)
             return;
         }
         if ((r = static_cast<const char *>(memchr(xref, ' ', p - xref)))
-                == NULL
+                == nullptr
             || r == p) {
             SendIOv(".\r\n", 3);
             ARTgetsize += 3;
@@ -628,7 +629,7 @@ GetHeader(const char *header, bool stripspaces)
     char lastchar = ' ';
     const char *limit;
     const char *cmplimit;
-    static char *retval = NULL;
+    static char *retval = nullptr;
     static size_t retlen = 0;
     int headerlen;
     bool pathheader = false;
@@ -642,7 +643,7 @@ GetHeader(const char *header, bool stripspaces)
         if (*p == '\r')
             continue;
         if ((lastchar == '\n') && (*p == '\n')) {
-            return NULL;
+            return nullptr;
         }
         if ((lastchar == '\n') || (p == ARThandle->data)) {
             /* If the header field name begins with a dot, it has been
@@ -680,12 +681,12 @@ GetHeader(const char *header, bool stripspaces)
                         }
                     }
                 if (q == limit)
-                    return NULL;
+                    return nullptr;
                 if (strncasecmp("Path", header, headerlen) == 0)
                     pathheader = true;
                 else if (strncasecmp("Xref", header, headerlen) == 0)
                     xrefheader = true;
-                if (retval == NULL) {
+                if (retval == nullptr) {
                     /* Possibly add '!' (a second one) at the end of the
                      * virtual path. So it is +2 because of '\0'. */
                     retlen = (size_t) (q - p) + VirtualPathlen + 2;
@@ -702,8 +703,8 @@ GetHeader(const char *header, bool stripspaces)
 
                     endofarticle = ARThandle->data + ARThandle->len - 1;
                     endofpath = wire_endheader(p, endofarticle);
-                    if (endofpath == NULL)
-                        return NULL;
+                    if (endofpath == nullptr)
+                        return nullptr;
                     for (s = p, prevchar = '\0';
                          s + VirtualPathlen + 1 < endofpath; prevchar = *s++) {
                         if ((prevchar != '\0' && prevchar != '!')
@@ -727,12 +728,12 @@ GetHeader(const char *header, bool stripspaces)
                     }
                 } else if (xrefheader && (VirtualPathlen > 0)) {
                     if ((r = static_cast<const char *>(memchr(p, ' ', q - p)))
-                        == NULL)
-                        return NULL;
+                        == nullptr)
+                        return nullptr;
                     for (; (r < q) && isspace((unsigned char) *r); r++)
                         ;
                     if (r == q)
-                        return NULL;
+                        return nullptr;
                     /* Copy the virtual path without its final '!'. */
                     memcpy(retval, VirtualPath, VirtualPathlen - 1);
                     memcpy(retval + VirtualPathlen - 1, r - 1, q - r + 1);
@@ -759,7 +760,7 @@ GetHeader(const char *header, bool stripspaces)
         }
         lastchar = *p;
     }
-    return NULL;
+    return nullptr;
 }
 
 /*
@@ -872,7 +873,7 @@ CMDfetch(int ac, char *av[])
               tart);
         return;
     }
-    if ((msgid = GetHeader("Message-ID", true)) == NULL) {
+    if ((msgid = GetHeader("Message-ID", true)) == nullptr) {
         ARTclose();
         Reply("%d No such article number %lu\r\n", NNTP_FAIL_ARTNUM_NOTFOUND,
               tart);
@@ -935,7 +936,7 @@ CMDnextlast(int ac UNUSED, char *av[])
 
     save = ARTnumber;
     missing = 0;
-    msgid = NULL;
+    msgid = nullptr;
     do {
         ARTnumber += delta;
 
@@ -949,8 +950,9 @@ CMDnextlast(int ac UNUSED, char *av[])
             i = 0;
             if ((handle = OVopensearch(GRPcur, delta > 0 ? ARTnumber : ARTlow,
                                        delta > 0 ? ARThigh : ARTnumber))
-                != NULL) {
-                while (OVsearch(handle, &i, NULL, NULL, NULL, NULL)) {
+                != nullptr) {
+                while (
+                    OVsearch(handle, &i, nullptr, nullptr, nullptr, nullptr)) {
                     /* Break for the next article; let the search reach its end
                      * for the previous article. */
                     if (delta > 0)
@@ -975,7 +977,7 @@ CMDnextlast(int ac UNUSED, char *av[])
         msgid = GetHeader("Message-ID", true);
         ARTclose();
         missing = 0;
-    } while (msgid == NULL);
+    } while (msgid == nullptr);
 
     Reply("%d %lu %s Article retrieved; request text separately\r\n",
           NNTP_OK_STAT, ARTnumber, msgid);
@@ -1031,7 +1033,7 @@ CMDgetrange(int ac, char *av[], ARTRANGE *rp, bool *DidReply)
     }
 
     /* Got just a single number? */
-    if ((p = strchr(av[1], '-')) == NULL) {
+    if ((p = strchr(av[1], '-')) == nullptr) {
         rp->Low = rp->High = atol(av[1]);
         return true;
     }
@@ -1067,16 +1069,16 @@ vhost_xref(char *p)
 {
     char *space;
     size_t offset;
-    char *field = NULL;
+    char *field = nullptr;
 
     space = strchr(p, ' ');
-    if (space == NULL) {
+    if (space == nullptr) {
         warn("malformed Xref header field: `%s'", p);
         goto fail;
     }
     offset = space - p;
     space = strchr(p + offset, ' ');
-    if (space == NULL) {
+    if (space == nullptr) {
         warn("malformed Xref header field: `%s'", p);
         goto fail;
     }
@@ -1103,7 +1105,7 @@ CMDover(int ac, char *av[])
     const char *p, *q;
     int len, useIOb = 0;
     TOKEN token;
-    struct cvector *vector = NULL;
+    struct cvector *vector = nullptr;
     bool xover, mid;
 
     xover = (strcasecmp(av[0], "XOVER") == 0);
@@ -1154,10 +1156,10 @@ CMDover(int ac, char *av[])
 
     if (PERMaccessconf->nnrpdoverstats) {
         OVERcount++;
-        gettimeofday(&stv, NULL);
+        gettimeofday(&stv, nullptr);
     }
     if ((handle = (void *) OVopensearch(GRPcur, range.Low, range.High))
-        == NULL) {
+        == nullptr) {
         /* The response code for OVER is different if a range is provided.
          * Note that XOVER answers OK. */
         if (ac > 1)
@@ -1171,13 +1173,13 @@ CMDover(int ac, char *av[])
         return;
     }
     if (PERMaccessconf->nnrpdoverstats) {
-        gettimeofday(&etv, NULL);
+        gettimeofday(&etv, nullptr);
         OVERtime += (etv.tv_sec - stv.tv_sec) * 1000;
         OVERtime += (etv.tv_usec - stv.tv_usec) / 1000;
     }
 
     if (PERMaccessconf->nnrpdoverstats)
-        gettimeofday(&stv, NULL);
+        gettimeofday(&stv, nullptr);
 
     /* If OVSTATICSEARCH is true, then the data returned by OVsearch is only
        valid until the next call to OVsearch.  In this case, we must use
@@ -1185,9 +1187,9 @@ CMDover(int ac, char *av[])
     OVctl(OVSTATICSEARCH, &useIOb);
 
     HasNotReplied = true;
-    while (OVsearch(handle, &artnum, &data, &len, &token, NULL)) {
+    while (OVsearch(handle, &artnum, &data, &len, &token, nullptr)) {
         if (PERMaccessconf->nnrpdoverstats) {
-            gettimeofday(&etv, NULL);
+            gettimeofday(&etv, nullptr);
             OVERtime += (etv.tv_sec - stv.tv_sec) * 1000;
             OVERtime += (etv.tv_usec - stv.tv_usec) / 1000;
         }
@@ -1195,7 +1197,7 @@ CMDover(int ac, char *av[])
             || (PERMaccessconf->nnrpdcheckart && !ARTinstorebytoken(token))) {
             if (PERMaccessconf->nnrpdoverstats) {
                 OVERmiss++;
-                gettimeofday(&stv, NULL);
+                gettimeofday(&stv, nullptr);
             }
             continue;
         }
@@ -1215,11 +1217,11 @@ CMDover(int ac, char *av[])
             HasNotReplied = false;
         }
 
-        vector = overview_split(data, len, NULL, vector);
+        vector = overview_split(data, len, nullptr, vector);
         r = overview_get_standard_header(vector, OVERVIEW_MESSAGE_ID);
-        if (r == NULL) {
+        if (r == nullptr) {
             if (PERMaccessconf->nnrpdoverstats) {
-                gettimeofday(&stv, NULL);
+                gettimeofday(&stv, nullptr);
             }
             continue;
         }
@@ -1228,7 +1230,7 @@ CMDover(int ac, char *av[])
         if (VirtualPathlen > 0 && overhdr_xref != -1) {
             if ((size_t) (overhdr_xref + 1) >= vector->count) {
                 if (PERMaccessconf->nnrpdoverstats) {
-                    gettimeofday(&stv, NULL);
+                    gettimeofday(&stv, nullptr);
                 }
                 continue;
             }
@@ -1236,9 +1238,9 @@ CMDover(int ac, char *av[])
             while ((p < data + len) && *p == ' ')
                 ++p;
             q = static_cast<const char *>(memchr(p, ' ', data + len - p));
-            if (q == NULL) {
+            if (q == nullptr) {
                 if (PERMaccessconf->nnrpdoverstats) {
-                    gettimeofday(&stv, NULL);
+                    gettimeofday(&stv, nullptr);
                 }
                 continue;
             }
@@ -1259,11 +1261,11 @@ CMDover(int ac, char *av[])
                 SendIOv(data, len);
         }
         if (PERMaccessconf->nnrpdoverstats)
-            gettimeofday(&stv, NULL);
+            gettimeofday(&stv, nullptr);
     }
 
     if (PERMaccessconf->nnrpdoverstats) {
-        gettimeofday(&etv, NULL);
+        gettimeofday(&etv, nullptr);
         OVERtime += (etv.tv_sec - stv.tv_sec) * 1000;
         OVERtime += (etv.tv_usec - stv.tv_usec) / 1000;
     }
@@ -1293,10 +1295,10 @@ CMDover(int ac, char *av[])
     }
 
     if (PERMaccessconf->nnrpdoverstats)
-        gettimeofday(&stv, NULL);
+        gettimeofday(&stv, nullptr);
     OVclosesearch(handle);
     if (PERMaccessconf->nnrpdoverstats) {
-        gettimeofday(&etv, NULL);
+        gettimeofday(&etv, nullptr);
         OVERtime += (etv.tv_sec - stv.tv_sec) * 1000;
         OVERtime += (etv.tv_usec - stv.tv_usec) / 1000;
     }
@@ -1325,7 +1327,7 @@ CMDpat(int ac, char *av[])
     char *data;
     int len;
     TOKEN token;
-    struct cvector *vector = NULL;
+    struct cvector *vector = nullptr;
     bool hdr, mid;
 
     hdr = (strcasecmp(av[0], "HDR") == 0);
@@ -1390,7 +1392,7 @@ CMDpat(int ac, char *av[])
     if (ac > 3) /* Necessarily XPAT. */
         pattern = Glom(&av[3]);
     else
-        pattern = NULL;
+        pattern = nullptr;
 
     /* We will only do the loop once.  It is just in order to easily break. */
     do {
@@ -1421,7 +1423,7 @@ CMDpat(int ac, char *av[])
                 "%d Header information for %s follows (from the article)\r\n",
                 hdr ? NNTP_OK_HDR : NNTP_OK_HEAD, av[1]);
 
-            if ((text = GetHeader(av[1], false)) != NULL
+            if ((text = GetHeader(av[1], false)) != nullptr
                 && (!pattern || uwildmat_simple(text, pattern)))
                 Printf("%s %s\r\n", hdr ? "0" : p, text);
             else if (hdr) {
@@ -1448,8 +1450,9 @@ CMDpat(int ac, char *av[])
         /* Not in overview, we have to fish headers out from the articles. */
         if (Overview < 0 || IsBytes || IsLines) {
             if ((handle = OVopensearch(GRPcur, range.Low, range.High))
-                != NULL) {
-                while (OVsearch(handle, &i, NULL, NULL, NULL, NULL)) {
+                != nullptr) {
+                while (
+                    OVsearch(handle, &i, nullptr, nullptr, nullptr, nullptr)) {
                     if (!ARTopen(i))
                         continue;
                     if (HasNotReplied) {
@@ -1497,7 +1500,7 @@ CMDpat(int ac, char *av[])
 
         /* Okay then, we can grab values from the overview database. */
         handle = (void *) OVopensearch(GRPcur, range.Low, range.High);
-        if (handle == NULL) {
+        if (handle == nullptr) {
             if (hdr) {
                 if (ac > 2)
                     Reply("%d No articles in %s\r\n",
@@ -1514,7 +1517,7 @@ CMDpat(int ac, char *av[])
             break;
         }
 
-        while (OVsearch(handle, &artnum, &data, &len, &token, NULL)) {
+        while (OVsearch(handle, &artnum, &data, &len, &token, nullptr)) {
             if (len == 0
                 || (PERMaccessconf->nnrpdcheckart
                     && !ARTinstorebytoken(token)))
@@ -1525,16 +1528,16 @@ CMDpat(int ac, char *av[])
                       hdr ? NNTP_OK_HDR : NNTP_OK_HEAD, av[1]);
                 HasNotReplied = false;
             }
-            vector = overview_split(data, len, NULL, vector);
+            vector = overview_split(data, len, nullptr, vector);
             if (Overview < OVERVIEW_MAX) {
                 p = overview_get_standard_header(vector, Overview);
             } else {
                 p = overview_get_extra_header(vector, header);
             }
-            if (p != NULL) {
+            if (p != nullptr) {
                 if (PERMaccessconf->virtualhost && Overview == overhdr_xref) {
                     p = vhost_xref(p);
-                    if (p == NULL) {
+                    if (p == nullptr) {
                         if (hdr) {
                             snprintf(buff, sizeof(buff), "%lu \r\n", artnum);
                             SendIOb(buff, strlen(buff));

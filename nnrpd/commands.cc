@@ -37,7 +37,7 @@ makeGroupInvalid(void)
     char *grplist[2];
 
     /* If no group has been selected yet, it is considered as valid. */
-    if (GRPcur == NULL) {
+    if (GRPcur == nullptr) {
         return false;
     }
 
@@ -66,7 +66,7 @@ makeGroupInvalid(void)
     if (!hookpresent) {
         if (PERMspecified) {
             grplist[0] = GRPcur;
-            grplist[1] = NULL;
+            grplist[1] = nullptr;
             if (!PERMmatch(PERMreadlist, grplist)) {
                 return true;
             }
@@ -115,7 +115,7 @@ PERMgeneric(char *av[], char *accesslist, size_t size)
     }
 
     /* Check for ".." (not "../").  Path must not be changed! */
-    if (strstr(av[0], "..") != NULL) {
+    if (strstr(av[0], "..") != nullptr) {
         Reply("%d .. in authenticator %s\r\n", NNTP_ERR_SYNTAX, av[0]);
         return -1;
     }
@@ -129,7 +129,7 @@ PERMgeneric(char *av[], char *accesslist, size_t size)
         return -1;
     }
 
-    if (strchr(INN_PATH_AUTHDIR, '/') == NULL)
+    if (strchr(INN_PATH_AUTHDIR, '/') == nullptr)
         snprintf(path, sizeof(path), "%s/%s/%s/%s", innconf->pathbin,
                  INN_PATH_AUTHDIR, INN_PATH_AUTHDIR_GENERIC, av[0]);
     else
@@ -208,7 +208,7 @@ PERMgeneric(char *av[], char *accesslist, size_t size)
     if (!WIFEXITED(status) || WEXITSTATUS(status) != 0)
         return 0;
 
-    if ((p = strchr(path, '\n')) != NULL)
+    if ((p = strchr(path, '\n')) != nullptr)
         *p = '\0';
 
     if (PERMauthstring)
@@ -238,12 +238,12 @@ PERMgeneric(char *av[], char *accesslist, size_t size)
         return -1;
     }
 
-    PERMcanread = strchr(fields[1], 'R') != NULL;
-    PERMcanpost = strchr(fields[1], 'P') != NULL;
-    PERMaccessconf->allowapproved = strchr(fields[1], 'A') != NULL;
-    PERMaccessconf->locpost = strchr(fields[1], 'L') != NULL;
-    PERMaccessconf->allowihave = strchr(fields[1], 'I') != NULL;
-    PERMaccessconf->allownewnews = strchr(fields[1], 'N') != NULL;
+    PERMcanread = strchr(fields[1], 'R') != nullptr;
+    PERMcanpost = strchr(fields[1], 'P') != nullptr;
+    PERMaccessconf->allowapproved = strchr(fields[1], 'A') != nullptr;
+    PERMaccessconf->locpost = strchr(fields[1], 'L') != nullptr;
+    PERMaccessconf->allowihave = strchr(fields[1], 'I') != nullptr;
+    PERMaccessconf->allownewnews = strchr(fields[1], 'N') != nullptr;
     strlcpy(PERMuser, fields[2], sizeof(PERMuser));
     strlcat(PERMuser, "@", sizeof(PERMuser));
     strlcat(PERMuser, fields[0], sizeof(PERMuser));
@@ -441,9 +441,9 @@ CMDdate(int ac UNUSED, char *av[] UNUSED)
     time_t now;
     struct tm *gmt;
 
-    now = time(NULL);
+    now = time(nullptr);
     gmt = gmtime(&now);
-    if (now == (time_t) -1 || gmt == NULL) {
+    if (now == (time_t) -1 || gmt == nullptr) {
         Reply("%d Can't get time, %s\r\n", NNTP_FAIL_ACTION, strerror(errno));
         return;
     }
@@ -498,7 +498,7 @@ CMDnewgroups(int ac, char *av[])
     time_t date;
     char *grplist[2];
     int hi, lo, count, flag;
-    GROUPDATA *grouplist = NULL;
+    GROUPDATA *grouplist = nullptr;
     GROUPDATA key;
     GROUPDATA *gd;
     int listsize = 0;
@@ -527,7 +527,7 @@ CMDnewgroups(int ac, char *av[])
        installation that's yet to have any new groups created, and returning
        an error was causing needless confusion.  Just return the empty list
        of groups. */
-    if ((qp = QIOopen(ACTIVETIMES)) == NULL) {
+    if ((qp = QIOopen(ACTIVETIMES)) == nullptr) {
         syslog(L_ERROR, "%s can't fopen %s %m", Client.host, ACTIVETIMES);
         Reply("%d No new newsgroups\r\n", NNTP_OK_NEWGROUPS);
         Printf(".\r\n");
@@ -535,8 +535,8 @@ CMDnewgroups(int ac, char *av[])
     }
 
     /* Read the file, ignoring long lines. */
-    while ((p = QIOread(qp)) != NULL) {
-        if ((q = strchr(p, ' ')) == NULL)
+    while ((p = QIOread(qp)) != nullptr) {
+        if ((q = strchr(p, ' ')) == nullptr)
             continue;
         *q++ = '\0';
         if ((time_t) atoll(q) < date)
@@ -546,13 +546,13 @@ CMDnewgroups(int ac, char *av[])
 
         if (PERMspecified) {
             grplist[0] = p;
-            grplist[1] = NULL;
+            grplist[1] = nullptr;
             if (!PERMmatch(PERMreadlist, grplist))
                 continue;
         } else
             continue;
 
-        if (grouplist == NULL) {
+        if (grouplist == nullptr) {
             grouplist = xmalloc(1000 * sizeof(GROUPDATA));
             listsize = 1000;
         }
@@ -569,7 +569,7 @@ CMDnewgroups(int ac, char *av[])
     }
     QIOclose(qp);
 
-    if ((qp = QIOopen(ACTIVE)) == NULL) {
+    if ((qp = QIOopen(ACTIVE)) == nullptr) {
         syslog(L_ERROR, "%s can't fopen %s %m", Client.host, ACTIVE);
         Reply("%d Can't open active file\r\n", NNTP_FAIL_ACTION);
 
@@ -586,23 +586,22 @@ CMDnewgroups(int ac, char *av[])
         /* p will contain the name of the newsgroup.
          * When the syntax of the line is not correct, we continue
          * with the following line. */
-        if ((q = strchr(p, ' ')) == NULL)
+        if ((q = strchr(p, ' ')) == nullptr)
             continue;
         *q++ = '\0';
         /* Find out the end of the high water mark. */
-        if ((q = strchr(q, ' ')) == NULL)
+        if ((q = strchr(q, ' ')) == nullptr)
             continue;
         q++;
         /* Find out the end of the low water mark.
          * q will contain the flag of the newsgroup. */
-        if ((q = strchr(q, ' ')) == NULL)
+        if ((q = strchr(q, ' ')) == nullptr)
             continue;
         q++;
         key.name = p;
-        if ((gd = static_cast<GROUPDATA *>(
-                 bsearch(&key, grouplist, numgroups, sizeof(GROUPDATA),
-                         GroupCompare)))
-            == NULL)
+        if ((gd = static_cast<GROUPDATA *>(bsearch(
+                 &key, grouplist, numgroups, sizeof(GROUPDATA), GroupCompare)))
+            == nullptr)
             continue;
         Printf("%s %lu %lu %s\r\n", p, gd->high, gd->low, q);
         numfound--;
@@ -673,7 +672,8 @@ CMDpost(int ac, char *av[])
     if (BACKOFFenabled) {
         /* Acquire lock (this could be in RateLimit but that would
          * invoke the spaghetti factor). */
-        if ((path = (char *) PostRecFilename(Client.ip, PERMuser)) == NULL) {
+        if ((path = (char *) PostRecFilename(Client.ip, PERMuser))
+            == nullptr) {
             Reply("%d Retry later\r\n",
                   ihave ? NNTP_FAIL_IHAVE_DEFER : NNTP_FAIL_POST_AUTH);
             return;
@@ -704,14 +704,14 @@ CMDpost(int ac, char *av[])
     } /* End backoff code. */
 
     /* Start at beginning of buffer. */
-    if (article == NULL) {
+    if (article == nullptr) {
         size = 4096;
         article = xmalloc(size);
     }
     idbuff[0] = 0;
     if (ihave) {
         /* Check whether it is a duplicate. */
-        if (History == NULL) {
+        if (History == nullptr) {
             time_t statinterval = 30;
             History = HISopen(HISTORY, innconf->hismethod, HIS_RDONLY);
             if (!History) {
@@ -732,12 +732,12 @@ CMDpost(int ac, char *av[])
         if (PERMaccessconf->domainoverriden)
             p = GenerateMessageID(PERMaccessconf->domain);
         else
-            p = GenerateMessageID(NULL);
+            p = GenerateMessageID(nullptr);
 
-        if (p != NULL) {
+        if (p != nullptr) {
             if (VirtualPathlen > 0) {
                 q = p;
-                if ((p = strchr(p, '@')) != NULL) {
+                if ((p = strchr(p, '@')) != nullptr) {
                     *p = '\0';
                     snprintf(idbuff, sizeof(idbuff), "%s%s@%s>", q,
                              NNRPinstance, PERMaccessconf->domain);
@@ -760,7 +760,7 @@ CMDpost(int ac, char *av[])
         const char *line;
 
         r = line_read(&NNTPline, PERMaccessconf->clienttimeout, &line, &len,
-                      NULL);
+                      nullptr);
         switch (r) {
         default:
             warn("%s internal %u in post", Client.host, r);
@@ -836,7 +836,7 @@ CMDpost(int ac, char *av[])
 
     /* Send the article to the server. */
     response = ARTpost(article, idbuff, &permanent);
-    if (response == NULL) {
+    if (response == nullptr) {
         notice("%s %s ok %s", Client.host, ihave ? "ihave" : "post", idbuff);
         Reply("%d Article received %s\r\n",
               ihave ? NNTP_OK_IHAVE : NNTP_OK_POST, idbuff);
@@ -845,9 +845,9 @@ CMDpost(int ac, char *av[])
         /* A CR or LF can only come from innd's reply, which ARTpost copies
            into post.c's writable Error buffer, so the writes never reach the
            string literals it also returns. */
-        if ((p = const_cast<char *>(strchr(response, '\r'))) != NULL)
+        if ((p = const_cast<char *>(strchr(response, '\r'))) != nullptr)
             *p = '\0';
-        if ((p = const_cast<char *>(strchr(response, '\n'))) != NULL)
+        if ((p = const_cast<char *>(strchr(response, '\n'))) != nullptr)
             *p = '\0';
         notice("%s %s failed %s", Client.host, ihave ? "ihave" : "post",
                response);

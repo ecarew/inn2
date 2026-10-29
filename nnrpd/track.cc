@@ -37,26 +37,26 @@ TrackClient(char *client, char *user, size_t len)
     RARTon = false;
     strlcpy(user, "unknown", len);
 
-    if ((fd = fopen(dbfile, "r")) != NULL) {
-        while ((fgets(line, (MAX_LEN - 1), fd)) != NULL) {
+    if ((fd = fopen(dbfile, "r")) != nullptr) {
+        while ((fgets(line, (MAX_LEN - 1), fd)) != nullptr) {
             if (line[0] == '#' || line[0] == '\n')
                 continue;
-            if ((p = strchr(line, ' ')) != NULL)
+            if ((p = strchr(line, ' ')) != nullptr)
                 *p = '\0';
-            if ((p = strchr(line, '\n')) != NULL)
+            if ((p = strchr(line, '\n')) != nullptr)
                 *p = '\0';
-            if ((p = strchr(line, ':')) != NULL) {
+            if ((p = strchr(line, ':')) != nullptr) {
                 *p++ = '\0';
             } else {
-                p = NULL;
+                p = nullptr;
             }
             pp = line;
-            if ((lp = strchr(pp, '*')) != NULL) {
+            if ((lp = strchr(pp, '*')) != nullptr) {
                 pp = ++lp;
             }
-            if (strstr(client, pp) != NULL) {
+            if (strstr(client, pp) != nullptr) {
                 RARTon = true;
-                if (p != NULL)
+                if (p != nullptr)
                     strlcpy(user, p, len);
                 break;
             }

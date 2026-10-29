@@ -13,12 +13,12 @@
 #    define WINDOW_BITS (-15) /* Raw deflate. */
 bool compression_layer_on = false;
 bool tls_compression_on = false;
-z_stream *zstream_in = NULL;
-z_stream *zstream_out = NULL;
+z_stream *zstream_in = nullptr;
+z_stream *zstream_out = nullptr;
 bool zstream_inflate_needed = false;
 bool zstream_flush_needed = false;
-unsigned char *zbuf_in = NULL;
-unsigned char *zbuf_out = NULL;
+unsigned char *zbuf_in = nullptr;
+unsigned char *zbuf_out = nullptr;
 size_t zbuf_in_size = NNTP_MAXLEN_COMMAND; /* Initial size of the input
                                             * buffer.  Can be reallocated. */
 size_t zbuf_in_allocated = 0;

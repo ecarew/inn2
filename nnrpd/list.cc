@@ -24,70 +24,69 @@ static void cmd_list_headers(LISTINFO *lp, int ac, char *av[]);
 
 static LISTINFO INFOactive = {"ACTIVE",
                               INN_PATH_ACTIVE,
-                              NULL,
+                              nullptr,
                               true,
                               "list of active newsgroups",
                               "Newsgroups in form \"group high low status\""};
 static LISTINFO INFOactivetimes = {
     "ACTIVE.TIMES",
     INN_PATH_ACTIVETIMES,
-    NULL,
+    nullptr,
     false,
     "list of newsgroup creation times",
     "Newsgroup creation times in form \"group time who\""};
 static LISTINFO INFOcounts = {
     "COUNTS",
     INN_PATH_ACTIVE,
-    NULL,
+    nullptr,
     true,
     "list of active newsgroups with estimated counts",
     "Newsgroups in form \"group high low count status\""};
 static LISTINFO INFOdistribs = {
     "DISTRIBUTIONS",
     INN_PATH_NNRPDIST,
-    NULL,
+    nullptr,
     false,
     "list of newsgroup distributions",
     "Distributions in form \"distribution description\""};
 static LISTINFO INFOheaders = {"HEADERS",
-                               NULL,
+                               nullptr,
                                cmd_list_headers,
                                true,
                                "list of supported headers and metadata items",
                                "Headers and metadata items supported"};
 static LISTINFO INFOsubs = {"SUBSCRIPTIONS",
                             INN_PATH_NNRPSUBS,
-                            NULL,
+                            nullptr,
                             false,
                             "list of recommended newsgroup subscriptions",
                             "Recommended subscriptions in form \"group\""};
 static LISTINFO INFOdistribpats = {
     "DISTRIB.PATS",
     INN_PATH_DISTPATS,
-    NULL,
+    nullptr,
     false,
     "list of distribution patterns",
     "Default distributions in form \"weight:group-pattern:distribution\""};
 static LISTINFO INFOgroups = {
     "NEWSGROUPS",
     INN_PATH_NEWSGROUPS,
-    NULL,
+    nullptr,
     true,
     "list of newsgroup descriptions",
     "Newsgroup descriptions in form \"group description\""};
 static LISTINFO INFOmoderators = {
     "MODERATORS",
     INN_PATH_MODERATORS,
-    NULL,
+    nullptr,
     false,
     "list of submission templates",
     "Newsgroup moderators in form \"group-pattern:submission-template\""};
 static LISTINFO INFOschema = {
-    "OVERVIEW.FMT",    NULL,
-    cmd_list_schema,   true,
-    "overview format", "Order of fields in overview database"};
+    "OVERVIEW.FMT", nullptr,           cmd_list_schema,
+    true,           "overview format", "Order of fields in overview database"};
 static LISTINFO INFOmotd = {
-    "MOTD", INN_PATH_MOTD_NNRPD,  NULL,
+    "MOTD", INN_PATH_MOTD_NNRPD,  nullptr,
     false,  "message of the day", "Message of the day text in UTF-8"};
 
 static LISTINFO *info[] = {
@@ -168,7 +167,7 @@ cmd_list_headers(LISTINFO *lp, int ac, char *av[])
 static bool
 CMD_list_single(char *group)
 {
-    char *grplist[2] = {NULL, NULL};
+    char *grplist[2] = {nullptr, nullptr};
     int lo, hi, count, flag;
 
     if (PERMspecified) {
@@ -221,7 +220,7 @@ CMDlist(int ac, char *av[])
     char *q;
     char *grplist[2];
     LISTINFO *lp;
-    char *wildarg = NULL;
+    char *wildarg = nullptr;
     char savec;
     unsigned int i;
     int lo, hi, count, flag;
@@ -230,10 +229,10 @@ CMDlist(int ac, char *av[])
 
     /* LIST ACTIVE is the default LIST command.  If a keyword is provided,
      * we check whether it is defined. */
-    if (p == NULL) {
+    if (p == nullptr) {
         lp = &INFOactive;
     } else {
-        lp = NULL;
+        lp = nullptr;
         for (i = 0; i < ARRAY_SIZE(info); ++i) {
             if (strcasecmp(p, info[i]->method) == 0) {
                 lp = info[i];
@@ -243,7 +242,7 @@ CMDlist(int ac, char *av[])
     }
 
     /* If no defined LIST keyword is found, we return. */
-    if (lp == NULL) {
+    if (lp == nullptr) {
         Reply("%d Unknown LIST keyword\r\n", NNTP_ERR_SYNTAX);
         return;
     }
@@ -269,7 +268,7 @@ CMDlist(int ac, char *av[])
     }
 
     /* If a function is provided for the given keyword, we call it. */
-    if (lp->impl != NULL) {
+    if (lp->impl != nullptr) {
         lp->impl(lp, ac, av);
         return;
     }
@@ -277,13 +276,13 @@ CMDlist(int ac, char *av[])
     path = innconf->pathetc;
 
     /* The active, active.times and newsgroups files are in pathdb. */
-    if ((strstr(lp->File, "active") != NULL)
-        || (strstr(lp->File, "newsgroups") != NULL))
+    if ((strstr(lp->File, "active") != nullptr)
+        || (strstr(lp->File, "newsgroups") != nullptr))
         path = innconf->pathdb;
     path = concatpath(path, lp->File);
     qp = QIOopen(path);
     free(path);
-    if (qp == NULL) {
+    if (qp == nullptr) {
         Reply("%d No %s available\r\n", NNTP_ERR_UNAVAILABLE, lp->Items);
         /* Only the active and newsgroups files are required. */
         if (lp->Required || errno != ENOENT) {
@@ -302,10 +301,10 @@ CMDlist(int ac, char *av[])
     }
 
     /* Set up group list terminator. */
-    grplist[1] = NULL;
+    grplist[1] = nullptr;
 
     /* Read lines, ignore long ones. */
-    while ((p = QIOread(qp)) != NULL) {
+    while ((p = QIOread(qp)) != nullptr) {
         /* Check that the output does not break the NNTP protocol. */
         if (p[0] == '.' && p[1] != '.') {
             syslog(L_ERROR, "%s bad dot-stuffing in %s", Client.host,
@@ -327,10 +326,10 @@ CMDlist(int ac, char *av[])
             if (*p == '\0' || *p == '#' || *p == ';' || *p == ' ')
                 continue;
             if (PERMspecified) {
-                if ((q = strchr(p, ':')) == NULL)
+                if ((q = strchr(p, ':')) == nullptr)
                     continue;
                 q++;
-                if ((save = strchr(q, ':')) == NULL)
+                if ((save = strchr(q, ':')) == nullptr)
                     continue;
                 *save = '\0';
                 grplist[0] = q;
@@ -400,7 +399,7 @@ CMDlist(int ac, char *av[])
                 } else if (savec != '\0') {
                     *save = savec;
 
-                    if ((q = strrchr(p, NF_FLAG_ALIAS)) != NULL) {
+                    if ((q = strrchr(p, NF_FLAG_ALIAS)) != nullptr) {
                         *save = '\0';
                         Printf("%s %d %d %d %s\r\n", p, hi, lo, count, q);
                     }
@@ -416,7 +415,7 @@ CMDlist(int ac, char *av[])
         if (lp == &INFOactive) {
             /* When the connected user has the right to locally post, mention
              * it. */
-            if (PERMaccessconf->locpost && (q = strrchr(p, ' ')) != NULL) {
+            if (PERMaccessconf->locpost && (q = strrchr(p, ' ')) != nullptr) {
                 q++;
                 if (*q == NF_FLAG_IGNORE || *q == NF_FLAG_JUNK
                     || *q == NF_FLAG_NOLOCAL)

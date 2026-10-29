@@ -100,13 +100,13 @@ typedef struct _CMDENT {
 } CMDENT;
 
 
-char *ACTIVE = NULL;
-char *ACTIVETIMES = NULL;
-char *HISTORY = NULL;
-char *NEWSGROUPS = NULL;
-char *NNRPACCESS = NULL;
+char *ACTIVE = nullptr;
+char *ACTIVETIMES = nullptr;
+char *HISTORY = nullptr;
+char *NEWSGROUPS = nullptr;
+char *NNRPACCESS = nullptr;
 
-static char *LocalLogFileName = NULL;
+static char *LocalLogFileName = nullptr;
 static char *LocalLogDirName;
 
 static double STATstart;
@@ -156,13 +156,13 @@ static CMDENT CMDtable[] = {
 #if defined(HAVE_ZLIB)
     {"COMPRESS",     CMDcompress,     false, 2, 2,      true,  "DEFLATE"                  },
 #endif
-    {"DATE",         CMDdate,         false, 1, 1,      true,  NULL                       },
+    {"DATE",         CMDdate,         false, 1, 1,      true,  nullptr                    },
     {"GROUP",        CMDgroup,        true,  2, 2,      true,  "newsgroup"                },
     {"HDR",          CMDpat,          true,  2, 3,      true,  "header [message-ID|range]"},
     {"HEAD",         CMDfetch,        true,  1, 2,      true,  CMDfetchhelp               },
-    {"HELP",         CMDhelp,         false, 1, 1,      true,  NULL                       },
+    {"HELP",         CMDhelp,         false, 1, 1,      true,  nullptr                    },
     {"IHAVE",        CMDpost,         true,  2, 2,      true,  "message-ID"               },
-    {"LAST",         CMDnextlast,     true,  1, 1,      true,  NULL                       },
+    {"LAST",         CMDnextlast,     true,  1, 1,      true,  nullptr                    },
     {"LIST",         CMDlist,         true,  1, 3,      true,
      "[ACTIVE [wildmat]|ACTIVE.TIMES [wildmat]|COUNTS [wildmat]|DISTRIB.PATS"
      "|DISTRIBUTIONS|HEADERS [MSGID|RANGE]|MODERATORS|MOTD|NEWSGROUPS "
@@ -172,13 +172,13 @@ static CMDENT CMDtable[] = {
     {"NEWGROUPS",    CMDnewgroups,    true,  3, 4,      true,  "[yy]yymmdd hhmmss [GMT]"  },
     {"NEWNEWS",      CMDnewnews,      true,  4, 5,      true,
      "wildmat [yy]yymmdd hhmmss [GMT]"                                                    },
-    {"NEXT",         CMDnextlast,     true,  1, 1,      true,  NULL                       },
+    {"NEXT",         CMDnextlast,     true,  1, 1,      true,  nullptr                    },
     {"OVER",         CMDover,         true,  1, 2,      true,  "[range]"                  },
-    {"POST",         CMDpost,         true,  1, 1,      true,  NULL                       },
-    {"QUIT",         CMDquit,         false, 1, 1,      true,  NULL                       },
+    {"POST",         CMDpost,         true,  1, 1,      true,  nullptr                    },
+    {"QUIT",         CMDquit,         false, 1, 1,      true,  nullptr                    },
     /* SLAVE (which was ill-defined in RFC 977) was removed from the NNTP
      * protocol in RFC 3977. */
-    {"SLAVE",        CMD_unimp,       false, 1, 1,      true,  NULL                       },
+    {"SLAVE",        CMD_unimp,       false, 1, 1,      true,  nullptr                    },
 #ifdef HAVE_OPENSSL
     {"STARTTLS",     CMDstarttls,     false, 1, 1,      true,  NULL                       },
 #endif
@@ -188,7 +188,7 @@ static CMDENT CMDtable[] = {
     {"XOVER",        CMDover,         true,  1, 2,      true,  "[range]"                  },
     {"XPAT",         CMDpat,          true,  4, CMDany, true,
      "header message-ID|range pattern [pattern ...]"                                      },
-    {NULL,           CMD_unimp,       false, 0, 0,      true,  NULL                       }
+    {nullptr,        CMD_unimp,       false, 0, 0,      true,  nullptr                    }
 };
 
 static const char *const timer_name[] = {
@@ -256,7 +256,7 @@ ExitWithStats(int x, bool readconf)
 #ifdef HAVE_SASL
     if (sasl_conn) {
         sasl_dispose(&sasl_conn);
-        sasl_conn = NULL;
+        sasl_conn = nullptr;
         sasl_ssf = 0;
         sasl_maxout = NNTP_MAXLEN_COMMAND;
     }
@@ -298,7 +298,7 @@ ExitWithStats(int x, bool readconf)
         TMRfree();
     }
 
-    if (LocalLogFileName != NULL)
+    if (LocalLogFileName != nullptr)
         free(LocalLogFileName);
     closelog();
     exit(x);
@@ -320,14 +320,14 @@ CMDhelp(int ac UNUSED, char *av[] UNUSED)
     for (cp = CMDtable; cp->Name; cp++) {
         if (cp->Function == CMD_unimp)
             continue;
-        if (cp->Help == NULL)
+        if (cp->Help == nullptr)
             Printf("  %s\r\n", cp->Name);
         else
             Printf("  %s %s\r\n", cp->Name, cp->Help);
     }
-    if (PERMaccessconf != NULL) {
-        if (PERMaccessconf->newsmaster != NULL) {
-            if (strchr(PERMaccessconf->newsmaster, '@') == NULL) {
+    if (PERMaccessconf != nullptr) {
+        if (PERMaccessconf->newsmaster != nullptr) {
+            if (strchr(PERMaccessconf->newsmaster, '@') == nullptr) {
                 Printf("Report problems to <%s@%s>.\r\n",
                        PERMaccessconf->newsmaster, PERMaccessconf->fromhost);
             } else {
@@ -336,7 +336,7 @@ CMDhelp(int ac UNUSED, char *av[] UNUSED)
             }
         } else {
             /* Sigh, pickup from newsmaster anyway. */
-            if ((p = strchr(newsmaster, '@')) == NULL)
+            if ((p = strchr(newsmaster, '@')) == nullptr)
                 Printf("Report problems to <%s@%s>.\r\n", newsmaster,
                        PERMaccessconf->fromhost);
             else {
@@ -347,7 +347,7 @@ CMDhelp(int ac UNUSED, char *av[] UNUSED)
             }
         }
     } else {
-        if (strchr(newsmaster, '@') == NULL)
+        if (strchr(newsmaster, '@') == nullptr)
             Printf("Report problems to <%s@%s>.\r\n", newsmaster,
                    innconf->fromhost);
         else
@@ -367,7 +367,7 @@ void
 CMDcapabilities(int ac, char *av[])
 {
 #ifdef HAVE_SASL
-    const char *mechlist = NULL;
+    const char *mechlist = nullptr;
 #endif
 
     if (ac == 2 && !IsValidKeyword(av[1])) {
@@ -387,7 +387,8 @@ CMDcapabilities(int ac, char *av[])
 #ifdef HAVE_SASL
     /* Check for available SASL mechanisms.
      * Start the string with a space for the strstr() calls afterwards. */
-    sasl_listmech(sasl_conn, NULL, " ", " ", "", &mechlist, NULL, NULL);
+    sasl_listmech(sasl_conn, nullptr, " ", " ", "", &mechlist, nullptr,
+                  nullptr);
 #endif
 
     /* The client is not already authenticated. */
@@ -436,7 +437,7 @@ CMDcapabilities(int ac, char *av[])
 #endif /* HAVE_OPENSSL */
 #ifdef HAVE_SASL
             /* Check whether at least one SASL mechanism is available. */
-            if (mechlist != NULL && strlen(mechlist) > 2) {
+            if (mechlist != nullptr && strlen(mechlist) > 2) {
                 Printf(" SASL");
             }
 #endif
@@ -482,7 +483,7 @@ CMDcapabilities(int ac, char *av[])
      * The SASL capability has to be advertised, even after authentication,
      * so that the client can detect a possible active down-negotiation
      * attack. */
-    if (mechlist != NULL && strlen(mechlist) > 2) {
+    if (mechlist != nullptr && strlen(mechlist) > 2) {
         Printf("SASL%s\r\n", mechlist);
     }
 #endif /* HAVE_SASL */
@@ -543,7 +544,7 @@ Address2Name(struct sockaddr *sa, socklen_t len, char *hostname, size_t size)
     bool valid = false;
 
     /* Get the official hostname, store it away. */
-    ret = getnameinfo(sa, len, hostname, size, NULL, 0, NI_NAMEREQD);
+    ret = getnameinfo(sa, len, hostname, size, nullptr, 0, NI_NAMEREQD);
     if (ret != 0) {
         HostErrorStr = gai_strerror(ret);
         return false;
@@ -553,14 +554,14 @@ Address2Name(struct sockaddr *sa, socklen_t len, char *hostname, size_t size)
     memset(&hints, 0, sizeof(hints));
     hints.ai_family = AF_UNSPEC;
     hints.ai_socktype = SOCK_STREAM;
-    ret = getaddrinfo(hostname, NULL, &hints, &ai);
+    ret = getaddrinfo(hostname, nullptr, &hints, &ai);
     if (ret != 0) {
         HostErrorStr = gai_strerror(ret);
         return false;
     }
 
     /* Make sure one of those addresses is the address we got. */
-    for (host = ai; host != NULL; host = host->ai_next)
+    for (host = ai; host != nullptr; host = host->ai_next)
         if (network_sockaddr_equal(sa, host->ai_addr)) {
             valid = true;
             break;
@@ -712,8 +713,8 @@ write_buffer(const char *buff, ssize_t len)
 
             if (!(r == Z_OK || r == Z_BUF_ERROR || r == Z_STREAM_END)) {
                 sysnotice("deflate() failed: %d; %s", r,
-                          zstream_out->msg != NULL ? zstream_out->msg
-                                                   : "no detail");
+                          zstream_out->msg != nullptr ? zstream_out->msg
+                                                      : "no detail");
                 TMRstop(TMR_NNTPWRITE);
                 return;
             }
@@ -730,7 +731,7 @@ write_buffer(const char *buff, ssize_t len)
         unsigned outlen;
 
 #if defined(HAVE_SASL)
-        if (sasl_conn != NULL && sasl_ssf > 0) {
+        if (sasl_conn != nullptr && sasl_ssf > 0) {
             int r;
 
             /* Can only encode as much as the client can handle at one time. */
@@ -739,8 +740,8 @@ write_buffer(const char *buff, ssize_t len)
                 const char *ed = sasl_errdetail(sasl_conn);
 
                 sysnotice("sasl_encode() failed: %s; %s",
-                          sasl_errstring(r, NULL, NULL),
-                          ed != NULL ? ed : "no detail");
+                          sasl_errstring(r, nullptr, nullptr),
+                          ed != nullptr ? ed : "no detail");
                 TMRstop(TMR_NNTPWRITE);
                 return;
             }
@@ -900,7 +901,7 @@ WaitChild(int s NO_SIGACTION_UNUSED)
     int pid;
 
     for (;;) {
-        pid = waitpid(-1, NULL, WNOHANG);
+        pid = waitpid(-1, nullptr, WNOHANG);
         if (pid <= 0)
             break;
     }
@@ -923,7 +924,7 @@ SetupDaemon(void)
         ExitWithStats(1, true);
     }
     OVextra = overview_extra_fields(false);
-    if (OVextra == NULL) {
+    if (OVextra == nullptr) {
         /* overview_extra_fields() should already have logged something
          * useful. */
         Reply("%d NNTP server unavailable.  Try later!\r\n",
@@ -976,8 +977,8 @@ main(int argc, char *argv[])
     int count = 123456789;
     struct timeval tv;
     unsigned short ListenPort = NNTP_PORT;
-    char *ListenAddr = NULL;
-    char *ListenAddr6 = NULL;
+    char *ListenAddr = nullptr;
+    char *ListenAddr6 = nullptr;
     int *lfds;
     fd_set lfdset, lfdsetread;
     unsigned int lfdcount;
@@ -988,7 +989,7 @@ main(int argc, char *argv[])
     pid_t pid = -1;
     FILE *pidfile;
     int clienttimeout;
-    char *ConfFile = NULL;
+    char *ConfFile = nullptr;
     char *path;
     bool validcommandtoolong;
 
@@ -998,23 +999,23 @@ main(int argc, char *argv[])
 
     /* Parse arguments.  Must xstrdup() optarg if used because setproctitle
      * may clobber it! */
-    Reject = NULL;
+    Reject = nullptr;
     LLOGenable = false;
-    GRPcur = NULL;
+    GRPcur = nullptr;
     MaxBytesPerSecond = 0;
     strlcpy(Username, "unknown", sizeof(Username));
 
     /* Set up the pathname, first thing, and teach our error handlers about
      * the name of the program. */
     name = argv[0];
-    if (name == NULL || *name == '\0')
+    if (name == nullptr || *name == '\0')
         name = "nnrpd";
     else {
         const char *p;
 
         /* We take the last "/" in the path. */
         p = strrchr(name, '/');
-        if (p != NULL)
+        if (p != nullptr)
             name = p + 1;
     }
     message_program_name = xstrdup(name);
@@ -1023,7 +1024,7 @@ main(int argc, char *argv[])
     message_handlers_warn(1, message_log_syslog_warning);
     message_handlers_notice(1, message_log_syslog_notice);
 
-    if (!innconf_read(NULL))
+    if (!innconf_read(nullptr))
         exit(1);
 
 #ifdef HAVE_SASL
@@ -1043,7 +1044,7 @@ main(int argc, char *argv[])
             /* NOTREACHED */
         case '4': /* Bind to a certain IPv4 address. */
         case 'b':
-            if (ListenAddr != NULL)
+            if (ListenAddr != nullptr)
                 die("-b and -4 are the same and both may not be given");
             ListenAddr = xstrdup(optarg);
             break;
@@ -1120,10 +1121,10 @@ main(int argc, char *argv[])
         NNRPACCESS = concatpath(innconf->pathetc, INN_PATH_NNRPACCESS);
 
     /* Initialize the checks to perform or not on article syntax. */
-    if ((innconf->syntaxchecks != NULL)
+    if ((innconf->syntaxchecks != nullptr)
         && (innconf->syntaxchecks->count > 0)) {
         for (j = 0; j < innconf->syntaxchecks->count; j++) {
-            if (innconf->syntaxchecks->strings[j] != NULL) {
+            if (innconf->syntaxchecks->strings[j] != nullptr) {
                 if (strcmp(innconf->syntaxchecks->strings[j], "laxmid") == 0) {
                     laxmid = true;
                 } else if (strcmp(innconf->syntaxchecks->strings[j],
@@ -1143,20 +1144,20 @@ main(int argc, char *argv[])
     if (DaemonMode) {
         /* Allocate an lfds array to hold the file descriptors
          * for IPv4 and/or IPv6 connections. */
-        if (ListenAddr == NULL && ListenAddr6 == NULL) {
+        if (ListenAddr == nullptr && ListenAddr6 == nullptr) {
             network_innbind_all(SOCK_STREAM, ListenPort, &lfds, &lfdcount);
         } else {
-            if (ListenAddr != NULL && ListenAddr6 != NULL)
+            if (ListenAddr != nullptr && ListenAddr6 != nullptr)
                 lfdcount = 2;
             else
                 lfdcount = 1;
             lfds = xmalloc(lfdcount * sizeof(int));
             i = 0;
-            if (ListenAddr6 != NULL) {
+            if (ListenAddr6 != nullptr) {
                 lfds[i++] =
                     network_innbind_ipv6(SOCK_STREAM, ListenAddr6, ListenPort);
             }
-            if (ListenAddr != NULL) {
+            if (ListenAddr != nullptr) {
                 lfds[i] =
                     network_innbind_ipv4(SOCK_STREAM, ListenAddr, ListenPort);
             }
@@ -1194,7 +1195,7 @@ main(int argc, char *argv[])
         path = concatpath(innconf->pathrun, buff);
         pidfile = fopen(path, "w");
         free(path);
-        if (pidfile == NULL) {
+        if (pidfile == nullptr) {
             syslog(L_ERROR, "cannot write %s %m", buff);
             exit(1);
         }
@@ -1241,12 +1242,12 @@ main(int argc, char *argv[])
                              * will be modified. */
                             lfdsetread = lfdset;
                             lfdreadcount = select(lfdmax + 1, &lfdsetread,
-                                                  NULL, NULL, NULL);
+                                                  nullptr, nullptr, nullptr);
 
                             if (lfdreadcount > 0) {
                                 for (j = 0; j < lfdcount; j++) {
                                     if (FD_ISSET(lfds[j], &lfdsetread)) {
-                                        fd = accept(lfds[j], NULL, NULL);
+                                        fd = accept(lfds[j], nullptr, nullptr);
                                         /* Only handle the first match.  Future
                                          * calls to select() will handle
                                          * possible other matches. */
@@ -1261,9 +1262,9 @@ main(int argc, char *argv[])
                 }
                 for (;;) {
                     if (respawn == 0)
-                        pid = wait(NULL);
+                        pid = wait(nullptr);
                     else
-                        pid = waitpid(-1, NULL, WNOHANG);
+                        pid = waitpid(-1, nullptr, WNOHANG);
                     if (pid <= 0)
                         break;
                     ++respawn;
@@ -1277,12 +1278,12 @@ main(int argc, char *argv[])
                 /* Copy the master set because lfdsetread will be modified. */
                 lfdsetread = lfdset;
                 lfdreadcount =
-                    select(lfdmax + 1, &lfdsetread, NULL, NULL, NULL);
+                    select(lfdmax + 1, &lfdsetread, nullptr, nullptr, nullptr);
 
                 if (lfdreadcount > 0) {
                     for (j = 0; j < lfdcount; j++) {
                         if (FD_ISSET(lfds[j], &lfdsetread)) {
-                            fd = accept(lfds[j], NULL, NULL);
+                            fd = accept(lfds[j], nullptr, nullptr);
                             /* Only handle the first match.  Future calls
                              * to select() will handle possible other matches.
                              */
@@ -1392,7 +1393,7 @@ main(int argc, char *argv[])
      * Even if we fail reading them, we can just go on.  Don't bail out, the
      * related features will just not be activated.
      * The file is read by each nnrpd newly spawned. */
-    secrets_read(NULL);
+    secrets_read(nullptr);
 
     /* Get permissions and see if we can talk to this client. */
     GetClientInfo(ListenPort);
@@ -1432,18 +1433,18 @@ main(int argc, char *argv[])
         || (!PERMaccessconf && innconf->readertrack)) {
         syslog(L_NOTICE, "%s Tracking Enabled (%s)", Client.host, Username);
         pid = getpid();
-        gettimeofday(&tv, NULL);
+        gettimeofday(&tv, nullptr);
         count += pid;
         vid = tv.tv_sec ^ tv.tv_usec ^ pid ^ count;
         xasprintf(&LocalLogFileName, "%s/tracklogs/log-%u", innconf->pathlog,
                   vid);
-        if ((locallog = fopen(LocalLogFileName, "w")) == NULL) {
+        if ((locallog = fopen(LocalLogFileName, "w")) == nullptr) {
             LocalLogDirName = concatpath(innconf->pathlog, "tracklogs");
             MakeDirectory(LocalLogDirName, false);
             free(LocalLogDirName);
         }
-        if (locallog == NULL
-            && (locallog = fopen(LocalLogFileName, "w")) == NULL) {
+        if (locallog == nullptr
+            && (locallog = fopen(LocalLogFileName, "w")) == nullptr) {
             syslog(L_ERROR, "%s Local Logging failed (%s) %s: %m", Client.host,
                    Username, LocalLogFileName);
         } else {
@@ -1481,7 +1482,7 @@ main(int argc, char *argv[])
     line_init(&NNTPline);
 
     /* Main dispatch loop. */
-    for (timeout = innconf->initialtimeout, av = NULL, ac = 0;;
+    for (timeout = innconf->initialtimeout, av = nullptr, ac = 0;;
          timeout = clienttimeout) {
         TMRstart(TMR_NNTPWRITE);
         fflush(stdout);
@@ -1593,7 +1594,7 @@ main(int argc, char *argv[])
                 break;
 
         /* If no command has been recognized. */
-        if (cp->Name == NULL) {
+        if (cp->Name == nullptr) {
             if (strcasecmp(av[0], "XYZZY") == 0) {
                 /* Acknowledge the magic word from the Colossal Cave Adventure
                  * computer game. */

@@ -32,7 +32,7 @@ CMDgroup(int ac, char *av[])
 
     /* Parse arguments. */
     if (ac == 1) {
-        if (GRPcur == NULL) {
+        if (GRPcur == nullptr) {
             Reply("%d No group specified\r\n", NNTP_FAIL_NO_GROUP);
             return;
         } else {
@@ -58,7 +58,7 @@ CMDgroup(int ac, char *av[])
     }
 
     /* FIXME: Temporarily work around broken API. */
-    if (!OVgroupstats(group, &low, &high, &count, NULL)) {
+    if (!OVgroupstats(group, &low, &high, &count, nullptr)) {
         Reply("%d No such group %s\r\n", NNTP_FAIL_BAD_GROUP, group);
         free(group);
         return;
@@ -93,7 +93,7 @@ CMDgroup(int ac, char *av[])
     if (!hookpresent) {
         if (PERMspecified) {
             grplist[0] = group;
-            grplist[1] = NULL;
+            grplist[1] = nullptr;
             if (!PERMmatch(PERMreadlist, grplist)) {
                 Reply("%d Read access denied\r\n", PERMcanauthenticate
                                                        ? NNTP_FAIL_AUTH_NEEDED
@@ -158,7 +158,8 @@ CMDgroup(int ac, char *av[])
                     return;
                 }
                 prev = nfslow;
-                while (OVsearch(handle, &i, NULL, NULL, NULL, &arrived)) {
+                while (OVsearch(handle, &i, nullptr, nullptr, nullptr,
+                                &arrived)) {
                     if ((time_t) (arrived + innconf->nfsreaderdelay) > now) {
                         ARThigh = prev;
                         /* No need to update the count since it is only
@@ -230,8 +231,9 @@ CMDgroup(int ac, char *av[])
              * in case there isn't any article within the range.  We already
              * know that the group exists. */
             if ((handle = OVopensearch(group, range.Low, range.High))
-                != NULL) {
-                while (OVsearch(handle, &i, NULL, NULL, &token, NULL)) {
+                != nullptr) {
+                while (
+                    OVsearch(handle, &i, nullptr, nullptr, &token, nullptr)) {
                     if ((PERMaccessconf->nnrpdcheckart
                          || (count > 0
                              && (PERMaccessconf->groupexactcount == 0
@@ -301,7 +303,7 @@ GRPexactcount(char *group, ARTNUM low, ARTNUM high)
         return 0;
     }
 
-    while (OVsearch(handle, NULL, NULL, NULL, &token, NULL)) {
+    while (OVsearch(handle, nullptr, nullptr, nullptr, &token, nullptr)) {
         if (ARTinstorebytoken(token))
             count++;
     }
@@ -343,7 +345,7 @@ CMDxgtitle(int ac, char *av[])
     }
 
     /* Open the file, get ready to scan. */
-    if ((qp = QIOopen(NEWSGROUPS)) == NULL) {
+    if ((qp = QIOopen(NEWSGROUPS)) == nullptr) {
         syslog(L_ERROR, "%s can't open %s %m", Client.host, NEWSGROUPS);
         Reply("%d Can't open %s\r\n", NNTP_FAIL_XGTITLE, NEWSGROUPS);
         return;
@@ -352,7 +354,7 @@ CMDxgtitle(int ac, char *av[])
           NNTP_OK_XGTITLE);
 
     /* Print all lines with matching newsgroup name. */
-    while ((line = QIOread(qp)) != NULL) {
+    while ((line = QIOread(qp)) != nullptr) {
         for (q = line; *q && !ISWHITE(*q); q++)
             continue;
         save = *q;
@@ -360,7 +362,7 @@ CMDxgtitle(int ac, char *av[])
         if (uwildmat(line, p)) {
             if (PERMspecified) {
                 grplist[0] = line;
-                grplist[1] = NULL;
+                grplist[1] = nullptr;
                 if (!PERMmatch(PERMreadlist, grplist))
                     continue;
             }

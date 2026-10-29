@@ -23,11 +23,11 @@ PERMmatch(char **Pats, char **list)
     char *p;
     int match = false;
 
-    if (Pats == NULL || Pats[0] == NULL)
+    if (Pats == nullptr || Pats[0] == nullptr)
         return true;
 
     for (; *list; list++) {
-        for (i = 0; (p = Pats[i]) != NULL; i++) {
+        for (i = 0; (p = Pats[i]) != nullptr; i++) {
             if (p[0] == '!') {
                 if (uwildmat(*list, ++p))
                     match = false;
@@ -56,9 +56,9 @@ PERMartok(void)
     if (!PERMspecified)
         return false;
 
-    if ((p = GetHeader("Xref", true)) == NULL) {
+    if ((p = GetHeader("Xref", true)) == nullptr) {
         /* In case article does not include an Xref header field. */
-        if ((p = GetHeader("Newsgroups", true)) != NULL) {
+        if ((p = GetHeader("Newsgroups", true)) != nullptr) {
             if (!NGgetlist(&grplist, p))
                 /* No newgroups or null entry. */
                 return true;
@@ -67,7 +67,7 @@ PERMartok(void)
         }
     } else {
         /* Skip path element. */
-        if ((p = strchr(p, ' ')) == NULL)
+        if ((p = strchr(p, ' ')) == nullptr)
             return true;
         for (p++; *p == ' '; p++)
             ;
@@ -77,8 +77,8 @@ PERMartok(void)
             /* No newgroups or null entry. */
             return true;
         /* Chop ':' and article number. */
-        for (grp = grplist; *grp != NULL; grp++) {
-            if ((p = strchr(*grp, ':')) == NULL)
+        for (grp = grplist; *grp != nullptr; grp++) {
+            if ((p = strchr(*grp, ':')) == nullptr)
                 return true;
             *p = '\0';
         }
@@ -170,7 +170,7 @@ InitBackoffConstants(void)
 
     /* Read the runtime config file to get parameters. */
 
-    if ((PERMaccessconf->backoff_db == NULL)
+    if ((PERMaccessconf->backoff_db == nullptr)
         || !(PERMaccessconf->backoff_postslow >= 1L))
         return;
 
@@ -242,7 +242,7 @@ PostRecFilename(char *ip, char *user)
     if (!MakeDirectory(dirbuff, true)) {
         syslog(L_ERROR, "%s Unable to create postrec directories '%s': %s",
                Client.host, dirbuff, strerror(errno));
-        return NULL;
+        return nullptr;
     }
     snprintf(buff, sizeof(buff), "%s/%03u", dirbuff, quads[0]);
     return (buff);
@@ -325,7 +325,7 @@ GetPostRecord(char *path, time_t *lastpost, long *lastsleep, long *lastn)
     char *s;
 
     fp = fopen(path, "r");
-    if (fp == NULL) {
+    if (fp == nullptr) {
         if (errno == ENOENT) {
             return 1;
         }
@@ -334,7 +334,7 @@ GetPostRecord(char *path, time_t *lastpost, long *lastsleep, long *lastn)
         return 0;
     }
 
-    if (fgets(buff, SMBUF, fp) == NULL) {
+    if (fgets(buff, SMBUF, fp) == nullptr) {
         syslog(L_ERROR, "%s Error reading '%s': %s", Client.host, path,
                strerror(errno));
         fclose(fp);
@@ -342,7 +342,7 @@ GetPostRecord(char *path, time_t *lastpost, long *lastsleep, long *lastn)
     }
     *lastpost = (time_t) atoll(buff);
 
-    if ((s = strchr(buff, ',')) == NULL) {
+    if ((s = strchr(buff, ',')) == nullptr) {
         syslog(L_ERROR, "%s bad data in postrec file: '%s'", Client.host,
                buff);
         fclose(fp);
@@ -351,7 +351,7 @@ GetPostRecord(char *path, time_t *lastpost, long *lastsleep, long *lastn)
     s++;
     *lastsleep = atol(s);
 
-    if ((s = strchr(s, ',')) == NULL) {
+    if ((s = strchr(s, ',')) == nullptr) {
         syslog(L_ERROR, "%s bad data in postrec file: '%s'", Client.host,
                buff);
         fclose(fp);
@@ -373,7 +373,7 @@ StorePostRecord(char *path, time_t lastpost, long lastsleep, long lastn)
     FILE *fp;
 
     fp = fopen(path, "w");
-    if (fp == NULL) {
+    if (fp == nullptr) {
         syslog(L_ERROR, "%s Error opening '%s': %s", Client.host, path,
                strerror(errno));
         return 0;
@@ -394,7 +394,7 @@ RateLimit(long *sleeptime, char *path)
     time_t prevpost;
     long prevsleep, prevn, n;
 
-    now = time(NULL);
+    now = time(nullptr);
     prevpost = 0;
     prevsleep = 0;
     prevn = 0;
@@ -477,7 +477,7 @@ IsValidAlgorithm(const char *string)
     const unsigned char *p;
 
     /* Not NULL. */
-    if (string == NULL) {
+    if (string == nullptr) {
         return false;
     }
 
