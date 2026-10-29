@@ -1,7 +1,7 @@
 # expire/ programs — converted from expire/Makefile.  expirerm is a script
 # generated from expirerm.in and is not built here yet.
 
-inn_program(convdate     SOURCES convdate.c     INNONLY)
+inn_program(convdate     SOURCES convdate.cc     INNONLY)
 inn_program(expire       SOURCES expire.c)
 inn_program(expireover   SOURCES expireover.c)
 inn_program(fastrm       SOURCES fastrm.c)
