@@ -92,7 +92,7 @@ static void method_parse(METHOD *, CONFFILE *, CONFTOKEN *, int);
 
 static void add_authgroup(AUTHGROUP *);
 static void add_accessgroup(ACCESSGROUP *);
-static void strip_accessgroups(void);
+static void strip_accessgroups();
 
 static METHOD *copy_method(METHOD *);
 static void free_method(METHOD *);
@@ -2030,7 +2030,7 @@ add_accessgroup(ACCESSGROUP *group)
 **  Clean out access groups that don't apply to any of our auth groups.
 */
 static void
-strip_accessgroups(void)
+strip_accessgroups()
 {
     int i, j;
 

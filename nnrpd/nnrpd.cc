@@ -63,7 +63,7 @@ bool encryption_layer_on = false;
 #    define OPENSSL_OPT ""
 #endif
 
-static void Usage(void) __attribute__((__noreturn__));
+static void Usage() __attribute__((__noreturn__));
 
 /*
 **  If we have getloadavg, include the appropriate header file.  Otherwise,
@@ -912,7 +912,7 @@ WaitChild(int s NO_SIGACTION_UNUSED)
 
 
 static void
-SetupDaemon(void)
+SetupDaemon()
 {
     bool val;
 
@@ -952,7 +952,7 @@ SetupDaemon(void)
 **  Print a usage message and exit.
 */
 static void
-Usage(void)
+Usage()
 {
     fprintf(stderr, "Usage error.\n");
     exit(1);

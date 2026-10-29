@@ -31,7 +31,7 @@ typedef struct {
 **  Return true if the group must be made invalid.
 */
 static bool
-makeGroupInvalid(void)
+makeGroupInvalid()
 {
     bool hookpresent = false;
     char *grplist[2];

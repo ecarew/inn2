@@ -135,7 +135,7 @@ PushIOvHelper(struct iovec *vec, int *countp)
 }
 
 static void
-PushIOvRateLimited(void)
+PushIOvRateLimited()
 {
     double start, end, elapsed, target;
     struct iovec newiov[IOV_MAX > 1024 ? 1024 : IOV_MAX];
@@ -186,7 +186,7 @@ PushIOvRateLimited(void)
 }
 
 static void
-PushIOv(void)
+PushIOv()
 {
     TMRstart(TMR_NNTPWRITE);
     fflush(stdout);
@@ -220,7 +220,7 @@ static char *_IO_buffer_ = nullptr;
 static int highwater = 0;
 
 static void
-PushIOb(void)
+PushIOb()
 {
 #if defined(HAVE_ZLIB)
     /* Last line of a multi-line data block response.
@@ -308,7 +308,7 @@ static off_t nnrpd_tombstone_size = 0;
 **  read instead of trusting a partial hashset.
 */
 static bool
-nnrpd_tombstone_refresh(void)
+nnrpd_tombstone_refresh()
 {
     /* Initial hash bucket count for the per-connection tombstone cache.
      * Sized for the typical case (hundreds of cancels per cycle); the
