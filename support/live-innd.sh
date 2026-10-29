@@ -81,6 +81,7 @@ chmod +x "$tmp/explode.sh"
 cat >"$tmp/etc/newsfeeds" <<EOF
 ME:*::
 filefeed:*:Tf,Wnm:filefeed
+ovfeed:*:Tf,WnteO:ovfeed
 explode:!*:Tx:$tmp/explode.sh
 EOF
 cat >"$tmp/etc/incoming.conf" <<'EOF'
@@ -449,6 +450,114 @@ ok sh -c "grep -qs 'posttrack ok' '$tmp'/log/tracklogs/log-* && ls '$tmp'/log/tr
 
 kill "$nnrpd_pid" 2>/dev/null
 wait "$nnrpd_pid" 2>/dev/null
+
+# --- backends ---------------------------------------------------------------
+
+be=$bin/backends
+ctl flush ''
+sleep 1
+out=$tmp/spool/outgoing
+
+# innxmit offers the file feed's articles back to innd, which already has
+# them: every offer is refused.  It streams by default; -s turns streaming
+# off and uses IHAVE.
+cp "$out/filefeed" "$tmp/xmit.batch"
+"$be/innxmit" -d -P "$port" 127.0.0.1 "$tmp/xmit.batch" >"$tmp/innxmit.out" 2>&1
+label="innxmit streams (CHECK, all refused)"
+ok sh -c "grep -q '^> CHECK' '$tmp/innxmit.out' && grep -q '^< 438' '$tmp/innxmit.out'"
+cp "$out/filefeed" "$tmp/xmit.batch"
+"$be/innxmit" -d -s -P "$port" 127.0.0.1 "$tmp/xmit.batch" >"$tmp/innxmit-s.out" 2>&1
+label="innxmit -s uses IHAVE (all refused)"
+ok sh -c "grep -q '^> IHAVE' '$tmp/innxmit-s.out' && grep -q '^< 435' '$tmp/innxmit-s.out'"
+"$be/innxmit" -p 127.0.0.1 "$tmp/xmit.batch" >>"$tmp/innxmit.out" 2>&1
+label="innxmit -p purges nothing from a valid batch"
+ok sh -c "[ -s '$tmp/xmit.batch' ] || [ ! -e '$tmp/xmit.batch' ]"
+
+# batcher turns a list of tokens into an rnews batch on standard output
+# (and removes its input file once done, so give it a copy).
+cut -d' ' -f1 "$out/filefeed" >"$tmp/tokens"
+cp "$tmp/tokens" "$tmp/batcher.in"
+"$be/batcher" -v live "$tmp/batcher.in" >"$tmp/batcher.out" 2>"$tmp/batcher.err"
+label="batcher writes an rnews batch"
+ok sh -c "[ \$(grep -c '^#! rnews ' '$tmp/batcher.out') -ge 5 ]"
+
+# cvtbatch adds the requested fields to each token (live1 was cancelled
+# earlier, so look for live2).
+"$be/cvtbatch" -w nm <"$tmp/tokens" >"$tmp/cvtbatch.out" 2>&1
+label="cvtbatch -w nm adds message-IDs"
+ok sh -c "grep -q '<live2@live.test>' '$tmp/cvtbatch.out'"
+
+# overchan writes overview data from innd's WnteO feed.  innd already
+# writes overview itself, so overchan warns about that and rewrites the same
+# entries.
+"$be/overchan" "$out/ovfeed" >"$tmp/overchan.out" 2>&1
+label="overchan reads the overview feed"
+ok sh -c "grep -q 'timings [1-9]' '$tmp/overchan.out' && [ -n \"\$('$bin/storage/tdx-util' -o -n test.live 2>/dev/null)\" ]"
+
+# buffchan reads funnel input, the data (one field by default) followed by
+# the sites to send it to, and appends the data to one file per site.
+mkdir -p "$tmp/bc"
+printf 'first siteA\nsecond siteB siteA\nthird siteA\n' \
+    | "$be/buffchan" -d "$tmp/bc" >"$tmp/buffchan.out" 2>&1
+label="buffchan writes one file per site"
+ok sh -c "[ \$(wc -l <'$tmp/bc/siteA') = 3 ] && grep -qx second '$tmp/bc/siteB'"
+
+# inndf reports free space, history entries and overview usage.
+label="inndf reports free space"
+ok sh -c "'$be/inndf' '$tmp/spool' | grep -Eq '^[0-9]+'"
+label="inndf -n counts history entries"
+ok sh -c "'$be/inndf' -n | grep -Eq '^[0-9]+'"
+label="inndf -o reports overview usage"
+ok sh -c "'$be/inndf' -o | grep -q ."
+
+# shlock: take a lock for this shell, refuse it for another live process,
+# release it once the holder is gone.
+lock=$tmp/run/LOCK.test
+label="shlock takes a free lock"
+ok "$be/shlock" -f "$lock" -p $$
+sleep 30 & other=$!
+label="shlock refuses a lock held by a live process"
+ok sh -c "! '$be/shlock' -f '$lock' -p $other"
+label="shlock -c checks without locking"
+ok sh -c "! '$be/shlock' -c -f '$lock' -p $other"
+kill "$other"; wait "$other" 2>/dev/null
+echo "$other" >"$lock"
+# shlock only replaces a lock whose inode changed in an earlier second than
+# its own temporary file (a guard against a lock replaced mid-check).
+sleep 1
+label="shlock replaces a stale lock"
+ok "$be/shlock" -f "$lock" -p $$
+
+# shrinkfile keeps the end of a file, cut at a line boundary.
+seq 1 5000 >"$tmp/shrink.txt"
+"$be/shrinkfile" -s 1k "$tmp/shrink.txt" 2>>"$tmp/ctlinnd.log"
+label="shrinkfile -s keeps the tail at a line start"
+ok sh -c "[ \$(wc -c <'$tmp/shrink.txt') -le 1024 ] && tail -1 '$tmp/shrink.txt' | grep -qx 5000"
+
+# actsync compares two active files and prints the ctlinnd commands needed.
+printf 'test.live 0000000000 0000000001 y\ntest.new 0000000000 0000000001 y\n' \
+    >"$tmp/active.remote"
+# -p 0: no minimum share of unchanged groups (two of five change here).
+"$be/actsync" -i /dev/null -o x -p 0 -v 0 "$tmp/db/active" "$tmp/active.remote" \
+    >"$tmp/actsync.out" 2>&1
+label="actsync lists the groups to add and remove"
+ok sh -c "grep -q 'newgroup test.new' '$tmp/actsync.out' && grep -q 'rmgroup junk' '$tmp/actsync.out'"
+
+# ninpaths: collect Path data, then report on it.
+printf 'live.test!peer.a!peer.b!not-for-mail\nlive.test!peer.a!not-for-mail\n' \
+    | "$be/ninpaths" -p -d "$tmp/paths.dump" 2>>"$tmp/ctlinnd.log"
+"$be/ninpaths" -r live.test -u "$tmp/paths.dump" -v 2 >"$tmp/ninpaths.out" 2>&1
+label="ninpaths reports the sites in its Path data"
+ok sh -c "grep -q 'peer.a' '$tmp/ninpaths.out'"
+
+# nntpget, innxbatch and innbind: only argument and error paths here
+# (nntpget and innxbatch always use port 119; innbind binds for innd).
+label="nntpget rejects conflicting options"
+ok sh -c "! '$be/nntpget' -f /dev/null -t 990101 127.0.0.1 >/dev/null 2>&1"
+label="innxbatch fails without a reachable server"
+ok sh -c "! '$be/innxbatch' -t 5 127.0.0.1 '$batch' >/dev/null 2>&1"
+label="innbind rejects a missing argument"
+ok sh -c "! '$be/innbind' >/dev/null 2>&1"
 
 # --- expire tools -------------------------------------------------------------
 
