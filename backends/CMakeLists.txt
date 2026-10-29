@@ -2,7 +2,7 @@
 # scripts (actsyncd, mod-active, news2mail, nntpsend, send-*, ...) are
 # generated from .in files and are not built here yet.
 
-inn_program(actsync    SOURCES actsync.c    INNONLY)
+inn_program(actsync    SOURCES actsync.cc    INNONLY)
 inn_program(archive    SOURCES archive.cc)
 inn_program(batcher    SOURCES batcher.cc)
 inn_program(buffchan   SOURCES buffchan.cc   INNONLY)

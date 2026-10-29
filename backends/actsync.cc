@@ -1562,8 +1562,10 @@ ignore_grps(struct grp *grp, int grplen, struct pat *igcl, int iglen)
 static int
 merge_cmp(const void *arg_a, const void *arg_b)
 {
-    const struct grp *a = arg_a; /* group a to compare */
-    const struct grp *b = arg_b; /* group b to compare */
+    const struct grp *a =
+        static_cast<const struct grp *>(arg_a); /* group a to compare */
+    const struct grp *b =
+        static_cast<const struct grp *>(arg_b); /* group b to compare */
     int i;
 
     /* firewall */
@@ -1777,8 +1779,10 @@ merge_grps(struct grp *grp, int grplen, char *host1, char *host2)
 static int
 active_cmp(const void *arg_a, const void *arg_b)
 {
-    const struct grp *a = arg_a; /* group a to compare */
-    const struct grp *b = arg_b; /* group b to compare */
+    const struct grp *a =
+        static_cast<const struct grp *>(arg_a); /* group a to compare */
+    const struct grp *b =
+        static_cast<const struct grp *>(arg_b); /* group b to compare */
 
     /* firewall */
     if (a == b) {
@@ -2262,8 +2266,10 @@ error_mark(struct grp *grp, int grplen, int hostid)
 static int
 eq_merge_cmp(const void *arg_a, const void *arg_b)
 {
-    const struct eqgrp *a = arg_a; /* group a to compare */
-    const struct eqgrp *b = arg_b; /* group b to compare */
+    const struct eqgrp *a =
+        static_cast<const struct eqgrp *>(arg_a); /* group a to compare */
+    const struct eqgrp *b =
+        static_cast<const struct eqgrp *>(arg_b); /* group b to compare */
     int i;
 
     /* firewall */
@@ -2788,7 +2794,7 @@ string_equal(const void *key, const void *entry)
 {
     const char *p, *q;
 
-    p = key;
-    q = entry;
+    p = static_cast<const char *>(key);
+    q = static_cast<const char *>(entry);
     return !strcmp(p, q);
 }
