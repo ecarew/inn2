@@ -142,7 +142,7 @@ main(int ac, char *av[])
 
     /* Set defaults. */
     pid = 0;
-    name = NULL;
+    name = nullptr;
     do_sleep = false;
     JustChecking = false;
     BinaryLock = false;
@@ -172,7 +172,7 @@ main(int ac, char *av[])
     }
 
     ac -= optind;
-    if (ac || pid == 0 || name == NULL) {
+    if (ac || pid == 0 || name == nullptr) {
         Usage();
     }
 
@@ -187,7 +187,7 @@ main(int ac, char *av[])
 
     /* Create the temp file in the same directory as the destination.
      * To prevent (some?) buffer overflows, chdir to the directory first. */
-    if ((p = strrchr(name, '/')) != NULL) {
+    if ((p = strrchr(name, '/')) != nullptr) {
         *p = '\0';
         if (chdir(name) < 0) {
             sysdie(CANTCHDIR, name, strerror(errno));

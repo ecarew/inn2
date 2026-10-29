@@ -203,9 +203,9 @@ readline(QIOSTATE *qp)
 {
     char *line, *p;
 
-    for (line = QIOread(qp); line != NULL; line = QIOread(qp)) {
+    for (line = QIOread(qp); line != nullptr; line = QIOread(qp)) {
         p = strchr(line, '#');
-        if (p != NULL)
+        if (p != nullptr)
             *p = '\0';
         for (; *line == ' ' || *line == '\t'; line++)
             ;
@@ -216,7 +216,7 @@ readline(QIOSTATE *qp)
             return line;
         }
     }
-    return NULL;
+    return nullptr;
 }
 
 int
@@ -226,10 +226,10 @@ main(int argc, char *argv[])
     unsigned long total;
     QIOSTATE *qp;
     char *active, *group, *line, *p;
-    struct overview *overview = NULL;
+    struct overview *overview = nullptr;
     struct overview_group stats;
     float used;
-    char *file = NULL;
+    char *file = nullptr;
     bool inode = false;
     bool ovcount = false;
     bool ovused = false;
@@ -252,14 +252,14 @@ main(int argc, char *argv[])
             ovused = true;
             break;
         case 'f':
-            if (file != NULL)
+            if (file != nullptr)
                 die("inndf: Only one of -f or -F may be given");
             file = xstrdup(optarg);
             break;
         case 'F':
-            if (file != NULL)
+            if (file != nullptr)
                 die("inndf: Only one of -f or -F may be given");
-            if (!innconf_read(NULL))
+            if (!innconf_read(nullptr))
                 exit(1);
             file = concatpath(innconf->pathetc, INN_PATH_FILESYSTEMS);
             use_filesystems = true;
@@ -269,7 +269,7 @@ main(int argc, char *argv[])
     argc -= optind;
     argv += optind;
 
-    if (argc == 0 && !ovused && !ovcount && file == NULL)
+    if (argc == 0 && !ovused && !ovcount && file == nullptr)
         die(usage);
 
     /* Set the program name now rather than earlier so that it doesn't get
@@ -280,20 +280,20 @@ main(int argc, char *argv[])
        one was given, just print out the number without the path or any
        explanatory text; this mode is used by e.g. innwatch.  Otherwise,
        format things nicely. */
-    if (argc == 1 && !ovused && !ovcount && file == NULL) {
+    if (argc == 1 && !ovused && !ovcount && file == nullptr) {
         printspace(argv[0], inode, false);
         printf("\n");
     } else {
         for (i = 0; i < argc; i++)
             printspace_formatted(argv[i], inode);
-        if (file != NULL) {
+        if (file != nullptr) {
             qp = QIOopen(file);
-            if (qp == NULL) {
+            if (qp == nullptr) {
                 if (!use_filesystems)
                     sysdie("can't open %s", file);
             } else {
                 line = readline(qp);
-                while (line != NULL) {
+                while (line != nullptr) {
                     printspace_formatted(line, inode);
                     line = readline(qp);
                 }
@@ -307,10 +307,10 @@ main(int argc, char *argv[])
        initialization stuff. */
     if (ovused || ovcount) {
         if (!use_filesystems)
-            if (!innconf_read(NULL))
+            if (!innconf_read(nullptr))
                 exit(1);
         overview = overview_open(OV_READ);
-        if (overview == NULL)
+        if (overview == nullptr)
             die("can't open overview");
     }
 
@@ -319,14 +319,14 @@ main(int argc, char *argv[])
     if (ovcount) {
         active = concatpath(innconf->pathdb, INN_PATH_ACTIVE);
         qp = QIOopen(active);
-        if (qp == NULL)
+        if (qp == nullptr)
             sysdie("can't open %s", active);
 
         total = 0;
         group = QIOread(qp);
-        while (group != NULL) {
+        while (group != nullptr) {
             p = strchr(group, ' ');
-            if (p != NULL)
+            if (p != nullptr)
                 *p = '\0';
             if (overview_group(overview, group, &stats))
                 total += stats.count;
@@ -346,7 +346,7 @@ main(int argc, char *argv[])
         else
             printf("%.2f%% overview space used\n", (double) used);
     }
-    if (overview != NULL)
+    if (overview != nullptr)
         overview_close(overview);
     exit(0);
 }

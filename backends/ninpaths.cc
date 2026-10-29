@@ -85,14 +85,14 @@ hhost(const char *n)
     /* not there - allocate */
     h = static_cast<struct nrec *>(wmalloc(sizeof(struct nrec)));
     if (!h)
-        return NULL;
+        return nullptr;
     h->id = strdup(n);
     if (!h->id) {
         free(h);
-        return NULL;
+        return nullptr;
     }
     h->link = hosthash[i];
-    h->rlink = NULL;
+    h->rlink = nullptr;
     h->no = h->sentto = 0;
     hosthash[i] = h;
     sites++;
@@ -109,7 +109,7 @@ tallyrec(struct nrec *r, struct nrec *h)
             return t;
     t = static_cast<struct trec *>(wmalloc(sizeof(struct trec)));
     if (!t)
-        return NULL;
+        return nullptr;
     t->rlink = r->rlink;
     t->linkid = h;
     t->tally = 0;
@@ -150,7 +150,7 @@ writedump(FILE *f)
         return -1;
     }
     fprintf(f, "!!NINP " VERSION " %lu %lu %ld %ld %lu\n",
-            (unsigned long) starttime, (unsigned long) time(NULL), sites,
+            (unsigned long) starttime, (unsigned long) time(nullptr), sites,
             total,
             (unsigned long) ((atimes / (double) total) + (double) starttime));
     n = j = 0;
@@ -207,7 +207,7 @@ writedumpfile(const char *n)
 #if __GNUC__ > 4 || defined(__llvm__) || defined(__clang__)
 #    pragma GCC diagnostic ignored "-Wformat-nonliteral"
 #endif
-    snprintf(buf, sizeof(buf), n, (unsigned long) time(0));
+    snprintf(buf, sizeof(buf), n, (unsigned long) time(nullptr));
 #if __GNUC__ > 4 || defined(__llvm__) || defined(__clang__)
 #    pragma GCC diagnostic warning "-Wformat-nonliteral"
 #endif
@@ -229,7 +229,7 @@ readdump(FILE *f)
     long i, m, l;
     unsigned long st, et, at;
     long sit, tot;
-    struct nrec **n = NULL;
+    struct nrec **n = nullptr;
     struct trec *t;
     char c[MAXHOST];
     char v[16];
@@ -356,7 +356,7 @@ pathline(char *c)
     struct nrec *h, *r;
     struct trec *t;
 
-    r = NULL;
+    r = nullptr;
     while (*c) {
         for (c2 = c; *c2 && *c2 != '!'; c2++)
             ;
@@ -412,7 +412,7 @@ procpaths(FILE *f)
                    INN will restart a fresh ninpaths. */
                 return;
             /* update average age and grand total */
-            atimes += (double) (time(0) - starttime);
+            atimes += (double) (time(nullptr) - starttime);
             ++total;
         } else {
             /* next line is valid */
@@ -431,7 +431,7 @@ report(const char *hostname, int verbose)
     struct nrec *list, *relay;
     struct trec *rlist;
     char hostString[MAXHOST];
-    time_t t0 = time(0);
+    time_t t0 = time(nullptr);
 
 #ifdef DEBUG
     long nhosts = 0, nlinks = 0;
@@ -452,8 +452,8 @@ report(const char *hostname, int verbose)
            verbose, total, avgAge);
     for (i = 0; i < HASH_TBL - 1; i++) {
         list = hosthash[i];
-        while (list != NULL) {
-            if (list->id[0] != 0 && list->rlink != NULL) {
+        while (list != nullptr) {
+            if (list->id[0] != 0 && list->rlink != nullptr) {
                 if (verbose > 0 || (100 * list->sentto > total))
                     printf("%ld\t%s\n", list->sentto, list->id);
             }
@@ -466,15 +466,15 @@ report(const char *hostname, int verbose)
            verbose, total, avgAge);
     for (i = 0; i < HASH_TBL - 1; i++) {
         list = hosthash[i];
-        while (list != NULL) {
+        while (list != nullptr) {
             if (verbose > 1 || (100 * list->sentto > total)) {
-                if (list->id[0] != 0 && list->rlink != NULL) {
+                if (list->id[0] != 0 && list->rlink != nullptr) {
                     columns = 3 + strlen(list->id);
                     snprintf(hostString, sizeof(hostString), "%s H ",
                              list->id);
                     needHost = 1;
                     rlist = list->rlink;
-                    while (rlist != NULL) {
+                    while (rlist != nullptr) {
                         if ((100 * rlist->tally > total)
                             || ((verbose > 1)
                                 && (5000 * rlist->tally > total))) {
@@ -517,11 +517,11 @@ main(int argc, char *argv[])
 {
     int i;
     int pf = 0, vf = 2;
-    char *df = NULL, *rf = NULL;
+    char *df = nullptr, *rf = nullptr;
 
     for (i = 0; i < HASH_TBL; i++)
-        hosthash[i] = NULL;
-    starttime = time(0);
+        hosthash[i] = nullptr;
+    starttime = time(nullptr);
 
     while ((i = getopt(argc, argv, "pd:u:r:v:")) != EOF)
         switch (i) {

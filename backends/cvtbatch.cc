@@ -31,7 +31,7 @@ main(int ac, char *av[])
 
     /* First thing, set up our identity. */
     message_program_name = "cvtbatch";
-    if (!innconf_read(NULL))
+    if (!innconf_read(nullptr))
         exit(1);
 
     /* Parse JCL. */
@@ -64,7 +64,7 @@ main(int ac, char *av[])
 
     /* Loop over all input. */
     qp = QIOfdopen((int) fileno(stdin));
-    while ((line = QIOread(qp)) != NULL) {
+    while ((line = QIOread(qp)) != nullptr) {
         for (p = line; *p; p++)
             if (ISWHITE(*p)) {
                 *p = '\0';
@@ -74,10 +74,10 @@ main(int ac, char *av[])
         if (!IsToken(line))
             continue;
         token = TextToToken(line);
-        if ((art = SMretrieve(token, RETR_ALL)) == NULL)
+        if ((art = SMretrieve(token, RETR_ALL)) == nullptr)
             continue;
         text = wire_findheader(art->data, art->len, "Message-ID", true);
-        if (text == NULL) {
+        if (text == nullptr) {
             SMfreearticle(art);
             continue;
         }

@@ -80,7 +80,7 @@ parse_argument(const char *string, struct binding *binding)
     long value;
 
     /* Do the initial parse and allocate our data structures. */
-    spec = vector_split(string, ',', NULL);
+    spec = vector_split(string, ',', nullptr);
     if (spec->count != 4)
         die("invalid command-line argument %s", string);
 
@@ -91,7 +91,7 @@ parse_argument(const char *string, struct binding *binding)
     if (!convert_string(spec->strings[1], &value))
         die("invalid protocol family %s in %s", spec->strings[1], string);
     binding->family = value;
-    if (binding->address != NULL)
+    if (binding->address != nullptr)
         free(binding->address);
     binding->address = xstrdup(spec->strings[2]);
     if (!convert_string(spec->strings[3], &value))
@@ -276,7 +276,7 @@ main(int argc, char *argv[])
     uid_t real_uid, uid;
     int i;
     bool done;
-    struct binding binding = {0, 0, NULL, 0};
+    struct binding binding = {0, 0, nullptr, 0};
     bool force_sendfd = false;
 
     /* Set up the error handlers.  Errors go to stderr and to syslog with a
@@ -292,7 +292,7 @@ main(int argc, char *argv[])
        need privileged ports easier and to make testing easier. */
     real_uid = getuid();
     if (real_uid != geteuid()) {
-        get_news_uid_gid(&uid, NULL, true);
+        get_news_uid_gid(&uid, nullptr, true);
         if (real_uid != uid) {
             die("must be run by runasuser (%lu), not %lu", (unsigned long) uid,
                 (unsigned long) real_uid);

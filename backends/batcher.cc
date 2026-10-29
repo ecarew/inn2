@@ -61,8 +61,8 @@ BATCHstart(void)
 #    pragma GCC diagnostic warning "-Wformat-nonliteral"
 #endif
         F = popen(buff, "w");
-        if (F == NULL)
-            return NULL;
+        if (F == nullptr)
+            return nullptr;
     } else
         F = stdout;
     BATCHopen = true;
@@ -122,11 +122,11 @@ RequeueAndExit(off_t Cookie, char *line, long BytesInArt)
     }
 
     /* Make an appropriate spool file. */
-    if (Input == NULL)
+    if (Input == nullptr)
         spool = concatpath(innconf->pathoutgoing, Host);
     else
-        spool = concat(Input, ".bch", (char *) 0);
-    if ((F = xfopena(spool)) == NULL)
+        spool = concat(Input, ".bch", (char *) nullptr);
+    if ((F = xfopena(spool)) == nullptr)
         sysdie("%s cannot open %s", Host, spool);
 
     /* If we can back up to where the batch started, do so. */
@@ -144,7 +144,7 @@ RequeueAndExit(off_t Cookie, char *line, long BytesInArt)
     }
 
     /* Write rest of stdin to spool. */
-    while (fgets(buff, sizeof buff, stdin) != NULL)
+    while (fgets(buff, sizeof buff, stdin) != nullptr)
         if (fputs(buff, F) == EOF) {
             syswarn("%s cannot write spool", Host);
             i = 1;
@@ -156,7 +156,7 @@ RequeueAndExit(off_t Cookie, char *line, long BytesInArt)
     }
 
     /* If we had a named input file, try to rename the spool. */
-    if (Input != NULL && rename(spool, Input) < 0) {
+    if (Input != nullptr && rename(spool, Input) < 0) {
         syswarn("%s cannot rename spool", Host);
         i = 1;
     }
@@ -202,7 +202,7 @@ main(int ac, char *av[])
     /* Set defaults. */
     openlog("batcher", L_OPENLOG_FLAGS | LOG_PID, LOG_INN_PROG);
     message_program_name = "batcher";
-    if (!innconf_read(NULL))
+    if (!innconf_read(nullptr))
         exit(1);
     Redirect = true;
     umask(NEWSUMASK);
@@ -260,15 +260,15 @@ main(int ac, char *av[])
     if (ac != 1 && ac != 2)
         die("usage error");
     Host = av[0];
-    if ((Input = av[1]) != NULL) {
+    if ((Input = av[1]) != nullptr) {
         if (Input[0] != '/')
             Input = concatpath(innconf->pathoutgoing, av[1]);
-        if (freopen(Input, "r", stdin) == NULL)
+        if (freopen(Input, "r", stdin) == nullptr)
             sysdie("%s cannot open %s", Host, Input);
     }
 
     if (Redirect) {
-        if (freopen(ERRLOG, "a", stderr) == NULL)
+        if (freopen(ERRLOG, "a", stderr) == nullptr)
             sysdie("cannot open %s for error output", ERRLOG);
     }
 
@@ -284,8 +284,8 @@ main(int ac, char *av[])
     STATbegin = TMRnow_double();
 
     SMinit();
-    F = NULL;
-    while (fgets(line, sizeof line, stdin) != NULL) {
+    F = nullptr;
+    while (fgets(line, sizeof line, stdin) != nullptr) {
         /* Record line length in case we do an ftello.  Not portable to
          * systems with non-Unix file formats. */
         length = strlen(line);
@@ -293,7 +293,7 @@ main(int ac, char *av[])
 
         /* Get lines like "name size".  Note that we ignore size but accept
          * it for backward compatibility. */
-        if ((p = strchr(line, '\n')) == NULL) {
+        if ((p = strchr(line, '\n')) == nullptr) {
             warn("%s skipping %.40s: too long", Host, line);
             continue;
         }
@@ -301,7 +301,7 @@ main(int ac, char *av[])
         if (line[0] == '\0' || line[0] == '#')
             continue;
         p = strchr(line, ' ');
-        if (p != NULL)
+        if (p != nullptr)
             *p = '\0';
 
         p = line;
@@ -309,7 +309,7 @@ main(int ac, char *av[])
         /* Open the article. */
         if (IsToken(p)) {
             token = TextToToken(p);
-            if ((art = SMretrieve(token, RETR_ALL)) == NULL) {
+            if ((art = SMretrieve(token, RETR_ALL)) == nullptr) {
                 if ((SMerrno != SMERR_NOENT) && (SMerrno != SMERR_UNINIT))
                     warn("%s skipping %.40s: %s", Host, p, SMerrorstr);
                 continue;
@@ -325,11 +325,11 @@ main(int ac, char *av[])
          * is here (rather than up before the while loop) so that we
          * can avoid sending an empty batch.  The goto makes the code
          * a bit more clear. */
-        if (F == NULL) {
+        if (F == nullptr) {
             if (GotInterrupt) {
-                RequeueAndExit(Cookie, (char *) NULL, 0L);
+                RequeueAndExit(Cookie, (char *) nullptr, 0L);
             }
-            if ((F = BATCHstart()) == NULL) {
+            if ((F = BATCHstart()) == nullptr) {
                 syswarn("%s cannot start batch %d", Host, BATCHcount);
                 break;
             }
@@ -364,10 +364,10 @@ main(int ac, char *av[])
             }
 
             if (GotInterrupt) {
-                RequeueAndExit(Cookie, (char *) NULL, 0L);
+                RequeueAndExit(Cookie, (char *) nullptr, 0L);
             }
 
-            if ((F = BATCHstart()) == NULL) {
+            if ((F = BATCHstart()) == nullptr) {
                 syswarn("%s cannot start batch %d", Host, BATCHcount);
                 break;
             }
@@ -412,7 +412,7 @@ main(int ac, char *av[])
 
     if (BATCHopen)
         BATCHstatus = BATCHclose(F);
-    RequeueAndExit(Cookie, NULL, 0);
+    RequeueAndExit(Cookie, nullptr, 0);
 
     /* NOTREACHED */
     return 0;

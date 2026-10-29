@@ -55,7 +55,7 @@ parse_line(char *line, struct overview_data *data)
        the line as the data. */
     for (start = line, i = 0; i < 3; i++) {
         end = strchr(start, ' ');
-        if (end == NULL) {
+        if (end == nullptr) {
             warn("truncated input line after %s", start);
             return false;
         }
@@ -96,7 +96,7 @@ write_overview(struct overview *overview, struct overview_data *data,
 {
     struct timeval start, end;
     const char *p;
-    const char *xref = NULL;
+    const char *xref = nullptr;
 
     statistics->articles++;
     if (data->overlen >= 6)
@@ -108,14 +108,14 @@ write_overview(struct overview *overview, struct overview_data *data,
                     xref++;
                 break;
             }
-    if (xref == NULL) {
+    if (xref == nullptr) {
         warn("no Xref found in overview data %s", data->overview);
         return;
     }
-    gettimeofday(&start, NULL);
+    gettimeofday(&start, nullptr);
     if (!overview_add_xref(overview, xref, data))
         warn("cannot write overview data for %s", TokenToText(data->token));
-    gettimeofday(&end, NULL);
+    gettimeofday(&end, nullptr);
     statistics->busy += (end.tv_sec - start.tv_sec) * 1000;
     statistics->busy += (end.tv_usec - start.tv_usec) / 1000;
 }
@@ -138,14 +138,14 @@ process_file(struct overview *overview, const char *file,
         qp = QIOfdopen(STDIN_FILENO);
     else
         qp = QIOopen(file);
-    if (qp == NULL) {
+    if (qp == nullptr) {
         syswarn("cannot open %s", file);
         return;
     }
 
     while (1) {
         line = QIOread(qp);
-        if (line == NULL) {
+        if (line == nullptr) {
             if (QIOtoolong(qp)) {
                 warn("input line too long, skipping");
                 continue;
@@ -186,7 +186,7 @@ main(int argc, char *argv[])
     argv += 1;
 
     /* Set defaults. */
-    if (!innconf_read(NULL))
+    if (!innconf_read(nullptr))
         exit(1);
     umask(NEWSUMASK);
     memset(&statistics, 0, sizeof(statistics));
@@ -194,18 +194,18 @@ main(int argc, char *argv[])
         warn("overchan is running while innd is creating overview data (you"
              " can ignore this message if you are running makehistory -F)");
     overview = overview_open(OV_WRITE);
-    if (overview == NULL)
+    if (overview == nullptr)
         die("cannot open overview");
-    gettimeofday(&start, NULL);
+    gettimeofday(&start, nullptr);
 
     /* Process the files. */
     if (argc == 0)
         process_file(overview, "-", &statistics);
     else
-        for (; *argv != NULL; argv++)
+        for (; *argv != nullptr; argv++)
             process_file(overview, *argv, &statistics);
     overview_close(overview);
-    gettimeofday(&end, NULL);
+    gettimeofday(&end, nullptr);
     total = (end.tv_sec - start.tv_sec) * 1000;
     total += (end.tv_usec - start.tv_usec) / 1000;
     notice("timings %lu arts %lu of %lu ms", statistics.articles,

@@ -57,7 +57,7 @@ mkpath(const char *file)
 
     path = xstrdup(file);
     delim = strrchr(path, '/');
-    if (delim == NULL) {
+    if (delim == nullptr) {
         free(path);
         return false;
     }
@@ -94,19 +94,19 @@ static bool
 write_article(ARTHANDLE *article, const char *file, bool concatenate)
 {
     FILE *out;
-    char *text = NULL;
+    char *text = nullptr;
     size_t length = 0;
 
     /* Open the output file. */
     out = fopen(file, concatenate ? "a" : "w");
-    if (out == NULL && errno == ENOENT) {
+    if (out == nullptr && errno == ENOENT) {
         if (!mkpath(file)) {
             syswarn("cannot mkdir for %s", file);
             return false;
         }
         out = fopen(file, concatenate ? "a" : "w");
     }
-    if (out == NULL) {
+    if (out == nullptr) {
         syswarn("cannot open %s for writing", file);
         return false;
     }
@@ -175,12 +175,12 @@ write_index_header(FILE *index, ARTHANDLE *art, const char *header)
     const char *start, *end, *p;
 
     start = wire_findheader(art->data, art->len, header, false);
-    if (start == NULL) {
+    if (start == nullptr) {
         fprintf(index, "<none>");
         return;
     }
     end = wire_endheader(start, art->data + art->len - 1);
-    if (end == NULL) {
+    if (end == nullptr) {
         fprintf(index, "<none>");
         return;
     }
@@ -228,7 +228,7 @@ build_path(const char *group, const char *number, struct config *config,
     char *p;
 
     /* Initialize the path buffer to config-root followed by /. */
-    if (path == NULL)
+    if (path == nullptr)
         path = buffer_new();
     buffer_set(path, config->root, strlen(config->root));
     buffer_append(path, "/", 1);
@@ -249,7 +249,7 @@ build_path(const char *group, const char *number, struct config *config,
         time_t now;
         int year, month;
 
-        now = time(NULL);
+        now = time(nullptr);
         tm = localtime(&now);
         year = tm->tm_year + 1900;
         month = tm->tm_mon + 1;
@@ -274,18 +274,18 @@ process_article(ARTHANDLE *art, const char *token, struct config *config)
     const char *group;
     size_t i;
     struct cvector *groups;
-    struct buffer *path = NULL;
+    struct buffer *path = nullptr;
 
     /* Determine the groups from the Xref header field.  In groups will be the
      * split Xref header field body; from the second string on should be a
      * group, a colon, and an article number. */
     start = wire_findheader(art->data, art->len, "Xref", true);
-    if (start == NULL) {
+    if (start == nullptr) {
         warn("cannot find Xref header field in %s", token);
         return;
     }
     end = wire_endheader(start, art->data + art->len - 1);
-    if (end == NULL) {
+    if (end == nullptr) {
         warn("unterminated Xref header field in %s", token);
         return;
     }
@@ -293,7 +293,7 @@ process_article(ARTHANDLE *art, const char *token, struct config *config)
     for (p = xref; *p != '\0'; p++)
         if (*p == '\r' || *p == '\n')
             *p = ' ';
-    groups = cvector_split_space(xref, NULL);
+    groups = cvector_split_space(xref, nullptr);
     if (groups->count < 2) {
         warn("bogus Xref header field in %s", token);
         free(xref);
@@ -303,19 +303,19 @@ process_article(ARTHANDLE *art, const char *token, struct config *config)
 
     /* Walk through each newsgroup, saving the article in the appropriate
        location. */
-    first = NULL;
+    first = nullptr;
     for (i = 1; i < groups->count; i++) {
         group = groups->strings[i];
         /* The cvector's strings point into xref, our own writable copy. */
         delim = const_cast<char *>(strchr(group, ':'));
-        if (delim == NULL) {
+        if (delim == nullptr) {
             warn("bogus Xref entry %s in %s", group, token);
             continue;
         }
         *delim = '\0';
 
         /* Skip newsgroups that don't match our pattern, if provided. */
-        if (config->pattern != NULL) {
+        if (config->pattern != nullptr) {
             if (uwildmat_poison(group, config->pattern) != UWILDMAT_MATCH)
                 continue;
         }
@@ -326,7 +326,7 @@ process_article(ARTHANDLE *art, const char *token, struct config *config)
         /* If this isn't the first group, and we're not saving by date, try to
            just link or symlink between the archive directories rather than
            writing out multiple copies. */
-        if (first == NULL || config->concat) {
+        if (first == nullptr || config->concat) {
             if (!write_article(art, path->data, config->concat))
                 continue;
             if (groups->count > 2)
@@ -343,9 +343,9 @@ process_article(ARTHANDLE *art, const char *token, struct config *config)
     }
     free(xref);
     cvector_free(groups);
-    if (path != NULL)
+    if (path != nullptr)
         buffer_free(path);
-    if (first != NULL)
+    if (first != nullptr)
         free(first);
 }
 
@@ -353,7 +353,7 @@ process_article(ARTHANDLE *art, const char *token, struct config *config)
 int
 main(int argc, char *argv[])
 {
-    struct config config = {NULL, NULL, NULL, 0, 0};
+    struct config config = {nullptr, nullptr, nullptr, 0, 0};
     int option, status;
     bool redirect = true;
     QIOSTATE *qp;
@@ -367,7 +367,7 @@ main(int argc, char *argv[])
     message_program_name = "archive";
 
     /* Set defaults. */
-    if (!innconf_read(NULL))
+    if (!innconf_read(nullptr))
         exit(1);
     config.root = innconf->patharchive;
     umask(NEWSUMASK);
@@ -390,7 +390,7 @@ main(int argc, char *argv[])
             break;
         case 'i':
             config.index = fopen(optarg, "a");
-            if (config.index == NULL)
+            if (config.index == nullptr)
                 sysdie("cannot open index %s for output", optarg);
             break;
         case 'p':
@@ -408,11 +408,11 @@ main(int argc, char *argv[])
         die("usage error");
     if (redirect) {
         file = concatpath(innconf->pathlog, INN_PATH_ERRLOG);
-        if (freopen(file, "a", stderr) == NULL)
+        if (freopen(file, "a", stderr) == nullptr)
             sysdie("cannot open %s for error output", file);
     }
     if (argc == 1)
-        if (freopen(argv[0], "r", stdin) == NULL)
+        if (freopen(argv[0], "r", stdin) == nullptr)
             sysdie("cannot open %s for input", argv[0]);
 
     /* Initialize the storage manager. */
@@ -421,9 +421,9 @@ main(int argc, char *argv[])
 
     /* Read input. */
     qp = QIOfdopen(fileno(stdin));
-    if (qp == NULL)
+    if (qp == nullptr)
         sysdie("cannot reopen input");
-    while ((line = QIOread(qp)) != NULL) {
+    while ((line = QIOread(qp)) != nullptr) {
         if (*line == '\0' || *line == '#')
             continue;
 
@@ -433,7 +433,7 @@ main(int argc, char *argv[])
         if (IsToken(line)) {
             token = TextToToken(line);
             art = SMretrieve(token, RETR_ALL);
-            if (art == NULL) {
+            if (art == nullptr) {
                 warn("cannot retrieve %s", line);
                 continue;
             }
@@ -456,23 +456,24 @@ main(int argc, char *argv[])
     }
 
     /* Otherwise, make an appropriate spool file. */
-    if (argv[0] == NULL)
+    if (argv[0] == nullptr)
         file = concatpath(innconf->pathoutgoing, "archive");
     else if (argv[0][0] == '/')
-        file = concat(argv[0], ".bch", (char *) 0);
+        file = concat(argv[0], ".bch", (char *) nullptr);
     else
-        file = concat(innconf->pathoutgoing, "/", argv[0], ".bch", (char *) 0);
+        file = concat(innconf->pathoutgoing, "/", argv[0], ".bch",
+                      (char *) nullptr);
     spool = fopen(file, "a");
-    if (spool == NULL)
+    if (spool == nullptr)
         sysdie("cannot spool to %s", file);
 
     /* Write the rest of stdin to the spool file. */
     status = 0;
-    if (fprintf(spool, "%s\n", line != NULL ? line : "") == EOF) {
+    if (fprintf(spool, "%s\n", line != nullptr ? line : "") == EOF) {
         syswarn("cannot start spool");
         status = 1;
     }
-    while (fgets(buffer, sizeof(buffer), stdin) != NULL)
+    while (fgets(buffer, sizeof(buffer), stdin) != nullptr)
         if (fputs(buffer, spool) == EOF) {
             syswarn("cannot write to spool");
             status = 1;
@@ -484,7 +485,7 @@ main(int argc, char *argv[])
     }
 
     /* If we had a named input file, try to rename the spool. */
-    if (argv[0] != NULL && rename(file, argv[0]) < 0) {
+    if (argv[0] != nullptr && rename(file, argv[0]) < 0) {
         syswarn("cannot rename spool");
         status = 1;
     }

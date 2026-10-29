@@ -280,15 +280,15 @@ struct eqgrp {
 #define D_SUMMARY (v_flag >= VER_REPORT) /* true => give summary always */
 
 /* flag and arg related defaults */
-static int bork_host1_flag = 0; /* 1 => -b 1 or -b 12 or -b 21 given */
-static int bork_host2_flag = 0; /* 1 => -b 2 or -b 12 or -b 21 given */
-static int num_host1_flag = 0;  /* 1 => -d 1 or -d 12 or -d 21 given */
-static int num_host2_flag = 0;  /* 1 => -d 2 or -d 12 or -d 21 given */
-static char *ign_file = NULL;   /* default ignore file */
-static int ign_host1_flag = 1;  /* 1 => -i ign_file applies to host1 */
-static int ign_host2_flag = 1;  /* 1 => -i ign_file applies to host2 */
-static int g_flag = 0;          /* ignore grps deeper than g_flag, 0=>don't */
-static int k_flag = 0;          /* 1 => -k given */
+static int bork_host1_flag = 0;  /* 1 => -b 1 or -b 12 or -b 21 given */
+static int bork_host2_flag = 0;  /* 1 => -b 2 or -b 12 or -b 21 given */
+static int num_host1_flag = 0;   /* 1 => -d 1 or -d 12 or -d 21 given */
+static int num_host2_flag = 0;   /* 1 => -d 2 or -d 12 or -d 21 given */
+static char *ign_file = nullptr; /* default ignore file */
+static int ign_host1_flag = 1;   /* 1 => -i ign_file applies to host1 */
+static int ign_host2_flag = 1;   /* 1 => -i ign_file applies to host2 */
+static int g_flag = 0;           /* ignore grps deeper than g_flag, 0=>don't */
+static int k_flag = 0;           /* 1 => -k given */
 static int l_host1_flag =
     HOSTID1; /* HOSTID1 => host1 =group error detection */
 static int l_host2_flag =
@@ -349,16 +349,16 @@ main(int argc, char *argv[])
     message_program_name = "actsync";
 
     /* Read in default info from inn.conf. */
-    if (!innconf_read(NULL))
+    if (!innconf_read(nullptr))
         exit(1);
     process_args(argc, argv, &host1, &host2);
 
     /* obtain the active files */
-    grp = get_active(host1, HOSTID1, &grplen, NULL, &host1_errs);
+    grp = get_active(host1, HOSTID1, &grplen, nullptr, &host1_errs);
     grp = get_active(host2, HOSTID2, &grplen, grp, &host2_errs);
 
     /* ignore groups from both active files, if -i */
-    if (ign_file != NULL) {
+    if (ign_file != nullptr) {
 
         /* read in the ignore file */
         ignor = get_ignore(ign_file, &iglen);
@@ -396,7 +396,7 @@ main(int argc, char *argv[])
 static void
 process_args(int argc, char *argv[], char **host1, char **host2)
 {
-    char *def_serv = NULL; /* name of default server */
+    char *def_serv = nullptr; /* name of default server */
     int i;
 
     /* parse args */
@@ -669,7 +669,7 @@ process_args(int argc, char *argv[], char **host1, char **host2)
     /* process the remaining args */
     argc -= optind;
     argv += optind;
-    *host1 = NULL;
+    *host1 = nullptr;
     switch (argc) {
     case 1:
         /* assume host1 is the local server */
@@ -685,17 +685,17 @@ process_args(int argc, char *argv[], char **host1, char **host2)
     }
 
     /* determine default host name if needed */
-    if (*host1 == NULL || strcmp(*host1, "-") == 0) {
+    if (*host1 == nullptr || strcmp(*host1, "-") == 0) {
         def_serv = innconf->server;
         *host1 = def_serv;
     }
-    if (*host2 == NULL || strcmp(*host2, "-") == 0) {
+    if (*host2 == nullptr || strcmp(*host2, "-") == 0) {
         def_serv = innconf->server;
         *host2 = def_serv;
     }
-    if (*host1 == NULL || *host2 == NULL)
+    if (*host1 == nullptr || *host2 == nullptr)
         die("unable to determine default server name");
-    if (D_BUG && def_serv != NULL)
+    if (D_BUG && def_serv != nullptr)
         warn("STATUS: using default server: %s", def_serv);
 
     /* processing done */
@@ -722,37 +722,37 @@ process_args(int argc, char *argv[], char **host1, char **host2)
 static struct grp *
 get_active(char *host, int hostid, int *len, struct grp *grp, int *errs)
 {
-    FILE *active;            /* stream for fetched active data */
-    FILE *FromServer = NULL; /* stream from server */
-    FILE *ToServer = NULL;   /* stream to server */
-    QIOSTATE *qp;            /* QIO active state */
-    char buff[8192 + 1];     /* QIO buffer */
-    char *line;              /* the line just read */
-    struct grp *ret;         /* array of groups to return */
-    struct grp *cur;         /* current grp entry being formed */
-    int max;                 /* max length of ret */
-    int cnt;                 /* number of entries read */
-    int ucnt;                /* number of entries to be used */
-    int namelen;             /* length of newsgroup name */
-    int is_file;             /* 1 => host is actually a filename */
-    int num_check;           /* true => check for all numeric components */
+    FILE *active;               /* stream for fetched active data */
+    FILE *FromServer = nullptr; /* stream from server */
+    FILE *ToServer = nullptr;   /* stream to server */
+    QIOSTATE *qp;               /* QIO active state */
+    char buff[8192 + 1];        /* QIO buffer */
+    char *line;                 /* the line just read */
+    struct grp *ret;            /* array of groups to return */
+    struct grp *cur;            /* current grp entry being formed */
+    int max;                    /* max length of ret */
+    int cnt;                    /* number of entries read */
+    int ucnt;                   /* number of entries to be used */
+    int namelen;                /* length of newsgroup name */
+    int is_file;                /* 1 => host is actually a filename */
+    int num_check;              /* true => check for all numeric components */
     char *rhost;
     int rport;
     char *p;
     int i;
 
     /* firewall */
-    if (len == NULL)
+    if (len == nullptr)
         die("internal error #1: len is NULL");
-    if (errs == NULL)
+    if (errs == nullptr)
         die("internal error #2: errs is NULL");
-    if (host == NULL)
+    if (host == nullptr)
         die("internal error #10: host is NULL");
     if (D_BUG)
         warn("STATUS: obtaining active file from %s", host);
 
     /* setup return array if needed */
-    if (grp == NULL) {
+    if (grp == nullptr) {
         ret = xmalloc(CHUNK * sizeof(struct grp));
         max = CHUNK;
         *len = 0;
@@ -770,7 +770,7 @@ get_active(char *host, int hostid, int *len, struct grp *grp, int *errs)
         is_file = 1;
 
         /* setup to read the local file quickly */
-        if ((qp = QIOopen(host)) == NULL)
+        if ((qp = QIOopen(host)) == nullptr)
             sysdie("cannot open active file");
 
         /* case: host is a hostname */
@@ -780,7 +780,7 @@ get_active(char *host, int hostid, int *len, struct grp *grp, int *errs)
         is_file = 0;
 
         /* prepare remote host variables */
-        if ((p = strchr(host, ':')) != NULL) {
+        if ((p = strchr(host, ':')) != nullptr) {
             rport = atoi(p + 1);
             *p = '\0';
             rhost = xstrdup(host);
@@ -804,18 +804,18 @@ get_active(char *host, int hostid, int *len, struct grp *grp, int *errs)
         free(rhost);
 
         /* get the active data from the server */
-        active = CAlistopen(FromServer, ToServer, NULL);
-        if (active == NULL)
+        active = CAlistopen(FromServer, ToServer, nullptr);
+        if (active == nullptr)
             sysdie("cannot retrieve data");
 
         /* setup to read the retrieved data quickly */
-        if ((qp = QIOfdopen((int) fileno(active))) == NULL)
+        if ((qp = QIOfdopen((int) fileno(active))) == nullptr)
             sysdie("cannot read temp file");
     }
 
     /* scan server's output, processing appropriate lines */
     num_check = NUM_CHECK(hostid);
-    for (cnt = 0, ucnt = 0; (line = QIOread(qp)) != NULL; ++(*len), ++cnt) {
+    for (cnt = 0, ucnt = 0; (line = QIOread(qp)) != nullptr; ++(*len), ++cnt) {
 
         /* expand return array if needed */
         if (*len >= max) {
@@ -830,19 +830,19 @@ get_active(char *host, int hostid, int *len, struct grp *grp, int *errs)
         cur->linenum = cnt + 1;
         cur->output = 0;
         cur->remove = 0;
-        cur->name = NULL;
-        cur->hi = NULL;
-        cur->low = NULL;
-        cur->type = NULL;
-        cur->outhi = NULL;
-        cur->outlow = NULL;
-        cur->outtype = NULL;
+        cur->name = nullptr;
+        cur->hi = nullptr;
+        cur->low = nullptr;
+        cur->type = nullptr;
+        cur->outhi = nullptr;
+        cur->outlow = nullptr;
+        cur->outtype = nullptr;
 
         /* obtain a copy of the current line */
         cur->name = xstrdup(line);
 
         /* get the group name */
-        if ((p = strchr(cur->name, ' ')) == NULL) {
+        if ((p = strchr(cur->name, ' ')) == nullptr) {
             if (!QUIET(hostid))
                 warn("line %d from %s is malformed, skipping line", cnt + 1,
                      host);
@@ -856,7 +856,7 @@ get_active(char *host, int hostid, int *len, struct grp *grp, int *errs)
 
         /* find the other 3 fields, ignore if not found */
         cur->hi = p + 1;
-        if ((p = strchr(p + 1, ' ')) == NULL) {
+        if ((p = strchr(p + 1, ' ')) == nullptr) {
             if (!QUIET(hostid))
                 warn("skipping malformed line %d (field 2) from %s", cnt + 1,
                      host);
@@ -867,7 +867,7 @@ get_active(char *host, int hostid, int *len, struct grp *grp, int *errs)
         }
         *p = '\0';
         cur->low = p + 1;
-        if ((p = strchr(p + 1, ' ')) == NULL) {
+        if ((p = strchr(p + 1, ' ')) == nullptr) {
             if (!QUIET(hostid))
                 warn("skipping malformed line %d (field 3) from %s", cnt + 1,
                      host);
@@ -878,7 +878,7 @@ get_active(char *host, int hostid, int *len, struct grp *grp, int *errs)
         }
         *p = '\0';
         cur->type = p + 1;
-        if ((p = strchr(p + 1, ' ')) != NULL) {
+        if ((p = strchr(p + 1, ' ')) != nullptr) {
             if (!QUIET(hostid))
                 warn("skipping line %d from %s, it has more than 4 fields",
                      cnt + 1, host);
@@ -915,7 +915,7 @@ get_active(char *host, int hostid, int *len, struct grp *grp, int *errs)
                 && strcmp(cur->name, "to") != 0
                 && strcmp(cur->name, "test") != 0
                 && strcmp(cur->name, "general") != 0
-                && strchr(cur->name, '.') == NULL) {
+                && strchr(cur->name, '.') == nullptr) {
                 if (!QUIET(hostid))
                     warn("line %d <%s> from %s is an invalid top level name",
                          cnt + 1, cur->name, host);
@@ -1107,7 +1107,7 @@ get_active(char *host, int hostid, int *len, struct grp *grp, int *errs)
         CAclose();
         fprintf(ToServer, "QUIT\r\n");
         fclose(ToServer);
-        if (fgets(buff, sizeof buff, FromServer) == NULL) {
+        if (fgets(buff, sizeof buff, FromServer) == nullptr) {
             /* ignore: we don't care if we don't get the server reply */
         }
         fclose(FromServer);
@@ -1149,7 +1149,7 @@ bad_grpname(char *name, int num_chk)
     int level;   /* group levels (.'s) */
 
     /* firewall */
-    if (name == NULL) {
+    if (name == nullptr) {
         return 1;
     }
 
@@ -1275,9 +1275,9 @@ get_ignore(char *filename, int *len)
     int i;
 
     /* firewall */
-    if (filename == NULL)
+    if (filename == nullptr)
         die("internal error #3: filename is NULL");
-    if (len == NULL)
+    if (len == nullptr)
         die("internal error #4: len is NULL");
     if (D_BUG)
         warn("STATUS: reading ignore file %s", filename);
@@ -1287,12 +1287,12 @@ get_ignore(char *filename, int *len)
     max = CHUNK;
 
     /* setup to read the ignore file data quickly */
-    if ((qp = QIOopen(filename)) == NULL)
+    if ((qp = QIOopen(filename)) == nullptr)
         sysdie("cannot read ignore file %s", filename);
 
     /* scan server's output, displaying appropriate lines */
     *len = 0;
-    for (linenum = 1; (line = QIOread(qp)) != NULL; ++linenum) {
+    for (linenum = 1; (line = QIOread(qp)) != nullptr; ++linenum) {
 
         /* expand return array if needed */
         if (*len >= max) {
@@ -1302,7 +1302,7 @@ get_ignore(char *filename, int *len)
 
         /* remove any trailing comments */
         p = strchr(line, '#');
-        if (p != NULL) {
+        if (p != nullptr) {
             *p = '\0';
         }
 
@@ -1324,12 +1324,12 @@ get_ignore(char *filename, int *len)
 
         /* ensure that the second newsgroup pattern token follows */
         p = strtok(line + 2, " \t");
-        if (p == NULL)
+        if (p == nullptr)
             die("did not find 2nd field in line %d of %s", linenum, filename);
 
         /* setup the next return element */
         cur = &ret[*len];
-        cur->pat = NULL;
+        cur->pat = nullptr;
         cur->type_match = 0;
         cur->y_type = 0;
         cur->m_type = 0;
@@ -1337,15 +1337,15 @@ get_ignore(char *filename, int *len)
         cur->j_type = 0;
         cur->x_type = 0;
         cur->eq_type = 0;
-        cur->epat = NULL;
+        cur->epat = nullptr;
         cur->ignore = (line[0] == 'i');
 
         /* obtain a copy of the newsgroup pattern token */
         cur->pat = xstrdup(p);
 
         /* process any other type tokens */
-        for (p = strtok(NULL, " \t"), i = 3; p != NULL;
-             p = strtok(NULL, " \t"), ++i) {
+        for (p = strtok(nullptr, " \t"), i = 3; p != nullptr;
+             p = strtok(nullptr, " \t"), ++i) {
 
             /* ensure that this next token is a valid type */
             switch (p[0]) {
@@ -1441,9 +1441,9 @@ ignore_grps(struct grp *grp, int grplen, struct pat *igcl, int iglen)
     int ccnt;       /* groups to be checked */
 
     /* firewall */
-    if (grp == NULL)
+    if (grp == nullptr)
         die("internal error #5: grp is NULL");
-    if (igcl == NULL)
+    if (igcl == nullptr)
         die("internal error $6: igcl is NULL");
     if (D_BUG)
         warn("STATUS: determining which groups to ignore");
@@ -1497,7 +1497,7 @@ ignore_grps(struct grp *grp, int grplen, struct pat *igcl, int iglen)
                 case NF_FLAG_ALIAS:
                     if (!pp->eq_type)
                         continue; /* pattern does not apply */
-                    if (pp->epat != NULL
+                    if (pp->epat != nullptr
                         && !uwildmat(&gp->type[1], pp->epat)) {
                         /* equiv pattern doesn't match, patt does not apply */
                         continue;
@@ -1625,7 +1625,7 @@ merge_grps(struct grp *grp, int grplen, char *host1, char *host2)
     int h2_probs; /* =type problem groups from host2 */
 
     /* firewall */
-    if (grp == NULL)
+    if (grp == nullptr)
         die("internal error #7: grp is NULL");
 
     /* sort groups for the merge */
@@ -1840,7 +1840,7 @@ output_grps(struct grp *grp, int grplen)
     int i;
 
     /* firewall */
-    if (grp == NULL)
+    if (grp == nullptr)
         die("internal error #9: grp is NULL");
 
     /*
@@ -1879,7 +1879,7 @@ output_grps(struct grp *grp, int grplen)
                 continue;
             p = xstrdup(grp[i].name);
             q = strchr(p, '.');
-            if (q != NULL)
+            if (q != nullptr)
                 *q = '\0';
             if (!hash_insert(existing_hier, p, p))
                 free(p);
@@ -2121,8 +2121,8 @@ output_grps(struct grp *grp, int grplen)
                     if (rm_cycle) {
                         if (D_REPORT && o_flag == OUTPUT_EXEC)
                             warn("rmgroup %s", grp[i].name);
-                        if (!exec_cmd(o_flag, "rmgroup", grp[i].name, NULL,
-                                      NULL)) {
+                        if (!exec_cmd(o_flag, "rmgroup", grp[i].name, nullptr,
+                                      nullptr)) {
                             ++not_done;
                         } else {
                             ++remove;
@@ -2157,7 +2157,7 @@ output_grps(struct grp *grp, int grplen)
                             warn("changegroup %s %s", grp[i].name,
                                  grp[i].outtype);
                         if (!exec_cmd(o_flag, "changegroup", grp[i].name,
-                                      grp[i].outtype, NULL)) {
+                                      grp[i].outtype, nullptr)) {
                             ++not_done;
                         } else {
                             ++change;
@@ -2212,7 +2212,7 @@ error_mark(struct grp *grp, int grplen, int hostid)
     int errcnt;
 
     /* firewall */
-    if (grp == NULL)
+    if (grp == nullptr)
         die("internal error #11: grp is NULL");
 
     /* loop through groups, looking for error groups from a given host */
@@ -2351,7 +2351,7 @@ mark_eq_probs(struct grp *grp, int grplen, int hostid, char *host1,
     int j;
 
     /* firewall */
-    if (grp == NULL)
+    if (grp == nullptr)
         die("internal error #12: grp is NULL");
     if (hostid == NOHOST) {
         /* nothing to detect, nothing else to do */
@@ -2362,7 +2362,7 @@ mark_eq_probs(struct grp *grp, int grplen, int hostid, char *host1,
     eq_cnt = 0;
     for (i = 0; i < grplen; ++i) {
         if (grp[i].hostid == hostid && !IS_ERROR(grp[i].ignore)
-            && grp[i].type != NULL && grp[i].type[0] == NF_FLAG_ALIAS) {
+            && grp[i].type != nullptr && grp[i].type[0] == NF_FLAG_ALIAS) {
             ++eq_cnt;
         }
     }
@@ -2378,7 +2378,7 @@ mark_eq_probs(struct grp *grp, int grplen, int hostid, char *host1,
     eqgrp = xmalloc(eq_cnt * sizeof(eqgrp[0]));
     for (i = 0, j = 0; i < grplen && j < eq_cnt; ++i) {
         if (grp[i].hostid == hostid && !IS_ERROR(grp[i].ignore)
-            && grp[i].type != NULL && grp[i].type[0] == NF_FLAG_ALIAS) {
+            && grp[i].type != nullptr && grp[i].type[0] == NF_FLAG_ALIAS) {
 
             /* initialize record */
             eqgrp[j].skip = 0;
@@ -2443,7 +2443,8 @@ mark_eq_probs(struct grp *grp, int grplen, int hostid, char *host1,
                 }
 
                 /* if =group refers to a valid group, we are done with it */
-                if (grp[i].type != NULL && grp[i].type[0] != NF_FLAG_ALIAS) {
+                if (grp[i].type != nullptr
+                    && grp[i].type[0] != NF_FLAG_ALIAS) {
                     eqgrp[j].skip = 1;
                     --new_eq_cnt;
                     /* otherwise note the equiv name */
@@ -2538,17 +2539,17 @@ mark_eq_probs(struct grp *grp, int grplen, int hostid, char *host1,
 static int
 exec_cmd(int mode, const char *cmd, char *grp, char *type, const char *who)
 {
-    FILE *ch_stream = NULL; /* stream from a child process */
-    char buf[BUFSIZ + 1];   /* interactive buffer */
-    int pid;                /* pid of child process */
-    int io[2];              /* pair of pipe descriptors */
-    int status;             /* wait status */
-    int exitval;            /* exit status of the child */
-    char *w_string = NULL;  /* will contain "-t "+w_flag */
+    FILE *ch_stream = nullptr; /* stream from a child process */
+    char buf[BUFSIZ + 1];      /* interactive buffer */
+    int pid;                   /* pid of child process */
+    int io[2];                 /* pair of pipe descriptors */
+    int status;                /* wait status */
+    int exitval;               /* exit status of the child */
+    char *w_string = nullptr;  /* will contain "-t "+w_flag */
     char *p;
 
     /* firewall */
-    if (cmd == NULL || grp == NULL)
+    if (cmd == nullptr || grp == nullptr)
         die("internal error #13, cmd or grp is NULL");
 
     /* if interactive, ask the question */
@@ -2557,9 +2558,9 @@ exec_cmd(int mode, const char *cmd, char *grp, char *type, const char *who)
         /* ask the question */
         fflush(stdout);
         fflush(stderr);
-        if (type == NULL) {
+        if (type == nullptr) {
             printf("%s %s  [yn]? ", cmd, grp);
-        } else if (who == NULL) {
+        } else if (who == nullptr) {
             printf("%s %s %s  [yn]? ", cmd, grp, type);
         } else {
             printf("%s %s %s %s  [yn]? ", cmd, grp, type, who);
@@ -2568,7 +2569,7 @@ exec_cmd(int mode, const char *cmd, char *grp, char *type, const char *who)
         buf[0] = '\0';
         buf[BUFSIZ] = '\0';
         p = fgets(buf, BUFSIZ, stdin);
-        if (p == NULL) {
+        if (p == nullptr) {
             /* EOF/ERROR on interactive input, silently stop processing */
             exit(43);
         }
@@ -2629,12 +2630,13 @@ exec_cmd(int mode, const char *cmd, char *grp, char *type, const char *who)
         p = concatpath(innconf->pathbin, INN_PATH_CTLINND);
         xasprintf(&w_string, "-t %d", w_flag);
 
-        if (type == NULL) {
-            execl(p, CTLINND_NAME, w_string, cmd, grp, (char *) 0);
-        } else if (who == NULL) {
-            execl(p, CTLINND_NAME, w_string, cmd, grp, type, (char *) 0);
+        if (type == nullptr) {
+            execl(p, CTLINND_NAME, w_string, cmd, grp, (char *) nullptr);
+        } else if (who == nullptr) {
+            execl(p, CTLINND_NAME, w_string, cmd, grp, type, (char *) nullptr);
         } else {
-            execl(p, CTLINND_NAME, w_string, cmd, grp, type, who, (char *) 0);
+            execl(p, CTLINND_NAME, w_string, cmd, grp, type, who,
+                  (char *) nullptr);
         }
         /* child exec failed */
         sysdie("child process exec failed");
@@ -2655,12 +2657,12 @@ exec_cmd(int mode, const char *cmd, char *grp, char *type, const char *who)
             buf[0] = '\0';
             buf[BUFSIZ] = '\0';
             ch_stream = fdopen(io[READ_SIDE], "r");
-            if (ch_stream == NULL)
+            if (ch_stream == nullptr)
                 sysdie("fdopen of pipe failed");
             p = fgets(buf, BUFSIZ, ch_stream);
 
             /* print what the child said, if anything */
-            if (p != NULL) {
+            if (p != nullptr) {
                 if (buf[strlen(buf) - 1] == '\n')
                     buf[strlen(buf) - 1] = '\0';
                 warn("    %s", buf);
@@ -2739,17 +2741,17 @@ new_top_hier(char *name, struct hash *existing_hier)
      * temp change name to just the top level
      */
     dot = strchr(name, '.');
-    if (dot != NULL) {
+    if (dot != nullptr) {
         *dot = '\0';
     }
 
     /*
      * determine if we can find this top level hierarchy directory
      */
-    result = (hash_lookup(existing_hier, name) == NULL);
+    result = (hash_lookup(existing_hier, name) == nullptr);
 
     /* restore name */
-    if (dot != NULL) {
+    if (dot != nullptr) {
         *dot = '.';
     }
 

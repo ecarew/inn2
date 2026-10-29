@@ -81,7 +81,7 @@ SITEread(SITE *sp, char *start)
             FD_SET(sp->Rfd, &rmask);
             t.tv_sec = DEFAULT_TIMEOUT;
             t.tv_usec = 0;
-            i = select(sp->Rfd + 1, &rmask, NULL, NULL, &t);
+            i = select(sp->Rfd + 1, &rmask, nullptr, nullptr, &t);
             if (i < 0) {
                 if (errno == EINTR)
                     goto Again;
@@ -137,12 +137,12 @@ SITEconnect(char *host)
 
     /* Connect and identify ourselves. */
     if (host)
-        i = NNTPconnect(host, NNTP_PORT, &From, &To, NULL, 0);
+        i = NNTPconnect(host, NNTP_PORT, &From, &To, nullptr, 0);
     else {
         host = innconf->server;
-        if (host == NULL)
+        if (host == nullptr)
             die("no server specified and server not set in inn.conf");
-        i = NNTPlocalopen(&From, &To, NULL, 0);
+        i = NNTPlocalopen(&From, &To, nullptr, 0);
     }
     if (i < 0)
         sysdie("cannot connect to %s", host);
@@ -197,7 +197,7 @@ main(int ac, char *av[])
     char buff[NNTP_MAXLEN_COMMAND];
     char mesgid[NNTP_MAXLEN_MSGID + 10];
     char tbuff[SMBUF];
-    char *msgidfile = NULL;
+    char *msgidfile = nullptr;
     int msgidfd;
     const char *Groups;
     char *Since;
@@ -206,7 +206,7 @@ main(int ac, char *av[])
     struct tm *gt;
     struct stat Sb;
     SITE *Remote;
-    SITE *Local = NULL;
+    SITE *Local = nullptr;
     FILE *F;
     bool Offer;
     bool Error;
@@ -218,11 +218,11 @@ main(int ac, char *av[])
     message_program_name = "nntpget";
 
     /* Set defaults. */
-    Groups = NULL;
-    Since = NULL;
+    Groups = nullptr;
+    Since = nullptr;
     Offer = false;
-    Update = NULL;
-    if (!innconf_read(NULL))
+    Update = nullptr;
+    if (!innconf_read(nullptr))
         exit(1);
 
     umask(NEWSUMASK);
@@ -279,19 +279,19 @@ main(int ac, char *av[])
     SITEvec[1].iov_len = strlen(SITEv1);
 
     /* Connect to the remote server. */
-    if ((Remote = SITEconnect(av[0])) == NULL)
+    if ((Remote = SITEconnect(av[0])) == nullptr)
         sysdie("cannot connect to %s", av[0]);
     if (!SITEwrite(Remote, READER, (int) strlen(READER))
         || !SITEread(Remote, buff))
         sysdie("cannot start reading");
 
-    if (Since == NULL) {
+    if (Since == nullptr) {
         F = stdin;
         if (Groups)
             Usage("-n flag not allowed when reading stdin");
     } else {
         /* Ask the server for a list of what's new. */
-        if (Groups == NULL)
+        if (Groups == nullptr)
             Groups = "*";
         snprintf(buff, sizeof(buff), "NEWNEWS %s %s", Groups, Since);
         if (!SITEwrite(Remote, buff, (int) strlen(buff))
@@ -308,7 +308,7 @@ main(int ac, char *av[])
         if (msgidfd < 0)
             sysdie("cannot create a temporary file");
         F = fopen(msgidfile, "w+");
-        if (F == NULL)
+        if (F == nullptr)
             sysdie("cannot open %s", msgidfile);
 
         /* Read and store the Message-ID list. */
@@ -341,7 +341,7 @@ main(int ac, char *av[])
 
     if (Offer) {
         /* Connect to the local server. */
-        if ((Local = SITEconnect((char *) NULL)) == NULL) {
+        if ((Local = SITEconnect((char *) nullptr)) == nullptr) {
             syswarn("cannot connect to local server");
             fclose(F);
             exit(1);
@@ -349,9 +349,9 @@ main(int ac, char *av[])
     }
 
     /* Loop through the list of Message-ID's. */
-    while (fgets(mesgid, sizeof mesgid, F) != NULL) {
+    while (fgets(mesgid, sizeof mesgid, F) != nullptr) {
         STATgot++;
-        if ((p = strchr(mesgid, '\n')) != NULL)
+        if ((p = strchr(mesgid, '\n')) != nullptr)
             *p = '\0';
 
         if (Offer) {
@@ -434,8 +434,8 @@ main(int ac, char *av[])
 
     /* Write rest of the list, close the input. */
     if (!feof(F))
-        while (fgets(mesgid, sizeof mesgid, F) != NULL) {
-            if ((p = strchr(mesgid, '\n')) != NULL)
+        while (fgets(mesgid, sizeof mesgid, F) != nullptr) {
+            if ((p = strchr(mesgid, '\n')) != nullptr)
                 *p = '\0';
             printf("%s\n", mesgid);
             STATgot++;
@@ -453,7 +453,7 @@ main(int ac, char *av[])
 
     /* Update timestamp file? */
     if (Update) {
-        if ((F = fopen(Update, "w")) == NULL)
+        if ((F = fopen(Update, "w")) == nullptr)
             sysdie("cannot update %s", Update);
         fprintf(F, "got %lu offered %lu sent %lu rejected %lu\n", STATgot,
                 STAToffered, STATsent, STATrejected);

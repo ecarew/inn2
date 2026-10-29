@@ -92,7 +92,7 @@ MAPfree(void)
         free(mp->Value);
     }
     free(MAPdata);
-    MAPdata = NULL;
+    MAPdata = nullptr;
 }
 
 
@@ -108,25 +108,25 @@ MAPread(const char *name)
     char *p;
     char buff[BUFSIZ];
 
-    if (MAPdata != NULL)
+    if (MAPdata != nullptr)
         MAPfree();
 
     /* Open file, count lines. */
-    if ((F = fopen(name, "r")) == NULL) {
+    if ((F = fopen(name, "r")) == nullptr) {
         fprintf(stderr, "Can't open %s, %s\n", name, strerror(errno));
         exit(1);
     }
-    for (i = 0; fgets(buff, sizeof buff, F) != NULL; i++)
+    for (i = 0; fgets(buff, sizeof buff, F) != nullptr; i++)
         continue;
     mp = MAPdata = xmalloc((i + 1) * sizeof(PAIR));
 
     /* Read each line; ignore blank and comment lines. */
     fseeko(F, 0, SEEK_SET);
-    while (fgets(buff, sizeof buff, F) != NULL) {
-        if ((p = strchr(buff, '\n')) != NULL)
+    while (fgets(buff, sizeof buff, F) != nullptr) {
+        if ((p = strchr(buff, '\n')) != nullptr)
             *p = '\0';
         if (buff[0] == '\0' || buff[0] == '#'
-            || (p = strchr(buff, ':')) == NULL)
+            || (p = strchr(buff, ':')) == nullptr)
             continue;
         *p++ = '\0';
         mp->First = buff[0];
@@ -179,11 +179,11 @@ SITEclose(SITE *sp)
 {
     FILE *F;
 
-    if ((F = sp->F) != NULL) {
+    if ((F = sp->F) != nullptr) {
         if (fflush(F) == EOF || ferror(F) || fchmod((int) fileno(F), 0664) < 0
             || fclose(F) == EOF)
             syswarn("%s cannot close %s", sp->Name, sp->Filename);
-        sp->F = NULL;
+        sp->F = nullptr;
     }
 }
 
@@ -209,11 +209,11 @@ SITEcloseall(void)
 static void
 SITEopen(SITE *sp)
 {
-    if ((sp->F = xfopena(sp->Filename)) == NULL
+    if ((sp->F = xfopena(sp->Filename)) == nullptr
         && (errno != EACCES || chmod(sp->Filename, 0644) < 0
-            || (sp->F = xfopena(sp->Filename)) == NULL)) {
+            || (sp->F = xfopena(sp->Filename)) == nullptr)) {
         syswarn("%s cannot fopen %s", sp->Name, sp->Filename);
-        if ((sp->F = fopen("/dev/null", "w")) == NULL)
+        if ((sp->F = fopen("/dev/null", "w")) == nullptr)
             /* This really should not happen. */
             sysdie("%s cannot fopen /dev/null", sp->Name);
     } else if (fchmod((int) fileno(sp->F), 0444) < 0)
@@ -252,7 +252,7 @@ SITEfind(char *Name, bool CanCreate)
         if (c == sp->Name[0] && strcasecmp(Name, sp->Name) == 0)
             return sp;
     if (!CanCreate)
-        return NULL;
+        return nullptr;
 
     /* Adding a new site -- grow hash bucket if we need to. */
     if (shp->Used == shp->Size - 1) {
@@ -272,7 +272,7 @@ SITEfind(char *Name, bool CanCreate)
 #endif
     sp->Filename = xstrdup(buff);
     if (BufferMode == 'u')
-        sp->Buffer = NULL;
+        sp->Buffer = nullptr;
     else if (BufferMode == 'b')
         sp->Buffer = xmalloc(BUFSIZ);
     SITEopen(sp);
@@ -289,11 +289,11 @@ SITEflush(SITE *sp)
 {
     FILE *F;
 
-    if ((F = sp->F) != NULL) {
+    if ((F = sp->F) != nullptr) {
         if (fflush(F) == EOF || ferror(F) || fchmod((int) fileno(F), 0664) < 0
             || fclose(F) == EOF)
             syswarn("%s cannot close %s", sp->Name, sp->Filename);
-        sp->F = NULL;
+        sp->F = nullptr;
     }
     if (!sp->Dropped)
         SITEopen(sp);
@@ -325,7 +325,7 @@ SITEwrite(char *name, char *text, size_t len)
     SITE *sp;
 
     sp = SITEfind(name, true);
-    if (sp->F == NULL)
+    if (sp->F == nullptr)
         SITEopen(sp);
 
     if (fwrite(text, 1, len, sp->F) != len)
@@ -371,7 +371,7 @@ Process(char *p)
             continue;
         if (*p == '\0')
             SITEflushall();
-        else if ((sp = SITEfind(p, false)) != NULL)
+        else if ((sp = SITEfind(p, false)) != nullptr)
             SITEflush(sp);
         /*else
             fprintf(stderr, "buffchan flush %s unknown site\n", p);*/
@@ -383,7 +383,7 @@ Process(char *p)
             continue;
         if (*p == '\0')
             SITEcloseall();
-        else if ((sp = SITEfind(p, false)) == NULL)
+        else if ((sp = SITEfind(p, false)) == nullptr)
             warn("drop %s unknown site", p);
         else {
             SITEclose(sp);
@@ -431,12 +431,12 @@ main(int ac, char *av[])
     message_program_name = "buffchan";
 
     /* Set defaults. */
-    if (!innconf_read(NULL))
+    if (!innconf_read(nullptr))
         exit(1);
     ERRLOG = concatpath(innconf->pathlog, INN_PATH_ERRLOG);
-    Directory = NULL;
+    Directory = nullptr;
     Fields = 1;
-    Format = NULL;
+    Format = nullptr;
     Redirect = true;
     GotInterrupt = false;
     umask(NEWSUMASK);
@@ -466,7 +466,7 @@ main(int ac, char *av[])
             break;
         case 'd':
             Directory = optarg;
-            if (Format == NULL)
+            if (Format == nullptr)
                 Format = xstrdup("%s");
             break;
         case 'f':
@@ -483,7 +483,7 @@ main(int ac, char *av[])
             MAPread(Map);
             break;
         case 'p':
-            if ((F = fopen(optarg, "w")) == NULL)
+            if ((F = fopen(optarg, "w")) == nullptr)
                 sysdie("cannot fopen %s", optarg);
             fprintf(F, "%ld\n", (long) getpid());
             if (ferror(F) || fclose(F) == EOF)
@@ -502,10 +502,10 @@ main(int ac, char *av[])
 
     /* Do some basic set-ups. */
     if (Redirect) {
-        if (freopen(ERRLOG, "a", stderr) == NULL)
+        if (freopen(ERRLOG, "a", stderr) == nullptr)
             sysdie("cannot open %s for error output", ERRLOG);
     }
-    if (Format == NULL) {
+    if (Format == nullptr) {
         Format = concatpath(innconf->pathoutgoing, "%s");
     }
     if (Directory && chdir(Directory) < 0)
@@ -514,7 +514,7 @@ main(int ac, char *av[])
 
     /* Read input. */
     for (qp = QIOfdopen((int) fileno(stdin)); !GotInterrupt;) {
-        if ((line = QIOread(qp)) == NULL) {
+        if ((line = QIOread(qp)) == nullptr) {
             if (QIOerror(qp)) {
                 syswarn("cannot read");
                 break;
@@ -547,7 +547,7 @@ main(int ac, char *av[])
         i = p - line;
 
         /* Update the current time. */
-        Now = time(NULL);
+        Now = time(nullptr);
 
         /* Rest of the line is space-separated list of filenames. */
         for (; *p; p = next) {

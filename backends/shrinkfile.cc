@@ -53,7 +53,7 @@ OpenTemp(void)
     if (fd < 0)
         sysdie("cannot create temporary file");
     F = fdopen(fd, "w+");
-    if (F == NULL)
+    if (F == nullptr)
         sysdie("cannot fdopen %s", filename);
     unlink(filename);
     free(filename);
@@ -92,7 +92,7 @@ AppendNewline(char *name)
 {
     FILE *F;
 
-    if ((F = xfopena(name)) == NULL) {
+    if ((F = xfopena(name)) == nullptr) {
         syswarn("cannot add newline");
         return false;
     }
@@ -149,7 +149,7 @@ Process(FILE *F, char *name, off_t size, off_t maxsize, bool *Changedp)
     if (size == 0 && len > maxsize) {
         if (len > 0) {
             fclose(F);
-            if ((F = fopen(name, "w")) == NULL) {
+            if ((F = fopen(name, "w")) == nullptr) {
                 syswarn("cannot overwrite");
                 return false;
             }
@@ -213,7 +213,7 @@ Process(FILE *F, char *name, off_t size, off_t maxsize, bool *Changedp)
 
     /* Now copy temp back to original file. */
     fclose(F);
-    if ((F = fopen(name, "w")) == NULL) {
+    if ((F = fopen(name, "w")) == nullptr) {
         syswarn("cannot overwrite file");
         fclose(tmp);
         return false;
@@ -332,7 +332,7 @@ main(int ac, char *av[])
     no_op = false;
     umask(NEWSUMASK);
 
-    if (!innconf_read(NULL))
+    if (!innconf_read(nullptr))
         exit(1);
 
     /* Parse JCL. */
@@ -364,8 +364,8 @@ main(int ac, char *av[])
     if (ac == 0)
         Usage();
 
-    while ((p = *av++) != NULL) {
-        if ((F = fopen(p, "r")) == NULL) {
+    while ((p = *av++) != nullptr) {
+        if ((F = fopen(p, "r")) == nullptr) {
             syswarn("cannot open %s", p);
             continue;
         }

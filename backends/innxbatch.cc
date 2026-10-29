@@ -162,9 +162,9 @@ REMclean(char *buff)
 {
     char *p;
 
-    if ((p = strchr(buff, '\r')) != NULL)
+    if ((p = strchr(buff, '\r')) != nullptr)
         *p = '\0';
-    if ((p = strchr(buff, '\n')) != NULL)
+    if ((p = strchr(buff, '\n')) != nullptr)
         *p = '\0';
 
     /* The dot-escape is only in text, not command responses. */
@@ -190,7 +190,7 @@ REMread(char *start, int size)
         FD_SET(FromServer, &rmask);
         t.tv_sec = 10 * 60;
         t.tv_usec = 0;
-        i = select(FromServer + 1, &rmask, NULL, NULL, &t);
+        i = select(FromServer + 1, &rmask, nullptr, nullptr, &t);
         if (GotInterrupt)
             return true;
         if (i < 0) {
@@ -346,11 +346,11 @@ main(int ac, char *av[])
     FILE *From;
     FILE *To;
     char buff[NNTP_MAXLEN_COMMAND];
-    void (*volatile old)(int) = NULL;
+    void (*volatile old)(int) = nullptr;
     struct stat statbuf;
     int fd;
     int err;
-    char *volatile XBATCHbuffer = NULL;
+    char *volatile XBATCHbuffer = nullptr;
     char **volatile argv;
     volatile int XBATCHbuffersize = 0;
     volatile int XBATCHsize, argc;
@@ -364,7 +364,7 @@ main(int ac, char *av[])
     message_handlers_notice(1, message_log_syslog_notice);
 
     /* Set defaults. */
-    if (!innconf_read(NULL))
+    if (!innconf_read(nullptr))
         exit(1);
     ConnectTimeout = 0;
     TotalTimeout = 0;
