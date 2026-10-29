@@ -233,6 +233,7 @@ tests=(
     lib/hissqlite-convert lib/inet_aton:::lib/inet_aton
     lib/inet_ntoa:::lib/inet_ntoa lib/inet_ntop:::lib/inet_ntop lib/innconf
     lib/list lib/md5 lib/messageid lib/messages lib/mkstemp:::lib/mkstemp
+    lib/newsuser
     lib/network/addr-ipv4 lib/network/addr-ipv6 lib/network/client
     lib/network/server lib/pread:::lib/pread lib/pwrite:::lib/pwrite lib/qio
     lib/readin lib/reallocarray:::lib/reallocarray lib/reservedfd

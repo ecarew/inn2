@@ -96,6 +96,13 @@ ensure_news_grp(bool may_setgid)
 
     get_news_uid_gid(nullptr, &gid, true);
     if (may_setgid && geteuid() == 0) {
+#ifdef HAVE_SETGROUPS
+        /* Drop root's supplementary groups too, or they survive the switch
+           to the news user. */
+        if (setgroups(1, &gid) < 0) {
+            sysdie("failed to setgroups");
+        }
+#endif
         if (setgid(gid) < 0) {
             sysdie("failed to setgid");
         }

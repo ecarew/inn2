@@ -174,13 +174,14 @@ coverage gate)**
   setuid-root or root-retaining paths (including scripts and install rules),
   that innd drops to news before doing anything else, and add tests for it.
 - Audit first pass done 2026-10-29 (CONVERSION_NOTES.md, "Security audit,
-  first pass").  innbind, innd, nnrpd -D and rc.news hold.  To fix:
-  (1) privilege drops keep root's supplementary groups (no setgroups in
-  lib/newsuser.cc); (2) nnrpd without -D started as root keeps root;
+  first pass").  innbind, innd, nnrpd -D and rc.news hold.  (1) Fixed: the
+  privilege drop now clears root's supplementary groups.  To fix: (2) nnrpd without -D started as root keeps root;
   (3) rnews as root drops only its UID; (4) innfeed and ovsqlite-server
   never check their user; (5) policy question: should programs that write
-  INN's data refuse root?  Decide first how to test the started-as-root
-  paths (tests run as the tester).  Not yet covered: the Perl and shell
+  INN's data refuse root?  Decided 2026-10-29: yes, programs that write
+  INN's data refuse root (read-only tools such as ctlinnd and grephistory
+  are exempt); started-as-root paths are tested by
+  `sudo support/root-checks.sh`, run by hand, its output in the commit.  Not yet covered: the Perl and shell
   scripts beyond rc.news, contrib/, and the planned CMake install rules.
 - Alternatives if ever wanted: systemd socket activation (innd accepts
   `sd_listen_fds` sockets), launchd sockets, Linux `CAP_NET_BIND_SERVICE`.

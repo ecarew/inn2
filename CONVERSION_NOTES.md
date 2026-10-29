@@ -277,8 +277,21 @@ install macros in `Makefile.global.in` and `m4/modes.m4`;
    `wheel`, `kmem`, `tty`, `admin` and others) after the drop: an
    incomplete privilege drop (CWE-271).  Affects every program in "What
    holds" that drops from root.  `configure.ac` already checks for
-   `setgroups`; nothing calls it.  Fix: `setgroups(1, &gid)` (or
-   `initgroups` for the news user) before `setgid`, failing hard on error.
+   `setgroups`; nothing calls it.  **Fixed** (2026-10-29): `ensure_news_grp`
+   calls `setgroups(1, &gid)` before `setgid` when root, failing hard on
+   error.  Tested as root by support/root-checks.sh with
+   tests/lib/newsuser-t.c: a file readable only through a group root has
+   and the news user lacks is still readable after a drop without
+   `setgroups` (so the leak is real on macOS) and refused after
+   `ensure_news_user_grp`.  The test checks access, not `getgroups()`:
+   with macOS's default compile settings `getgroups()` returns the user's
+   directory group list, not the list set by `setgroups()` (getgroups(2)).
+   Apple's setgroups(2) says only that its use is "highly discouraged";
+   initgroups(3) explains that the kernel treats the credential's group
+   list as an initial cache and resolves other memberships through
+   opendirectoryd, and that membership checks should use
+   `mbr_check_membership(3)`.  Neither says a privilege drop should keep
+   root's groups, and the access test shows `setgroups` removes them.
 2. **nnrpd started as root without -D keeps root.**  The drop is inside
    the daemon-mode block only.  Run from inetd/xinetd as root (the docs say
    to use the news user, but nothing enforces it), nnrpd serves the whole
