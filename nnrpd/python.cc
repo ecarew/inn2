@@ -40,7 +40,7 @@
 
 /*  Define Py_ssize_t when it does not exist (Python < 2.5.0). */
 #    if PY_VERSION_HEX < 0x02050000
-typedef int Py_ssize_t;
+using Py_ssize_t = int;
 #    endif
 
 #    if PY_MAJOR_VERSION >= 3
