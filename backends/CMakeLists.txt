@@ -4,7 +4,7 @@
 
 inn_program(actsync    SOURCES actsync.c    INNONLY)
 inn_program(archive    SOURCES archive.c)
-inn_program(batcher    SOURCES batcher.c)
+inn_program(batcher    SOURCES batcher.cc)
 inn_program(buffchan   SOURCES buffchan.c   INNONLY)
 inn_program(cvtbatch   SOURCES cvtbatch.cc)
 inn_program(innbind    SOURCES innbind.c    INNONLY)
