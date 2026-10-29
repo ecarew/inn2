@@ -353,7 +353,7 @@ process_article(ARTHANDLE *art, const char *token, struct config *config)
 int
 main(int argc, char *argv[])
 {
-    struct config config = {nullptr, nullptr, nullptr, 0, 0};
+    struct config config = {nullptr, nullptr, nullptr, false, false};
     int option, status;
     bool redirect = true;
     QIOSTATE *qp;

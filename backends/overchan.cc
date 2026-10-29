@@ -143,7 +143,7 @@ process_file(struct overview *overview, const char *file,
         return;
     }
 
-    while (1) {
+    while (true) {
         line = QIOread(qp);
         if (line == nullptr) {
             if (QIOtoolong(qp)) {
