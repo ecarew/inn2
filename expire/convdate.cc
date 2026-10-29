@@ -65,7 +65,7 @@ print_date(time_t date)
         }
     } else {
         result = ctime(&date);
-        if (result == NULL) {
+        if (result == nullptr) {
             warn("can't format %lu", (unsigned long) date);
             return false;
         } else {
@@ -89,8 +89,8 @@ convdate(const char *date, char mode)
     time_t seconds;
 
     /* Convert the given date to seconds or obtain the current time. */
-    if (date == NULL) {
-        seconds = time(NULL);
+    if (date == nullptr) {
+        seconds = time(nullptr);
     } else if (mode == 'c') {
         if (!isdigits(date)) {
             warn("\"%s\" doesn't look like a number", date);
@@ -158,9 +158,9 @@ main(int argc, char *argv[])
 
     /* Perform the desired action for each provided argument. */
     if (argc == 0) {
-        exit(convdate(NULL, mode) ? 0 : 1);
+        exit(convdate(nullptr, mode) ? 0 : 1);
     } else {
-        for (date = *argv, status = 0; date != NULL; date = *++argv)
+        for (date = *argv, status = 0; date != nullptr; date = *++argv)
             status += (convdate(date, mode) ? 0 : 1);
         exit(status);
     }

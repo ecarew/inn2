@@ -78,8 +78,8 @@ typedef struct _ARTOVERFIELD {
 #define DEFAULT_SEGSIZE 10000
 
 static bool NukeBadArts;
-static char *ActivePath = NULL;
-static char *HistoryPath = NULL;
+static char *ActivePath = nullptr;
+static char *HistoryPath = nullptr;
 static struct history *History;
 static FILE *Overchan;
 static bool DoOverview;
@@ -88,7 +88,7 @@ static bool Cutofflow = false;
 static char *TmpDir;
 static int OverTmpSegSize, OverTmpSegCount;
 static FILE *OverTmpFile;
-static char *OverTmpPath = NULL;
+static char *OverTmpPath = nullptr;
 static bool NoHistory;
 static OVSORTTYPE sorttype;
 static bool WriteStdout = false;
@@ -104,13 +104,13 @@ static char XREF[] = "Xref";
 static ARTOVERFIELD *ARTfields; /* Overview fields for which overview data
                                  * is generated. */
 static size_t ARTfieldsize;
-static ARTOVERFIELD *Bytesp = (ARTOVERFIELD *) NULL;
-static ARTOVERFIELD *Datep = (ARTOVERFIELD *) NULL;
-static ARTOVERFIELD *Expp = (ARTOVERFIELD *) NULL;
-static ARTOVERFIELD *InjectionDatep = (ARTOVERFIELD *) NULL;
-static ARTOVERFIELD *Linesp = (ARTOVERFIELD *) NULL;
-static ARTOVERFIELD *Msgidp = (ARTOVERFIELD *) NULL;
-static ARTOVERFIELD *Xrefp = (ARTOVERFIELD *) NULL;
+static ARTOVERFIELD *Bytesp = (ARTOVERFIELD *) nullptr;
+static ARTOVERFIELD *Datep = (ARTOVERFIELD *) nullptr;
+static ARTOVERFIELD *Expp = (ARTOVERFIELD *) nullptr;
+static ARTOVERFIELD *InjectionDatep = (ARTOVERFIELD *) nullptr;
+static ARTOVERFIELD *Linesp = (ARTOVERFIELD *) nullptr;
+static ARTOVERFIELD *Msgidp = (ARTOVERFIELD *) nullptr;
+static ARTOVERFIELD *Xrefp = (ARTOVERFIELD *) nullptr;
 static ARTOVERFIELD *Missfields; /* Header fields not used in overview
                                   * but that we need (e.g. Expires). */
 static size_t Missfieldsize = 0;
@@ -123,7 +123,7 @@ static void OverAddAllNewsgroups(void);
 static const char *
 GetMessageID(char *p)
 {
-    static struct buffer buffer = {0, 0, 0, NULL};
+    static struct buffer buffer = {0, 0, 0, nullptr};
 
     while (ISWHITE(*p))
         p++;
@@ -159,12 +159,12 @@ FlushOverTmpFile(void)
     QIOSTATE *qp;
     int count;
     char *line, *p;
-    char *q = NULL;
-    char *r = NULL;
+    char *q = nullptr;
+    char *r = nullptr;
     time_t arrived, expires;
     static int first = 1;
 
-    if (OverTmpFile == NULL)
+    if (OverTmpFile == nullptr)
         return;
     if (fflush(OverTmpFile) == EOF || ferror(OverTmpFile)
         || fclose(OverTmpFile) == EOF)
@@ -185,7 +185,7 @@ FlushOverTmpFile(void)
             /* parent */
             first = 0;
             free(OverTmpPath);
-            OverTmpPath = NULL;
+            OverTmpPath = nullptr;
             return;
         }
 
@@ -239,10 +239,10 @@ FlushOverTmpFile(void)
     /* Don't need old path anymore. */
     unlink(OverTmpPath);
     free(OverTmpPath);
-    OverTmpPath = NULL;
+    OverTmpPath = nullptr;
 
     /* Read sorted lines. */
-    if ((qp = QIOopen(SortedTmpPath)) == NULL) {
+    if ((qp = QIOopen(SortedTmpPath)) == nullptr) {
         syswarn("cannot open sorted overview file %s", SortedTmpPath);
         OVclose();
         if (Fork)
@@ -253,16 +253,16 @@ FlushOverTmpFile(void)
 
     for (count = 1;; ++count) {
         line = QIOread(qp);
-        if (line == NULL) {
+        if (line == nullptr) {
             if (QIOtoolong(qp)) {
                 warn("overview line %d is too long", count);
                 continue;
             } else
                 break;
         }
-        if ((p = strchr(line, '\t')) == NULL
-            || (q = strchr(p + 1, '\t')) == NULL
-            || (r = strchr(q + 1, '\t')) == NULL) {
+        if ((p = strchr(line, '\t')) == nullptr
+            || (q = strchr(p + 1, '\t')) == nullptr
+            || (r = strchr(q + 1, '\t')) == nullptr) {
             warn("sorted overview file %s has a bad line at %d", SortedTmpPath,
                  count);
             continue;
@@ -276,7 +276,7 @@ FlushOverTmpFile(void)
             arrived = (time_t) atoll(p);
             expires = (time_t) atoll(q);
             q = r;
-            if ((r = strchr(r, '\t')) == NULL) {
+            if ((r = strchr(r, '\t')) == nullptr) {
                 warn("sorted overview file %s has a bad line at %d",
                      SortedTmpPath, count);
                 continue;
@@ -382,14 +382,14 @@ WriteOverLine(TOKEN *token, const char *xrefs, int xrefslen, char *overdata,
 
     /* Otherwise, we need the temporary file.  Create it if it doesn't already
        exist. */
-    if (OverTmpPath == NULL) {
+    if (OverTmpPath == nullptr) {
         /* Need new temp file, so create it. */
         OverTmpPath = concatpath(TmpDir, "histXXXXXX");
         fd = mkstemp(OverTmpPath);
         if (fd < 0)
             sysdie("cannot create temporary file");
         OverTmpFile = fdopen(fd, "w");
-        if (OverTmpFile == NULL)
+        if (OverTmpFile == nullptr)
             sysdie("cannot open %s", OverTmpPath);
         OverTmpSegCount = 0;
     }
@@ -398,7 +398,7 @@ WriteOverLine(TOKEN *token, const char *xrefs, int xrefslen, char *overdata,
        sorting. */
     if (sorttype == OVNEWSGROUP) {
         /* Find first ng name in xref. */
-        for (p = xrefs, q = NULL; p < xrefs + xrefslen; ++p) {
+        for (p = xrefs, q = nullptr; p < xrefs + xrefslen; ++p) {
             if (*p == ' ') {
                 q = p + 1; /* found space */
                 break;
@@ -410,7 +410,7 @@ WriteOverLine(TOKEN *token, const char *xrefs, int xrefslen, char *overdata,
             return;
         }
 
-        for (p = q, r = NULL; p < xrefs + xrefslen; ++p) {
+        for (p = q, r = nullptr; p < xrefs + xrefslen; ++p) {
             if (*p == ':') {
                 r = p;
                 break;
@@ -466,7 +466,7 @@ ARTreadschema(bool Overview)
             fp->NeedHeadername = false;
             fp->Headername = xstrdup(standardoverview->strings[i]);
             fp->HeadernameLength = strlen(standardoverview->strings[i]);
-            fp->Header = (char *) NULL;
+            fp->Header = (char *) nullptr;
             fp->HasHeader = false;
             fp->HeaderLength = 0;
             /* We need to keep the value of fp for :bytes and :lines
@@ -492,7 +492,7 @@ ARTreadschema(bool Overview)
             fp->NeedHeadername = true;
             fp->Headername = xstrdup(extraoverview->strings[i]);
             fp->HeadernameLength = strlen(extraoverview->strings[i]);
-            fp->Header = (char *) NULL;
+            fp->Header = (char *) nullptr;
             fp->HasHeader = false;
             fp->HeaderLength = 0;
             if (strncasecmp(extraoverview->strings[i], XREF, strlen(XREF))
@@ -512,17 +512,17 @@ ARTreadschema(bool Overview)
         ARTfieldsize = fp - ARTfields;
         vector_free(extraoverview);
     }
-    if (Bytesp == (ARTOVERFIELD *) NULL)
+    if (Bytesp == (ARTOVERFIELD *) nullptr)
         Missfieldsize++;
-    if (Datep == (ARTOVERFIELD *) NULL)
+    if (Datep == (ARTOVERFIELD *) nullptr)
         Missfieldsize++;
-    if (Expp == (ARTOVERFIELD *) NULL)
+    if (Expp == (ARTOVERFIELD *) nullptr)
         Missfieldsize++;
-    if (InjectionDatep == (ARTOVERFIELD *) NULL)
+    if (InjectionDatep == (ARTOVERFIELD *) nullptr)
         Missfieldsize++;
-    if (Linesp == (ARTOVERFIELD *) NULL)
+    if (Linesp == (ARTOVERFIELD *) nullptr)
         Missfieldsize++;
-    if (Msgidp == (ARTOVERFIELD *) NULL)
+    if (Msgidp == (ARTOVERFIELD *) nullptr)
         Missfieldsize++;
     /* The fields in Missfields are not used in the overview (because they were
      * not set before), so the values do not matter much (especially for
@@ -530,65 +530,65 @@ ARTreadschema(bool Overview)
     if (Missfieldsize > 0) {
         Missfields = xmalloc(Missfieldsize * sizeof(ARTOVERFIELD));
         fp = Missfields;
-        if (Bytesp == (ARTOVERFIELD *) NULL) {
+        if (Bytesp == (ARTOVERFIELD *) nullptr) {
             fp->NeedHeadername = false;
             fp->Headername = xstrdup(BYTES);
             fp->HeadernameLength = strlen(BYTES);
-            fp->Header = (char *) NULL;
+            fp->Header = (char *) nullptr;
             fp->HasHeader = false;
             fp->HeaderLength = 0;
             Bytesp = fp++;
         }
-        if (Datep == (ARTOVERFIELD *) NULL) {
+        if (Datep == (ARTOVERFIELD *) nullptr) {
             fp->NeedHeadername = false;
             fp->Headername = xstrdup(DATE);
             fp->HeadernameLength = strlen(DATE);
-            fp->Header = (char *) NULL;
+            fp->Header = (char *) nullptr;
             fp->HasHeader = false;
             fp->HeaderLength = 0;
             Datep = fp++;
         }
-        if (Expp == (ARTOVERFIELD *) NULL) {
+        if (Expp == (ARTOVERFIELD *) nullptr) {
             fp->NeedHeadername = true;
             fp->Headername = xstrdup(EXPIRES);
             fp->HeadernameLength = strlen(EXPIRES);
-            fp->Header = (char *) NULL;
+            fp->Header = (char *) nullptr;
             fp->HasHeader = false;
             fp->HeaderLength = 0;
             Expp = fp++;
         }
-        if (InjectionDatep == (ARTOVERFIELD *) NULL) {
+        if (InjectionDatep == (ARTOVERFIELD *) nullptr) {
             fp->NeedHeadername = true;
             fp->Headername = xstrdup(INJECTIONDATE);
             fp->HeadernameLength = strlen(INJECTIONDATE);
-            fp->Header = (char *) NULL;
+            fp->Header = (char *) nullptr;
             fp->HasHeader = false;
             fp->HeaderLength = 0;
             InjectionDatep = fp++;
         }
-        if (Linesp == (ARTOVERFIELD *) NULL) {
+        if (Linesp == (ARTOVERFIELD *) nullptr) {
             fp->NeedHeadername = false;
             fp->Headername = xstrdup(LINES);
             fp->HeadernameLength = strlen(LINES);
-            fp->Header = (char *) NULL;
+            fp->Header = (char *) nullptr;
             fp->HasHeader = false;
             fp->HeaderLength = 0;
             Linesp = fp++;
         }
-        if (Msgidp == (ARTOVERFIELD *) NULL) {
+        if (Msgidp == (ARTOVERFIELD *) nullptr) {
             fp->NeedHeadername = false;
             fp->Headername = xstrdup(MESSAGEID);
             fp->HeadernameLength = strlen(MESSAGEID);
-            fp->Header = (char *) NULL;
+            fp->Header = (char *) nullptr;
             fp->HasHeader = false;
             fp->HeaderLength = 0;
             Msgidp = fp++;
         }
-        if (Overview && Xrefp == (ARTOVERFIELD *) NULL) {
+        if (Overview && Xrefp == (ARTOVERFIELD *) nullptr) {
             fp->NeedHeadername = true;
             fp->Headername = xstrdup(XREF);
             fp->HeadernameLength = strlen(XREF);
-            fp->Header = (char *) NULL;
+            fp->Header = (char *) nullptr;
             fp->HasHeader = false;
             fp->HeaderLength = 0;
             Xrefp = fp++;
@@ -605,7 +605,7 @@ DoArt(ARTHANDLE *art)
     ARTOVERFIELD *fp;
     const char *p, *end;
     char *q;
-    static struct buffer buffer = {0, 0, 0, NULL};
+    static struct buffer buffer = {0, 0, 0, nullptr};
     static char SEP[] = "\t";
     static char NUL[] = "\0";
     static char COLONSPACE[] = ": ";
@@ -614,7 +614,7 @@ DoArt(ARTHANDLE *art)
     time_t Arrived;
     time_t Expires;
     time_t Posted;
-    char *overdata = NULL;
+    char *overdata = nullptr;
     char Bytes[BIG_BUFFER];
     char Lines[BIG_BUFFER];
     struct artngnum ann;
@@ -625,7 +625,7 @@ DoArt(ARTHANDLE *art)
     /* Set up place to store headers. */
     for (fp = ARTfields, i = 0; i < ARTfieldsize; i++, fp++) {
         if (fp->HeaderLength) {
-            fp->Header = 0;
+            fp->Header = nullptr;
         }
         fp->HeaderLength = 0;
         fp->HasHeader = false;
@@ -633,7 +633,7 @@ DoArt(ARTHANDLE *art)
     if (Missfieldsize > 0) {
         for (fp = Missfields, i = 0; i < Missfieldsize; i++, fp++) {
             if (fp->HeaderLength) {
-                fp->Header = 0;
+                fp->Header = nullptr;
             }
             fp->HeaderLength = 0;
             fp->HasHeader = false;
@@ -651,14 +651,14 @@ DoArt(ARTHANDLE *art)
             const char *next = fp->Header;
             size_t left;
 
-            while (next != NULL) {
+            while (next != nullptr) {
                 next = wire_endheader(fp->Header, art->data + art->len - 1);
-                if (next == NULL)
+                if (next == nullptr)
                     break;
                 next++;
                 left = art->len - (next - art->data);
                 next = wire_findheader(next, left, fp->Headername, false);
-                if (next != NULL)
+                if (next != nullptr)
                     fp->Header = next;
             }
         }
@@ -667,7 +667,7 @@ DoArt(ARTHANDLE *art)
         if (fp == Bytesp || fp == Linesp) {
             /* Parse the article only once. */
             if (!hasCounts
-                && (p = wire_findbody(art->data, art->len)) != NULL) {
+                && (p = wire_findbody(art->data, art->len)) != nullptr) {
                 end = art->data + art->len - 1;
                 /* p is at the beginning of the body, if any. */
                 for (; *p != '\0';) {
@@ -675,7 +675,7 @@ DoArt(ARTHANDLE *art)
                     lines++;
                     if (*p == '.')
                         DotStuffedLines++;
-                    if ((p = wire_nextline(p, end)) == NULL) {
+                    if ((p = wire_nextline(p, end)) == nullptr) {
                         /* p is at the final ".\r\n". */
                         lines--;
                         DotStuffedLines--;
@@ -701,10 +701,10 @@ DoArt(ARTHANDLE *art)
         }
 
         /* Now, if we have a header field, find and record its length. */
-        if (fp->Header != NULL) {
+        if (fp->Header != nullptr) {
             fp->HasHeader = true;
             p = wire_endheader(fp->Header, art->data + art->len - 1);
-            if (p == NULL)
+            if (p == nullptr)
                 continue;
 
             /* The true length of the header field is p - fp->Header + 1, but p
@@ -718,10 +718,10 @@ DoArt(ARTHANDLE *art)
         for (fp = Missfields, i = 0; i < Missfieldsize; i++, fp++) {
             fp->Header =
                 wire_findheader(art->data, art->len, fp->Headername, false);
-            if (fp->Header != NULL) {
+            if (fp->Header != nullptr) {
                 fp->HasHeader = true;
                 p = wire_endheader(fp->Header, art->data + art->len - 1);
-                if (p == NULL)
+                if (p == nullptr)
                     continue;
                 fp->HeaderLength = p - fp->Header - 1;
             }
@@ -729,10 +729,10 @@ DoArt(ARTHANDLE *art)
     }
     if (DoOverview && Xrefp->HeaderLength == 0) {
         if (!SMprobe(SMARTNGNUM, art->token, (void *) &ann)) {
-            Xrefp->Header = NULL;
+            Xrefp->Header = nullptr;
             Xrefp->HeaderLength = 0;
         } else {
-            if (ann.artnum == 0 || ann.groupname == NULL)
+            if (ann.artnum == 0 || ann.groupname == nullptr)
                 return;
 
             xasprintf(&overdata, "%s %s:%lu", innconf->pathhost, ann.groupname,
@@ -740,7 +740,7 @@ DoArt(ARTHANDLE *art)
             Xrefp->Header = overdata;
             Xrefp->HeaderLength = strlen(overdata);
 
-            if (ann.groupname != NULL)
+            if (ann.groupname != nullptr)
                 free(ann.groupname);
         }
     }
@@ -832,7 +832,7 @@ DoArt(ARTHANDLE *art)
         }
         WriteOverLine(art->token, Xrefp->Header, Xrefp->HeaderLength,
                       buffer.data, buffer.left, Arrived, Expires);
-        if (overdata != NULL)
+        if (overdata != nullptr)
             free(overdata);
     }
 
@@ -858,22 +858,22 @@ OverAddAllNewsgroups(void)
     char *line;
     ARTNUM hi, lo;
 
-    if ((qp = QIOopen(ActivePath)) == NULL)
+    if ((qp = QIOopen(ActivePath)) == nullptr)
         sysdie("cannot open %s", ActivePath);
-    for (count = 1; (line = QIOread(qp)) != NULL; count++) {
-        if ((p = strchr(line, ' ')) == NULL) {
+    for (count = 1; (line = QIOread(qp)) != nullptr; count++) {
+        if ((p = strchr(line, ' ')) == nullptr) {
             warn("bad active line %d: %.40s", count, line);
             continue;
         }
         *p++ = '\0';
         hi = (ARTNUM) atol(p);
-        if ((p = strchr(p, ' ')) == NULL) {
+        if ((p = strchr(p, ' ')) == nullptr) {
             warn("bad active line %d: %.40s", count, line);
             continue;
         }
         *p++ = '\0';
         lo = (ARTNUM) atol(p);
-        if ((q = strrchr(p, ' ')) == NULL) {
+        if ((q = strrchr(p, ' ')) == nullptr) {
             warn("bad active line %d: %.40s", count, line);
             continue;
         }
@@ -893,7 +893,7 @@ OverAddAllNewsgroups(void)
 int
 main(int argc, char **argv)
 {
-    ARTHANDLE *art = NULL;
+    ARTHANDLE *art = nullptr;
     bool AppendMode;
     int LoadAverage;
     double load[1];
@@ -911,7 +911,7 @@ main(int argc, char **argv)
     message_program_name = "makehistory";
 
     /* Set defaults. */
-    if (!innconf_read(NULL))
+    if (!innconf_read(nullptr))
         exit(1);
     HistoryPath = concatpath(innconf->pathhistory, INN_PATH_HISTORY);
     ActivePath = concatpath(innconf->pathdb, INN_PATH_ACTIVE);
@@ -979,7 +979,7 @@ main(int argc, char **argv)
     }
 
     if (!NoHistory) {
-        if ((p = strrchr(HistoryPath, '/')) == NULL) {
+        if ((p = strrchr(HistoryPath, '/')) == nullptr) {
             /* Find the default history database directory. */
             HistoryDir = innconf->pathhistory;
         } else {
@@ -993,7 +993,7 @@ main(int argc, char **argv)
 
     /* Change to the runasuser user and runasgroup group if necessary. */
     if (!NoHistory || !WriteStdout) {
-        if (getenv(INN_ENV_TESTSUITE) == NULL)
+        if (getenv(INN_ENV_TESTSUITE) == nullptr)
             ensure_news_user_grp(true, true);
     }
 
@@ -1014,7 +1014,7 @@ main(int argc, char **argv)
             OverAddAllNewsgroups();
             if (sorttype == OVNOSORT) {
                 buff = concat(innconf->pathbin, "/", "overchan", NULL);
-                if ((Overchan = popen(buff, "w")) == NULL)
+                if ((Overchan = popen(buff, "w")) == nullptr)
                     sysdie("cannot fork overchan process");
                 free(buff);
             }
@@ -1036,8 +1036,8 @@ main(int argc, char **argv)
 
         if (!AppendMode)
             flags |= HIS_CREAT;
-        History = HISopen(NULL, innconf->hismethod, flags);
-        if (History == NULL)
+        History = HISopen(nullptr, innconf->hismethod, flags);
+        if (History == nullptr)
             sysdie("cannot create history handle");
         HISctl(History, HISCTLS_NPAIRS, &npairs);
         if (!HISctl(History, HISCTLS_PATH, HistoryPath))
@@ -1049,9 +1049,9 @@ main(int argc, char **argv)
      * article.  We take a break when the load is too high.
      */
 
-    while ((art = SMnext(art, RETR_ALL)) != NULL) {
+    while ((art = SMnext(art, RETR_ALL)) != nullptr) {
         if (art->len == 0) {
-            if (NukeBadArts && art->data == NULL && art->token != NULL)
+            if (NukeBadArts && art->data == nullptr && art->token != nullptr)
                 SMcancel(*art->token);
             continue;
         }
@@ -1083,9 +1083,9 @@ main(int argc, char **argv)
                 wait(&status);
         }
         if (!WriteStdout) {
-            if ((F = fopen(RebuiltflagPath, "w")) == NULL)
+            if ((F = fopen(RebuiltflagPath, "w")) == nullptr)
                 sysdie("cannot open %s", RebuiltflagPath);
-            if (fprintf(F, "%lu\n", (unsigned long) time(NULL)) == EOF
+            if (fprintf(F, "%lu\n", (unsigned long) time(nullptr)) == EOF
                 || ferror(F))
                 sysdie("cannot write rebuilt flag file");
             fclose(F);

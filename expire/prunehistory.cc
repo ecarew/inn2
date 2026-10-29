@@ -34,7 +34,7 @@ main(int ac, char *av[])
     char buff[BUFSIZ];
     const char *History;
     bool Passing;
-    struct history *history = NULL;
+    struct history *history = nullptr;
     int rc = 0;
 
     /* First thing, set up logging and our identity. */
@@ -42,7 +42,7 @@ main(int ac, char *av[])
     message_program_name = "prunehistory";
 
     /* Set defaults. */
-    if (!innconf_read(NULL))
+    if (!innconf_read(nullptr))
         exit(1);
 
     History = concatpath(innconf->pathhistory, INN_PATH_HISTORY);
@@ -68,17 +68,17 @@ main(int ac, char *av[])
     }
 
     history = HISopen(History, innconf->hismethod, HIS_RDWR);
-    if (history == NULL) {
+    if (history == nullptr) {
         syswarn("cannot set up %s database", History);
         rc = 1;
         goto fail;
     }
 
     /* Loop over all input. */
-    while (fgets(buff, sizeof buff, stdin) != NULL) {
+    while (fgets(buff, sizeof buff, stdin) != nullptr) {
         time_t arrived, posted, expires;
 
-        if ((p = strchr(buff, '\n')) == NULL) {
+        if ((p = strchr(buff, '\n')) == nullptr) {
             if (Passing)
                 printf("%s\n", buff);
             else
@@ -94,7 +94,7 @@ main(int ac, char *av[])
             continue;
         }
 
-        if (buff[0] != '<' || (p = strchr(buff, '>')) == NULL) {
+        if (buff[0] != '<' || (p = strchr(buff, '>')) == nullptr) {
             if (Passing)
                 printf("%s\n", buff);
             else
@@ -104,8 +104,8 @@ main(int ac, char *av[])
         }
         *++p = '\0';
 
-        if (HISlookup(history, buff, &arrived, &posted, &expires, NULL)) {
-            if (!HISreplace(history, buff, arrived, posted, expires, NULL))
+        if (HISlookup(history, buff, &arrived, &posted, &expires, nullptr)) {
+            if (!HISreplace(history, buff, arrived, posted, expires, nullptr))
                 syswarn("cannot write new text for %s", buff);
         } else {
             syswarn("no entry for %s", buff);
@@ -114,7 +114,7 @@ main(int ac, char *av[])
 
 fail:
     /* Close files; we're done. */
-    if (history != NULL && !HISclose(history)) {
+    if (history != nullptr && !HISclose(history)) {
         syswarn("cannot close %s", History);
         rc = 1;
     }

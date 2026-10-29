@@ -21,9 +21,9 @@
  * go */
 #define HIS_FIELDSEP '\t'
 
-static char *TextFile = NULL;
-static char *HistoryDir = NULL;
-static char *HISTORY = NULL;
+static char *TextFile = nullptr;
+static char *HistoryDir = nullptr;
+static char *HISTORY = nullptr;
 
 static void Usage(void) __attribute__((__noreturn__));
 
@@ -64,12 +64,12 @@ Countlines(void)
 
     /* Open the text file. */
     qp = QIOopen(TextFile);
-    if (qp == NULL)
+    if (qp == nullptr)
         sysdie("cannot open %s", TextFile);
 
     /* Loop through all lines in the text file. */
     count = 0;
-    for (; QIOread(qp) != NULL;)
+    for (; QIOread(qp) != nullptr;)
         count++;
     if (QIOerror(qp))
         sysdie("cannot read %s near line %lu", TextFile,
@@ -113,7 +113,7 @@ Rebuild(off_t size, bool IgnoreOld, bool Overwrite)
 
     /* Open the text file. */
     qp = QIOopen(TextFile);
-    if (qp == NULL)
+    if (qp == nullptr)
         sysdie("cannot open %s", TextFile);
 
     /* If using the standard history file, force DBZ to use history.n. */
@@ -159,9 +159,10 @@ Rebuild(off_t size, bool IgnoreOld, bool Overwrite)
 
     /* Loop through all lines in the text file. */
     count = 0;
-    for (where = QIOtell(qp); (p = QIOread(qp)) != NULL; where = QIOtell(qp)) {
+    for (where = QIOtell(qp); (p = QIOread(qp)) != nullptr;
+         where = QIOtell(qp)) {
         count++;
-        if ((save = strchr(p, HIS_FIELDSEP)) == NULL) {
+        if ((save = strchr(p, HIS_FIELDSEP)) == nullptr) {
             warn("bad line #%lu: %.40s", (unsigned long) count, p);
             if (temp[0])
                 unlink(temp);
@@ -242,7 +243,7 @@ main(int argc, char **argv)
     message_program_name = "makedbz";
 
     /* Set defaults. */
-    if (!innconf_read(NULL))
+    if (!innconf_read(nullptr))
         exit(1);
     TextFile = concatpath(innconf->pathhistory, INN_PATH_HISTORY);
     HISTORY = concatpath(innconf->pathhistory, INN_PATH_HISTORY);
@@ -275,7 +276,7 @@ main(int argc, char **argv)
         Usage();
     }
 
-    if ((p = strrchr(TextFile, '/')) == NULL) {
+    if ((p = strrchr(TextFile, '/')) == nullptr) {
         /* find the default history file directory */
         HistoryDir = innconf->pathhistory;
     } else {

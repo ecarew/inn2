@@ -38,7 +38,7 @@ typedef struct filelist {
 } filelist;
 
 /* All relative paths are relative to this directory. */
-static char *base_dir = NULL;
+static char *base_dir = nullptr;
 
 /* The absolute path of the current working directory. */
 static char current_dir[MAX_DIR_LEN];
@@ -102,7 +102,7 @@ filelist_new(char *dir)
     list->count = 0;
     list->size = 0;
     list->dir = dir;
-    list->files = NULL;
+    list->files = nullptr;
     return list;
 }
 
@@ -137,9 +137,9 @@ filelist_lookup(filelist *list, const char *name)
 {
     char **p;
 
-    p = static_cast<char **>(
-        bsearch(&name, list->files, list->count, sizeof(char *), file_compare));
-    return (p == NULL ? NULL : *p);
+    p = static_cast<char **>(bsearch(&name, list->files, list->count,
+                                     sizeof(char *), file_compare));
+    return (p == nullptr ? nullptr : *p);
 }
 
 
@@ -152,7 +152,7 @@ filelist_empty(filelist *list)
 {
     int i;
 
-    if (list->files == NULL)
+    if (list->files == nullptr)
         return;
     for (i = 0; i < list->count; i++)
         free(list->files[i]);
@@ -167,9 +167,9 @@ static void
 filelist_free(filelist *list)
 {
     filelist_empty(list);
-    if (list->files != NULL)
+    if (list->files != nullptr)
         free(list->files);
-    if (list->dir != NULL)
+    if (list->dir != nullptr)
         free(list->dir);
     free(list);
 }
@@ -195,7 +195,7 @@ sm_initialize(void)
 {
     bool value;
 
-    if (!innconf_read(NULL))
+    if (!innconf_read(nullptr))
         exit(1);
     value = true;
     if (!SMsetup(SM_RDWR, &value) || !SMsetup(SM_PREOPEN, &value))
@@ -220,17 +220,17 @@ get_line(QIOSTATE *qp)
 
     p = QIOread(qp);
     count++;
-    while (QIOtoolong(qp) || (p != NULL && strlen(p) >= MAX_DIR_LEN)) {
+    while (QIOtoolong(qp) || (p != nullptr && strlen(p) >= MAX_DIR_LEN)) {
         warn("line %d too long", count);
         error_count++;
         p = QIOread(qp);
     }
-    if (p == NULL) {
+    if (p == nullptr) {
         if (QIOerror(qp)) {
             syswarn("read error");
             error_count++;
         }
-        return NULL;
+        return nullptr;
     }
     return p;
 }
@@ -245,19 +245,19 @@ get_line(QIOSTATE *qp)
 static filelist *
 process_line(QIOSTATE *qp, int *queued, int *deleted)
 {
-    static char *line = NULL;
-    filelist *list = NULL;
+    static char *line = nullptr;
+    filelist *list = nullptr;
     char *p;
-    char *dir = NULL;
+    char *dir = nullptr;
     int dlen = -1;
 
     *queued = 0;
     *deleted = 0;
 
-    if (line == NULL)
+    if (line == nullptr)
         line = get_line(qp);
 
-    for (; line != NULL; line = get_line(qp)) {
+    for (; line != nullptr; line = get_line(qp)) {
         if (IsToken(line)) {
             (*deleted)++;
             if (debug_only) {
@@ -272,15 +272,15 @@ process_line(QIOSTATE *qp, int *queued, int *deleted)
                     error_count++;
                 }
         } else {
-            if (list == NULL) {
+            if (list == nullptr) {
                 p = strrchr(line, '/');
-                if (p != NULL) {
+                if (p != nullptr) {
                     *p++ = '\0';
                     dlen = strlen(line);
                     dir = xstrdup(line);
                 } else {
                     dlen = -1;
-                    dir = NULL;
+                    dir = nullptr;
                 }
                 list = filelist_new(dir);
             } else {
@@ -427,7 +427,7 @@ setup_dir(char *dir, int filecount)
     int base_depth, depth;
 
     /* Set absolute to the absolute path to the new directory. */
-    if (dir == NULL)
+    if (dir == nullptr)
         absolute = base_dir;
     else if (*dir == '/')
         absolute = dir;
@@ -579,7 +579,7 @@ unlink_filelist(filelist *list, int filecount)
        operation.  Note that this optimization may slightly slow more
        efficient operating systems. */
     dir = opendir(prefix_len == 0 ? "." : prefix_dir);
-    if (dir == NULL) {
+    if (dir == nullptr) {
         if (prefix_len > 0 && prefix_dir[0] == '/')
             warn("can't open directory %s", prefix_dir);
         else
@@ -589,8 +589,8 @@ unlink_filelist(filelist *list, int filecount)
         filelist_free(list);
         return;
     }
-    for (i = 0, entry = readdir(dir); entry != NULL; entry = readdir(dir))
-        if (filelist_lookup(list, entry->d_name) != NULL) {
+    for (i = 0, entry = readdir(dir); entry != nullptr; entry = readdir(dir))
+        if (filelist_lookup(list, entry->d_name) != nullptr) {
             i++;
             strlcpy(file, entry->d_name, sizeof(prefix_dir) - prefix_len);
             unlink_file(prefix_dir);
@@ -649,7 +649,7 @@ main(int argc, char *argv[])
         name = "fastrm";
     else {
         p = strrchr(name, '/');
-        if (p != NULL)
+        if (p != nullptr)
             name = p + 1;
     }
     message_program_name = name;
@@ -717,9 +717,9 @@ main(int argc, char *argv[])
     /* Open our input stream and then loop through it, building filelists
        and processing them until done. */
     qp = QIOfdopen(fileno(stdin));
-    if (qp == NULL)
+    if (qp == nullptr)
         sysdie("can't reopen stdin");
-    while ((list = process_line(qp, &filecount, &deleted)) != NULL) {
+    while ((list = process_line(qp, &filecount, &deleted)) != nullptr) {
         empty_error = false;
         unlink_filelist(list, filecount);
     }

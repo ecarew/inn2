@@ -79,7 +79,7 @@ EXPfopen(bool Unlink, const char *Name, const char *Mode, bool Needclean,
 
     if (Unlink && unlink(Name) < 0 && errno != ENOENT)
         syswarn("cannot remove %s", Name);
-    if ((F = fopen(Name, Mode)) == NULL) {
+    if ((F = fopen(Name, Mode)) == nullptr) {
         syswarn("cannot open %s in %s mode", Name, Mode);
         if (Needclean)
             CleanupAndExit(Server, Paused, 1);
@@ -191,8 +191,8 @@ EXPreadfile(FILE *F)
         EXPclasses[i].Missing = true;
     }
 
-    for (i = 1; fgets(buff, sizeof buff, F) != NULL; i++) {
-        if ((p = strchr(buff, '\n')) == NULL) {
+    for (i = 1; fgets(buff, sizeof buff, F) != nullptr; i++) {
+        if ((p = strchr(buff, '\n')) == nullptr) {
             warn("line %d too long", i);
             return false;
         }
@@ -343,7 +343,8 @@ EXPkeepit(const TOKEN *token, time_t when, time_t Expires)
         /* Make sure it's not posted before the purge cut-off and
          * that it's not due to expire. */
     } else {
-        if (when >= storageclass.Purge && (Expires >= Now || when >= storageclass.Keep))
+        if (when >= storageclass.Purge
+            && (Expires >= Now || when >= storageclass.Keep))
             return Keep;
     }
     return Remove;
@@ -374,7 +375,7 @@ EXPremove(const TOKEN *token)
             return;
         syswarn("cannot write to -z file (will ignore it for rest of run)");
         fclose(EXPunlinkfile);
-        EXPunlinkfile = NULL;
+        EXPunlinkfile = nullptr;
     }
     if (!SMcancel(*token) && SMerrno != SMERR_NOENT && SMerrno != SMERR_UNINIT)
         warn("cannot unlink %s", TokenToText(*token));
@@ -416,11 +417,11 @@ static struct hash *
 EXPloadtombstone(bool consuming, char **out_expireover_path,
                  char **out_cancels_snapshot)
 {
-    char *expireover_path = NULL;
-    char *cancels_path = NULL;
-    char *cancels_snapshot = NULL;
-    char *leftover = NULL;
-    struct hash *h = NULL;
+    char *expireover_path = nullptr;
+    char *cancels_path = nullptr;
+    char *cancels_snapshot = nullptr;
+    char *leftover = nullptr;
+    struct hash *h = nullptr;
     struct stat sb;
     unsigned long n_expireover = 0;
     unsigned long n_cancels = 0;
@@ -432,12 +433,12 @@ EXPloadtombstone(bool consuming, char **out_expireover_path,
     /* Default outputs to NULL; only set on the success-return path
        below.  This avoids double-frees if a future maintainer adds an
        early return between here and that single point. */
-    *out_expireover_path = NULL;
-    *out_cancels_snapshot = NULL;
+    *out_expireover_path = nullptr;
+    *out_cancels_snapshot = nullptr;
 
     expireover_path = concatpath(innconf->pathdb, "expireover.tombstone");
     cancels_path = concatpath(innconf->pathdb, "cancels.tombstone");
-    leftover = concat(cancels_path, ".processing", (char *) 0);
+    leftover = concat(cancels_path, ".processing", (char *) nullptr);
 
     /* Probe each file's presence (independent of content) so we can
        distinguish "tombstone subsystem is actively tracking but had
@@ -459,7 +460,7 @@ EXPloadtombstone(bool consuming, char **out_expireover_path,
 
     /* Recover a leftover .processing from a previous run that crashed
        between rename and unlink. */
-    n_leftover = tombstone_read(h, leftover, NULL);
+    n_leftover = tombstone_read(h, leftover, nullptr);
 
     /* On a real run, atomically snapshot the live cancels.tombstone,
        then read it.  On dry-run / tracing / alt-output, just read
@@ -468,14 +469,14 @@ EXPloadtombstone(bool consuming, char **out_expireover_path,
        with concurrent appenders). */
     if (consuming) {
         cancels_snapshot = tombstone_rename_for_processing(cancels_path);
-        if (cancels_snapshot != NULL)
-            n_cancels = tombstone_read(h, cancels_snapshot, NULL);
+        if (cancels_snapshot != nullptr)
+            n_cancels = tombstone_read(h, cancels_snapshot, nullptr);
     } else {
-        n_cancels = tombstone_read(h, cancels_path, NULL);
+        n_cancels = tombstone_read(h, cancels_path, nullptr);
     }
 
     /* Read the expireover-side log. */
-    n_expireover = tombstone_read(h, expireover_path, NULL);
+    n_expireover = tombstone_read(h, expireover_path, nullptr);
 
     if (EXPverbose)
         printf("Loaded %lu + %lu + %lu tombstone entries (%lu unique)\n",
@@ -491,18 +492,18 @@ EXPloadtombstone(bool consuming, char **out_expireover_path,
            (its contents are already in the hashset); the snapshot
            remains and is unlinked on success */
     if (consuming) {
-        if (n_leftover > 0 && cancels_snapshot == NULL) {
+        if (n_leftover > 0 && cancels_snapshot == nullptr) {
             cancels_snapshot = leftover;
-            leftover = NULL;
+            leftover = nullptr;
         } else if (n_leftover > 0) {
             if (unlink(leftover) < 0)
                 syswarn("can't unlink %s", leftover);
-        } else if (leftover_present && cancels_snapshot == NULL) {
+        } else if (leftover_present && cancels_snapshot == nullptr) {
             /* Leftover existed but was empty.  Treat it as the
                snapshot so the caller cleans it up after a
                successful run. */
             cancels_snapshot = leftover;
-            leftover = NULL;
+            leftover = nullptr;
         } else if (leftover_present) {
             /* Both leftover and live snapshot existed; leftover
                empty.  Unlink it now; snapshot will be cleaned up
@@ -512,7 +513,7 @@ EXPloadtombstone(bool consuming, char **out_expireover_path,
         }
     }
     free(leftover);
-    leftover = NULL;
+    leftover = nullptr;
 
     /* Decide between "fall back to slow path" (return NULL) and
        "trust the (possibly empty) tombstone".  A file that exists
@@ -523,11 +524,11 @@ EXPloadtombstone(bool consuming, char **out_expireover_path,
        cancels.tombstone is not renamed, so cancels_snapshot stays
        NULL; use the cancels_present probe instead. */
     if (!expireover_present && !leftover_present && !cancels_present
-        && cancels_snapshot == NULL) {
+        && cancels_snapshot == nullptr) {
         hash_free(h);
         free(expireover_path);
         free(cancels_path);
-        return NULL;
+        return nullptr;
     }
 
     /* Single success-return: hand both paths to the caller for
@@ -561,7 +562,7 @@ EXPdoline(void *cookie, time_t arrived, time_t posted, time_t expires,
        EXPunlinked too so the news.daily summary's "Articles dropped"
        count matches the slow path's accounting (EXPremove also bumps
        it). */
-    if (tombstone != NULL && hash_lookup(tombstone, token) != NULL) {
+    if (tombstone != nullptr && hash_lookup(tombstone, token) != nullptr) {
         EXPprocessed++;
         if (EXPverbose > 3)
             printf("%s (tombstoned by expireover)\n", TokenToText(*token));
@@ -571,10 +572,10 @@ EXPdoline(void *cookie, time_t arrived, time_t posted, time_t expires,
         return false;
     }
 
-    selfexpiring = SMprobe(SELFEXPIRE, token, NULL);
+    selfexpiring = SMprobe(SELFEXPIRE, token, nullptr);
 
     if (innconf->groupbaseexpiry || selfexpiring) {
-        if (tombstone != NULL && !selfexpiring) {
+        if (tombstone != nullptr && !selfexpiring) {
             /* Backend does not self-expire and the tombstone log is
                complete: not in the log means the article still exists.
                Skip the SMretrieve to avoid a per-article syscall (the
@@ -582,7 +583,7 @@ EXPdoline(void *cookie, time_t arrived, time_t posted, time_t expires,
             HasSelfexpire = true;
             Selfexpired = false;
         } else if ((article = SMretrieve(*token, RETR_STAT))
-                   == (ARTHANDLE *) NULL) {
+                   == (ARTHANDLE *) nullptr) {
             HasSelfexpire = true;
             Selfexpired = true;
         } else {
@@ -680,10 +681,10 @@ CleanupAndExit(bool Server, bool Paused, int x)
 
     SMshutdown();
     HISclose(History);
-    if (EXPreason != NULL)
+    if (EXPreason != nullptr)
         free(EXPreason);
 
-    if (NHistory != NULL)
+    if (NHistory != nullptr)
         free(NHistory);
     closelog();
     exit(x);
@@ -707,8 +708,8 @@ main(int ac, char *av[])
     char *p;
     FILE *F;
     char *HistoryText;
-    const char *NHistoryPath = NULL;
-    const char *NHistoryText = NULL;
+    const char *NHistoryPath = nullptr;
+    const char *NHistoryText = nullptr;
     char *EXPhistdir;
     char buff[SMBUF];
     bool Server;
@@ -732,7 +733,7 @@ main(int ac, char *av[])
     TimeWarp = 0;
     UnlinkFile = false;
 
-    if (!innconf_read(NULL))
+    if (!innconf_read(nullptr))
         exit(1);
 
     /* Warn about expiretombstone-without-groupbaseexpiry: in that
@@ -752,7 +753,7 @@ main(int ac, char *av[])
     /* find the default history database directory */
     EXPhistdir = xstrdup(HistoryText);
     p = strrchr(EXPhistdir, '/');
-    if (p != NULL) {
+    if (p != nullptr) {
         *p = '\0';
     }
 
@@ -818,13 +819,13 @@ main(int ac, char *av[])
     /* if EXPtracing is set, then pass in a path, this ensures we
      * don't replace the existing hisv6 history files */
     if (EXPtracing || NHistoryText || NHistoryPath) {
-        if (NHistoryPath == NULL)
+        if (NHistoryPath == nullptr)
             NHistoryPath = innconf->pathhistory;
-        if (NHistoryText == NULL)
+        if (NHistoryText == nullptr)
             NHistoryText = INN_PATH_HISTORY;
         NHistory = concatpath(NHistoryPath, NHistoryText);
     } else {
-        NHistory = NULL;
+        NHistory = nullptr;
     }
 
     time(&Now);
@@ -855,14 +856,14 @@ main(int ac, char *av[])
 
     /* Set up the link, reserve the lock. */
     if (Server) {
-        if (EXPreason == NULL) {
+        if (EXPreason == nullptr) {
             snprintf(buff, sizeof(buff), "Expiring process %ld",
                      (long) getpid());
             EXPreason = xstrdup(buff);
         }
     } else {
         free(EXPreason);
-        EXPreason = NULL;
+        EXPreason = nullptr;
     }
 
     if (Server) {
@@ -919,7 +920,7 @@ main(int ac, char *av[])
     if (inplace) {
         if (EXPtracing) {
             Writing = false;
-        } else if (NHistory != NULL) {
+        } else if (NHistory != nullptr) {
             warn("%s expires in place and cannot write a separate history file"
                  " (-d/-f); use -t for a dry run",
                  innconf->hismethod);
@@ -964,10 +965,10 @@ main(int ac, char *av[])
        under the old config could drop history entries for articles
        still alive. */
     {
-        bool consuming = Writing && !EXPtracing && NHistory == NULL;
-        char *expireover_path = NULL;
-        char *cancels_snapshot = NULL;
-        struct hash *tombstone = NULL;
+        bool consuming = Writing && !EXPtracing && NHistory == nullptr;
+        char *expireover_path = nullptr;
+        char *cancels_snapshot = nullptr;
+        struct hash *tombstone = nullptr;
 
         if (innconf->expiretombstone && innconf->groupbaseexpiry)
             tombstone = EXPloadtombstone(consuming, &expireover_path,
@@ -977,7 +978,7 @@ main(int ac, char *av[])
                         EXPremember, EXPdoline)
               == false;
 
-        if (tombstone != NULL)
+        if (tombstone != nullptr)
             hash_free(tombstone);
 
         /* On a successful real run, unlink both consumed snapshots
@@ -985,11 +986,11 @@ main(int ac, char *av[])
            alt-output skipped the rename in the loader so there are
            no snapshot paths to clean up. */
         if (!Bad && consuming) {
-            if (expireover_path != NULL) {
+            if (expireover_path != nullptr) {
                 if (unlink(expireover_path) < 0 && errno != ENOENT)
                     syswarn("can't unlink %s", expireover_path);
             }
-            if (cancels_snapshot != NULL) {
+            if (cancels_snapshot != nullptr) {
                 if (unlink(cancels_snapshot) < 0 && errno != ENOENT)
                     syswarn("can't unlink %s", cancels_snapshot);
             }
@@ -1021,7 +1022,7 @@ main(int ac, char *av[])
         free(cancels_snapshot);
     }
 
-    if (UnlinkFile && EXPunlinkfile == NULL)
+    if (UnlinkFile && EXPunlinkfile == nullptr)
         /* Got -z but file was closed; oops. */
         Bad = true;
 
@@ -1034,7 +1035,7 @@ main(int ac, char *av[])
             printf("Expire tracing: history files not updated.\n");
     }
 
-    if (!Bad && NHistory != NULL) {
+    if (!Bad && NHistory != nullptr) {
         snprintf(buff, sizeof(buff), "%s.n.done", NHistory);
         fclose(EXPfopen(false, buff, "w", true, Server, false));
     }

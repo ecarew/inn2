@@ -65,7 +65,7 @@ static bool
 build_bloom_cb(void *cookie, const HASH *hash, time_t arrived UNUSED,
                time_t posted UNUSED, time_t expires UNUSED, const TOKEN *token)
 {
-    if (token != NULL)
+    if (token != nullptr)
         bloom_add(static_cast<struct bloom_filter *>(cookie), hash);
     return true;
 }
@@ -88,14 +88,14 @@ verify_tombstone_lines(char *raw, ssize_t got, struct buffer *kept)
         return;
     raw[got] = '\0';
     entry = strtok_r(raw, "\n", &save_p);
-    while (entry != NULL) {
+    while (entry != nullptr) {
         size_t len = strlen(entry);
         if (len > 0 && entry[len - 1] == '\r')
             entry[--len] = '\0';
         if (len > 0 && IsToken(entry)) {
             TOKEN t = TextToToken(entry);
             ARTHANDLE *art = SMretrieve(t, RETR_STAT);
-            if (art != NULL) {
+            if (art != nullptr) {
                 /* Article still on disk; drop from tombstone to
                    avoid orphaning history for it. */
                 SMfreearticle(art);
@@ -112,7 +112,7 @@ verify_tombstone_lines(char *raw, ssize_t got, struct buffer *kept)
                 buffer_append(kept, "\n", 1);
             }
         }
-        entry = strtok_r(NULL, "\n", &save_p);
+        entry = strtok_r(nullptr, "\n", &save_p);
     }
 }
 
@@ -136,10 +136,10 @@ slurp_tombstone(const char *path, ssize_t *out_size)
     *out_size = 0;
     fd = open(path, O_RDONLY);
     if (fd < 0)
-        return NULL;
+        return nullptr;
     if (fstat(fd, &sb) < 0 || sb.st_size <= 0) {
         close(fd);
-        return NULL;
+        return nullptr;
     }
     raw = xmalloc(sb.st_size + 1);
     while (got < sb.st_size) {
@@ -151,7 +151,7 @@ slurp_tombstone(const char *path, ssize_t *out_size)
     close(fd);
     if (got <= 0) {
         free(raw);
-        return NULL;
+        return nullptr;
     }
     *out_size = got;
     return raw;
@@ -166,18 +166,18 @@ main(int argc, char *argv[])
     QIOSTATE *qp;
     bool value;
     OVGE ovge;
-    char *active_path = NULL;
-    char *lowmark_path = NULL;
+    char *active_path = nullptr;
+    char *lowmark_path = nullptr;
     char *path;
-    char *tombstone_path = NULL;
-    char *tombstone_path_new = NULL;
-    FILE *lowmark = NULL;
+    char *tombstone_path = nullptr;
+    char *tombstone_path_new = nullptr;
+    FILE *lowmark = nullptr;
     bool purge_deleted = false;
     bool always_stat = false;
     bool tombstone_clean = true;
     struct history *history;
-    struct bloom_filter *bloom = NULL;
-    struct bloom_filter *null_bloom = NULL;
+    struct bloom_filter *bloom = nullptr;
+    struct bloom_filter *null_bloom = nullptr;
 
     /* First thing, set up logging and our identity. */
     openlog("expireover", L_OPENLOG_FLAGS | LOG_PID, LOG_INN_PROG);
@@ -191,7 +191,7 @@ main(int argc, char *argv[])
     ovge.usepost = false;
     ovge.quiet = false;
     ovge.timewarp = 0;
-    ovge.filename = NULL;
+    ovge.filename = nullptr;
     ovge.delayrm = false;
 
     /* Parse the command-line options. */
@@ -237,7 +237,7 @@ main(int argc, char *argv[])
         die("-e and -k cannot be specified at the same time");
 
     /* Initialize innconf. */
-    if (!innconf_read(NULL))
+    if (!innconf_read(nullptr))
         exit(1);
 
     /* Warn about expiretombstone-without-groupbaseexpiry: in that
@@ -252,27 +252,27 @@ main(int argc, char *argv[])
     ensure_news_user_grp(true, true);
 
     /* Initialize the lowmark file, if one was requested. */
-    if (lowmark_path != NULL) {
+    if (lowmark_path != nullptr) {
         if (unlink(lowmark_path) < 0 && errno != ENOENT)
             syswarn("can't remove %s", lowmark_path);
         lowmark = fopen(lowmark_path, "a");
-        if (lowmark == NULL)
+        if (lowmark == nullptr)
             sysdie("can't open %s", lowmark_path);
     }
 
     /* Set up the path to the list of newsgroups we're going to use and open
        that file.  This could be stdin. */
-    if (active_path == NULL) {
+    if (active_path == nullptr) {
         active_path = concatpath(innconf->pathdb, INN_PATH_ACTIVE);
         purge_deleted = true;
     }
     if (strcmp(active_path, "-") == 0) {
         qp = QIOfdopen(fileno(stdin));
-        if (qp == NULL)
+        if (qp == nullptr)
             sysdie("can't reopen stdin");
     } else {
         qp = QIOopen(active_path);
-        if (qp == NULL)
+        if (qp == nullptr)
             sysdie("can't open active file (%s)", active_path);
     }
     free(active_path);
@@ -346,7 +346,7 @@ main(int argc, char *argv[])
         int fd;
 
         tombstone_path = concatpath(innconf->pathdb, "expireover.tombstone");
-        tombstone_path_new = concat(tombstone_path, ".NEW", (char *) 0);
+        tombstone_path_new = concat(tombstone_path, ".NEW", (char *) nullptr);
         fd = open(tombstone_path_new, O_RDWR | O_CREAT, 0664);
         if (fd < 0) {
             syswarn("can't open tombstone log %s", tombstone_path_new);
@@ -390,12 +390,12 @@ main(int argc, char *argv[])
             char *raw;
             ssize_t got = 0;
 
-            kept.data = NULL;
+            kept.data = nullptr;
             kept.size = kept.used = kept.left = 0;
 
             /* Recover unconsumed final tombstone first. */
             raw = slurp_tombstone(tombstone_path, &got);
-            if (raw != NULL) {
+            if (raw != nullptr) {
                 verify_tombstone_lines(raw, got, &kept);
                 free(raw);
                 /* Unlink whether or not we extracted entries: the
@@ -430,7 +430,7 @@ main(int argc, char *argv[])
                 fd = -1;
             } else {
                 OVtombstonefile = fdopen(fd, "w");
-                if (OVtombstonefile == NULL) {
+                if (OVtombstonefile == nullptr) {
                     syswarn("can't fdopen %s", tombstone_path_new);
                     close(fd);
                     fd = -1;
@@ -461,11 +461,11 @@ main(int argc, char *argv[])
             }
             free(kept.data);
         }
-        if (OVtombstonefile == NULL) {
+        if (OVtombstonefile == nullptr) {
             free(tombstone_path);
             free(tombstone_path_new);
-            tombstone_path = NULL;
-            tombstone_path_new = NULL;
+            tombstone_path = nullptr;
+            tombstone_path_new = nullptr;
         }
     }
 
@@ -492,11 +492,11 @@ main(int argc, char *argv[])
             warn("can't estimate history entries, Bloom filter will be"
                  " undersized");
         bloom = bloom_create(estimated, innconf->expirebloomfp);
-        if (!HISwalk(history, NULL, bloom, build_bloom_cb)) {
+        if (!HISwalk(history, nullptr, bloom, build_bloom_cb)) {
             warn("can't walk history for Bloom filter, using per-article"
                  " lookups");
             bloom_free(bloom);
-            bloom = NULL;
+            bloom = nullptr;
         }
         OVctl(OVTOKENCACHE, &bloom);
     }
@@ -504,16 +504,16 @@ main(int argc, char *argv[])
     /* Loop through each line of the input file and process each group,
        writing data to the lowmark file if desired. */
     line = QIOread(qp);
-    while (line != NULL && !signalled) {
+    while (line != nullptr && !signalled) {
         p = strchr(line, ' ');
-        if (p != NULL)
+        if (p != nullptr)
             *p = '\0';
         p = strchr(line, '\t');
-        if (p != NULL)
+        if (p != nullptr)
             *p = '\0';
         if (!OVexpiregroup(line, &low, history))
             warn("can't expire %s", line);
-        else if (lowmark != NULL && low != 0)
+        else if (lowmark != nullptr && low != 0)
             fprintf(lowmark, "%s %d\n", line, low);
         line = QIOread(qp);
     }
@@ -522,7 +522,7 @@ main(int argc, char *argv[])
 
     /* If desired, purge all deleted newsgroups. */
     if (!signalled && purge_deleted)
-        if (!OVexpiregroup(NULL, NULL, history))
+        if (!OVexpiregroup(nullptr, nullptr, history))
             warn("can't expire deleted newsgroups");
 
     /* Close everything down in an orderly fashion. */
@@ -534,7 +534,7 @@ main(int argc, char *argv[])
     OVclose();
     SMshutdown();
     HISclose(history);
-    if (lowmark != NULL)
+    if (lowmark != nullptr)
         if (fclose(lowmark) == EOF)
             syswarn("can't close %s", lowmark_path);
 
@@ -548,7 +548,7 @@ main(int argc, char *argv[])
        expireover, so a partial log can never be consumed by expire.
        No fsync: the log is advisory; if a crash loses the buffered
        tail, expire just runs the slow path. */
-    if (OVtombstonefile != NULL) {
+    if (OVtombstonefile != nullptr) {
         if (fclose(OVtombstonefile) == EOF) {
             syswarn("can't finalize tombstone log %s", tombstone_path_new);
             tombstone_clean = false;

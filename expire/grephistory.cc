@@ -27,7 +27,7 @@ IhaveSendme(struct history *h, char What)
     char *q;
     char buff[BUFSIZ];
 
-    while (fgets(buff, sizeof buff, stdin) != NULL) {
+    while (fgets(buff, sizeof buff, stdin) != nullptr) {
         time_t arrived, posted, expires;
         TOKEN token;
 
@@ -86,7 +86,7 @@ main(int ac, char *av[])
     message_program_name = "grephistory";
 
     /* Set defaults. */
-    if (!innconf_read(NULL))
+    if (!innconf_read(nullptr))
         exit(1);
 
     History = concatpath(innconf->pathhistory, INN_PATH_HISTORY);
@@ -121,7 +121,7 @@ main(int ac, char *av[])
     av += optind;
 
     history = HISopen(History, innconf->hismethod, HIS_RDONLY);
-    if (history == NULL)
+    if (history == nullptr)
         die("cannot open history");
 
     /* Set operating mode. */
@@ -149,7 +149,7 @@ main(int ac, char *av[])
     } else {
         /* Add optional braces if not already present. */
         if (*key != '<')
-            key = concat("<", key, ">", (char *) 0);
+            key = concat("<", key, ">", (char *) nullptr);
     }
 
     if (!HIScheck(history, key)) {
