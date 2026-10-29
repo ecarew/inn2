@@ -667,7 +667,7 @@ Unspool()
         }
 
         /* Make sure multiple Unspools don't stomp on each other. */
-        if (!inn_lock_file(fd, INN_LOCK_WRITE, 0)) {
+        if (!inn_lock_file(fd, INN_LOCK_WRITE, false)) {
             close(fd);
             continue;
         }
