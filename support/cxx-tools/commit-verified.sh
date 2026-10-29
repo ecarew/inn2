@@ -24,6 +24,10 @@ if [ $# -gt 0 ]; then
 else
     git add -u
 fi
+if git diff --cached --quiet; then
+    echo "nothing staged to commit"
+    exit 1
+fi
 if git status --porcelain --untracked-files=no | grep -qv '^[MADR] '; then
     echo "unstaged changes remain; not committing"
     git status --short --untracked-files=no
