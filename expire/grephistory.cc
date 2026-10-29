@@ -14,7 +14,7 @@
 #include "inn/paths.h"
 #include "inn/storage.h"
 
-static void Usage(void) __attribute__((__noreturn__));
+static void Usage() __attribute__((__noreturn__));
 
 /*
 **  Read stdin for list of Message-ID's, output list of ones we
@@ -62,7 +62,7 @@ IhaveSendme(struct history *h, char What)
 **  Print a usage message and exit.
 */
 static void
-Usage(void)
+Usage()
 {
     fprintf(stderr, "Usage: grephistory [flags] MessageID\n");
     exit(1);

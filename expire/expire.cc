@@ -58,7 +58,7 @@ static char *NHistory;
 
 static void CleanupAndExit(bool Server, bool Paused, int x)
     __attribute__((__noreturn__));
-static void Usage(void) __attribute__((__noreturn__));
+static void Usage() __attribute__((__noreturn__));
 
 static int EXPsplit(char *p, char sep, char **argv, int count);
 
@@ -694,7 +694,7 @@ CleanupAndExit(bool Server, bool Paused, int x)
 **  Print a usage message and exit.
 */
 static void
-Usage(void)
+Usage()
 {
     fprintf(stderr, "Usage: expire [flags] [expire.ctl]\n");
     exit(1);

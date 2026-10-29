@@ -115,7 +115,7 @@ static ARTOVERFIELD *Missfields; /* Header fields not used in overview
                                   * but that we need (e.g. Expires). */
 static size_t Missfieldsize = 0;
 
-static void OverAddAllNewsgroups(void);
+static void OverAddAllNewsgroups();
 
 /*
 **  Check and parse a Message-ID header field body.  Return private space.
@@ -149,7 +149,7 @@ GetMessageID(char *p)
 **  back in, and add it to overview.
 */
 static void
-FlushOverTmpFile(void)
+FlushOverTmpFile()
 {
     char temp[SMBUF];
     char *SortedTmpPath;
@@ -850,7 +850,7 @@ DoArt(ARTHANDLE *art)
 **  Add all groups to overview group.index. --rmt
 */
 static void
-OverAddAllNewsgroups(void)
+OverAddAllNewsgroups()
 {
     QIOSTATE *qp;
     int count;

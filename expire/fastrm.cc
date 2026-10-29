@@ -179,7 +179,7 @@ filelist_free(filelist *list)
 **  Exit handler for die.  Shut down the storage manager before exiting.
 */
 static int
-sm_cleanup(void)
+sm_cleanup()
 {
     SMshutdown();
     return 1;
@@ -191,7 +191,7 @@ sm_cleanup(void)
 **  fastrm doesn't need for any other purpose.
 */
 static void
-sm_initialize(void)
+sm_initialize()
 {
     bool value;
 

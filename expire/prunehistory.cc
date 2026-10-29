@@ -13,13 +13,13 @@
 #include "inn/messages.h"
 #include "inn/paths.h"
 
-static void Usage(void) __attribute__((__noreturn__));
+static void Usage() __attribute__((__noreturn__));
 
 /*
 **  Print usage message and exit.
 */
 static void
-Usage(void)
+Usage()
 {
     fprintf(stderr, "Usage: prunehistory [-p] [-f file]\n");
     exit(1);

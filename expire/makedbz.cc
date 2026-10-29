@@ -25,7 +25,7 @@ static char *TextFile = nullptr;
 static char *HistoryDir = nullptr;
 static char *HISTORY = nullptr;
 
-static void Usage(void) __attribute__((__noreturn__));
+static void Usage() __attribute__((__noreturn__));
 
 /*
 **  Remove the DBZ files for the specified base text file.
@@ -57,7 +57,7 @@ RemoveDBZFiles(char *p)
 **  Count lines in the history text.  A long-winded way of saying "wc -l"
 */
 static off_t
-Countlines(void)
+Countlines()
 {
     QIOSTATE *qp;
     off_t count;
@@ -222,7 +222,7 @@ Rebuild(off_t size, bool IgnoreOld, bool Overwrite)
 }
 
 static void
-Usage(void)
+Usage()
 {
     fprintf(stderr, "Usage: makedbz [-f histfile] [-s numlines] [-i] [-o]\n");
     exit(1);
