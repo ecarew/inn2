@@ -83,7 +83,7 @@ print_value(int i, void *p, struct datatab *tab, const char *sep)
     int mode = 0;
     u_int32_t a = 0, b = 0, c = 0, bytes = 0, mbytes = 0, gbytes = 0;
     double percent;
-    char *cp = p;
+    char *cp = static_cast<char *>(p);
     char *tmp = NULL;
     time_t tm = 0;
     size_t sz = 0;
