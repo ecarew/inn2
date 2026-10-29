@@ -76,6 +76,16 @@ list) are in [CLAUDE.md](CLAUDE.md).  This file is the rationale.
   <https://en.cppreference.com/w/cpp/compiler_support/20>.  Apple publishes no
   per-feature table for Apple Clang, so the LLVM libc++ pages are the closest
   authoritative source; this project builds with Apple Clang 21.
+- **The C++20 setting had not reached most of the code** (found 2026-10-29).
+  It was requested per target, on the innd targets only, so 88 of the 108
+  `.cc` files (all of lib, history and storage) were compiled with the
+  compiler's default, C++14 on Apple Clang 21, and buffindexed_d with GNU
+  extensions (`gnu++20`).  Found by checking the `-std` flag in
+  `compile_commands.json` while converting gencancel.  Now set once for every
+  target (`CMAKE_CXX_STANDARD 20`, required, extensions off); all `.cc` files
+  compile as `-std=c++20`, and the whole tree builds and passes verification
+  under C++20.  Earlier `Tested:` sections for lib, history and storage commits
+  therefore describe C++14 builds of those files.
 - **Assertions stay on in every build** (`13a7720aa`).  CMake's Release-type
   defaults add `-DNDEBUG`, which silently disabled INN's 28 `assert()` calls;
   configure's `-g -O2` never did.  `-DNDEBUG` is stripped.

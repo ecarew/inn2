@@ -52,6 +52,12 @@ if(INN_COVERAGE)
 endif()
 
 set(CMAKE_C_STANDARD 11)
+# Every C++ target is C++20 (CLAUDE.md, "Build system"), without GNU
+# extensions.  Set once here: per-target settings had left most libraries on
+# the compiler default (C++14 for Apple Clang 21).
+set(CMAKE_CXX_STANDARD 20)
+set(CMAKE_CXX_STANDARD_REQUIRED ON)
+set(CMAKE_CXX_EXTENSIONS OFF)
 set(CMAKE_C_EXTENSIONS ON)
 set(CMAKE_POSITION_INDEPENDENT_CODE ON)
 

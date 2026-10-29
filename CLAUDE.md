@@ -8,8 +8,9 @@ code must follow the rules below.
 ## Build system
 
 - CMake minimum version: 4.3
-- C++ standard: C++20, set per target with `target_compile_features(<tgt> PRIVATE cxx_std_20)`
-  and `CXX_EXTENSIONS OFF`.  C++20 has far fewer gaps than C++23 in Apple's
+- C++ standard: C++20 for every C++ target, set once in the root CMakeLists.txt
+  (`CMAKE_CXX_STANDARD 20`, `..._REQUIRED ON`, `CMAKE_CXX_EXTENSIONS OFF`).
+  Check `-std=c++20` appears in `build/compile_commands.json` for all `.cc`.  C++20 has far fewer gaps than C++23 in Apple's
   libc++; don't use C++23-only features, or the C++20 features libc++ lists as
   incomplete (modules, chrono time zones, `jthread`, execution policies).
   Details and sources: CONVERSION_NOTES.md, "Build system".
