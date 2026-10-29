@@ -20,9 +20,9 @@ d=$1 r=$2
 
 git mv "$d/$r.c" "$d/$r.cc" || exit 1
 esc=$(printf '%s' "$r" | sed 's|/|\\/|g; s|\.|\\.|g')
-sed -i '' -E "s/(^|[[:space:]])$esc\.c([[:space:]]|\)|$)/\1$esc.cc\2/" \
+sed -i '' -E "s/(^|[[:space:](])$esc\.c([[:space:]]|\)|$)/\1$esc.cc\2/g" \
     "$d/CMakeLists.txt"
-grep -qE "(^|[[:space:]])$esc\.cc([[:space:]]|\)|$)" "$d/CMakeLists.txt" \
+grep -qE "(^|[[:space:](])$esc\.cc([[:space:]]|\)|$)" "$d/CMakeLists.txt" \
     || echo "WARNING: $d/CMakeLists.txt does not list $r.cc; update it by hand"
 
 perl "$tools/fixkw.pl" "$d/$r.cc" class class_ storageclass
