@@ -94,12 +94,12 @@ static CONFTOKEN radtoks[] = {
 static rad_config_t *
 get_radconf(void)
 {
-    rad_config_t *new;
+    rad_config_t *conf;
 
-    new = xcalloc(1, sizeof(rad_config_t));
-    new->next = NULL;
+    conf = xcalloc(1, sizeof(rad_config_t));
+    conf->next = NULL;
 
-    return new;
+    return conf;
 }
 
 static int
@@ -257,7 +257,7 @@ rad_auth(rad_config_t *radconfig, char *uname, char *pass)
     socklen_t slen;
     int authtries = 3; /* number of times to try reaching the radius server */
     rad_config_t *config;
-    sending_t *reqtop, *sreq, *new;
+    sending_t *reqtop, *sreq, *entry;
     int done;
 
     /* set up the linked list */
@@ -273,14 +273,14 @@ rad_auth(rad_config_t *radconfig, char *uname, char *pass)
     }
 
     while (config != NULL) {
-        new = xmalloc(sizeof(sending_t));
-        new->next = NULL;
+        entry = xmalloc(sizeof(sending_t));
+        entry->next = NULL;
 
         if (sreq == NULL) {
-            reqtop = new;
-            sreq = new;
+            reqtop = entry;
+            sreq = entry;
         } else {
-            sreq->next = new;
+            sreq->next = entry;
             sreq = sreq->next;
         }
         req_copyto(&req, sreq);

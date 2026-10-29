@@ -12,7 +12,7 @@ endif()
 inn_program(ckpasswd SOURCES ckpasswd.cc INNONLY LIBS innauth ${_pam})
 inn_program(domain   SOURCES domain.cc   INNONLY LIBS innauth)
 inn_program(ident    SOURCES ident.cc    INNONLY LIBS innauth)
-inn_program(radius   SOURCES radius.c   INNONLY LIBS innauth)
+inn_program(radius   SOURCES radius.cc   INNONLY LIBS innauth)
 
 if(HAVE_KRB5)
     inn_program(auth_krb5 SOURCES auth_krb5.c INNONLY
