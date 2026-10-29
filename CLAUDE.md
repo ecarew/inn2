@@ -199,6 +199,9 @@ a document so the rounds can be compared.
   whether that is intended and whether finer-grained or inclusive time
   comparison is wanted; then drop the `sleep 2` in support/live-innd.sh that
   works around it.
+- nnrpd `ARTpost` returns `const char *` that `CMDpost` truncates in place,
+  through a `const_cast` that is safe only because of where CR/LF can come
+  from (CONVERSION_NOTES.md).  Return an owned string instead.
 
 **Housekeeping (later)**
 - Once the class work no longer needs them as references, remove the
@@ -227,12 +230,26 @@ a document so the rounds can be compared.
 - ident's INN test needs an identd on port 113 (tests 2 and 4); the new
   authprogs/identport test covers ident with a stand-in server instead.
 
-**Test coverage (2026-10-28, support/coverage-report.sh)**
-- innd/ is 42.3% line-covered (2026-10-29).  Lowest: nc.cc 21.1% (no NNTP
-  streaming, MODE READER or error responses yet), rc.cc 26.2%, site.cc 33.0%
-  (only file and exploder feeds), newsfeeds.cc 38.1%.
-- Overall 50.5% of lines: lib/ 77.3%, history/ 64.8%, storage/ 38.1%.
-  0% also in storage/overdata.cc, lib/inndcomm.cc, lib/network-innbind.cc.
+**Test coverage (support/coverage-report.sh)**
+- Measure with `support/verify-cxx.sh build-cov`, then
+  `support/live-innd.sh build-cov` (it adds to the profiles; verify-cxx.sh
+  clears them), then the report.  Until 33d778dfa live-innd.sh did not set
+  `LLVM_PROFILE_FILE`, so a plain run of it counted nothing; earlier figures
+  that include it came from profiles left in `build-cov/coverage/raw`, and
+  the "before" numbers in that commit's message were stale ones.
+- 2026-10-29, fresh profiles, line coverage by directory: innd/ 42.9%,
+  nnrpd/ 42.3%, expire/ 39.4%, lib/ 74.4%, history/ 70.3%, storage/ 40.0%,
+  authprogs/ 60.4%, control/ 72.1%.
+- nnrpd lowest: sasl.cc 6.9% (no SASL mechanism in the tests), misc.cc
+  22.5%, commands.cc 32.5%, perm.cc 35.3%.
+- innd lowest (2026-10-29): nc.cc 21.1% (no NNTP streaming, MODE READER or
+  error responses yet), rc.cc 26.2%, site.cc 33.0% (only file and exploder
+  feeds), newsfeeds.cc 38.1%.
+- 0% also in storage/overdata.cc, lib/inndcomm.cc, lib/network-innbind.cc
+  (as of 2026-10-28).
+- The report warns "N functions have mismatched data" even with fresh
+  profiles; probably sources compiled into more than one binary (tests build
+  lib sources with -DTESTING).  Not yet investigated.
 
 **Deferred modernization (on hold by decision, 2026-10-28)**
 - C-style casts: 323 `cppcoreguidelines-pro-type-cstyle-cast` hits in the
@@ -250,7 +267,11 @@ a document so the rounds can be compared.
 - Code never compiled as C++ because its feature is off in this build:
   `innd/perl.cc`, `innd/python.cc`, `lib/perl.cc` (DO_PERL/DO_PYTHON),
   `storage/ovdb/ovdb.cc` (HAVE_BDB), `lib/canlock.cc` (libcanlock).  Also
-  where `NULL` still remains in compiled-out code.
+  where `NULL` still remains in compiled-out code.  `nnrpd/tls.cc`,
+  `nnrpd/perl.cc` and `nnrpd/python.cc` passed a syntax-only compile with
+  their feature defined (CONVERSION_NOTES.md, "Code compiled out in this
+  build") but are not linked or run.  The same check would help the innd
+  and lib files above.
 - Generated sources still C: `storage/methods.c`, `storage/ovmethods.c`,
   `storage/ovsqlite/sql-*.c`, `history/hismethods.c`,
   `history/hissqlite/hissqlite-{init,main,read}.c` (their generators: goal
@@ -294,6 +315,10 @@ a document so the rounds can be compared.
   (CMake-only goal items 4, 7 and 8).
 
 **Resolved**
+- 2026-10-29: nnrpd/ converted to C++, all 18 files (`d298ec362` through
+  `5952b3822`), then nullptr, void-arg, bool-literal and typedef passes
+  (`624fc7f51`, `e19b4ec63`, `68e73ed90`, `9d6b989d2`).  Tests first: the
+  nnrpd section of support/live-innd.sh (`33d778dfa`).
 - 2026-10-29: innd coverage gate passed: innd/ 33.9% (from 2.0%) with
   innd/artparse, innd/chan and the live test support/live-innd.sh.  The gate
   (33% before further C++ conversion anywhere, decided 2026-10-28) no longer

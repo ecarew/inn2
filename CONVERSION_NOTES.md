@@ -100,6 +100,11 @@ list) are in [CLAUDE.md](CLAUDE.md).  This file is the rationale.
   symbol check confirms.
 - **`include/inn/tst.h` was missing its `END_DECLS`** (`eba96dd22`): an
   upstream bug that is invisible in C, where both macros are empty.
+- **`nnrpd/nnrpd.h` had no `BEGIN_DECLS`/`END_DECLS` at all** (`d298ec362`):
+  nnrpd was all C, so nothing needed them.  Converting the first file
+  (track.c) left the C files calling an unmangled `TrackClient` that the C++
+  file no longer exported.  Everything after the header's includes is now
+  wrapped, as in the innd headers.
 - **`void *` from `xmalloc` and friends:** `include/inn/xmalloc.h` returns a
   small `inn_void_ptr` helper in C++ that converts to any pointer type, so the
   hundreds of allocation calls need no casts.  Every other `void *` conversion
@@ -131,7 +136,36 @@ list) are in [CLAUDE.md](CLAUDE.md).  This file is the rationale.
 - C++ does not convert integers to enums implicitly: `lib/nntp` casts
   `strtol()` to `enum nntp_code` (`d413525d6`).
 - C's tentative definitions (`FILE *Log;` followed by `FILE *Log = NULL;`) are
-  redefinitions in C++ (`eb1e5e2eb`).
+  redefinitions in C++ (`eb1e5e2eb`).  nnrpd hit this through its `EXTERN`
+  macro, which is empty in nnrpd.c: `Tracing` and `hasSentCapabilities` were
+  declared `EXTERN` but initialized in nnrpd.c, against the header's own rule
+  that initialized globals use plain `extern`.  They now follow that rule
+  (`ffdf0db35`).
+- `strchr` on a `const char *` returns `const char *` in C++.  In nnrpd's
+  posting path (`CMDpost`, commands.cc) the reply from `ARTpost` (declared
+  `const char *`) is truncated at its CR/LF in place.  This is safe only
+  because a CR or LF comes from innd's reply, which `ARTpost` copies into
+  post.c's writable static `Error` buffer, and never from the string
+  literals it also returns.  The writes now go through `const_cast` with a
+  comment saying so (`1ff1892a4`).  Behavior unchanged; making the result
+  an owned string is a refactoring candidate (CLAUDE.md).
+- In C++, Python's `PyMODINIT_FUNC` already expands to
+  `extern "C" PyObject *`, so nnrpd.h's `extern PyMODINIT_FUNC` repeated
+  `extern`.  The redundant one is dropped (`5952b3822`).
+
+### Code compiled out in this build
+
+Some files are almost entirely inside a feature test that is off here
+(`HAVE_OPENSSL`, `DO_PERL`, `DO_PYTHON`), so building them as C++ proves
+nothing.  For nnrpd's `tls.cc`, `perl.cc` and `python.cc` each conversion
+also ran a syntax-only compile (`c++ -fsyntax-only -std=c++20`) with the
+feature defined and the library's headers on the include path; the commits
+give the exact commands.  This found six `void *` conversions in python.cc
+that the normal build could not see.  For Perl, only the CORE directory
+was used (`-idirafter`): the full `perl -MExtUtils::Embed -e ccopts` adds
+MacPorts' `/opt/local/include`, whose headers clash with the system ones
+INN was configured against.  None of this links or runs the code; that
+waits for CMake-only goal item 8 (optional features).
 - `static const` objects need an initializer in C++ (`= {}`, same zero value).
 - Test-only prototypes under `TESTING` need C linkage, or the C tests cannot
   link (`6a8df6188`).
