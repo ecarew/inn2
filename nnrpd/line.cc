@@ -94,7 +94,7 @@ line_doread(void *p, size_t len, int timeout)
             && (zstream_in->avail_in > 0 || zstream_inflate_needed)) {
             int r;
 
-            zstream_in->next_out = p;
+            zstream_in->next_out = static_cast<Bytef *>(p);
             zstream_in->avail_out = len;
 
             r = inflate(zstream_in, Z_SYNC_FLUSH);
@@ -214,7 +214,9 @@ line_doread(void *p, size_t len, int timeout)
             unsigned outlen;
             int r;
 
-            if ((r = sasl_decode(sasl_conn, p, n, &out, &outlen)) == SASL_OK) {
+            r = sasl_decode(sasl_conn, static_cast<const char *>(p), n, &out,
+                            &outlen);
+            if (r == SASL_OK) {
                 if (outlen > len) {
                     sysnotice("sasl_decode() returned too much output");
                     n = -1;
@@ -297,7 +299,7 @@ line_read(struct line *line, int timeout, const char **p, size_t *len,
         if (line->start != line->where) {
             memmove(line->start, line->where, line->remaining);
         }
-        lf = memchr(line->start, '\n', line->remaining);
+        lf = static_cast<char *>(memchr(line->start, '\n', line->remaining));
     }
     where = line->start + line->remaining;
 
@@ -356,7 +358,7 @@ line_read(struct line *line, int timeout, const char **p, size_t *len,
             }
             /* Search for `\n' in what we just read.  If we find it, we'll
              * drop out and return the line for processing. */
-            lf = memchr(where, '\n', count);
+            lf = static_cast<char *>(memchr(where, '\n', count));
             where += count;
         } while (lf == NULL);
     }
