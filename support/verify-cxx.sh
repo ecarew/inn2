@@ -220,7 +220,7 @@ tests=(
     lib/setenv:::lib/setenv lib/snprintf:::lib/snprintf
     lib/strlcat:::lib/strlcat lib/strlcpy:::lib/strlcpy lib/tst lib/uwildmat
     lib/vector lib/wire lib/xwrite:::lib/xwrite,tests/lib/fakewrite
-    authprogs/ident authprogs/ckpasswd.t authprogs/domain.t
+    authprogs/ident authprogs/identport authprogs/ckpasswd.t authprogs/domain.t
     innd/artparse:::tests/innd/fakeinnd,@lib/CMakeFiles/inn_canlock.dir/canlock.cc.o,@lib/CMakeFiles/inn_perl.dir/perl.cc.o
     innd/chan:::tests/innd/fakeinnd,@lib/CMakeFiles/inn_canlock.dir/canlock.cc.o,@lib/CMakeFiles/inn_perl.dir/perl.cc.o
     expire/tombstone-hisexpire

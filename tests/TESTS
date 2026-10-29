@@ -1,6 +1,7 @@
 authprogs/ckpasswd
 authprogs/domain
 authprogs/ident
+authprogs/identport
 clients/getlist
 docs/pod
 expire/tombstone

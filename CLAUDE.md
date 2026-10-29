@@ -33,6 +33,12 @@ One file per commit: `git mv foo.c foo.cc`, update the source list in that
 directory's `CMakeLists.txt`, build, fix only what the compiler reports, then
 commit. Modernization (classes, containers, RAII) goes in separate commits
 after the file compiles as C++.
+When a directory is fully converted, run the automatic modernization passes
+on its `.cc` files as separate commits (`support/cxx-tools/tidy-fix.sh`:
+`modernize-use-nullptr`, `modernize-redundant-void-arg`,
+`modernize-use-bool-literals`; single-line typedefs to `using` by hand, since
+clang-tidy 23.1.4's fix corrupts anonymous structs).  The deferred passes
+(C-style casts, init-variables, implicit bool) stay on hold.
 
 ## Testing before commit
 
