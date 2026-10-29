@@ -242,6 +242,12 @@ a document so the rounds can be compared.
   authprogs/ 60.4%, control/ 72.1%.
 - nnrpd lowest: sasl.cc 6.9% (no SASL mechanism in the tests), misc.cc
   22.5%, commands.cc 32.5%, perm.cc 35.3%.
+- 2026-10-29: backends/ 41.5%, frontends/ 50.4% (each measured before its
+  conversion).  backends lowest: innbind 8.5%, nntpget 15.4%, innxbatch
+  15.9%.  nntpget and innxbatch always connect to port 119 (NNTP_PORT, no
+  port option), so only their argument and error paths can run without
+  root; a test would need an option for the port or a server on 119.
+  frontends lowest: inews 41.0%, ctlinnd 41.2%, rnews 42.1%.
 - innd lowest (2026-10-29): nc.cc 21.1% (no NNTP streaming, MODE READER or
   error responses yet), rc.cc 26.2%, site.cc 33.0% (only file and exploder
   feeds), newsfeeds.cc 38.1%.
@@ -271,7 +277,18 @@ a document so the rounds can be compared.
   `nnrpd/perl.cc` and `nnrpd/python.cc` passed a syntax-only compile with
   their feature defined (CONVERSION_NOTES.md, "Code compiled out in this
   build") but are not linked or run.  The same check would help the innd
-  and lib files above.
+  and lib files above.  The frontends ovdb tools passed it too, against
+  Homebrew's Berkeley DB 18 (`brew install berkeley-db`, installed
+  2026-10-29; use `-I/opt/homebrew/opt/berkeley-db/include`, not
+  `-idirafter`, or the SDK's Berkeley DB 1.85 `db.h` wins).
+- `storage/ovdb/ovdb.cc` fails that check: with `-DHAVE_BDB` it has many
+  errors, starting with a keyword name near line 1777 and broken
+  declarations from line 2664 (checked 2026-10-29; not yet fixed).  Fix it
+  before ovdb can be turned on (goal item 8).
+- `frontends/feedone.c` and `frontends/sys2nf.c` are still C.  The Makefile
+  lists them as OPTIONAL (built only on request) and CMake does not build
+  them, so there is nothing to test them against; convert them once they
+  are built and tested (e.g. as targets excluded from the default build).
 - Generated sources still C: `storage/methods.c`, `storage/ovmethods.c`,
   `storage/ovsqlite/sql-*.c`, `history/hismethods.c`,
   `history/hissqlite/hissqlite-{init,main,read}.c` (their generators: goal
@@ -281,8 +298,14 @@ a document so the rounds can be compared.
   `getaddrinfo`, `getnameinfo`, `daemon`) are still C.
 - The Autoconf/Make build can no longer build libinn, libinnhist or
   libinnstorage (their Makefiles list `.c` files that are now `.cc`).  CMake
-  now builds all 49 C programs (2026-10-28), but only innd, tinyleaf,
-  encode/decode and convdate have been run; the rest are untested.
+  builds all 49 programs (2026-10-28).  As of 2026-10-29 every program in
+  innd/, nnrpd/, backends/, frontends/, expire/, control/ and authprogs/
+  (except auth_krb5) is run by a test; innfeed and the storage/history
+  tools other than tdx-util and makehistory are not yet.
+- Tooling (2026-10-29): when commit-verified.sh refuses because a change is
+  left unstaged, the paths it already staged stay staged, so the next run
+  commits them too (this merged two ovdb fixes into one commit, split again
+  before pushing).  It should unstage what it staged when it refuses.
 - Kerberos (auth_krb5) is found through `krb5-config`, which on this Mac is
   Anaconda's (`/opt/anaconda3`), matching what configure picked.
 - Upstream bug, control/gencancel.c: without -n, gencancel copies the
@@ -315,6 +338,16 @@ a document so the rounds can be compared.
   (CMake-only goal items 4, 7 and 8).
 
 **Resolved**
+- 2026-10-29: frontends/ converted to C++, all 12 built programs
+  (`a1363a6fe` through `efb8bfd9b`), the ovdb tools' Berkeley DB code
+  fixed after a syntax check (`57e431e0b`, `74499a1fa`), then nullptr,
+  void-arg and bool-literal passes (`3e1e529f4`, `66389a61e`, `e6519ac69`;
+  no single-line typedefs).  Tests first: `0380c3f5e`, 50.4% line coverage.
+  feedone.c and sys2nf.c stay C for now (see "Other known gaps").
+- 2026-10-29: backends/ converted to C++, all 14 files (`2bc8f526b`
+  through `c0629da2d`), then nullptr, void-arg, bool-literal and typedef
+  passes (`a3fe3102b`, `fd95a8aee`, `85d3bca07`, `0cd2d54e5`).  Tests first:
+  `29f5c80e4`, 41.5% line coverage.
 - 2026-10-29: nnrpd/ converted to C++, all 18 files (`d298ec362` through
   `5952b3822`), then nullptr, void-arg, bool-literal and typedef passes
   (`624fc7f51`, `e19b4ec63`, `68e73ed90`, `9d6b989d2`).  Tests first: the

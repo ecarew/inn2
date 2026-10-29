@@ -126,8 +126,14 @@ list) are in [CLAUDE.md](CLAUDE.md).  This file is the rationale.
 - **Locals and parameters:** `class` → `storageclass`, `private` → `priv`
   (`privp` in `cnfs.cc`, which already had a `priv`), `this` → `smc`,
   `delete` → `dodelete`, `new` → a descriptive name (`entry`, `newcp`,
-  `lowered`, ...).  Renames were applied to code only, never to comments or
-  log strings, and checked function by function for name collisions.
+  `lowered`, `glued` in ctlinnd, ...).  Renames were applied to code only,
+  never to comments or log strings, and checked function by function for
+  name collisions.
+- **Struct fields private to one program** were renamed the same way:
+  frontends/sm's `struct options` field `delete` → `dodelete` (`f2b775f2f`).
+- convert-file.sh renames only `class` and `private` automatically
+  (support/cxx-tools/fixkw.pl); `new`, `delete` and `this` are renamed by
+  hand, since a good replacement depends on what the name means.
 
 ### Other C/C++ differences that needed code changes
 
@@ -152,23 +158,58 @@ list) are in [CLAUDE.md](CLAUDE.md).  This file is the rationale.
 - In C++, Python's `PyMODINIT_FUNC` already expands to
   `extern "C" PyObject *`, so nnrpd.h's `extern PyMODINIT_FUNC` repeated
   `extern`.  The redundant one is dropped (`5952b3822`).
+- The same `const_cast` pattern in backends/archive (`3f1f556df`): the Xref
+  groups come from `cvector_split_space`, whose strings are `const char *`,
+  and each is ended at its colon in place.  They point into the function's
+  own `xstrndup` copy of the header, so the write is safe; a comment says
+  so.
+- Programs that link no INN library (`NOLIBS` in CMake, e.g. ninpaths)
+  allocate with their own helpers or `calloc`, which return plain `void *`;
+  `inn_void_ptr` does not apply, so those results get a `static_cast`
+  (`812a465b0`).
+- `static const` objects need an initializer in C++ (`= {}`, same zero value).
+- Test-only prototypes under `TESTING` need C linkage, or the C tests cannot
+  link (`6a8df6188`).
 
 ### Code compiled out in this build
 
 Some files are almost entirely inside a feature test that is off here
-(`HAVE_OPENSSL`, `DO_PERL`, `DO_PYTHON`), so building them as C++ proves
-nothing.  For nnrpd's `tls.cc`, `perl.cc` and `python.cc` each conversion
-also ran a syntax-only compile (`c++ -fsyntax-only -std=c++20`) with the
-feature defined and the library's headers on the include path; the commits
-give the exact commands.  This found six `void *` conversions in python.cc
-that the normal build could not see.  For Perl, only the CORE directory
-was used (`-idirafter`): the full `perl -MExtUtils::Embed -e ccopts` adds
-MacPorts' `/opt/local/include`, whose headers clash with the system ones
-INN was configured against.  None of this links or runs the code; that
-waits for CMake-only goal item 8 (optional features).
-- `static const` objects need an initializer in C++ (`= {}`, same zero value).
-- Test-only prototypes under `TESTING` need C linkage, or the C tests cannot
-  link (`6a8df6188`).
+(`HAVE_OPENSSL`, `DO_PERL`, `DO_PYTHON`, `HAVE_BDB`), so building them as C++
+proves nothing.  Each such conversion also ran a syntax-only compile
+(`c++ -fsyntax-only -std=c++20`) with the feature defined and the library's
+headers on the include path; the commits give the exact commands.
+- nnrpd's `tls.cc`, `perl.cc` and `python.cc`: the check found six `void *`
+  conversions in python.cc that the normal build could not see.  For Perl,
+  only the CORE directory was used (`-idirafter`): the full
+  `perl -MExtUtils::Embed -e ccopts` adds MacPorts' `/opt/local/include`,
+  whose headers clash with the system ones INN was configured against.
+- frontends' ovdb tools, against Homebrew's Berkeley DB 18 (installed
+  2026-10-29): seven `void *` conversions in ovdb_server.cc and
+  ovdb_stat.cc (`57e431e0b`, `74499a1fa`).  The Berkeley DB headers must
+  come first (`-I`, not `-idirafter`): the macOS SDK ships its own
+  Berkeley DB 1.85 `db.h`, which `ovdb-private.h` rejects ("Need Berkeley
+  DB 4.4 or higher").
+
+None of this links or runs the code; that waits for CMake-only goal item 8
+(optional features).
+
+### Testing gate for each directory
+
+Before a directory is converted, every program CMake builds there is run
+at least once by a test, and the directory reaches 33% line coverage (the
+innd gate, applied per directory).  Programs that only need files run as
+`.t` shell tests in verify-cxx.sh; those that need a server or stored
+articles run in support/live-innd.sh.  Applied so far:
+
+| Directory | Line coverage | Tests |
+|---|---|---|
+| nnrpd | 42.3% | live-innd.sh nnrpd section (`33d778dfa`) |
+| backends | 41.5% | live-innd.sh backends section (`29f5c80e4`) |
+| frontends | 50.4% | live-innd.sh frontends sections (`0380c3f5e`) |
+
+nntpget and innxbatch always connect to port 119, so only their argument
+and error paths run (15.4% and 15.9%); innbind (8.5%) binds ports for innd
+and is covered only by its argument check.
 
 ### Modernization done so far
 
