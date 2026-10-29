@@ -13,7 +13,7 @@ inn_program(nnrpd
     LIBS ${INN_CANLOCK_LIBS} ${INN_PERL_LIBS} ${INN_PYTHON_LIBS} ${_sasl}
          ZLIB::ZLIB)
 
-set_source_files_properties(perl.c PROPERTIES
+set_source_files_properties(perl.cc PROPERTIES
     COMPILE_OPTIONS "${INN_PERL_CPPFLAGS}")
-set_source_files_properties(python.c PROPERTIES
+set_source_files_properties(python.cc PROPERTIES
     COMPILE_OPTIONS "${INN_PYTHON_CPPFLAGS}")
