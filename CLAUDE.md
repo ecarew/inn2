@@ -151,10 +151,15 @@ coverage gate)**
   (`ensure_news_user_grp()`, innd.cc), and programs install owned by news
   (0550/0555).  The exception is `innbind`, installed setuid root (4550, group
   news, `LI_SPRI`) solely to bind ports below 1024 for innd and nnrpd.
-- Options to remove it: systemd socket activation (innd already accepts
-  `sd_listen_fds` sockets), launchd sockets on macOS, Linux
-  `CAP_NET_BIND_SERVICE` instead of setuid, or an unprivileged port.  Also
-  decide whether starting as root should be refused rather than dropped.
+- Policy refined (2026-10-29): root used only transiently at startup and
+  then dropped, or a setuid helper that exits right away, is acceptable.
+  innbind meets this: it dies unless run by the news user, binds only the
+  allowed ports (119 by default), passes each socket back, and exits
+  (backends/innbind.c).  So the post-gate task is an audit: confirm no other
+  setuid-root or root-retaining paths (including scripts and install rules),
+  that innd drops to news before doing anything else, and add tests for it.
+- Alternatives if ever wanted: systemd socket activation (innd accepts
+  `sd_listen_fds` sockets), launchd sockets, Linux `CAP_NET_BIND_SERVICE`.
 
 **Documentation (2026-10-28)**
 - Convert `readme.pod` to Markdown (`README.md`), next to `CONVERSION_NOTES.md`.

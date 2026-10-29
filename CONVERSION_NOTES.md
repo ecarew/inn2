@@ -128,8 +128,11 @@ list) are in [CLAUDE.md](CLAUDE.md).  This file is the rationale.
 - No INN executable should run as root in production; they run as an
   unprivileged account such as `news` (tests run as the tester).  Upstream INN
   already drops to news and installs programs as news; the remaining root
-  component is the setuid-root `innbind` port-binding helper.  Removing it is
-  the next task after the innd coverage gate (options in CLAUDE.md).
+  component is the setuid-root `innbind` port-binding helper.  Transient
+  root that is dropped right away is acceptable (refined 2026-10-29), and
+  innbind qualifies: it only runs for the news user, binds the allowed
+  ports, hands back the sockets and exits.  The next task after the innd
+  coverage gate is an audit confirming this holds everywhere, with tests.
 
 ### Not converted
 
