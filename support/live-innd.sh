@@ -448,8 +448,85 @@ ok sh -c "grep -qs 'Tracking Enabled (tracker@live.test)' '$tmp'/log/tracklogs/l
 label="nnrpd readertrack copies tracked posts to trackposts"
 ok sh -c "grep -qs 'posttrack ok' '$tmp'/log/tracklogs/log-* && ls '$tmp'/log/trackposts/track.* >/dev/null"
 
+# --- frontends that talk to nnrpd ----------------------------------------------
+
+fe=$bin/frontends
+"$fe/getlist" -h 127.0.0.1 -p "$rport" >"$tmp/getlist.out" 2>&1
+label="getlist fetches the active list"
+ok sh -c "grep -q '^test.live ' '$tmp/getlist.out'"
+"$fe/getlist" -h 127.0.0.1 -p "$rport" newsgroups 'test.*' >"$tmp/getlist-ng.out" 2>&1
+label="getlist newsgroups with a pattern"
+ok sh -c "grep -q '^test.live' '$tmp/getlist-ng.out' && ! grep -q '^junk' '$tmp/getlist-ng.out'"
+"$fe/getlist" -h 127.0.0.1 -p "$rport" active 'test.*' y >"$tmp/getlist-y.out" 2>&1
+label="getlist active filtered by group type"
+ok sh -c "grep -q '^test.live ' '$tmp/getlist-y.out'"
+
+# inews posts through nnrpd; -h: the input holds the headers.
+printf 'From: tester@live.test\nNewsgroups: test.live\nSubject: posted with inews\nMessage-ID: <inews1@live.test>\n\nPosted with inews.\n' \
+    | "$fe/inews" -h -p "$rport" >"$tmp/inews.out" 2>&1
+sleep 1
+label="inews posts through nnrpd"
+ok inhist inews1
+label="inews refuses an article without Newsgroups"
+ok sh -c "! { printf 'From: tester@live.test\nSubject: no groups\n\nBody.\n' | '$fe/inews' -h -p '$rport' >/dev/null 2>&1; }"
+
 kill "$nnrpd_pid" 2>/dev/null
 wait "$nnrpd_pid" 2>/dev/null
+
+# --- frontends ---------------------------------------------------------------
+
+# encode/decode: 7-bit encoding of a binary batch and back.
+head -c 4096 /dev/urandom >"$tmp/binary"
+"$fe/encode" <"$tmp/binary" >"$tmp/encoded"
+"$fe/decode" <"$tmp/encoded" >"$tmp/decoded"
+label="encode output is 7-bit"
+ok sh -c "! LC_ALL=C grep -q '[^ -~[:space:]]' '$tmp/encoded'"
+label="decode restores the encoded data"
+ok cmp -s "$tmp/binary" "$tmp/decoded"
+
+# innconfval: single values, shell/Perl/Tcl output, and checking.
+label="innconfval prints a value"
+ok sh -c "[ \"\$('$fe/innconfval' pathspool)\" = '$tmp/spool' ]"
+label="innconfval -s prints shell assignments"
+ok sh -c "'$fe/innconfval' -s | grep -q '^PATHSPOOL='"
+label="innconfval -p prints Perl assignments"
+ok sh -c "'$fe/innconfval' -p | grep -q '^\\\$pathspool = '"
+label="innconfval -t prints Tcl assignments"
+ok sh -c "'$fe/innconfval' -t | grep -q '^set inn_pathspool '"
+label="innconfval -C accepts the scratch inn.conf"
+ok "$fe/innconfval" -C
+label="innconfval -v prints the version"
+ok sh -c "'$fe/innconfval' -v | grep -q 'INN'"
+
+# rnews: a gzip-compressed batch, and a batch from the incoming spool (-U).
+art=$(printf 'Path: live.test!not-for-mail\nFrom: tester@live.test\nNewsgroups: test.live\nSubject: gzip batch\nMessage-ID: <gzip1@live.test>\nDate: %s\n\nBody of the gzip batch.\n' \
+      "$(date -u '+%a, %d %b %Y %H:%M:%S +0000')")
+printf '#! rnews %d\n%s\n' "$(( ${#art} + 1 ))" "$art" | gzip -c >"$tmp/batch.gz"
+"$fe/rnews" <"$tmp/batch.gz" >>"$tmp/rnews.log" 2>&1
+art=$(printf 'Path: live.test!not-for-mail\nFrom: tester@live.test\nNewsgroups: test.live\nSubject: spooled batch\nMessage-ID: <spool1@live.test>\nDate: %s\n\nBody of the spooled batch.\n' \
+      "$(date -u '+%a, %d %b %Y %H:%M:%S +0000')")
+printf '#! rnews %d\n%s\n' "$(( ${#art} + 1 ))" "$art" >"$tmp/spool/incoming/live.batch"
+"$fe/rnews" -U >>"$tmp/rnews.log" 2>&1
+ctl flush ''
+sleep 1
+label="rnews unpacks a gzip batch"
+ok inhist gzip1
+label="rnews -U processes the incoming spool"
+ok sh -c "'$bin/expire/grephistory' '<spool1@live.test>' >/dev/null 2>&1 && [ ! -e '$tmp/spool/incoming/live.batch' ]"
+
+# sm: article information, headers only, raw output.
+tokg=$("$bin/expire/grephistory" '<gzip1@live.test>' 2>/dev/null)
+label="sm -i prints the group and article number"
+ok sh -c "'$fe/sm' -i '$tokg' | grep -Eq '^test.live: [0-9]+\$'"
+label="sm -H prints only the headers"
+ok sh -c "'$fe/sm' -H '$tokg' | grep -q '^Subject: gzip batch' && ! '$fe/sm' -H '$tokg' | grep -q 'Body of'"
+label="sm -R prints the raw (wire) article"
+ok sh -c "'$fe/sm' -R '$tokg' | grep -q \$'\r\$'"
+
+# ovdb tools: built without Berkeley DB, ovdb_init, ovdb_server and
+# ovdb_stat report that and fail; ovdb_monitor's stub just exits.
+label="ovdb tools report missing Berkeley DB support"
+ok sh -c "for t in ovdb_init ovdb_server ovdb_stat; do '$fe/'\$t 2>&1 </dev/null | grep -q 'Berkeley DB support not compiled' || exit 1; done && '$fe/ovdb_monitor' </dev/null"
 
 # --- backends ---------------------------------------------------------------
 
