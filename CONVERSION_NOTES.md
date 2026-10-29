@@ -218,6 +218,16 @@ the tests reach.
 
 ### Not converted
 
+- **INN's test programs stay C** (decided 2026-10-29).  The 76 test programs
+  in `tests/` are compiled as C and linked against the converted C++
+  libraries and innd objects.  That is a deliberate, continuous check of the
+  C/C++ boundary: if a header lost its C linkage or a function's exported
+  name changed, the C tests would fail to compile or link, which is exactly
+  the breakage an existing C user of libinn, or the Perl/Python embedding,
+  would hit.  Keeping them unchanged also keeps the differential testing
+  honest: the same test source runs against the original C build and the
+  C++ build.  New tests written for the conversion (`tests/storage/methods-t.c`)
+  follow the same rule.
 - **Perl and Python stay** (2026-10-28).  The Python in `samples/` and the
   embedded Perl/Python filter and authentication hooks are INN's extension
   interface for sites; the ~25,600 lines of Perl are administration tools that

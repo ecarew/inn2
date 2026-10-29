@@ -248,6 +248,10 @@ a document so the rounds can be compared.
   `lib/hissqlite-util`, `lib/xmalloc` (need the programs above).
 
 **Decisions**
+- 2026-10-29: INN's test programs in `tests/` stay C, as a standing check of
+  the C/C++ boundary and so the same test source runs against the original C
+  and the C++ builds (CONVERSION_NOTES.md, "Not converted").  New tests are
+  written in C too.
 - 2026-10-29: CONVERSION_NOTES.md records the conversion only.  C++-specific
   design and refactoring beyond it (classes, memory management, containers)
   gets a separate document, started after the conversion is complete and
