@@ -8,7 +8,7 @@ endif()
 
 inn_program(nnrpd
     SOURCES article.c auth-ext.cc cache.cc commands.cc group.cc line.cc list.cc
-            misc.cc newnews.cc nnrpd.c perl.c perm.c post.c python.c sasl.cc
+            misc.cc newnews.cc nnrpd.c perl.c perm.c post.cc python.c sasl.cc
             tls.cc track.cc zlib.cc
     LIBS ${INN_CANLOCK_LIBS} ${INN_PERL_LIBS} ${INN_PYTHON_LIBS} ${_sasl}
          ZLIB::ZLIB)
