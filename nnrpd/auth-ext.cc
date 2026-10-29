@@ -189,7 +189,7 @@ output(struct client *client, int fd, struct buffer *buffer,
 
     /* Otherwise, break what we got up into lines and process each one. */
     start = buffer->data + buffer->used;
-    line = memchr(start, '\n', buffer->left);
+    line = static_cast<char *>(memchr(start, '\n', buffer->left));
     while (line != NULL) {
         *line = '\0';
         if (line > start && line[-1] == '\r')
@@ -198,7 +198,7 @@ output(struct client *client, int fd, struct buffer *buffer,
         buffer->used += line - start + 1;
         buffer->left -= line - start + 1;
         start = buffer->data + buffer->used;
-        line = memchr(start, '\n', buffer->left);
+        line = static_cast<char *>(memchr(start, '\n', buffer->left));
     }
     return count;
 }
