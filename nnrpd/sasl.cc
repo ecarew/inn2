@@ -241,18 +241,18 @@ SASLauth(int ac, char *av[])
     /* Fetch the username (authorization ID). */
     if (r == SASL_OK) {
         r = sasl_getprop(sasl_conn, SASL_USERNAME, &property);
-        canon_user = property;
+        canon_user = static_cast<const char *>(property);
     }
 
     /* Grab info about the negotiated layer. */
     if (r == SASL_OK) {
         r = sasl_getprop(sasl_conn, SASL_SSF, &property);
-        ssfp = property;
+        ssfp = static_cast<const int *>(property);
     }
 
     if (r == SASL_OK) {
         r = sasl_getprop(sasl_conn, SASL_MAXOUTBUF, &property);
-        maxoutp = property;
+        maxoutp = static_cast<const int *>(property);
     }
 
     if (r == SASL_OK) {
