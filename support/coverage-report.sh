@@ -26,15 +26,26 @@ ls "$covdir"/raw/*.profraw >/dev/null 2>&1 || {
 xcrun llvm-profdata merge -sparse "$covdir"/raw/*.profraw \
     -o "$covdir/merged.profdata" || exit 1
 
+# Every executable in the build (innd, tinyleaf, the other INN programs)
+# plus the test programs verify-cxx.sh kept.
 objects=("$build/innd/innd")
-for o in "$build/innd/tinyleaf" "$covdir"/bin/*.t; do
+while IFS= read -r o; do
+    [ "$o" = "$build/innd/innd" ] || objects+=(-object "$o")
+done < <(find "$build" -path "$covdir" -prune -o -type f -perm -u+x \
+             ! -name '*.sh' ! -name '*.dylib' -print \
+         | while IFS= read -r f; do
+               file "$f" | grep -q 'Mach-O.*executable' && echo "$f"
+           done)
+for o in "$covdir"/bin/*.t; do
     objects+=(-object "$o")
 done
 ignore='(^|/)tests/|^/Applications/|^/Library/|^/usr/|/build[^/]*/'
 
+# The repository path may contain regex characters (e.g. "inn++"); escape it.
+rootre=$(printf '%s' "${root#/}" | sed 's/[][\.*^$+?(){}|/]/\\&/g')
 xcrun llvm-cov report -instr-profile="$covdir/merged.profdata" \
     -ignore-filename-regex="$ignore" "${objects[@]}" \
-    | sed "s|$root/||"
+    | sed -E "s|/?$rootre/||"
 
 if $html; then
     xcrun llvm-cov show -format=html -output-dir="$covdir/html" \
