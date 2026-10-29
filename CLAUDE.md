@@ -202,6 +202,14 @@ a document so the rounds can be compared.
 - nnrpd `ARTpost` returns `const char *` that `CMDpost` truncates in place,
   through a `const_cast` that is safe only because of where CR/LF can come
   from (CONVERSION_NOTES.md).  Return an owned string instead.
+- Retire ovdb and the Berkeley DB dependency (proposed 2026-10-29; reasons,
+  sources and plan in CONVERSION_NOTES.md, "Retiring ovdb and Berkeley DB").
+  Condition: first ship a one-way converter from existing ovdb databases to
+  ovsqlite that does not itself depend on Berkeley DB.  Whether Berkeley DB
+  files can be read without its library is open: prototype first; fallbacks
+  are parsing `db_dump` text output or rebuilding with `makehistory -O`.
+  Decide ckpasswd's Berkeley DB ndbm use separately.  Raise with upstream
+  INN before removing anything.
 
 **Housekeeping (later)**
 - Once the class work no longer needs them as references, remove the

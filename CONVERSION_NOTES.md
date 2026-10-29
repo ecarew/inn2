@@ -457,3 +457,70 @@ These start with structs private to `art.cc`.  Structs in headers still
 included by C code stay C-compatible until their last C user is converted.
 Before any of this, INN's `innd/artparse` test must join the verification
 checks: `art.cc` currently has no test coverage.
+
+### Retiring ovdb and Berkeley DB (proposed 2026-10-29, refactoring phase)
+
+**Proposal.**  After the C++ and CMake conversion, retire the ovdb overview
+method and with it INN's dependency on Berkeley DB.  Condition set by the
+user: a **one-way converter** from existing ovdb databases to ovsqlite, and
+the converter itself must **not depend on Berkeley DB**.
+
+**Why.**
+- Oracle relicensed Berkeley DB 6.0 under AGPLv3 in 2013
+  ([LWN](https://lwn.net/Articles/557487),
+  [debian-devel](https://lists.debian.org/debian-devel/2013/07/msg00173.html)).
+  Fedora stayed on the last LGPL release, 5.3.28, and deprecated `libdb` in
+  Fedora 33 as the first step toward removing it
+  ([Fedora change page](https://fedoraproject.org/wiki/Changes/Libdb_deprecated),
+  [tracker](https://bugzilla.redhat.com/show_bug.cgi?id=1361971)).
+  Other projects have moved off it: 389 Directory Server to LMDB, bogofilter
+  to SQLite
+  ([Fedora devel-announce, 2023-11](https://lists.fedorahosted.org/archives/list/devel-announce@lists.fedoraproject.org/2023/11/?page=1)).
+  Not yet confirmed: whether Fedora has since removed `libdb`, and Debian's
+  current status.
+- INN does not deprecate ovdb (doc/pod/ovdb.pod,
+  [INN docs](https://www.eyrie.org/~eagle/software/inn/docs/ovdb.html)), but
+  its own news notes say ovdb "has not been as widely tested as the other
+  overview methods", has known locking and timing issues with nnrpd, and needs
+  a database upgrade whenever the Berkeley DB library changes.
+- ovsqlite covers the same role with SQLite, which INN already links.
+- `storage/ovdb/ovdb.cc` fails the C++ syntax check with Berkeley DB
+  enabled (CLAUDE.md, "Other known gaps"); retiring it avoids that work.
+
+**Scope.**  About 5,900 lines: `storage/ovdb/`, `frontends/ovdb_init`,
+`ovdb_monitor`, `ovdb_server`, `ovdb_stat`, `m4/bdb.m4` (already moot once
+the build is CMake-only), and the documentation.  Separate decision:
+`authprogs/ckpasswd` can read dbm password files through Berkeley DB's ndbm
+layer (`HAVE_BDB_NDBM`); without Berkeley DB it would use the system `dbm`
+only.
+
+**The converter without Berkeley DB.**  Reading Berkeley DB files without
+its library may or may not be practical; to be settled by a prototype
+before ovdb is removed.  Things to establish:
+- **On-disk format.**  Which access methods and page layouts ovdb's
+  databases use (btree is expected; check overflow pages, byte order and
+  the format versions in the field), and whether those formats are
+  documented well enough to read independently.  The record layout on top
+  (ovdb's keys, data and its zlib compression, ovdb format versions 1-3) is
+  INN's own and is in `storage/ovdb/`.
+- **Consistency.**  ovdb runs in a transactional environment, so recent
+  changes can sit in the log files rather than the database pages.  A
+  converter that reads only the pages needs the site to stop INN and
+  checkpoint cleanly first, or it may miss or misread records.  Decide how
+  the converter detects an unclean database and refuses.
+- **Fallbacks if direct reading is impractical:**
+  1. Read the portable text output of Berkeley DB's own `db_dump` utility.
+     The site runs `db_dump` with the Berkeley DB it already has installed;
+     INN's converter parses only text and has no Berkeley DB dependency.
+  2. Rebuild the overview from the spool with `makehistory -O` after
+     switching `ovmethod` to ovsqlite.  It needs no converter, but on a
+     large spool it can take a long time.
+- **Tests.**  Fixture databases written by real Berkeley DB versions (4.4
+  through 18), converted and compared with ovsqlite's contents through the
+  overview API (`tests/overview/api` style).
+
+**Plan.**  (1) Mark ovdb deprecated in the documentation and the CMake
+option, pointing to ovsqlite.  (2) Ship and test the converter.
+(3) Remove ovdb in a later release.  Because this changes what INN
+supports, raise it with the upstream INN maintainers first; they may
+already have a position the documentation does not show.
