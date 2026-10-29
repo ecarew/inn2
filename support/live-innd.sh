@@ -15,7 +15,9 @@
 root=$(cd "$(dirname "$0")/.." && pwd)
 build=$root/${1:-build}
 bin=$build
-tmp=$(mktemp -d "${TMPDIR:-/tmp}/live-innd.XXXXXX")
+# Canonical path: TMPDIR may end in "/", and fastrm rejects a base path
+# containing "//" ("bad base path").
+tmp=$(cd "$(mktemp -d "${TMPDIR:-/tmp}/live-innd.XXXXXX")" && pwd -P)
 port=${LIVE_INND_PORT:-11119}
 fail=0
 innd_pid=
@@ -318,6 +320,41 @@ label="ctlinnd hangup refuses a bad channel"
 ok sh -c "! '$bin/frontends/ctlinnd' -s hangup 999"
 label="ctlinnd readers and logmode"
 ok sh -c "'$bin/frontends/ctlinnd' -s readers n 'live test' && '$bin/frontends/ctlinnd' -s readers y '' && '$bin/frontends/ctlinnd' -s logmode"
+
+# --- expire tools -------------------------------------------------------------
+
+gh() { "$bin/expire/grephistory" "<$1@live.test>" 2>/dev/null; }
+tok() { gh "$1" | head -1; }
+
+# prunehistory overwrites a token in the history text with spaces (it then
+# lacks its field separator, which grephistory warns about), so the article
+# is remembered but no longer retrievable through history.
+echo '<live4@live.test>' | "$bin/expire/prunehistory" 2>>"$tmp/ctlinnd.log"
+label="prunehistory removes the history token"
+ok sh -c "'$bin/expire/grephistory' '<live4@live.test>' 2>/dev/null | grep -qx /dev/null"
+
+# fastrm removes the articles whose tokens it reads.
+t5=$(tok live5)
+echo "$t5" | "$bin/expire/fastrm" "$tmp/spool/articles" 2>>"$tmp/ctlinnd.log"
+label="fastrm removes an article by token"
+ok sh -c "! '$bin/frontends/sm' '$t5' >/dev/null 2>&1"
+
+# expire.ctl: remember nothing, expire everything at once.  With
+# groupbaseexpiry (the sample inn.conf default) expire handles the history
+# file and expireover expires the articles group by group.
+printf '/remember/:0\n*:A:0:0:0\n' >"$tmp/etc/expire.ctl"
+# With 0 days, articles that arrived in the current second are kept, so let
+# the clock move past the last arrival first.
+sleep 2
+t2=$(tok live2)
+"$bin/expire/expire" -v1 >"$tmp/expire.out" 2>&1
+label="expire rewrites history (drops remembered entries)"
+ok sh -c "grep -q 'Entries expired' '$tmp/expire.out' && ! '$bin/expire/grephistory' '<live4@live.test>' >/dev/null 2>&1"
+"$bin/expire/expireover" >"$tmp/expireover.out" 2>&1
+label="expireover expires the articles"
+ok sh -c "grep -q 'Articles dropped' '$tmp/expireover.out' && ! '$bin/frontends/sm' '$t2' >/dev/null 2>&1"
+label="expireover empties the group's overview"
+ok sh -c "[ -z \"\$('$bin/storage/tdx-util' -o -n test.live 2>/dev/null)\" ]"
 
 # --- Shut down ------------------------------------------------------------------
 

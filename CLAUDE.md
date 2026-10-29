@@ -192,6 +192,14 @@ a document so the rounds can be compared.
   live innd test, and peak memory (`/usr/bin/time -l` maximum resident set
   size on macOS); repeat runs and report the spread, not a single number.
 
+**Refactoring candidates (after the C++ and CMake conversion)**
+- expire/expireover timing (pinned by the user, 2026-10-29): articles expire
+  only when strictly older than "now", measured in whole seconds, so with a
+  0-day limit an article that arrived in the current second is kept.  Decide
+  whether that is intended and whether finer-grained or inclusive time
+  comparison is wanted; then drop the `sleep 2` in support/live-innd.sh that
+  works around it.
+
 **Housekeeping (later)**
 - Once the class work no longer needs them as references, remove the
   "Branches kept for reference" bullet from CONVERSION_NOTES.md and delete

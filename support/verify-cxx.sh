@@ -110,6 +110,21 @@ else
     res "tinyleaf HELP/IHAVE/duplicate/QUIT" FAIL
 fi
 
+# convdate (expire/) has no INN test.  Check each conversion in UTC.
+cv() { TZ=UTC INNCONF=$root/tests/data/etc/inn.conf "$build/expire/convdate" "$@" 2>&1; }
+d='Wed, 28 Oct 2026 12:00:00 +0000'
+if [ "$(cv -n "$d")" = 1793188800 ] \
+   && [ "$(cv -c 1793188800)" = "Wed Oct 28 12:00:00 2026" ] \
+   && [ "$(cv -s "$d")" = "Wed Oct 28 12:00:00 2026" ] \
+   && [ "$(cv "$d")" = "Wed Oct 28 12:00:00 2026" ] \
+   && [ "$(cv -d "$d")" = "Wed, 28 Oct 2026 12:00:00 -0000 (UTC)" ] \
+   && [ "$(cv -dl "$d")" = "Wed, 28 Oct 2026 12:00:00 +0000 (UTC)" ] \
+   && ! cv -n 'not a date' >/dev/null; then
+    res "convdate conversions (7 cases)" PASS
+else
+    res "convdate conversions (7 cases)" FAIL
+fi
+
 # gencancel (control/) has no INN test.  Check the cancel articles it writes
 # for several option sets; Date and Message-ID vary per run and are masked.
 gencancel_runs() {
