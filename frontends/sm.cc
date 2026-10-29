@@ -80,11 +80,11 @@ store_article_common(char *text, size_t size)
 
     /* Find the expiration time, if any. */
     start = wire_findheader(text, size, "Expires", true);
-    if (start != NULL) {
+    if (start != nullptr) {
         char *expires;
 
         end = wire_endheader(start, text + size - 1);
-        if (end == NULL)
+        if (end == nullptr)
             die("cannot find end of Expires header field");
         expires = xstrndup(start, end - start);
         handle.expires = parsedate_rfc5322_lax(expires);
@@ -96,10 +96,10 @@ store_article_common(char *text, size_t size)
     /* Find the appropriate newsgroups header field. */
     if (innconf->storeonxref) {
         start = wire_findheader(text, size, "Xref", true);
-        if (start == NULL)
+        if (start == nullptr)
             die("no Xref header field found in message");
         end = wire_endheader(start, text + size - 1);
-        if (end == NULL)
+        if (end == nullptr)
             die("cannot find end of Xref header field");
         for (; *start != ' ' && start < end; start++)
             ;
@@ -108,10 +108,10 @@ store_article_common(char *text, size_t size)
         start++;
     } else {
         start = wire_findheader(text, size, "Newsgroups", true);
-        if (start == NULL)
+        if (start == nullptr)
             die("no Newsgroups header field found in message");
         end = wire_endheader(start, text + size - 1);
-        if (end == NULL)
+        if (end == nullptr)
             die("cannot find end of Newsgroups header field");
     }
     handle.groups = start;
@@ -148,7 +148,7 @@ store_article(int fd)
         sysdie("cannot read article");
     }
     text = wire_from_native(article->data, article->left, &size);
-    if (text == NULL)
+    if (text == nullptr)
         sysdie("cannot convert article to wire format");
     buffer_free(article);
     result = store_article_common(text, size);
@@ -274,7 +274,7 @@ process_token(const char *id, const struct options *options)
         SMcanceltombstone(token);
     } else {
         article = SMretrieve(token, options->header ? RETR_HEAD : RETR_ALL);
-        if (article == NULL) {
+        if (article == nullptr) {
             warn("could not retrieve %s", id);
             return false;
         }
@@ -308,7 +308,7 @@ main(int argc, char *argv[])
 
     message_program_name = "sm";
 
-    if (!innconf_read(NULL))
+    if (!innconf_read(nullptr))
         exit(1);
 
     while ((option = getopt(argc, argv, "cdHiqrRSs")) != EOF) {
@@ -382,7 +382,7 @@ main(int argc, char *argv[])
      * sm modes (-i, -c, -H, -R, -s, retrieval) preserve the
      * historical behaviour of running as the invoking user. */
     if (options.dodelete && innconf->expiretombstone
-        && getenv(INN_ENV_TESTSUITE) == NULL)
+        && getenv(INN_ENV_TESTSUITE) == nullptr)
         ensure_news_user_grp(true, true);
     if (!SMinit())
         die("cannot initialize storage manager: %s", SMerrorstr);
@@ -406,7 +406,7 @@ main(int argc, char *argv[])
         char *line;
 
         qp = QIOfdopen(fileno(stdin));
-        for (line = QIOread(qp); line != NULL; line = QIOread(qp)) {
+        for (line = QIOread(qp); line != nullptr; line = QIOread(qp)) {
             status = process_token(line, &options);
             okay = okay && status;
         }

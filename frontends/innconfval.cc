@@ -50,8 +50,8 @@ int
 main(int argc, char *argv[])
 {
     int option, i;
-    char *innconffile = NULL;
-    char *configfile = NULL;
+    char *innconffile = nullptr;
+    char *configfile = nullptr;
     enum confparse_quoting quoting = CONFPARSE_QUOTE_NONE;
     bool okay = true;
     bool version = false;
@@ -108,7 +108,7 @@ main(int argc, char *argv[])
     if (!innconf_read(innconffile))
         exit(1);
 
-    if (requested_file == INN_CONF && configfile == NULL)
+    if (requested_file == INN_CONF && configfile == nullptr)
         configfile = innconffile;
 
     if (requested_file == INN_SECRETS_CONF) {
@@ -129,7 +129,7 @@ main(int argc, char *argv[])
     }
 
     /* Perform the specified action. */
-    if (argv[0] == NULL) {
+    if (argv[0] == nullptr) {
         switch (requested_file) {
         case INN_CONF:
             innconf_dump(stdout, quoting);

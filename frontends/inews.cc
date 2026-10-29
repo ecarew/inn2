@@ -64,50 +64,50 @@ static void Usage(void) __attribute__((__noreturn__));
 /* clang-format off */
 static HEADER Table[] = {
     /* Name,           CanSet,  Type, Size, Value */
-    {"Path",             true,   HTstd, 0, NULL},
+    {"Path",             true,   HTstd, 0, nullptr},
 #define _path          0
-    {"From",             true,   HTstd, 0, NULL},
+    {"From",             true,   HTstd, 0, nullptr},
 #define _from          1
-    {"Newsgroups",       true,   HTreq, 0, NULL},
+    {"Newsgroups",       true,   HTreq, 0, nullptr},
 #define _newsgroups    2
-    {"Subject",          true,   HTreq, 0, NULL},
+    {"Subject",          true,   HTreq, 0, nullptr},
 #define _subject       3
-    {"Control",          true,   HTstd, 0, NULL},
+    {"Control",          true,   HTstd, 0, nullptr},
 #define _control       4
-    {"Supersedes",       true,   HTstd, 0, NULL},
+    {"Supersedes",       true,   HTstd, 0, nullptr},
 #define _supersedes    5
-    {"Followup-To",      true,   HTstd, 0, NULL},
+    {"Followup-To",      true,   HTstd, 0, nullptr},
 #define _followupto    6
-    {"Date",             true,   HTstd, 0, NULL},
+    {"Date",             true,   HTstd, 0, nullptr},
 #define _date          7
-    {"Organization",     true,   HTstd, 0, NULL},
+    {"Organization",     true,   HTstd, 0, nullptr},
 #define _organization  8
-    {"Lines",            true,   HTstd, 0, NULL},
+    {"Lines",            true,   HTstd, 0, nullptr},
 #define _lines         9
-    {"Sender",           true,   HTstd, 0, NULL},
+    {"Sender",           true,   HTstd, 0, nullptr},
 #define _sender       10
-    {"Approved",         true,   HTstd, 0, NULL},
+    {"Approved",         true,   HTstd, 0, nullptr},
 #define _approved     11
-    {"Distribution",     true,   HTstd, 0, NULL},
+    {"Distribution",     true,   HTstd, 0, nullptr},
 #define _distribution 12
-    {"Expires",          true,   HTstd, 0, NULL},
+    {"Expires",          true,   HTstd, 0, nullptr},
 #define _expires      13
-    {"Message-ID",       true,   HTstd, 0, NULL},
+    {"Message-ID",       true,   HTstd, 0, nullptr},
 #define _messageid    14
-    {"References",       true,   HTstd, 0, NULL},
+    {"References",       true,   HTstd, 0, nullptr},
 #define _references   15
-    {"Reply-To",         true,   HTstd, 0, NULL},
+    {"Reply-To",         true,   HTstd, 0, nullptr},
 #define _replyto      16
-    {"Also-Control",     true,   HTstd, 0, NULL},
+    {"Also-Control",     true,   HTstd, 0, nullptr},
 #define _alsocontrol  17
-    {"Xref",             false,  HTstd, 0, NULL},
-    {"Summary",          true,   HTstd, 0, NULL},
-    {"Keywords",         true,   HTstd, 0, NULL},
-    {"Date-Received",    false,  HTobs, 0, NULL},
-    {"Received",         false,  HTobs, 0, NULL},
-    {"Posted",           false,  HTobs, 0, NULL},
-    {"Posting-Version",  false,  HTobs, 0, NULL},
-    {"Relay-Version",    false,  HTobs, 0, NULL},
+    {"Xref",             false,  HTstd, 0, nullptr},
+    {"Summary",          true,   HTstd, 0, nullptr},
+    {"Keywords",         true,   HTstd, 0, nullptr},
+    {"Date-Received",    false,  HTobs, 0, nullptr},
+    {"Received",         false,  HTobs, 0, nullptr},
+    {"Posted",           false,  HTobs, 0, nullptr},
+    {"Posting-Version",  false,  HTobs, 0, nullptr},
+    {"Relay-Version",    false,  HTobs, 0, nullptr},
 };
 /* clang-format on */
 
@@ -130,11 +130,11 @@ QuitServer(int x)
     fprintf(ToServer, "quit\r\n");
     if (FLUSH_ERROR(ToServer))
         sysdie("cannot send quit to server");
-    if (fgets(buff, sizeof buff, FromServer) == NULL)
+    if (fgets(buff, sizeof buff, FromServer) == nullptr)
         sysdie("warning: server did not reply to quit");
-    if ((p = strchr(buff, '\r')) != NULL)
+    if ((p = strchr(buff, '\r')) != nullptr)
         *p = '\0';
-    if ((p = strchr(buff, '\n')) != NULL)
+    if ((p = strchr(buff, '\n')) != nullptr)
         *p = '\0';
     if (atoi(buff) != NNTP_OK_QUIT)
         die("server did not reply to quit properly: %s", buff);
@@ -152,7 +152,7 @@ static int
 fatal_cleanup(void)
 {
     /* Don't recurse. */
-    message_fatal_cleanup = NULL;
+    message_fatal_cleanup = nullptr;
 
     /* QuitServer does all the work. */
     QuitServer(1);
@@ -198,7 +198,7 @@ NextHeader(char *p)
 {
     char *q;
     for (q = p;; p++) {
-        if ((p = strchr(p, '\n')) == NULL) {
+        if ((p = strchr(p, '\n')) == nullptr) {
             die("article is all headers");
         }
         /* Check the maximum length of a single line. */
@@ -234,7 +234,7 @@ StripOffHeaders(char *article)
 
     /* Scan through buffer, a header field at a time. */
     for (p = article;;) {
-        if ((q = strchr(p, ':')) == NULL)
+        if ((q = strchr(p, ':')) == nullptr)
             die("no colon in header field \"%.30s...\"", p);
         if (q[1] == '\n' && !ISWHITE(q[2])) {
             /* Empty header field body; ignore this one, get next line. */
@@ -244,7 +244,7 @@ StripOffHeaders(char *article)
         }
 
         if (q[1] != '\0' && !ISWHITE(q[1])) {
-            if ((q = strchr(q, '\n')) != NULL)
+            if ((q = strchr(q, '\n')) != nullptr)
                 *q = '\0';
             die("no space after colon in \"%.30s...\"", p);
         }
@@ -310,7 +310,7 @@ AnAdministrator(void)
      * supplementary groups, rather than the group(5) file entry. */
 #ifdef HAVE_GETGROUPS
     {
-        int ngroups = getgroups(0, 0);
+        int ngroups = getgroups(0, nullptr);
         GETGROUPS_T *groups, *gp;
         int rv;
         int rest;
@@ -392,7 +392,7 @@ FormatUserName(struct passwd *pwp, char *node)
 
 #if !defined(DONT_MUNGE_GETENV)
     memset(outbuff, 0, SMBUF);
-    if ((p = getenv(INN_ENV_NAME)) != NULL)
+    if ((p = getenv(INN_ENV_NAME)) != nullptr)
         strlcpy(outbuff, p, SMBUF);
     if (strlen(outbuff) == 0) {
 #endif /* !defined(DONT_MUNGE_GETENV) */
@@ -436,9 +436,10 @@ FormatUserName(struct passwd *pwp, char *node)
 
     out = TrimSpaces(outbuff);
     if (out[0])
-        buff = concat(pwp->pw_name, "@", node, " (", out, ")", (char *) 0);
+        buff =
+            concat(pwp->pw_name, "@", node, " (", out, ")", (char *) nullptr);
     else
-        buff = concat(pwp->pw_name, "@", node, (char *) 0);
+        buff = concat(pwp->pw_name, "@", node, (char *) nullptr);
     return buff;
 }
 
@@ -452,13 +453,13 @@ CheckDistribution(char *p)
     static char SEPS[] = " \t,";
     const char *const *dp;
 
-    if ((p = strtok(p, SEPS)) == NULL)
+    if ((p = strtok(p, SEPS)) == nullptr)
         die("cannot parse Distribution header field");
     do {
         for (dp = BadDistribs; *dp; dp++)
             if (uwildmat(p, *dp))
                 die("illegal distribution %s", p);
-    } while ((p = strtok((char *) NULL, SEPS)) != NULL);
+    } while ((p = strtok((char *) nullptr, SEPS)) != nullptr);
 }
 
 
@@ -469,7 +470,7 @@ static void
 ProcessHeaders(bool AddOrg, bool AddSender, struct passwd *pwp)
 {
     static char PATHFLUFF[] = PATHMASTER;
-    static char *sendbuff = NULL;
+    static char *sendbuff = nullptr;
     HEADER *hp;
     char *p;
     char buff[SMBUF];
@@ -482,26 +483,26 @@ ProcessHeaders(bool AddOrg, bool AddSender, struct passwd *pwp)
         if (hp->Value) {
             hp->Value = TrimSpaces(hp->Value);
             if (*hp->Value == '\0')
-                hp->Value = NULL;
+                hp->Value = nullptr;
         }
     }
 
     /* Set From or Sender. */
-    if ((p = innconf->fromhost) == NULL)
+    if ((p = innconf->fromhost) == nullptr)
         sysdie("cannot get hostname");
-    if (HDR(_from) == NULL)
+    if (HDR(_from) == nullptr)
         HDR(_from) = FormatUserName(pwp, p);
     else if (AddSender) {
-        if (sendbuff != NULL)
+        if (sendbuff != nullptr)
             free(sendbuff);
-        sendbuff = concat(pwp->pw_name, "%", p, (char *) 0);
+        sendbuff = concat(pwp->pw_name, "%", p, (char *) nullptr);
         strlcpy(from, HDR(_from), SMBUF);
         HeaderCleanFrom(from);
         if (strcmp(from, sendbuff) != 0)
             HDR(_sender) = xstrdup(sendbuff);
     }
 
-    if (HDR(_date) == NULL) {
+    if (HDR(_date) == nullptr) {
         /* Set Date. */
         if (!makedate(-1, true, buff, sizeof(buff)))
             die("cannot generate Date header field body");
@@ -515,25 +516,25 @@ ProcessHeaders(bool AddOrg, bool AddSender, struct passwd *pwp)
         CheckControl(HDR(_control));
     } else {
         p = HDR(_subject);
-        if (p == NULL)
+        if (p == nullptr)
             die("required Subject header field is missing or empty");
         else if (HDR(_alsocontrol))
             CheckControl(HDR(_alsocontrol));
     }
 
     /* Set Message-ID */
-    if (HDR(_messageid) == NULL) {
-        if ((p = GenerateMessageID(NULL)) == NULL)
+    if (HDR(_messageid) == nullptr) {
+        if ((p = GenerateMessageID(nullptr)) == nullptr)
             die("cannot generate Message-ID header field body");
         HDR(_messageid) = xstrdup(p);
-    } else if ((p = strchr(HDR(_messageid), '@')) == NULL
-               || strchr(++p, '@') != NULL) {
+    } else if ((p = strchr(HDR(_messageid), '@')) == nullptr
+               || strchr(++p, '@') != nullptr) {
         die("Message-ID must have exactly one @");
     }
 
     /* Set Path */
-    if (HDR(_path) == NULL) {
-        HDR(_path) = concat(Exclusions, PATHFLUFF, (char *) 0);
+    if (HDR(_path) == nullptr) {
+        HDR(_path) = concat(Exclusions, PATHFLUFF, (char *) nullptr);
     }
 
     /* Reply-To; left alone. */
@@ -548,15 +549,15 @@ ProcessHeaders(bool AddOrg, bool AddSender, struct passwd *pwp)
     /* Control; checked above. */
 
     /* Distribution. */
-    if ((p = HDR(_distribution)) != NULL) {
+    if ((p = HDR(_distribution)) != nullptr) {
         p = xstrdup(p);
         CheckDistribution(p);
         free(p);
     }
 
     /* Set Organization. */
-    if (AddOrg && HDR(_organization) == NULL
-        && (p = innconf->organization) != NULL) {
+    if (AddOrg && HDR(_organization) == nullptr
+        && (p = innconf->organization) != nullptr) {
         HDR(_organization) = xstrdup(p);
     }
 
@@ -567,7 +568,7 @@ ProcessHeaders(bool AddOrg, bool AddSender, struct passwd *pwp)
 
     /* Now make sure everything is there. */
     for (hp = Table; hp < ARRAY_END(Table); hp++)
-        if (hp->Type == HTreq && hp->Value == NULL)
+        if (hp->Type == HTreq && hp->Value == nullptr)
             die("required header field %s is missing or empty", hp->Name);
 }
 
@@ -585,12 +586,12 @@ AppendSignature(bool UseMalloc, char *article, char *homedir)
     size_t artsize;
     char *p;
     char buff[BUFSIZ];
-    char *sigpath = NULL;
+    char *sigpath = nullptr;
     FILE *F;
 
     /* Open the file. */
     sigpath = concatpath(homedir, ".signature");
-    if ((F = fopen(sigpath, "r")) == NULL) {
+    if ((F = fopen(sigpath, "r")) == nullptr) {
         free(sigpath);
         if (errno == ENOENT)
             return article;
@@ -617,7 +618,7 @@ AppendSignature(bool UseMalloc, char *article, char *homedir)
     buff[length] = '\0';
 
     /* Count the lines. */
-    for (i = 0, p = buff; (p = strchr(p, '\n')) != NULL; p++)
+    for (i = 0, p = buff; (p = strchr(p, '\n')) != nullptr; p++)
         if (++i > SIG_MAXLINES)
             die("signature has too many lines");
 
@@ -662,7 +663,7 @@ CheckIncludedText(char *p, int lines)
             i--;
             break;
         }
-        if ((p = strchr(p, '\n')) == NULL)
+        if ((p = strchr(p, '\n')) == nullptr)
             break;
     }
     if ((i * 2 > lines) && (lines > 40))
@@ -710,7 +711,7 @@ OfferArticle(char *buff, bool Authorized)
 {
     fprintf(ToServer, "post\r\n");
     SafeFlush(ToServer);
-    if (fgets(buff, MED_BUFFER, FromServer) == NULL)
+    if (fgets(buff, MED_BUFFER, FromServer) == nullptr)
         sysdie(Authorized ? "Can't offer article to server (authorized)"
                           : "Can't offer article to server");
     return atoi(buff);
@@ -728,10 +729,10 @@ Spoolit(char *article, size_t Length, char *deadfile)
     int i;
 
     /* Try to write to the deadfile. */
-    if (deadfile == NULL)
+    if (deadfile == nullptr)
         return;
     F = xfopena(deadfile);
-    if (F == NULL)
+    if (F == nullptr)
         sysdie("cannot create spool file");
 
     /* Write the headers and a blank line. */
@@ -798,7 +799,7 @@ main(int ac, char *av[])
     uid = geteuid();
     if (uid == (uid_t) -1)
         sysdie("cannot get your user ID");
-    if ((pwp = getpwuid(uid)) == NULL)
+    if ((pwp = getpwuid(uid)) == nullptr)
         sysdie("cannot get your passwd entry");
 
     /* Set defaults. */
@@ -811,7 +812,7 @@ main(int ac, char *av[])
     ForceAuth = false;
     port = 0;
 
-    if (!innconf_read(NULL))
+    if (!innconf_read(nullptr))
         exit(1);
 
     umask(NEWSUMASK);
@@ -865,7 +866,7 @@ main(int ac, char *av[])
             Mode = i;
             break;
         case 'x':
-            Exclusions = concat(optarg, "!", (char *) 0);
+            Exclusions = concat(optarg, "!", (char *) nullptr);
             break;
         case 'Y':
             ForceAuth = true;
@@ -904,8 +905,8 @@ main(int ac, char *av[])
         break;
     case 1:
         /* Read named file. */
-        article = ReadInFile(av[0], (struct stat *) NULL);
-        if (article == NULL)
+        article = ReadInFile(av[0], (struct stat *) nullptr);
+        if (article == nullptr)
             sysdie("cannot read input file");
         break;
     }
@@ -916,9 +917,9 @@ main(int ac, char *av[])
     /* Try to open a connection to the server. */
     if (NNTPremoteopen(port, &FromServer, &ToServer, buff, sizeof(buff)) < 0) {
         Spooling = true;
-        if ((p = strchr(buff, '\n')) != NULL)
+        if ((p = strchr(buff, '\n')) != nullptr)
             *p = '\0';
-        if ((p = strchr(buff, '\r')) != NULL)
+        if ((p = strchr(buff, '\r')) != nullptr)
             *p = '\0';
         strlcpy(SpoolMessage, buff[0] ? buff : NOCONNECT,
                 sizeof(SpoolMessage));
@@ -935,7 +936,7 @@ main(int ac, char *av[])
         setbuf(ToServer, xmalloc(BUFSIZ));
         fprintf(ToServer, "mode reader\r\n");
         SafeFlush(ToServer);
-        if (fgets(buff, MED_BUFFER, FromServer) == NULL)
+        if (fgets(buff, MED_BUFFER, FromServer) == nullptr)
             sysdie("cannot tell server we're reading");
         if ((j = atoi(buff)) != NNTP_ERR_COMMAND)
             i = j;
@@ -943,10 +944,10 @@ main(int ac, char *av[])
         if (i != NNTP_OK_BANNER_POST || ForceAuth) {
             /* We try to authenticate in case it is all the same possible
              * to post. */
-            if (NNTPsendpassword((char *) NULL, FromServer, ToServer) < 0)
+            if (NNTPsendpassword((char *) nullptr, FromServer, ToServer) < 0)
                 die("you do not have permission to post");
         }
-        deadfile = NULL;
+        deadfile = nullptr;
     }
 
     /* Basic processing. */
@@ -954,7 +955,7 @@ main(int ac, char *av[])
         hp->Size = strlen(hp->Name);
     if (Mode == 'h')
         article = StripOffHeaders(article);
-    for (i = 0, p = article; (p = strchr(p, '\n')) != NULL; i++, p++)
+    for (i = 0, p = article; (p = strchr(p, '\n')) != nullptr; i++, p++)
         continue;
     if (innconf->checkincludedtext)
         CheckIncludedText(article, i);
@@ -967,7 +968,7 @@ main(int ac, char *av[])
             innconf->localmaxartsize);
 
     /* Do final checks. */
-    if (i == 0 && HDR(_control) == NULL) {
+    if (i == 0 && HDR(_control) == nullptr) {
         if (DiscardEmpty)
             exit(0);
         else
@@ -1003,7 +1004,7 @@ main(int ac, char *av[])
     i = OfferArticle(buff, false);
     if (i == NNTP_FAIL_AUTH_NEEDED) {
         /* Posting not allowed, try to authorize. */
-        if (NNTPsendpassword((char *) NULL, FromServer, ToServer) < 0)
+        if (NNTPsendpassword((char *) nullptr, FromServer, ToServer) < 0)
             sysdie("authorization error");
         i = OfferArticle(buff, true);
     }
@@ -1021,11 +1022,11 @@ main(int ac, char *av[])
         sysdie("cannot send article to server");
     SafeFlush(ToServer);
 
-    if (fgets(buff, sizeof buff, FromServer) == NULL)
+    if (fgets(buff, sizeof buff, FromServer) == nullptr)
         sysdie("no reply from server after sending the article");
-    if ((p = strchr(buff, '\r')) != NULL)
+    if ((p = strchr(buff, '\r')) != nullptr)
         *p = '\0';
-    if ((p = strchr(buff, '\n')) != NULL)
+    if ((p = strchr(buff, '\n')) != nullptr)
         *p = '\0';
     if (atoi(buff) != NNTP_OK_POST)
         die("cannot send article to server: %s", buff);

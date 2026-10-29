@@ -124,7 +124,7 @@ Help(char *p)
 {
     COMMAND *cp;
 
-    if (p == NULL) {
+    if (p == nullptr) {
         printf("Usage:\n");
         printf("  ctlinnd [-hs] [-t timeout] [command [argument ...]]\n\n");
         printf("Options:\n");
@@ -210,7 +210,7 @@ main(int ac, char *av[])
     message_program_name = "ctlinnd";
 
     /* Set defaults. */
-    if (!innconf_read(NULL))
+    if (!innconf_read(nullptr))
         exit(1);
     Silent = false;
     NeedHelp = false;
@@ -261,14 +261,14 @@ main(int ac, char *av[])
             nv[0] = av[0];
             nv[1] = Y;
             nv[2] = EMPTY;
-            nv[3] = NULL;
+            nv[3] = nullptr;
             av = nv;
             break;
         case 2:
             nv[0] = av[0];
             nv[1] = av[1];
             nv[2] = EMPTY;
-            nv[3] = NULL;
+            nv[3] = nullptr;
             av = nv;
             break;
         case 3:
@@ -276,7 +276,7 @@ main(int ac, char *av[])
         }
     } else if (ac > cp->argc && cp->Glue) {
         /* Glue any extra words together. */
-        for (length = 0, i = cp->argc - 1; (p = av[i++]) != NULL;)
+        for (length = 0, i = cp->argc - 1; (p = av[i++]) != nullptr;)
             length += strlen(p) + 1;
         glued = xmalloc(length);
         *glued = '\0';
@@ -286,7 +286,7 @@ main(int ac, char *av[])
             strlcat(glued, av[i], length);
         }
         av[cp->argc - 1] = glued;
-        av[cp->argc] = NULL;
+        av[cp->argc] = nullptr;
     } else if (ac != cp->argc)
         /* All other commands must have the right number of arguments. */
         WrongArgs(cp);
@@ -308,8 +308,8 @@ main(int ac, char *av[])
     }
 
     /* Make sure there are no separators in the parameters. */
-    for (i = 0; (p = av[i++]) != NULL;)
-        if (strchr(p, SC_SEP) != NULL)
+    for (i = 0; (p = av[i++]) != nullptr;)
+        if (strchr(p, SC_SEP) != nullptr)
             die("illegal character \\%03o in %s", (unsigned int) SC_SEP, p);
 
     /* Do the real work. */

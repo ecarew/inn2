@@ -70,7 +70,7 @@ send_list(struct nntp *nntp, const char *command, const char *pattern)
     enum nntp_code code;
     char *line;
 
-    if (pattern != NULL)
+    if (pattern != nullptr)
         okay = nntp_send_line(nntp, "LIST %s %s", command, pattern);
     else
         okay = nntp_send_line(nntp, "LIST %s", command);
@@ -115,7 +115,7 @@ print_active(struct nntp *nntp, const char *types)
 {
     enum nntp_status status;
     char *line;
-    struct cvector *group = NULL;
+    struct cvector *group = nullptr;
 
     status = nntp_read_line(nntp, &line);
     while (status == NNTP_READ_OK) {
@@ -126,7 +126,7 @@ print_active(struct nntp *nntp, const char *types)
             warn("malformed line from server: %s", line);
             continue;
         }
-        if (strchr(types, group->strings[3][0]) != NULL)
+        if (strchr(types, group->strings[3][0]) != nullptr)
             printf("%s %s %s %s\n", group->strings[0], group->strings[1],
                    group->strings[2], group->strings[3]);
         status = nntp_read_line(nntp, &line);
@@ -146,17 +146,17 @@ get_authinfo(const char *server, char **username, char **password)
 {
     char *path, *line;
     QIOSTATE *passwords;
-    struct cvector *info = NULL;
+    struct cvector *info = nullptr;
 
     path = concatpath(innconf->pathetc, INN_PATH_NNTPPASS);
     passwords = QIOopen(path);
-    if (passwords == NULL) {
+    if (passwords == nullptr) {
         if (errno != ENOENT)
             warn("cannot open %s", path);
         return false;
     }
     free(path);
-    while ((line = QIOread(passwords)) != NULL) {
+    while ((line = QIOread(passwords)) != nullptr) {
         if (line[0] == '\0' || line[0] == '#')
             continue;
         info = cvector_split(line, ':', info);
@@ -208,10 +208,10 @@ int
 main(int argc, char *argv[])
 {
     struct nntp *nntp;
-    const char *host = NULL;
+    const char *host = nullptr;
     const char *list = "active";
-    const char *pattern = NULL;
-    const char *types = NULL;
+    const char *pattern = nullptr;
+    const char *types = nullptr;
     enum nntp_status status;
     enum nntp_code response;
     char *line;
@@ -221,7 +221,7 @@ main(int argc, char *argv[])
     int option;
 
     message_program_name = "getlist";
-    if (!innconf_read(NULL))
+    if (!innconf_read(nullptr))
         exit(1);
     host = innconf->server;
 
@@ -259,14 +259,14 @@ main(int argc, char *argv[])
         pattern = argv[1];
     if (argc == 3)
         types = argv[2];
-    if (strcasecmp(list, "active") != 0 && types != NULL)
+    if (strcasecmp(list, "active") != 0 && types != nullptr)
         die("group types can only be specified with a list type of active");
 
     /* Connect to the server. */
-    if (host == NULL)
+    if (host == nullptr)
         sysdie("cannot get server name");
     nntp = nntp_connect(host, port, 128 * 1024, DEFAULT_TIMEOUT);
-    if (nntp == NULL)
+    if (nntp == nullptr)
         sysdie("cannot connect to server %s:%hu", host, port);
     status = nntp_read_response(nntp, &response, &line);
     if (status != NNTP_READ_OK)
@@ -298,7 +298,7 @@ main(int argc, char *argv[])
 
     /* Get and display the data. */
     send_list(nntp, list, pattern);
-    if (types != NULL)
+    if (types != nullptr)
         print_active(nntp, types);
     else
         print_list(nntp);

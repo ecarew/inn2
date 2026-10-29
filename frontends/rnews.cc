@@ -39,7 +39,7 @@ static bool logDuplicates = false;
 static bool Verbose = false;
 static const char *InputFile = "stdin";
 static char *UUCPHost;
-static char *PathBadNews = NULL;
+static char *PathBadNews = nullptr;
 static char *remoteServer;
 static FILE *FromServer;
 static FILE *ToServer;
@@ -128,7 +128,7 @@ WaitForChildren(int n)
     pid_t pid;
 
     while (--n >= 0) {
-        pid = waitpid(-1, NULL, WNOHANG);
+        pid = waitpid(-1, nullptr, WNOHANG);
         if (pid == (pid_t) -1 && errno != EINTR) {
             if (errno != ECHILD)
                 syswarn("cannot wait");
@@ -146,9 +146,9 @@ REMclean(char *buff)
 {
     char *p;
 
-    if ((p = strchr(buff, '\r')) != NULL)
+    if ((p = strchr(buff, '\r')) != nullptr)
         *p = '\0';
-    if ((p = strchr(buff, '\n')) != NULL)
+    if ((p = strchr(buff, '\n')) != nullptr)
         *p = '\0';
 
     /* The dot-escape is only in text, not command responses. */
@@ -187,7 +187,7 @@ Reject(const char *article, size_t length UNUSED, const char *reason,
     }
 
     if (backupBad) {
-        filename = concat(PathBadNews, "/XXXXXX", (char *) 0);
+        filename = concat(PathBadNews, "/XXXXXX", (char *) nullptr);
         fd = mkstemp(filename);
         if (fd < 0) {
             warn("cannot create temporary file");
@@ -195,7 +195,7 @@ Reject(const char *article, size_t length UNUSED, const char *reason,
             return;
         }
         F = fdopen(fd, "w");
-        if (F == NULL) {
+        if (F == nullptr) {
             warn("cannot fdopen %s", filename);
             free(filename);
             return;
@@ -221,7 +221,7 @@ Process(char *article, size_t artlen)
     const char *p;
     size_t length;
     char *wirefmt, *q;
-    const char *id = NULL;
+    const char *id = nullptr;
     char *msgid;
     char buff[SMBUF];
     char path[40];
@@ -232,7 +232,7 @@ Process(char *article, size_t artlen)
 
     /* Convert the article to wire format. */
     wirefmt = wire_from_native(article, artlen, &length);
-    if (wirefmt == NULL) {
+    if (wirefmt == nullptr) {
         Reject(article, artlen, "bad_article %s",
                "too large after wire conversion");
         return true;
@@ -241,7 +241,7 @@ Process(char *article, size_t artlen)
     /* Make sure that all the headers are there, note the ID. */
     for (hp = RequiredHeaders; hp < ARRAY_END(RequiredHeaders); hp++) {
         p = wire_findheader(wirefmt, length, hp->Name, true);
-        if (p == NULL) {
+        if (p == nullptr) {
             free(wirefmt);
             Reject(article, artlen, "bad_article missing %s", hp->Name);
             return true;
@@ -253,14 +253,14 @@ Process(char *article, size_t artlen)
         if (logDuplicates) {
             if (IS_PATH(hp)) {
                 strlcpy(path, p, sizeof(path));
-                if ((q = strchr(path, '\r')) != NULL)
+                if ((q = strchr(path, '\r')) != nullptr)
                     *q = '\0';
             }
         }
     }
 
     /* Send the NNTP "ihave" message. */
-    if ((p = strchr(id, '\r')) == NULL) {
+    if ((p = strchr(id, '\r')) == nullptr) {
         free(wirefmt);
         Reject(article, artlen, "bad_article unterminated %s header",
                "Message-ID");
@@ -273,7 +273,7 @@ Process(char *article, size_t artlen)
         notice("offered %s %s", msgid, UUCPHost);
 
     /* Get a reply, see if they want the article. */
-    if (fgets(buff, sizeof buff, FromServer) == NULL) {
+    if (fgets(buff, sizeof buff, FromServer) == nullptr) {
         if (ferror(FromServer))
             syswarn("cannot fgets after ihave");
         else
@@ -327,7 +327,7 @@ Process(char *article, size_t artlen)
     }
 
     /* Process server reply code. */
-    if (fgets(buff, sizeof buff, FromServer) == NULL) {
+    if (fgets(buff, sizeof buff, FromServer) == nullptr) {
         if (ferror(FromServer))
             syswarn("cannot fgets after article");
         else
@@ -432,7 +432,7 @@ ReadBytecount(int fd, int artsize)
 
     /* If we haven't gotten any memory before, or we didn't get enough,
      * then get some. */
-    if (article == NULL) {
+    if (article == nullptr) {
         oldsize = artsize;
         article = xmalloc(oldsize + 1 + 1);
     } else if (artsize > oldsize) {
@@ -535,7 +535,7 @@ UnpackOne(int *fdp, size_t *countp)
         if (gzip && ((buff[1] == (char) 0x8b) || (buff[1] == (char) 0x9d))) {
             cargv[0] = "gzip";
             cargv[1] = "-d";
-            cargv[2] = NULL;
+            cargv[2] = nullptr;
             lseek(*fdp, 0, 0); /* Back to the beginning */
             *fdp = StartChild(*fdp, INN_PATH_GZIP, cargv);
             if (*fdp < 0)
@@ -574,7 +574,7 @@ UnpackOne(int *fdp, size_t *countp)
             }
             cargv[0] = UNPACK;
             cargv[1] = "-d";
-            cargv[2] = NULL;
+            cargv[2] = nullptr;
             *fdp = StartChild(*fdp, INN_PATH_GZIP, cargv);
             if (*fdp < 0)
                 return false;
@@ -585,14 +585,14 @@ UnpackOne(int *fdp, size_t *countp)
 
         if (additionalUnpackers) {
             cargv[0] = UNPACK;
-            cargv[1] = NULL;
+            cargv[1] = nullptr;
             /* Ignore any possible leading pathnames, to avoid trouble. */
-            if ((p = strrchr(&buff[3], '/')) != NULL) {
+            if ((p = strrchr(&buff[3], '/')) != nullptr) {
                 p++;
             } else {
                 p = &buff[3];
             }
-            if (strchr(INN_PATH_RNEWSPROGS, '/') == NULL) {
+            if (strchr(INN_PATH_RNEWSPROGS, '/') == nullptr) {
                 snprintf(path, sizeof(path), "%s/%s/%s", innconf->pathbin,
                          INN_PATH_RNEWSPROGS, p);
                 len =
@@ -644,11 +644,11 @@ Unspool(void)
     /* Go to the spool directory, get ready to scan it. */
     if (chdir(innconf->pathincoming) < 0)
         sysdie("cannot chdir to %s", innconf->pathincoming);
-    if ((dp = opendir(".")) == NULL)
+    if ((dp = opendir(".")) == nullptr)
         sysdie("cannot open spool directory");
 
     /* Loop over all files, and parse them. */
-    while ((ep = readdir(dp)) != NULL) {
+    while ((ep = readdir(dp)) != nullptr) {
         InputFile = ep->d_name;
         if (InputFile[0] == '.')
             continue;
@@ -724,7 +724,7 @@ Spool(int fd, int mode)
     if (mode == 'N')
         exit(9);
     tmpspool = concat(innconf->pathincoming, "/.", UUCPHost ? UUCPHost : "",
-                      "XXXXXX", (char *) 0);
+                      "XXXXXX", (char *) nullptr);
     spfd = mkstemp(tmpspool);
     if (spfd < 0)
         sysdie("cannot create temporary batch file %s", tmpspool);
@@ -756,7 +756,7 @@ Spool(int fd, int mode)
 
     /* Move temp file into the spool area, and exit appropriately. */
     spoolfile = concat(innconf->pathincoming, "/", UUCPHost ? UUCPHost : "",
-                       "XXXXXX", (char *) 0);
+                       "XXXXXX", (char *) nullptr);
     spfd = mkstemp(spoolfile);
     if (spfd < 0) {
         syswarn("cannot create spool file %s", spoolfile);
@@ -872,13 +872,13 @@ main(int ac, char *av[])
 
         /* Do not use ensure_news_user() because it will fail to deal
          * with the case of rnews being setuid news. */
-        get_news_uid_gid(&uid, NULL, true);
+        get_news_uid_gid(&uid, nullptr, true);
         if (setuid(uid) < 0) {
             sysdie("failed to setuid");
         }
     }
 
-    if (!innconf_read(NULL))
+    if (!innconf_read(nullptr))
         exit(1);
     UUCPHost = getenv(INN_ENV_UUCPHOST);
     PathBadNews = concatpath(innconf->pathincoming, INN_PATH_BADNEWS);
@@ -904,7 +904,7 @@ main(int ac, char *av[])
             logDuplicates = true;
             break;
         case 'h':
-            UUCPHost = *optarg ? optarg : NULL;
+            UUCPHost = *optarg ? optarg : nullptr;
             break;
         case 'N':
         case 'U':
@@ -934,7 +934,7 @@ main(int ac, char *av[])
     case 1:
         if (mode == 'U')
             die("usage error");
-        if (freopen(av[0], "r", stdin) == NULL)
+        if (freopen(av[0], "r", stdin) == nullptr)
             sysdie("cannot freopen %s", av[0]);
         fd = fileno(stdin);
         InputFile = av[0];
@@ -942,10 +942,10 @@ main(int ac, char *av[])
     }
 
     /* Open the link to the server. */
-    if (remoteServer != NULL) {
+    if (remoteServer != nullptr) {
         if (!OpenRemote(remoteServer, port, buff, sizeof(buff)))
             CantConnect(buff, mode, fd);
-    } else if (innconf->nnrpdposthost != NULL) {
+    } else if (innconf->nnrpdposthost != nullptr) {
         if (!OpenRemote(innconf->nnrpdposthost,
                         (port != NNTP_PORT) ? (unsigned) port
                                             : innconf->nnrpdpostport,
@@ -956,7 +956,7 @@ main(int ac, char *av[])
             /* If server rejected us, no point in continuing. */
             if (buff[0])
                 CantConnect(buff, mode, fd);
-            if (!OpenRemote(NULL,
+            if (!OpenRemote(nullptr,
                             (port != NNTP_PORT) ? (unsigned) port
                                                 : innconf->port,
                             buff, sizeof(buff)))
@@ -981,7 +981,7 @@ main(int ac, char *av[])
     /* Tell the server we're quitting, get his okay message. */
     fprintf(ToServer, "quit\r\n");
     fflush(ToServer);
-    if (fgets(buff, sizeof buff, FromServer) == NULL) {
+    if (fgets(buff, sizeof buff, FromServer) == nullptr) {
         /* ignore: we don't care if we don't get the server reply */
     }
 
