@@ -157,6 +157,11 @@ Everything below must be done before the Autoconf/Make build is deleted.
    Berkeley DB (ovdb), OpenSSL/TLS, libcanlock, systemd, blocklist.
 9. Tests: run them through CTest instead of only support/verify-cxx.sh.
 10. Portability: build and test on Linux and a BSD, not just macOS.
+    Started 2026-10-29: `support/docker-root-checks.sh` builds the tree on
+    Debian trixie (aarch64, GCC, GNU ld) in Docker and runs root-checks.sh
+    as the container's root.  Fixed on the way: libcrypt for ckpasswd
+    (8c93d26fa), the libinnhist/libinnstorage link cycle (ef4885a92).  Not
+    yet run there: verify-cxx.sh and live-innd.sh.
 
 **Security: no root at run time (decided 2026-10-29; next task after the
 coverage gate)**

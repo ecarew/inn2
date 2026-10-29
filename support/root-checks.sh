@@ -37,10 +37,16 @@ trap 'rm -rf "$tmp"' EXIT
 
 # --- lib/newsuser: the shared privilege drop ----------------------------------
 
+# Compile the C test as C, then link with the C++ driver, which adds the
+# platform's C++ runtime for the converted libinn (libc++ on macOS,
+# libstdc++ on Linux).
 cflags=(-I"$build/include" -I"$root/include" -I"$root/tests" -DTESTING)
-if cc "${cflags[@]}" -o "$tmp/newsuser.t" "$root/tests/lib/newsuser-t.c" \
-      "$root/tests/tap/basic.c" "$build/lib/libinn.a" -lc++ \
-      >"$tmp/cc.log" 2>&1; then
+if cc "${cflags[@]}" -c -o "$tmp/newsuser-t.o" "$root/tests/lib/newsuser-t.c" \
+      >"$tmp/cc.log" 2>&1 \
+   && cc "${cflags[@]}" -c -o "$tmp/basic.o" "$root/tests/tap/basic.c" \
+      >>"$tmp/cc.log" 2>&1 \
+   && c++ -o "$tmp/newsuser.t" "$tmp/newsuser-t.o" "$tmp/basic.o" \
+      "$build/lib/libinn.a" >>"$tmp/cc.log" 2>&1; then
     out=$("$tmp/newsuser.t" 2>&1)
     if echo "$out" | grep -q '^not ok' || ! echo "$out" | grep -q '^ok'; then
         res "lib/newsuser test" FAIL
