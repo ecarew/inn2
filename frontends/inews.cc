@@ -59,7 +59,7 @@ static int OtherSize;
 static const char *Exclusions = "";
 static const char *const BadDistribs[] = {BAD_DISTRIBS};
 
-static void Usage(void) __attribute__((__noreturn__));
+static void Usage() __attribute__((__noreturn__));
 
 /* clang-format off */
 static HEADER Table[] = {
@@ -149,7 +149,7 @@ QuitServer(int x)
 **  connection with the remote server before exiting.
 */
 static int
-fatal_cleanup(void)
+fatal_cleanup()
 {
     /* Don't recurse. */
     message_fatal_cleanup = nullptr;
@@ -290,7 +290,7 @@ StripOffHeaders(char *article)
 **  See if the user is the news administrator.
 */
 static bool
-AnAdministrator(void)
+AnAdministrator()
 {
     uid_t news_uid;
     gid_t news_gid;
@@ -676,7 +676,7 @@ CheckIncludedText(char *p, int lines)
 **  since that will fail if stdin is a tty.
 */
 static char *
-ReadStdin(void)
+ReadStdin()
 {
     int size;
     char *p;
@@ -759,7 +759,7 @@ Spoolit(char *article, size_t Length, char *deadfile)
 **  Print usage message and exit.
 */
 static void
-Usage(void)
+Usage()
 {
     fprintf(stderr,
             "Usage: inews [-D] [-h] [other_options] [header_flags] [article]\n"

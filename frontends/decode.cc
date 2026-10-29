@@ -108,7 +108,7 @@ pack12(char *p, int n, int last)
 
 
 int
-main(void)
+main()
 {
     int c;
     char *p;

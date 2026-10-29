@@ -627,7 +627,7 @@ UnpackOne(int *fdp, size_t *countp)
 **  interactively.
 */
 static void
-Unspool(void)
+Unspool()
 {
     DIR *dp;
     struct dirent *ep;

@@ -60,7 +60,7 @@ dumpcode(char *p, int n)
 }
 
 static void
-flushout(void)
+flushout()
 {
     putchar(ENDMARK1);
     putchar(ENDMARK2);
@@ -95,7 +95,7 @@ encode(char *dest, int n)
 
 
 int
-main(void)
+main()
 {
     char *p;
     int c;
