@@ -2,7 +2,7 @@
 # generated from expirerm.in and is not built here yet.
 
 inn_program(convdate     SOURCES convdate.cc     INNONLY)
-inn_program(expire       SOURCES expire.c)
+inn_program(expire       SOURCES expire.cc)
 inn_program(expireover   SOURCES expireover.cc)
 inn_program(fastrm       SOURCES fastrm.cc)
 inn_program(grephistory  SOURCES grephistory.cc)
