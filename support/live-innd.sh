@@ -64,6 +64,7 @@ sed -e "s|/usr/local/news|$tmp|g" \
     -e "s|^port:.*|port: $port|" \
     -e "s|^noreader:.*|noreader: true|" \
     -e "s|^docancels:.*|docancels: \"auth\"|" \
+    -e "s|^linecountfuzz:.*|linecountfuzz: 1|" \
     "$build/samples/inn.conf" >"$INNCONF"
 cat >>"$INNCONF" <<EOF
 runasuser:   $user
@@ -837,6 +838,192 @@ ok sh -c "grep -q 'Articles dropped' '$tmp/expireover.out' && ! '$bin/frontends/
 label="expireover empties the group's overview"
 ok sh -c "[ -z \"\$('$bin/storage/tdx-util' -o -n test.live 2>/dev/null)\" ]"
 
+# --- Article routing: distributions, poison, hashfeed, newgroup ---------------
+#
+# Paths the in-memory article work moves (CONVERSION_NOTES.md, "innd's
+# in-memory article", step 2): the Distribution list (ARTparsedist,
+# DISTwanted, DISTwantany), poisoned groups (ARTpoisongroup), hashfeeds
+# (HashFeedMatch, both hashes) and a newgroup for a group that does not
+# exist yet (ARTsendthegroup).
+
+# send_art ID GROUPS [HEADER...]: send <ID@live.test> to GROUPS through
+# rnews, with any extra header lines.
+send_art() {
+    local id=$1 groups=$2 art extra=
+    shift 2
+    for h in "$@"; do extra="$extra$h"$'\n'; done
+    art=$(printf 'Path: live.test!not-for-mail\nFrom: tester@live.test\nNewsgroups: %s\nSubject: %s\nMessage-ID: <%s@live.test>\nDate: %s\n%s\nBody of %s.\n' \
+          "$groups" "$id" "$id" "$(date -u '+%a, %d %b %Y %H:%M:%S +0000')" \
+          "$extra" "$id")
+    printf '#! rnews %d\n%s\n' "$(( ${#art} + 1 ))" "$art" \
+        | "$bin/frontends/rnews" >>"$tmp/rnews.log" 2>&1
+}
+# fed FEED ID: the file feed FEED (after a flush) lists <ID@live.test>.
+fed() { grep -q "<$2@live.test>" "$tmp/spool/outgoing/$1" 2>/dev/null; }
+
+cat >>"$tmp/etc/newsfeeds" <<EOF
+distfeed:*/local:Tf,Wm:distfeed
+nodist:*/!secret:Tf,Wm:nodist
+poisonfeed:*,@test.nosuch:Tf,Wm:poisonfeed
+newgrpfeed:!*,test.newgrp:Tf,Wm:newgrpfeed
+hash1:*:Tf,Wm,Q1/2:hash1
+hash2:*:Tf,Wm,Q2/2:hash2
+qhash1:*:Tf,Wm,Q@1/2:qhash1
+qhash2:*:Tf,Wm,Q@2/2:qhash2
+EOF
+ctl reload newsfeeds "live routing feeds"
+
+send_art dist-local test.live 'Distribution: local'
+send_art dist-world test.live 'Distribution: world'
+send_art dist-both test.live 'Distribution: world, local'
+send_art dist-none test.live
+send_art dist-secret test.live 'Distribution: secret'
+send_art poisoned test.live,test.nosuch
+send_art unpoisoned test.live
+send_art newgrp test.newgrp 'Control: newgroup test.newgrp' \
+    'Approved: tester@live.test'
+for i in 1 2 3 4 5 6 7 8; do send_art "hashed$i" test.live; done
+ctl flush ''
+sleep 1
+
+label="site distributions: only listed ones, none is any"
+ok bash -c "$(declare -f fed); tmp='$tmp'; fed distfeed dist-local && fed distfeed dist-both && fed distfeed dist-none && ! fed distfeed dist-world"
+label="site distributions: a !negated one is refused, others sent"
+ok bash -c "$(declare -f fed); tmp='$tmp'; ! fed nodist dist-secret && fed nodist dist-world && fed nodist dist-local"
+label="a poisoned nonexistent group keeps a crosspost from a site"
+ok bash -c "$(declare -f fed); tmp='$tmp'; ! fed poisonfeed poisoned && fed poisonfeed unpoisoned"
+label="a newgroup for a new group reaches sites that want the group"
+ok bash -c "$(declare -f fed); tmp='$tmp'; fed newgrpfeed newgrp && ! fed newgrpfeed unpoisoned"
+# Each hashfeed pair splits the articles: every one goes to exactly one of
+# the two, and (for these Message-IDs) both get some.
+hashsplit() {
+    local a=0 b=0 i
+    for i in 1 2 3 4 5 6 7 8; do
+        fed "$1" "hashed$i" && a=$((a + 1))
+        fed "$2" "hashed$i" && b=$((b + 1))
+        fed "$1" "hashed$i" && fed "$2" "hashed$i" && return 1
+        fed "$1" "hashed$i" || fed "$2" "hashed$i" || return 1
+    done
+    [ $a -gt 0 ] && [ $b -gt 0 ]
+}
+label="hashfeed (MD5) splits articles between Q1/2 and Q2/2"
+ok bash -c "$(declare -f fed hashsplit); tmp='$tmp'; hashsplit hash1 hash2"
+label="hashfeed (quickhash) splits articles between Q@1/2 and Q@2/2"
+ok bash -c "$(declare -f fed hashsplit); tmp='$tmp'; hashsplit qhash1 qhash2"
+
+# The ME entry's distributions decide what innd accepts at all.
+sed -i.bak 's|^ME:\*::|ME:*/!rejectme::|' "$tmp/etc/newsfeeds"
+ctl reload newsfeeds "live ME distributions"
+send_art dist-rejectme test.live 'Distribution: rejectme'
+send_art dist-accepted test.live 'Distribution: world'
+mv "$tmp/etc/newsfeeds.bak" "$tmp/etc/newsfeeds"
+ctl reload newsfeeds "live ME restored"
+ctl flush ''
+sleep 1
+label="ME distributions: an unwanted one is rejected, others accepted"
+ok sh -c "grep -q 'Unwanted distribution \"rejectme\"' '$tmp/log/news' && ! '$bin/frontends/sm' \"\$('$bin/expire/grephistory' '<dist-rejectme@live.test>' 2>/dev/null)\" >/dev/null 2>&1 && '$bin/expire/grephistory' '<dist-accepted@live.test>' >/dev/null 2>&1"
+
+# --- Malformed articles (ARTclean) ---------------------------------------------
+#
+# Each is refused with its own reason in the news log.  linecountfuzz is 1
+# in this inn.conf so that the Lines check runs; artcutoff is the sample's
+# 10 days.
+
+# send_raw HEADERS: send an article with exactly these header lines (each
+# ending in a newline) through rnews.
+send_raw() {
+    local art
+    art=$(printf '%s\nBody.\n' "$1")
+    printf '#! rnews %d\n%s\n' "$(( ${#art} + 1 ))" "$art" \
+        | "$bin/frontends/rnews" >>"$tmp/rnews.log" 2>&1
+}
+now=$(date -u '+%a, %d %b %Y %H:%M:%S +0000')
+std='Path: live.test!not-for-mail
+From: tester@live.test
+Newsgroups: test.live'
+# rnews checks the Subject and Message-ID itself, so these two are offered
+# to innd directly.  ihave ID FILE HEADERS: offer <ID> with IHAVE, the
+# article's header lines as given; innd's replies go to $tmp/FILE.
+ihave() {
+    { printf 'IHAVE <%s>\r\n' "$1"
+      printf '%sBody.\n.\n' "$3" | sed 's/$/\r/'
+      printf 'QUIT\r\n'; } | nc -w 10 127.0.0.1 "$port" >"$tmp/$2" 2>&1
+}
+ihave bad-nosubject@live.test ihave-nosubject.out "$std
+Message-ID: <bad-nosubject@live.test>
+Date: $now
+
+"
+ihave bad-mid@live.test ihave-badmid.out "$std
+Subject: bad mid
+Message-ID: <no-at-sign>
+Date: $now
+
+"
+send_raw "$std
+Subject: bad lines
+Message-ID: <bad-lines@live.test>
+Date: $now
+Lines: 9
+"
+send_raw "$std
+Subject: bad date
+Message-ID: <bad-date@live.test>
+Date: not a date
+"
+send_raw "$std
+Subject: bad injection date
+Message-ID: <bad-injdate@live.test>
+Date: $now
+Injection-Date: not a date either
+"
+send_raw "$std
+Subject: too old
+Message-ID: <bad-old@live.test>
+Date: Mon, 01 Jan 2001 00:00:00 +0000
+"
+send_raw "$std
+Subject: from the future
+Message-ID: <bad-future@live.test>
+Date: Fri, 01 Jan 2100 00:00:00 +0000
+"
+send_raw "Path: live.test!not-for-mail
+From: tester@live.test
+Newsgroups: test.live:extra
+Subject: colon in newsgroups
+Message-ID: <bad-groups@live.test>
+Date: $now
+"
+send_raw "$std
+Subject: with expires
+Message-ID: <good-expires@live.test>
+Date: $now
+Expires: Fri, 01 Jan 2100 00:00:00 +0000
+"
+send_raw "$std
+Subject: with a bad expires
+Message-ID: <good-badexpires@live.test>
+Date: $now
+Expires: whenever
+"
+ctl flush ''
+sleep 1
+rejected() { grep -q "$1" "$tmp/log/news"; }
+label="innd rejects a missing required header field"
+ok grep -q '^437 Missing "Subject" header field' "$tmp/ihave-nosubject.out"
+label="innd rejects a bad Message-ID"
+ok grep -q '^437 Bad "Message-ID" header field' "$tmp/ihave-badmid.out"
+label="innd rejects a wrong Lines count (linecountfuzz)"
+ok rejected 'bad-lines@live.test.* Linecount 9 != 1 +- 1'
+label="innd rejects a bad Date and a bad Injection-Date"
+ok sh -c "grep -q 'bad-date@live.test.* Bad \"Date\" header field' '$tmp/log/news' && grep -q 'bad-injdate@live.test.* Bad \"Injection-Date\" header field' '$tmp/log/news'"
+label="innd rejects articles too old (artcutoff) and from the future"
+ok sh -c "grep -q 'bad-old@live.test.* Too old' '$tmp/log/news' && grep -q 'bad-future@live.test.* in the future' '$tmp/log/news'"
+label="innd rejects a colon in Newsgroups"
+ok rejected 'bad-groups@live.test.* Unwanted character in "Newsgroups"'
+label="innd accepts articles with a valid or an unparsable Expires"
+ok sh -c "inhist() { '$bin/expire/grephistory' \"<\$1@live.test>\" >/dev/null 2>&1; }; inhist good-expires && inhist good-badexpires"
+
 # --- Shut down ------------------------------------------------------------------
 
 "$bin/frontends/ctlinnd" -s shutdown "live test done" >/dev/null 2>&1
@@ -851,6 +1038,53 @@ else
     res "ctlinnd shutdown stops innd" PASS
     innd_pid=
 fi
+
+# --- xrefslave mode -----------------------------------------------------------
+#
+# A slave server files each article under the numbers in its Xref header
+# field (ARTxrefslave) instead of assigning its own.  Restart innd so.
+
+sed -i.bak 's|^xrefslave:.*|xrefslave: true|' "$INNCONF" && rm -f "$INNCONF.bak"
+"$bin/innd/innd" -f >>"$tmp/innd.out" 2>&1 &
+innd_pid=$!
+up=false
+for _ in $(seq 1 50); do
+    if "$bin/frontends/ctlinnd" -s mode >/dev/null 2>&1; then
+        up=true
+        break
+    fi
+    kill -0 "$innd_pid" 2>/dev/null || break
+    sleep 0.2
+done
+label="innd restarts in xrefslave mode"
+ok sh -c "$up && '$bin/frontends/ctlinnd' mode 2>/dev/null | grep -qi 'slave'"
+
+send_art slave-500 test.live 'Xref: master.test test.live:500'
+# A malformed entry second: tradspool takes the article's path from the
+# first entry, and refuses the article if that one is malformed.
+send_art slave-501 test.live 'Xref: master.test test.live:501 bad-entry'
+send_art slave-noxref test.live
+send_art slave-nogroup test.live 'Xref: master.test no.such.group:7'
+send_art slave-noentries test.live 'Xref: master.test'
+ctl flush ''
+sleep 1
+ov=$("$bin/storage/tdx-util" -o -n test.live 2>/dev/null)
+label="xrefslave files an article under its Xref number"
+ok sh -c "printf '%s\n' \"\$1\" | grep -q '^500	.*slave-500'" _ "$ov"
+label="xrefslave skips a malformed Xref entry, files the rest"
+ok sh -c "printf '%s\n' \"\$1\" | grep -q '^501	.*slave-501'" _ "$ov"
+label="xrefslave rejects an article without Xref"
+ok grep -q 'Xref header field required in xrefslave mode' "$tmp/log/news"
+label="xrefslave rejects an Xref with no known group or no entries"
+ok sh -c "[ \$(grep -c 'Xref header field \"master.test[^\"]*\" invalid in xrefslave mode' '$tmp/log/news') -ge 2 ]"
+
+"$bin/frontends/ctlinnd" -s shutdown "live xrefslave done" >/dev/null 2>&1
+for _ in $(seq 1 50); do
+    kill -0 "$innd_pid" 2>/dev/null || break
+    sleep 0.2
+done
+wait "$innd_pid" 2>/dev/null
+innd_pid=
 
 if [ $fail = 0 ]; then
     echo "RESULT: PASS"
