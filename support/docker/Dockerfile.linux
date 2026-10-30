@@ -9,6 +9,7 @@ RUN apt-get update \
     && DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends \
        build-essential ninja-build perl python3 python3-venv flex bison \
        libsqlite3-dev zlib1g-dev ca-certificates procps netcat-openbsd \
+       curl bzip2 \
     && rm -rf /var/lib/apt/lists/*
 
 # The CMake build requires CMake 4.3 or later, newer than Debian ships;
@@ -16,6 +17,20 @@ RUN apt-get update \
 RUN python3 -m venv /opt/cmake \
     && /opt/cmake/bin/pip install --no-cache-dir 'cmake>=4.3' \
     && ln -s /opt/cmake/bin/cmake /opt/cmake/bin/ctest /usr/local/bin/
+
+# Boost 1.92 or later is required, newer than Debian trixie's 1.83: the
+# official release, checked against the SHA-256 in Boost's
+# boost_1_92_0.tar.bz2.json, headers and CMake config files only
+# (b2 --with-headers; nothing is compiled) into /usr/local.
+ARG BOOST_SHA256=5c1d40cb8e19adbf740a4ec2da35b3e58f3f5804b1dce44deb53df72193cbc6c
+RUN cd /tmp \
+    && curl -sfLO https://archives.boost.io/release/1.92.0/source/boost_1_92_0.tar.bz2 \
+    && echo "$BOOST_SHA256  boost_1_92_0.tar.bz2" | sha256sum -c \
+    && tar xjf boost_1_92_0.tar.bz2 \
+    && cd boost_1_92_0 \
+    && ./bootstrap.sh >/dev/null \
+    && ./b2 --prefix=/usr/local --with-headers install >/dev/null \
+    && cd /tmp && rm -rf boost_1_92_0 boost_1_92_0.tar.bz2
 
 # The unprivileged account the root checks' build drops to
 # (INN_RUNAS_USER/GROUP), and an ordinary user for the normal checks, who is
