@@ -63,11 +63,29 @@ else
     res "every .cc compiles as -std=c++20" "FAIL (${not20:-?} files)"
 fi
 
-# Every symbol the Makefile-built innd exports (innd-symbols.txt) must still
-# be exported, under its C name, by the CMake build.
-nm -gU "$build/innd/innd" | awk '{print $3}' | sort >"$tmp/syms"
-want=$(wc -l <"$data/innd-symbols.txt" | tr -d ' ')
-missing=$(comm -23 "$data/innd-symbols.txt" "$tmp/syms" | wc -l | tr -d ' ')
+# defined_symbols FILE: "W name" or "T name" for each defined external symbol
+# (W for weak), without the leading underscore Mach-O adds to C names.  Apple's
+# nm takes -gUm; GNU nm takes -g --defined-only and marks weak symbols W or V.
+defined_symbols() {
+    if nm -gUm "$1" >/dev/null 2>&1; then
+        nm -gUm "$1" | awk '/ external / {
+            name = $NF; sub(/^_/, "", name)
+            print (/ weak / ? "W" : "T"), name }'
+    else
+        nm -g --defined-only "$1" | awk 'NF >= 3 {
+            print ($2 ~ /^[WwVv]$/ ? "W" : "T"), $3 }'
+    fi
+}
+
+# Every symbol the Makefile-built innd exports (innd-symbols.txt, Mach-O
+# names) must still be exported, under its C name, by the CMake build.
+defined_symbols "$build/innd/innd" | awk '{print $2}' | sort >"$tmp/syms"
+# __mh_execute_header is the Mach-O header symbol Apple's linker adds to
+# every executable, not one of INN's.
+sed 's/^_//' "$data/innd-symbols.txt" | grep -vx '_mh_execute_header' \
+    | sort >"$tmp/want-syms"
+want=$(wc -l <"$tmp/want-syms" | tr -d ' ')
+missing=$(comm -23 "$tmp/want-syms" "$tmp/syms" | wc -l | tr -d ' ')
 if [ "$missing" = 0 ]; then
     res "innd exports all $want Make-build symbols" PASS
 else
@@ -77,7 +95,7 @@ fi
 mangled=0
 for a in "$build/innd/innd" "$build"/history/libinnhist.a \
          "$build"/storage/libinnstorage.a "$build"/lib/libinn.a; do
-    n=$(nm -gUm "$a" 2>/dev/null | grep -v weak | grep -c ' __Z')
+    n=$(defined_symbols "$a" 2>/dev/null | awk '$1 == "T" && $2 ~ /^_Z/' | wc -l)
     mangled=$((mangled + n))
 done
 if [ "$mangled" = 0 ]; then
@@ -93,7 +111,9 @@ runas=$(sed -n 's/^#define RUNASUSER "\(.*\)"/\1/p' "$build/include/config.h")
 if [ "$runas" = "$(id -un)" ]; then
     expect="open of .*inn.conf failed"
 else
-    expect="can't resolve $runas to a [GU]ID"
+    # Without a news account innd cannot resolve it (macOS); with one, as
+    # on Debian, it gets one step further and refuses the tester.
+    expect="can't resolve $runas to a [GU]ID|must be run as $runas"
 fi
 if "$build/innd/innd" -h 2>&1 | grep -qE "$expect"; then
     res "innd starts (passes or reaches user check)" PASS
@@ -179,11 +199,11 @@ else
 fi
 
 # INN tap tests, built against the CMake libraries.
-# lib/innconf reads samples/inn.conf, generated from inn.conf.in by fixconfig.
-if [ ! -f samples/inn.conf ]; then
-    make -C samples inn.conf >"$tmp/samples.log" 2>&1
-fi
-libs=("$build/innd/libinnd_core.a" "$build/storage/libinnstorage.a" "$build/history/libinnhist.a"
+# libinnstorage and libinnhist use each other.  Apple's ld resolves symbols
+# in any order, but GNU ld only searches forward, so name libinnstorage again
+# after libinnhist (as history/CMakeLists.txt makes CMake do).
+libs=("$build/innd/libinnd_core.a" "$build/storage/libinnstorage.a"
+      "$build/history/libinnhist.a" "$build/storage/libinnstorage.a"
       "$build/lib/libinn.a" -lz -lsqlite3)
 cflags=(-g -I"$build/include" -I"$root/include" -I"$root/tests" -I"$root/history"
         -I"$root/storage")
@@ -278,7 +298,7 @@ shm_cleanup() {
 # and authprogs pointing at the CMake-built programs.
 sb=$tmp/sandbox
 mkdir -p "$sb/tests" && cp -R tests/data "$sb/tests/data"
-for d in authprogs backends control expire frontends innfeed nnrpd storage; do
+for d in authprogs backends control expire frontends innfeed nnrpd samples storage; do
     [ -d "$build/$d" ] && ln -s "$build/$d" "$sb/$d"
 done
 
@@ -318,7 +338,10 @@ for spec in "${tests[@]}"; do
         t=${t%.t}
     fi
     rundir=tests
-    { [[ "$t" == authprogs/* ]] || $shell; } && rundir=$sb/tests
+    # lib/innconf reads ../../samples/inn.conf from tests/data: in the
+    # sandbox that is the build's generated samples/inn.conf.
+    { [[ "$t" == authprogs/* ]] || [ "$t" = lib/innconf ] || $shell; } \
+        && rundir=$sb/tests
     src=${src:-$t}
     n=$(echo "$t" | tr / _)
     objs=()
