@@ -78,18 +78,27 @@ defined_symbols() {
 }
 
 # Every symbol the Makefile-built innd exports (innd-symbols.txt, Mach-O
-# names) must still be exported, under its C name, by the CMake build.
+# names) must still be exported, under its C name, by the CMake build,
+# except those the refactoring retired on purpose (innd-retired.txt, one
+# name and its reason per line), which must be gone.
 defined_symbols "$build/innd/innd" | awk '{print $2}' | sort >"$tmp/syms"
+awk '!/^#/ && NF { print $1 }' "$data/innd-retired.txt" | sort >"$tmp/retired"
 # __mh_execute_header is the Mach-O header symbol Apple's linker adds to
 # every executable, not one of INN's.
 sed 's/^_//' "$data/innd-symbols.txt" | grep -vx '_mh_execute_header' \
-    | sort >"$tmp/want-syms"
+    | sort | comm -23 - "$tmp/retired" >"$tmp/want-syms"
 want=$(wc -l <"$tmp/want-syms" | tr -d ' ')
 missing=$(comm -23 "$tmp/want-syms" "$tmp/syms" | wc -l | tr -d ' ')
 if [ "$missing" = 0 ]; then
     res "innd exports all $want Make-build symbols" PASS
 else
     res "innd exports all $want Make-build symbols" "FAIL ($missing missing)"
+fi
+back=$(comm -12 "$tmp/retired" "$tmp/syms" | wc -l | tr -d ' ')
+if [ "$back" = 0 ]; then
+    res "retired innd symbols are gone ($(wc -l <"$tmp/retired" | tr -d ' '))" PASS
+else
+    res "retired innd symbols are gone" "FAIL ($back still exported)"
 fi
 
 mangled=0
