@@ -33,7 +33,9 @@
 #if TESTING
 #    undef strlcat
 #    define strlcat test_strlcat
+BEGIN_DECLS
 size_t test_strlcat(char *, const char *, size_t);
+END_DECLS
 #endif
 
 size_t
