@@ -11,6 +11,8 @@
 #include "inn/portable-macros.h"
 #include "inn/portable-stdbool.h"
 
+#include <sys/types.h> /* uid_t, gid_t */
+
 BEGIN_DECLS
 
 int get_news_uid_gid(uid_t *uid, gid_t *gid, bool may_die);
