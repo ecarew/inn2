@@ -31,11 +31,10 @@ be simple names.  This can substantially reduce the operating system
 overhead from directory lookups.
 
 B<fastrm> assumes that its input is valid and that it is safe to call
-unlink(2) on every file name it is given.  As a safety measure, however,
-B<fastrm> when running as root will check with stat(2) that a file name
-doesn't specify a directory before removing it.  (In some operating
-systems, root is allowed to unlink directories, even directories which
-aren't empty, which can cause file system corruption.)
+unlink(2) on every file name it is given.  It refuses to run as root: on
+some operating systems root is allowed to unlink directories, even
+directories which aren't empty, which can cause file system corruption,
+and files it might create would be owned by root.
 
 The input to B<fastrm> should always be sorted S<-- or> even better be in the
 order file names are output by S<find(1) --> if speed is an issue and the

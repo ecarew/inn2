@@ -74,7 +74,6 @@ static int error_count = 0;
 static bool sm_initialized = false;
 
 /* True if unlink may be able to remove directories. */
-static bool unlink_dangerous = false;
 
 
 /*
@@ -334,38 +333,12 @@ slashcount(char *name)
 
 /*
 **  Unlink a file, reporting errors if the unlink fails for a reason other
-**  than the file not existing doesn't exist.  Be careful to avoid unlinking
-**  a directory if unlink_dangerous is true.
+**  than the file not existing doesn't exist.  fastrm refuses to run as root,
+**  so unlink cannot remove a directory here.
 */
 static void
 unlink_file(const char *file)
 {
-    struct stat st;
-
-    /* On some systems, unlink will remove directories if used by root.  If
-       we're running as root, unlink_dangerous will be set, and we need to
-       make sure that the file isn't a directory first. */
-    if (unlink_dangerous) {
-        if (stat(file, &st) < 0) {
-            if (errno != ENOENT) {
-                if (*file == '/')
-                    syswarn("can't stat %s", file);
-                else
-                    syswarn("can't stat %s in %s", file, current_dir);
-                error_count++;
-            }
-            return;
-        }
-        if (S_ISDIR(st.st_mode)) {
-            if (*file == '/')
-                syswarn("%s is a directory", file);
-            else
-                syswarn("%s in %s is a directory", file, current_dir);
-            error_count++;
-            return;
-        }
-    }
-
     if (debug_only) {
         if (*file != '/')
             printf("%s / ", current_dir);
@@ -656,9 +629,6 @@ main(int argc, char *argv[])
     message_program_name = name;
     ensure_not_root();
     openlog(name, LOG_CONS | LOG_PID, LOG_INN_PROG);
-
-    /* If we're running as root, unlink may remove directories. */
-    unlink_dangerous = (geteuid() == 0);
 
     /* Unfortunately, we can't use getopt, because several of our options
        take optional arguments.  Bleh. */
