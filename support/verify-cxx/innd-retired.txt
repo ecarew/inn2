@@ -1,0 +1,3 @@
+# innd symbols in innd-symbols.txt (the Make build's exports) that the
+# refactoring removed on purpose: name, then why.  verify-cxx.sh leaves them
+# out of the export check and checks that they are gone.
