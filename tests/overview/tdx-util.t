@@ -10,7 +10,7 @@
 count=1
 printcount() {
     echo "$1 $count $2"
-    count=$(expr $count + 1)
+    count=$((count + 1))
 }
 
 # ok DESCRIPTION COMMAND...: print ok if the command succeeds.
@@ -39,7 +39,7 @@ compare() {
 dirs='../data data tests/data'
 for dir in $dirs; do
     if [ -r "$dir/articles/1" ]; then
-        cd $dir
+        cd "$dir" || exit 1
         break
     fi
 done
