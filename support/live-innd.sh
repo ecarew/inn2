@@ -64,7 +64,7 @@ sed -e "s|/usr/local/news|$tmp|g" \
     -e "s|^port:.*|port: $port|" \
     -e "s|^noreader:.*|noreader: true|" \
     -e "s|^docancels:.*|docancels: \"auth\"|" \
-    "$root/samples/inn.conf" >"$INNCONF"
+    "$build/samples/inn.conf" >"$INNCONF"
 cat >>"$INNCONF" <<EOF
 runasuser:   $user
 runasgroup:  $group
@@ -361,7 +361,9 @@ rport=$((port + 1))
 cp "$root/tests/data/etc/passwd" "$tmp/etc/passwd"
 # Reader tracking (track.c): nnrpd reads inn.conf at startup, so turn it on
 # for this section and name the client in nnrpd.track (host:identity).
-sed -i '' 's/^readertrack:.*/readertrack: true/' "$INNCONF"
+# (sed -i takes different arguments in BSD and GNU sed; write a new copy.)
+sed 's/^readertrack:.*/readertrack: true/' "$INNCONF" >"$INNCONF.new" \
+    && mv "$INNCONF.new" "$INNCONF"
 printf 'localhost:tracker@live.test\n127.0.0.1:tracker@live.test\n' >"$tmp/etc/nnrpd.track"
 cat >"$tmp/etc/readers.conf" <<EOF
 auth "localhost" {
@@ -541,7 +543,9 @@ ok sh -c "'$fe/sm' -i '$tokg' | grep -Eq '^test.live: [0-9]+\$'"
 label="sm -H prints only the headers"
 ok sh -c "'$fe/sm' -H '$tokg' | grep -q '^Subject: gzip batch' && ! '$fe/sm' -H '$tokg' | grep -q 'Body of'"
 label="sm -R prints the raw (wire) article"
-ok sh -c "'$fe/sm' -R '$tokg' | grep -q \$'\r\$'"
+# A carriage return, made here: sh -c runs dash on Debian, which lacks $'\r'.
+cr=$(printf '\r')
+ok sh -c "'$fe/sm' -R '$tokg' | grep -q '$cr\$'"
 
 # ovdb tools: built without Berkeley DB, ovdb_init, ovdb_server and
 # ovdb_stat report that and fail; ovdb_monitor's stub just exits.
@@ -758,9 +762,14 @@ ok sh -c "[ '$sent' -gt 0 ] && [ '$got' = '$sent' ]"
 
 # Streaming to innd, which already has every article.
 feed self 999
+# innfeed rewrites the status file only on connection events (and every ten
+# minutes), so its counters can miss the last replies: on Linux it showed 3
+# offered, 2 refused, 0 accepted.  Check what matters: innfeed streamed, innd
+# refused duplicates, and accepted none.
 refused=$(peerstat self refused)
-label="innfeed streams to innd (refused ${refused:-?} duplicates)"
-ok sh -c "awk '/^self\$/,/^\$/' '$tmp/innfeed.status' | grep -q 'is streaming: yes' && [ '${refused:-0}' -ge '$sent' ]"
+accepted=$(peerstat self accepted)
+label="innfeed streams to innd (refused ${refused:-?}, accepted ${accepted:-?})"
+ok sh -c "awk '/^self\$/,/^\$/' '$tmp/innfeed.status' | grep -q 'is streaming: yes' && [ '${refused:-0}' -ge 1 ] && [ '${accepted:-1}' = 0 ]"
 
 # Peer down: innfeed writes the articles to the peer's backlog file.
 leaf_down
