@@ -10,6 +10,7 @@
 
 #include "config.h"
 #include "inn/messages.h"
+#include "inn/newsuser.h"
 #include "ovsqlite-private.h"
 
 #ifdef HAVE_SQLITE3
@@ -2290,6 +2291,9 @@ main(int argc, char **argv)
     }
     if (!innconf_read(NULL))
         exit(1);
+    /* Normally started by rc.news or innd as the news user.  If started as
+       root, switch to the news user before opening the database. */
+    ensure_news_user_grp(true, true);
     load_config();
     if (!debug) {
         if (daemon(1, 0) < 0) {

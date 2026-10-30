@@ -32,6 +32,7 @@
 #include "inn/innconf.h"
 #include "inn/libinn.h"
 #include "inn/messages.h"
+#include "inn/newsuser.h"
 #include "inn/storage.h"
 #include "inn/version.h"
 
@@ -131,6 +132,10 @@ main(int argc, char **argv)
         syslog(LOG_ERR, "cant read inn.conf\n");
         exit(1);
     }
+
+    /* Normally started by innd as the news user.  If started as root,
+       switch to the news user before opening anything. */
+    ensure_news_user_grp(true, true);
 
     message_handlers_die(2, error_log_stderr_date, message_log_syslog_err);
     message_handlers_warn(1, message_log_syslog_warning);
