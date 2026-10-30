@@ -15,7 +15,7 @@ RUN apt-get update \
 # take it from PyPI into a private virtual environment.
 RUN python3 -m venv /opt/cmake \
     && /opt/cmake/bin/pip install --no-cache-dir 'cmake>=4.3' \
-    && ln -s /opt/cmake/bin/cmake /usr/local/bin/cmake
+    && ln -s /opt/cmake/bin/cmake /opt/cmake/bin/ctest /usr/local/bin/
 
 # The unprivileged account the root checks' build drops to
 # (INN_RUNAS_USER/GROUP), and an ordinary user for the normal checks, who is
