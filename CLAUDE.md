@@ -183,7 +183,6 @@ from `cmake-build`; record method and raw numbers so rounds compare.
 - Delete the `cxx-conversion-wip` and `legacy-2020` branches once the class
   work no longer needs them (confirm with the user first; irreversible).
 - Convert `readme.pod` to `README.md`.
-- Benchmark the header tree against the planned sorted-array `HeaderTable`.
 
 ---
 
