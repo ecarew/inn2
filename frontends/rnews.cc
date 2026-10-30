@@ -871,7 +871,11 @@ main(int ac, char *av[])
         uid_t uid;
 
         /* Do not use ensure_news_user() because it will fail to deal
-         * with the case of rnews being setuid news. */
+         * with the case of rnews being setuid news.  The group drop
+         * (including root's supplementary groups) needs root, so it is
+         * done only when the real or effective UID is root, as here. */
+        if (geteuid() == 0)
+            ensure_news_grp(true);
         get_news_uid_gid(&uid, nullptr, true);
         if (setuid(uid) < 0) {
             sysdie("failed to setuid");
