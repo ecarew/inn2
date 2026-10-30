@@ -15,6 +15,7 @@
 #include "inn/vector.h"
 #include "inn/wire.h"
 #include "innd.h"
+#include "article.h"
 
 #include <algorithm>
 #include <array>
@@ -731,6 +732,8 @@ ARTprepare(CHANNEL *cp)
     data->BytesHeader = nullptr;
     data->Feedsite = "?";
     data->FeedsiteLength = strlen(data->Feedsite);
+    if (data->State != nullptr)
+        data->State->clear();
     *cp->Error = '\0';
 }
 
