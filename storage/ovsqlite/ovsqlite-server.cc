@@ -1160,7 +1160,7 @@ do_get_groupinfo(client_t *client)
     low = sqlite3_column_int64(stmt, 0);
     high = sqlite3_column_int64(stmt, 1);
     count = sqlite3_column_int64(stmt, 2);
-    flag_alias = sqlite3_column_blob(stmt, 3);
+    flag_alias = static_cast<const char *>(sqlite3_column_blob(stmt, 3));
     if (!flag_alias)
         fail(response_corrupted);
     size = sqlite3_column_bytes(stmt, 3);
@@ -1268,7 +1268,7 @@ do_list_groups(client_t *client)
             }
         }
 
-        groupname = sqlite3_column_blob(stmt, 1);
+        groupname = static_cast<const char *>(sqlite3_column_blob(stmt, 1));
         size = sqlite3_column_bytes(stmt, 1);
         if (!groupname || size >= 0x10000)
             goto corrupted;
@@ -1290,7 +1290,7 @@ do_list_groups(client_t *client)
         if (pack_now(respbuf, &count, sizeof count) > space)
             goto flush;
 
-        flag_alias = sqlite3_column_blob(stmt, 5);
+        flag_alias = static_cast<const char *>(sqlite3_column_blob(stmt, 5));
         size = sqlite3_column_bytes(stmt, 5);
         if (!flag_alias || size >= 0x10000)
             goto corrupted;
@@ -1356,7 +1356,7 @@ do_add_article(client_t *client)
         fail(response_bad_request);
     if (!unpack_now(reqbuf, &overview_len, sizeof overview_len))
         fail(response_bad_request);
-    overview = unpack_later(reqbuf, overview_len);
+    overview = static_cast<uint8_t *>(unpack_later(reqbuf, overview_len));
     if (!overview)
         fail(response_bad_request);
     if (!finish_request(client))
@@ -1404,9 +1404,10 @@ do_add_article(client_t *client)
         deflation.next_in = overview;
         deflation.avail_in = overview_len;
 #        ifdef USE_DICTIONARY
-        status =
-            deflateSetDictionary(&deflation, (uint8_t *) dictionary,
-                                 make_dict(groupname, groupname_len, artnum));
+        status = deflateSetDictionary(
+            &deflation, (uint8_t *) dictionary,
+            make_dict(static_cast<const char *>(groupname), groupname_len,
+                      artnum));
         if (status == Z_OK)
 #        endif
             status = deflate(&deflation, Z_FINISH);
@@ -1499,7 +1500,7 @@ do_get_artinfo(client_t *client)
     default:
         fail_stmt();
     }
-    token = sqlite3_column_blob(stmt, 0);
+    token = static_cast<const TOKEN *>(sqlite3_column_blob(stmt, 0));
     if (!token)
         fail(response_corrupted);
     if (sqlite3_column_bytes(stmt, 0) != sizeof(TOKEN))
@@ -1701,7 +1702,7 @@ do_search_group(client_t *client)
         if (cols & search_col_token) {
             TOKEN const *token;
 
-            token = sqlite3_column_blob(stmt, 3);
+            token = static_cast<const TOKEN *>(sqlite3_column_blob(stmt, 3));
             size = sqlite3_column_bytes(stmt, 3);
             if (!token || size != sizeof(TOKEN))
                 goto corrupted;
@@ -1713,7 +1714,8 @@ do_search_group(client_t *client)
             uint8_t const *overview;
             uint32_t overview_len;
 
-            overview = sqlite3_column_blob(stmt, 4);
+            overview =
+                static_cast<const uint8_t *>(sqlite3_column_blob(stmt, 4));
             size = sqlite3_column_bytes(stmt, 4);
             if (!overview || size > MAX_OVDATA_SIZE)
                 goto corrupted;
@@ -1747,7 +1749,8 @@ do_search_group(client_t *client)
                     if (status == Z_NEED_DICT) {
                         status = inflateSetDictionary(
                             &inflation, (uint8_t *) dictionary,
-                            make_dict(groupname, groupname_len, artnum));
+                            make_dict(static_cast<const char *>(groupname),
+                                      groupname_len, artnum));
                         if (status == Z_OK)
                             status = inflate(&inflation, Z_FINISH);
                     }

@@ -31,7 +31,7 @@ add_library(INN::storage_deps ALIAS storage_deps)
 # from ovsqlite-util.in and is not built here yet.
 inn_program(tdx-util SOURCES tradindexed/tdx-util.cc)
 inn_program(ovsqlite-server
-    SOURCES ovsqlite/ovsqlite-server.c ovsqlite/sql-main.c ovsqlite/sql-init.c
+    SOURCES ovsqlite/ovsqlite-server.cc ovsqlite/sql-main.c ovsqlite/sql-init.c
             ovsqlite/ovsqlite-private.cc)
 # buffindexed.cc again, with its BUFF_DEBUG main().
 inn_program(buffindexed_d SOURCES buffindexed/buffindexed.cc)
