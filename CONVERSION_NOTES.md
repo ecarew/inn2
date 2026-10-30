@@ -722,6 +722,36 @@ requires it with `find_package(Boost 1.92 REQUIRED CONFIG)` (CMake 4 has
 no FindBoost module) and code that uses it links `Boost::headers`.  A
 compiled Boost library needs its own decision.
 
+### On-disk formats: typed access, Boost.Endian, no Boost.Serialization (decided 2026-10-30)
+
+INN's files keep their formats exactly: history (dbz and the text
+history), overview (tradindexed and buffindexed indexes, ovsqlite), CNFS
+cycbuff headers, storage tokens, the active file.  Existing sites upgrade
+in place, and INN's Perl modules, contrib scripts, admins' tools and other
+INN versions read them.  The C++ work changes how INN reads and writes
+them, not what is on disk.  Agreed with the user:
+
+- **Typed readers and writers per format.**  Each binary record is a
+  struct with an explicit layout, its size and field offsets pinned by
+  `static_assert` against the format, read and written through
+  `std::bit_cast` or `std::span` over the bytes (often an `mmap`ed
+  region) instead of casts of raw pointers.  The format is unchanged; the
+  access is checked at compile time.
+- **Boost.Endian** (header-only) where a format's byte order matters: its
+  types carry their byte order (`big_uint32_t` and so on), so fields are
+  right on any CPU without hand-written swapping.  Formats that today use
+  the host's order keep it, unless a change is agreed (and then it is a
+  format change, with a migration).
+- **Boost.Serialization only for new state that only INN++ reads**, if any
+  appears; none does today.  Not for INN's existing formats: it writes only
+  its own archive format, reads whole archives as streams (INN reads its
+  files in place at random offsets), and it is a compiled library, which
+  needs its own decision (see "Boost in the design").
+
+Each format gets tests that read files written by the original C code
+(tests/data) and compare bytes written by the new code with the
+original's, before its access code changes.
+
 ### Memory management: from C to standard C++ (goal, 2026-10-29)
 
 **Goal.**  Move C-style memory management to standard C++ practice wherever
