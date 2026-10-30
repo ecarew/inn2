@@ -600,7 +600,12 @@ result from the optimizer.
 **Chosen (by the user): `std::lower_bound`**, for well-traveled standard
 library code over a hand-written search.  The cost is about 15 ns per header
 line, under half a microsecond per article, next to innd's history, disk and
-network work per article.  Done in innd/art.cc: a file-local `HeaderTable`
+network work per article.  On the plus side, it retires the lookup's
+manual memory management: 76 `xmalloc`s for tree nodes at startup, the
+temporary `xmalloc`ed table sorted with `qsort` and then `free`d, and the
+recursive `ARTfreetree` that `ARTclose` had to call, replaced by a fixed
+`std::array` with no allocation and nothing to free (art.cc: 65 code lines
+removed, 40 added).  Done in innd/art.cc: a file-local `HeaderTable`
 (a `std::array` of pointers into `ARTheaders`, sorted once by ARTsetup, no
 allocation), reached through `ARTfindheader()` in innd.h, which
 tests/innd/headers-t.c tests (every name in four cases, 14 non-names).
