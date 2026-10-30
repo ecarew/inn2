@@ -636,10 +636,120 @@ ok sh -c "! '$be/innxbatch' -t 5 127.0.0.1 '$batch' >/dev/null 2>&1"
 label="innbind rejects a missing argument"
 ok sh -c "! '$be/innbind' >/dev/null 2>&1"
 
-# --- expire tools -------------------------------------------------------------
-
 gh() { "$bin/expire/grephistory" "<$1@live.test>" 2>/dev/null; }
 tok() { gh "$1" | head -1; }
+
+# --- innfeed ------------------------------------------------------------------
+
+# Two peers: "leaf", a tinyleaf behind a Perl listener that forks one per
+# connection (tinyleaf speaks only IHAVE, so innfeed falls back from
+# streaming), and "self", the running innd (streaming; it already has every
+# article, so each offer is refused).  innfeed runs in channel mode, reading
+# the lines innd would send (token, message-ID, peer) from standard input,
+# and exits once its input ends and the articles are sent.
+lport=$((port + 2))
+mkdir -p "$tmp/leaf" "$tmp/spool/innfeed"
+leaf_up() {
+    perl -MIO::Socket::INET -e '
+        my ($port, @cmd) = @ARGV;
+        my $l = IO::Socket::INET->new(LocalAddr => "127.0.0.1",
+                                      LocalPort => $port, Listen => 5,
+                                      ReuseAddr => 1) or die "listen: $!";
+        $SIG{CHLD} = "IGNORE";
+        while (my $c = $l->accept) {
+            if (!fork) {
+                open(STDIN, "<&", $c) and open(STDOUT, ">&", $c) or die;
+                exec @cmd or die "exec: $!";
+            }
+            close $c;
+        }' "$lport" "$bin/innd/tinyleaf" "$tmp/leaf" 2>>"$tmp/leaf.err" &
+    leaf_pid=$!
+    sleep 0.5
+}
+leaf_down() { kill "$leaf_pid" 2>/dev/null; wait "$leaf_pid" 2>/dev/null; }
+cat >"$tmp/etc/innfeed.conf" <<EOF
+backlog-directory: $tmp/spool/innfeed
+peer leaf {
+    ip-name:     127.0.0.1
+    port-number: $lport
+}
+peer self {
+    ip-name:     127.0.0.1
+    port-number: $port
+}
+EOF
+# Fresh articles for innfeed: earlier checks cancel or remove some of the
+# live articles, and offering a peer an article that is gone makes innfeed
+# send it an empty one.
+for i in 1 2 3; do send_one "innfeed$i"; done
+ctl flush ''
+sleep 1
+# funnel PEER: the channel lines innd would send for those articles.
+funnel() {
+    local i t
+    for i in 1 2 3; do
+        t=$(gh "innfeed$i" | head -1)
+        [ -n "$t" ] && echo "$t <innfeed$i@live.test> $1"
+    done
+}
+inf() { "$bin/innfeed/innfeed" -c "$tmp/etc/innfeed.conf" \
+            -l "$tmp/innfeed.log" -S "$tmp/innfeed.status" \
+            -p "$tmp/run/innfeed-test.pid" "$@"; }
+# feed PEER WANT: run innfeed with the funnel lines for PEER on its input,
+# and keep the input open until the leaf spool holds WANT articles (or ten
+# seconds pass), so innfeed has time to connect and send before its input
+# ends; at the end of input it flushes, sends QUIT and exits.
+leafcount() { ls "$tmp/leaf" | wc -l | tr -d ' '; }
+# peerstat PEER FIELD: a counter from the status file innfeed rewrites at
+# exit (its statistics otherwise go to syslog).
+peerstat() {
+    awk -v peer="$1" -v field="$2" '
+        $0 == peer { inpeer = 1; next }
+        inpeer && /^$/ { exit }
+        inpeer { for (i = 1; i < NF; i++)
+                     if ($i == field ":") { print $(i + 1); exit } }' \
+        "$tmp/innfeed.status"
+}
+feed() {
+    { funnel "$1"
+      for _ in $(seq 1 50); do
+          [ "$(leafcount)" -ge "$2" ] && break
+          sleep 0.2
+      done
+    } | inf >>"$tmp/innfeed.out" 2>&1
+}
+
+label="innfeed -C accepts its configuration"
+ok inf -C
+printf 'peer broken {\n    port-number: notanumber\n' >"$tmp/etc/innfeed-bad.conf"
+label="innfeed -C rejects a broken configuration"
+ok sh -c "! '$bin/innfeed/innfeed' -C -c '$tmp/etc/innfeed-bad.conf' >/dev/null 2>&1"
+
+leaf_up
+sent=$(funnel leaf | wc -l | tr -d ' ')
+feed leaf "$sent"
+got=$(leafcount)
+label="innfeed delivers to an IHAVE-only peer ($got/$sent)"
+ok sh -c "[ '$sent' -gt 0 ] && [ '$got' = '$sent' ]"
+
+# Not checked yet (see CLAUDE.md, innfeed): offering tinyleaf the same
+# articles again, and replaying a backlog with innfeed -x.
+
+# Streaming to innd, which already has every article.
+feed self 999
+refused=$(peerstat self refused)
+label="innfeed streams to innd (refused ${refused:-?} duplicates)"
+ok sh -c "awk '/^self\$/,/^\$/' '$tmp/innfeed.status' | grep -q 'is streaming: yes' && [ '${refused:-0}' -ge '$sent' ]"
+
+# Peer down: innfeed writes the articles to the peer's backlog file.
+leaf_down
+rm -f "$tmp/leaf"/*
+feed leaf 999
+label="innfeed backlogs articles while the peer is down"
+ok sh -c "[ -s '$tmp/spool/innfeed/leaf' ] || [ -s '$tmp/spool/innfeed/leaf.output' ]"
+
+# --- expire tools -------------------------------------------------------------
+
 
 # prunehistory overwrites a token in the history text with spaces (it then
 # lacks its field separator, which grephistory warns about), so the article

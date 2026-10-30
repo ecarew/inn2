@@ -248,6 +248,26 @@ a document so the rounds can be compared.
   `HeaderTable` with the 76 real header names (see CONVERSION_NOTES.md); keep
   it as the first test of `HeaderTable`.
 
+**innfeed (2026-10-29; deferred, to come back to)**
+- support/live-innd.sh has an innfeed section: -C on a good and a broken
+  configuration, delivery to an IHAVE-only peer (tinyleaf behind a Perl
+  listener), streaming to innd (duplicates refused), and spooling to the
+  backlog with the peer down.  Statistics come from the -S status file;
+  innfeed sends them to syslog otherwise.  Coverage not yet measured.
+- Open 1: offering tinyleaf articles it already has.  After the first
+  duplicate reply innfeed puts the connection to sleep and spools the rest
+  ("offered 1, requeued 1, spooled 3"); it does not treat tinyleaf's reply
+  as a refusal.  Find which side is wrong (tinyleaf's reply code or
+  innfeed's handling).
+- Open 2: replaying a backlog with innfeed -x after renaming
+  `<peer>.output` to `<peer>` offered nothing ("offered 0") and exited.
+- Learned: offering a peer an article that is missing from the spool makes
+  innfeed send an empty article (a bare "."), which hung tinyleaf; tests
+  must feed articles that exist.  innfeed keeps reading its channel input
+  until EOF, so the test holds the input open until delivery finishes.
+- imapfeed (imap_connection.c, a quarter of innfeed/) needs an IMAP/LMTP
+  stand-in to test.  Then the conversion: tests first, 33% gate.
+
 **authprogs (2026-10-29)**
 - auth_krb5.c is the only authprogs file not converted: it has no test, and a
   meaningful one needs a Kerberos KDC (e.g. a scratch MIT krb5kdc with a test
