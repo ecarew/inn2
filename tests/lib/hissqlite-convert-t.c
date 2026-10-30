@@ -41,7 +41,9 @@ main(void)
 
 #    define BASE ((time_t) 1600000000)
 
-static const char convert[] = "../../history/hissqlite/hissqlite-convert";
+/* The Make build's location, relative to tests/lib; HISSQLITE_CONVERT in
+   the environment overrides it (the CMake build puts the binary elsewhere). */
+static const char *convert = "../../history/hissqlite/hissqlite-convert";
 
 /* Run "<convert> <src> <dst>" with output suppressed; return its exit code,
    or -1 if it could not be run. */
@@ -74,6 +76,8 @@ main(void)
         if (access("lib/hissqlite-convert.t", F_OK) == 0)
             if (chdir("lib") < 0)
                 sysbail("cannot chdir to lib");
+    if (getenv("HISSQLITE_CONVERT") != NULL)
+        convert = getenv("HISSQLITE_CONVERT");
     if (access(convert, X_OK) != 0)
         skip_all("hissqlite-convert not built");
 
