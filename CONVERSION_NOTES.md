@@ -330,6 +330,47 @@ install macros in `Makefile.global.in` and `m4/modes.m4`;
    (writes only the file it is given; links no INN library).  Programs
    that already drop from root (expire, makehistory, ...) keep doing so.
 
+**Scripts (second pass, 2026-10-29).**  Of the 61 `.in` scripts, the
+ones that write INN's data now refuse root, with the check written out
+right after the line fixscript replaces (so `${NEWSUSER}` or
+`$INN::Config::runasuser` is set): shell `[ "$(id -u)" = 0 ]`, Perl
+`$> == 0` inside a `BEGIN` block, so it runs before the script's other
+`use` lines are compiled and a missing module cannot pre-empt it.
+- Shell: news.daily, scanlogs, innwatch, writelog, tally.control,
+  nntpsend, send-ihave, sendxbatches, controlbatch, actsyncd, expirerm.
+- Perl: send-uucp, controlchan, perl-nocem, procbatch, innreport,
+  hissqlite-util, ovsqlite-util, cnfsheadconf.
+- Already checked: rc.news (refuses anyone but news), mod-active (dies
+  unless running as news).
+- Exempt: read-only or reporting tools (innstat, cnfsstat, scanspool,
+  docheckgroups and pgpverify, whose results controlchan acts on,
+  actmerge); clients and mail (mailpost, pullnews, news2mail, sendinpaths,
+  innmail, simpleftp, delayer); inncheck (its -f mode fixes ownership
+  with chown, which needs root); innupgrade (run as root by `make update`
+  at install time, and it chowns what it writes to news); build-time
+  helpers (fixscript, sqlite-helper-gen).
+- No script calls su, sudo or a setuid function, and none is installed
+  setuid or setgid.
+
+**contrib/ (reviewed, not changed).**  Unsupported, built only on request
+and not installed (contrib/README).  No C program or script in it changes
+user IDs.  Recommendations: `auth_pass` checks `pw_passwd` from
+`getpwnam`, which on shadow-password systems is only readable by root, so
+it works only as root; use ckpasswd (shadow and PAM support) instead.
+`mlockfile` needs root or a raised `RLIMIT_MEMLOCK` for mlock; raise the
+limit for the news user rather than running it as root.  The scripts that
+modify data (fixhist, thdexpire, ovsqlite-undump, ...) should be run as
+news.
+
+**fastrm.**  Its `unlink_dangerous` branch (as root, stat each name and
+refuse directories, since root may unlink them on some systems) could no
+longer run once fastrm refused root; removed, and fastrm(8) now says it
+refuses root.
+
+**Not auditable yet.**  The CMake install rules (goal item 5) do not exist;
+when written they must keep innbind the only setuid-root file and offer
+the setgid-inews and uucp-rnews choices (see "What holds").
+
 **Test builds.**  build-live and build-cov compile in the tester's account
 as `RUNASUSER` (INN_RUNAS_USER), so an innbind from those builds would
 accept the tester; they must never be installed.

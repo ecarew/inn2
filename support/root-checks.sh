@@ -198,6 +198,38 @@ for p in backends/innxmit backends/batcher backends/buffchan \
     fi
 done
 
+# --- Scripts that write INN's data refuse root ----------------------------------
+
+# Line 2 of each script is replaced by fixscript with code that loads
+# innshellvars (shell) or INN::Config (Perl).  A minimal stand-in that sets
+# only the news user is enough to reach the check, which comes right after
+# it (in a BEGIN block in Perl, so missing modules cannot get in first).
+for p in scripts/news.daily scripts/scanlogs scripts/innwatch \
+         scripts/writelog scripts/tally.control backends/nntpsend \
+         backends/send-ihave backends/sendxbatches control/controlbatch \
+         backends/actsyncd expire/expirerm; do
+    { sed -n 1p "$root/$p.in"; echo "NEWSUSER=$runas"
+      sed 1,2d "$root/$p.in"; } >"$tmp/script"
+    out=$(sh "$tmp/script" </dev/null 2>&1)
+    if [ $? -ne 0 ] && echo "$out" | grep -q 'must not be run as root'; then
+        res "$(basename "$p") refuses root" PASS
+    else
+        res "$(basename "$p") refuses root" "FAIL ($(echo "$out" | head -1))"
+    fi
+done
+for p in backends/send-uucp control/controlchan control/perl-nocem \
+         innfeed/procbatch scripts/innreport history/hissqlite/hissqlite-util \
+         storage/ovsqlite/ovsqlite-util frontends/cnfsheadconf; do
+    { echo "BEGIN { \$INN::Config::runasuser = '$runas'; }"
+      sed 1,2d "$root/$p.in"; } >"$tmp/script"
+    out=$(perl "$tmp/script" </dev/null 2>&1)
+    if [ $? -ne 0 ] && echo "$out" | grep -q 'must not be run as root'; then
+        res "$(basename "$p") refuses root" PASS
+    else
+        res "$(basename "$p") refuses root" "FAIL ($(echo "$out" | head -1))"
+    fi
+done
+
 if [ $fail = 0 ]; then
     echo "RESULT: PASS"
 else

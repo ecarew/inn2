@@ -187,10 +187,11 @@ coverage gate)**
   exempt).  Started-as-root paths are tested by `support/root-checks.sh`:
   run by hand with sudo on macOS, and as root in Docker on Linux
   (support/docker-root-checks.sh); outputs go in the commit.
-- Still to audit: the Perl and shell scripts beyond rc.news, contrib/, and
-  the CMake install rules once they exist (goal item 5).  Follow-up:
-  fastrm's `unlink_dangerous` branch (root may unlink directories) is dead
-  now that fastrm refuses root; remove it in a cleanup commit.
+- Audit second pass done 2026-10-29: the writer scripts (11 shell, 8 Perl)
+  refuse root; contrib/ reviewed (not installed; recommendations recorded);
+  fastrm's dead root branch removed.  Remaining: audit the CMake install
+  rules when goal item 5 writes them (innbind must stay the only
+  setuid-root file).
 - Alternatives if ever wanted: systemd socket activation (innd accepts
   `sd_listen_fds` sockets), launchd sockets, Linux `CAP_NET_BIND_SERVICE`.
 
