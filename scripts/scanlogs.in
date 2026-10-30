@@ -1,6 +1,13 @@
 #! /bin/sh
 # fixscript will replace this line with code to load innshellvars
 
+# Writes INN's data, so refuse to run as root (CONVERSION_NOTES.md,
+# "Security audit").
+if [ "$(id -u)" = 0 ]; then
+    echo "$0: must not be run as root; run it as ${NEWSUSER}" >&2
+    exit 1
+fi
+
 ##  Summarize INN log files and rotate them.
 ##  Used by news.daily.
 ##

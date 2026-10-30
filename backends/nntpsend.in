@@ -1,6 +1,13 @@
 #! /bin/sh
 # fixscript will replace this line with code to load innshellvars
 
+# Writes INN's data, so refuse to run as root (CONVERSION_NOTES.md,
+# "Security audit").
+if [ "$(id -u)" = 0 ]; then
+    echo "$0: must not be run as root; run it as ${NEWSUSER}" >&2
+    exit 1
+fi
+
 ##  Send news via NNTP by running several innxmit processes in the background.
 ##  Usage:
 ##      nntpsend [-acDdlNnpr] [-P portnum] [-s size] [-T limit] [-t timeout]

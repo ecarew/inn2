@@ -1,6 +1,14 @@
 #! /usr/bin/perl
 # fixscript will replace this line with code to load INN::Config
 
+# Writes INN's data, so refuse to run as root (CONVERSION_NOTES.md,
+# "Security audit").  In a BEGIN block so it runs before the script's other
+# "use" lines are compiled.
+BEGIN {
+    die "$0: must not be run as root; run it as $INN::Config::runasuser\n"
+      if $> == 0;
+}
+
 # Author:       James Brister <brister@vix.com> -- berkeley-unix --
 # Start Date:   Thu May 16 10:32:02 1996 +0200
 #
