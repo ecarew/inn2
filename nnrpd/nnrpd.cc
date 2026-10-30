@@ -1340,6 +1340,11 @@ main(int argc, char *argv[])
         xsignal(SIGCHLD, SIG_DFL);
 
     } else {
+        /* Started by innd (already the news user) or by inetd and the like.
+           If that was as root, switch to the news user before opening
+           storage or talking to the client, as daemon mode does above. */
+        if (geteuid() == 0)
+            ensure_news_user_grp(true, true);
         if (innconf->timer != 0)
             TMRinit(TMR_MAX);
         STATstart = TMRnow_double();
