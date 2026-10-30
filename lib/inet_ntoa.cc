@@ -33,7 +33,9 @@
 #if TESTING
 #    undef inet_ntoa
 #    define inet_ntoa test_inet_ntoa
+BEGIN_DECLS
 char *test_inet_ntoa(struct in_addr);
+END_DECLS
 #endif
 
 char *
