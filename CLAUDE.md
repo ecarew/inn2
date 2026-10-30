@@ -146,6 +146,7 @@ Everything below must be done before the Autoconf/Make build is deleted.
 2. Generated sources: run `storage/buildconfig`, `history/buildconfig` and
    `lib/sqlite-helper-gen` (or CMake equivalents) from CMake with
    `add_custom_command`, instead of requiring one Make pass first.
+   **Done 2026-10-30** (see Resolved).
 3. Generated configuration and helpers: `samples/*` (inn.conf etc. via
    fixconfig) and `support/fixconfig`, `support/fixscript`.
 4. Scripts: generate the shell and Perl programs from their `.in` files
@@ -326,6 +327,15 @@ a document so the rounds can be compared.
   the forked child's output interleaving with the parent's in the pipe).
   verify-cxx.sh now prints a failing test's non-"ok" lines (`2892a1a8a`);
   read them at the next recurrence.
+  Recurred 2026-10-30 (generator series, build/), with output: tests 12-18
+  fail, all in test_network_read.  The parent accepts a connection, and the
+  first network_read on it fails; the errno check expects ETIMEDOUT (60)
+  and gets EPIPE (32).  So the accepted connection is already dead: likely
+  not the delay_writer child's but a leftover from test_timeout_ipv4, which
+  just before hammered the same port 11119 with connection attempts (that
+  run timed out at socket 1).  Unconfirmed; a fix would give each section
+  its own port or drain the old attempts.  Also unexplained: verify-cxx.sh
+  reports exit status 0 although the test prints six "not ok" lines.
 - 49 struct/enum `typedef`s with bodies left by `modernize-use-using`; convert
   to `struct X { ... };` during struct/class modernization.  Do not use
   clang-tidy 23.1.4's `-fix` for this check: it corrupts anonymous struct
@@ -349,10 +359,13 @@ a document so the rounds can be compared.
   lists them as OPTIONAL (built only on request) and CMake does not build
   them, so there is nothing to test them against; convert them once they
   are built and tested (e.g. as targets excluded from the default build).
-- Generated sources still C: `storage/methods.c`, `storage/ovmethods.c`,
-  `storage/ovsqlite/sql-*.c`, `history/hismethods.c`,
-  `history/hissqlite/hissqlite-{init,main,read}.c` (their generators: goal
-  item 2).
+- The Make build's storage/ and history/ Makefiles still name the generated
+  sources `.c` (`methods.c`, `sql-*.c`, ...); the generators now write `.cc`.
+  Those libraries were already unbuildable with Make (next item).
+- Upstream bug (found 2026-10-30, kept): history/buildconfig, run from the
+  top directory, looks for `history/cnfs` (a storage method) instead of
+  `history/hisv6`, so it only works when run from history/ (as both builds
+  do).
 - lib fallbacks vs the C++ standard library (2026-10-30): check which of
   the 22 replacement functions (asprintf, snprintf, strlcpy, strlcat,
   strcasecmp, strspn, strtok, setenv, mkstemp, pread, pwrite, fseeko,
@@ -430,6 +443,15 @@ a document so the rounds can be compared.
   (CMake-only goal items 4, 7 and 8).
 
 **Resolved**
+- 2026-10-30: CMake-only goal item 2: CMake generates the method tables
+  (methods, ovmethods, hismethods) and the ovsqlite and hissqlite SQL
+  helpers as C++ in the build tree, rerunning a generator when it or its
+  inputs change (`daa978cd1` through `f59b45640`).  The generators write
+  `.cc` and take an output directory.  CMake now needs only the three
+  headers ./configure writes.  The stale generated .c/.h files a Make build
+  had left in the source tree were moved out (they would shadow the
+  generated headers through quoted includes).  With this, every source
+  compiled into the three libraries is C++.
 - 2026-10-30: root checks rerun by the user on macOS after `4780a0b0c`,
   `a885baf6d` and the ovsqlite-server conversion (`30461df12`):
   `sudo support/root-checks.sh` RESULT: PASS, all 34 checks (lib/newsuser
