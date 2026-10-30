@@ -59,9 +59,9 @@ checked(sqlite3 *db, int status, const char *what)
 static void
 exec(sqlite3 *db, const char *sql)
 {
-    char *errmsg = NULL;
+    char *errmsg = nullptr;
 
-    if (sqlite3_exec(db, sql, NULL, NULL, &errmsg) != SQLITE_OK)
+    if (sqlite3_exec(db, sql, nullptr, nullptr, &errmsg) != SQLITE_OK)
         die("%s: %s", sql, errmsg ? errmsg : "(unknown)");
 }
 
@@ -81,7 +81,7 @@ convert_cb(void *cookie, const HASH *hash, time_t arrived, time_t posted,
     sqlite3_bind_int64(ins, 2, (sqlite3_int64) arrived);
     sqlite3_bind_int64(ins, 3, (sqlite3_int64) posted);
     sqlite3_bind_int64(ins, 4, (sqlite3_int64) expires);
-    if (token == NULL)
+    if (token == nullptr)
         sqlite3_bind_null(ins, 5);
     else
         sqlite3_bind_blob(ins, 5, token, sizeof(TOKEN), SQLITE_STATIC);
@@ -140,12 +140,12 @@ main(int argc, char *argv[])
 
     /* The created database honors the hissqlite* tunables (page size in
        particular) from inn.conf, matching what innd will later use. */
-    if (!innconf_read(NULL))
+    if (!innconf_read(nullptr))
         exit(1);
 
     /* Refuse to overwrite an existing destination: a re-run or a typo must not
        clobber or merge into a live history. */
-    finaldb = concat(dstpath, ".sqlite", (char *) NULL);
+    finaldb = concat(dstpath, ".sqlite", (char *) nullptr);
     if (stat(finaldb, &sb) == 0)
         die("destination %s already exists; refusing to overwrite", finaldb);
 
@@ -153,14 +153,14 @@ main(int argc, char *argv[])
        a crash or error never leaves a usable-but-incomplete destination (this
        is also what makes journal_mode=off below safe).  Clear any stale temp
        from a previous failed run. */
-    tempbase = concat(dstpath, ".new", (char *) NULL);
-    tempdb = concat(tempbase, ".sqlite", (char *) NULL);
+    tempbase = concat(dstpath, ".new", (char *) nullptr);
+    tempdb = concat(tempbase, ".sqlite", (char *) nullptr);
     unlink(tempdb);
 
     /* Create the temp DB with the canonical hissqlite schema, then reopen the
        raw SQLite file for a fast by-hash bulk load. */
     tmp = HISopen(tempbase, "hissqlite", HIS_CREAT | HIS_RDWR);
-    if (tmp == NULL)
+    if (tmp == nullptr)
         die("cannot create destination %s", tempdb);
     HISclose(tmp);
 
@@ -188,15 +188,15 @@ main(int argc, char *argv[])
                                "(hash, arrived, posted, expires, token)"
                                " values(?1, ?2, ?3, ?4, ?5)",
                                -1, SQLITE_PREPARE_PERSISTENT, &st.insert,
-                               NULL),
+                               nullptr),
             "prepare insert");
 
     src = HISopen(srcpath, srcmethod, HIS_RDONLY);
-    if (src == NULL)
+    if (src == nullptr)
         die("cannot open source %s (method %s)", srcpath, srcmethod);
 
     exec(st.db, "begin");
-    if (!HISwalk(src, NULL, &st, convert_cb))
+    if (!HISwalk(src, nullptr, &st, convert_cb))
         die("HISwalk failed: %s", HISerror(src));
     exec(st.db, "commit");
     HISclose(src);
