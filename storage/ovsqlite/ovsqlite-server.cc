@@ -108,10 +108,10 @@ typedef struct client_t {
 static ovsqlite_port port;
 #    endif /* ! HAVE_UNIX_DOMAIN_SOCKETS */
 
-static char *pidfile = NULL;
+static char *pidfile = nullptr;
 static int listensock = -1;
 static int maxsock = -1;
-static client_t *clients = NULL;
+static client_t *clients = nullptr;
 static size_t client_capacity, client_count;
 static fd_set read_fds, write_fds;
 static bool volatile terminating;
@@ -547,8 +547,8 @@ checkpoint_wal(void)
      * stall indefinitely, the normal timeout is ~31 years for writer
      * locks. */
     sqlite3_busy_timeout(connection, CHECKPOINT_BUSY_TIMEOUT_MS);
-    rc = sqlite3_wal_checkpoint_v2(connection, NULL,
-                                   SQLITE_CHECKPOINT_TRUNCATE, NULL, NULL);
+    rc = sqlite3_wal_checkpoint_v2(
+        connection, nullptr, SQLITE_CHECKPOINT_TRUNCATE, nullptr, nullptr);
     sqlite3_busy_timeout(connection, OVSQLITE_BUSY_TIMEOUT_MS);
     if (rc == SQLITE_OK) {
         wal_pages = 0;
@@ -581,9 +581,9 @@ open_db(void)
     if (init) {
         sql_init_t sql_init;
 
-        status =
-            sqlite3_open_v2(path, &connection,
-                            SQLITE_OPEN_READWRITE | SQLITE_OPEN_CREATE, NULL);
+        status = sqlite3_open_v2(path, &connection,
+                                 SQLITE_OPEN_READWRITE | SQLITE_OPEN_CREATE,
+                                 nullptr);
         if (status != SQLITE_OK)
             die("cannot create database: %s", connection
                                                   ? sqlite3_errmsg(connection)
@@ -606,7 +606,8 @@ open_db(void)
                 /* can't use placeholders for pragma arguments, alas */
                 snprintf(sqltext, sizeof sqltext,
                          "pragma page_size=%lu; vacuum;", pagesize);
-                status = sqlite3_exec(connection, sqltext, 0, NULL, &errmsg);
+                status = sqlite3_exec(connection, sqltext, nullptr, nullptr,
+                                      &errmsg);
                 if (status != SQLITE_OK)
                     die("cannot set pagesize: %s", errmsg);
             }
@@ -614,7 +615,7 @@ open_db(void)
         sqlite_helper_term(&sql_init_helper, (sqlite3_stmt **) &sql_init);
     } else {
         status =
-            sqlite3_open_v2(path, &connection, SQLITE_OPEN_READWRITE, NULL);
+            sqlite3_open_v2(path, &connection, SQLITE_OPEN_READWRITE, nullptr);
         if (status != SQLITE_OK)
             die("cannot open database: %s", connection
                                                 ? sqlite3_errmsg(connection)
@@ -693,7 +694,7 @@ open_db(void)
     if (cachesize) {
         snprintf(sqltext, sizeof sqltext, "pragma cache_size = -%lu;",
                  cachesize);
-        status = sqlite3_exec(connection, sqltext, 0, NULL, &errmsg);
+        status = sqlite3_exec(connection, sqltext, nullptr, nullptr, &errmsg);
         if (status != SQLITE_OK) {
             warn("cannot set cache size: %s", errmsg);
             sqlite3_free(errmsg);
@@ -701,7 +702,7 @@ open_db(void)
     }
     if (mmapsize) {
         snprintf(sqltext, sizeof sqltext, "pragma mmap_size = %lu;", mmapsize);
-        status = sqlite3_exec(connection, sqltext, 0, NULL, &errmsg);
+        status = sqlite3_exec(connection, sqltext, nullptr, nullptr, &errmsg);
         if (status != SQLITE_OK) {
             warn("cannot set mmap size: %s", errmsg);
             sqlite3_free(errmsg);
@@ -711,15 +712,15 @@ open_db(void)
         status = sqlite3_exec(connection,
                               "pragma journal_mode = 'WAL';"
                               "pragma synchronous = 'NORMAL';",
-                              0, NULL, &errmsg);
+                              nullptr, nullptr, &errmsg);
         if (status != SQLITE_OK) {
             warn("cannot enable WAL mode: %s", errmsg);
             sqlite3_free(errmsg);
         }
-        sqlite3_wal_hook(connection, wal_hook, NULL);
+        sqlite3_wal_hook(connection, wal_hook, nullptr);
     } else {
         status = sqlite3_exec(connection, "pragma journal_mode = 'PERSIST';",
-                              0, NULL, &errmsg);
+                              nullptr, nullptr, &errmsg);
         if (status != SQLITE_OK) {
             warn("cannot set PERSIST journal mode: %s", errmsg);
             sqlite3_free(errmsg);
@@ -738,14 +739,15 @@ close_db(void)
          * when direct reader processes (nnrpd) still have the database open.
          * Avoid TRUNCATE directly here as it would hang waiting for all
          * readers to disconnect (busy_timeout is ~31 years). */
-        rc = sqlite3_wal_checkpoint_v2(connection, NULL,
+        rc = sqlite3_wal_checkpoint_v2(connection, nullptr,
                                        SQLITE_CHECKPOINT_PASSIVE, &wal_frames,
                                        &checkpointed);
         if (rc == SQLITE_OK && wal_frames == checkpointed) {
             /* All frames checkpointed (no readers holding pins).
              * Safe to truncate the WAL file for a clean shutdown. */
-            sqlite3_wal_checkpoint_v2(connection, NULL,
-                                      SQLITE_CHECKPOINT_TRUNCATE, NULL, NULL);
+            sqlite3_wal_checkpoint_v2(connection, nullptr,
+                                      SQLITE_CHECKPOINT_TRUNCATE, nullptr,
+                                      nullptr);
         } else if (rc == SQLITE_OK && wal_frames > checkpointed) {
             notice("WAL checkpoint: %d/%d frames checkpointed"
                    " (readers still connected)",
@@ -762,14 +764,14 @@ close_db(void)
     }
     sqlite_helper_term(&sql_main_helper, (sqlite3_stmt **) &sql_main);
     sqlite3_close_v2(connection);
-    connection = NULL;
+    connection = nullptr;
     sqlite3_shutdown();
 #    ifdef HAVE_ZLIB
     if (use_compression) {
         inflateEnd(&inflation);
         deflateEnd(&deflation);
         buffer_free(flate);
-        flate = NULL;
+        flate = nullptr;
     }
 #    endif
 }
@@ -806,7 +808,7 @@ start_response(client_t *client, unsigned int code)
 {
     uint8_t code_r;
 
-    buffer_set(client->response, NULL, 0);
+    buffer_set(client->response, nullptr, 0);
     code_r = code;
     pack_later(client->response, 4);
     pack_now(client->response, &code_r, sizeof code_r);
@@ -838,7 +840,7 @@ begin_transaction(void)
 
     if (in_transaction)
         return;
-    gettimeofday(&now, NULL);
+    gettimeofday(&now, nullptr);
     next_commit = timeval_sum(now, transaction_time_limit);
     status = sqlite3_step(sql_main.begin);
     if (status != SQLITE_DONE)
@@ -1089,7 +1091,7 @@ do_add_group(client_t *client)
         fail_stmt();
     }
     resetclear(stmt);
-    stmt = NULL;
+    stmt = nullptr;
 
     if (!groupid) {
         stmt = sql_main.add_group;
@@ -1102,7 +1104,7 @@ do_add_group(client_t *client)
             fail_stmt();
         changes = sqlite3_changes(connection);
         resetclear(stmt);
-        stmt = NULL;
+        stmt = nullptr;
     } else {
         stmt = sql_main.update_groupinfo_flag_alias;
         sqlite3_bind_int64(stmt, 1, groupid);
@@ -1112,7 +1114,7 @@ do_add_group(client_t *client)
             fail_stmt();
         changes = sqlite3_changes(connection);
         resetclear(stmt);
-        stmt = NULL;
+        stmt = nullptr;
     }
 
     if (changes > 0)
@@ -1176,7 +1178,7 @@ do_get_groupinfo(client_t *client)
     pack_now(respbuf, flag_alias, flag_alias_len);
     finish_response(client);
     resetclear(stmt);
-    stmt = NULL;
+    stmt = nullptr;
     return;
 
     failhandling_stmt;
@@ -1207,7 +1209,7 @@ do_delete_group(client_t *client)
     if (sqlite3_changes(connection) <= 0)
         fail(response_no_group);
     resetclear(stmt);
-    stmt = NULL;
+    stmt = nullptr;
     simple_response(client, response_ok);
     commit_transaction();
     return;
@@ -1315,7 +1317,7 @@ do_list_groups(client_t *client)
 
 done:
     resetclear(stmt);
-    stmt = NULL;
+    stmt = nullptr;
     memcpy(respbuf->data + off_id, &groupid, sizeof groupid);
     memcpy(respbuf->data + off_count, &groupcount, sizeof groupcount);
     finish_response(client);
@@ -1383,7 +1385,7 @@ do_add_article(client_t *client)
     if (client->cutofflow && artnum < low)
         fail(response_old_article);
     resetclear(stmt);
-    stmt = NULL;
+    stmt = nullptr;
 
 #    ifdef HAVE_ZLIB
     /*
@@ -1421,7 +1423,7 @@ do_add_article(client_t *client)
             *--overview = 0;
             overview_len++;
         }
-        deflation.next_in = NULL;
+        deflation.next_in = nullptr;
         deflation.avail_in = 0;
         deflateReset(&deflation);
     }
@@ -1447,7 +1449,7 @@ do_add_article(client_t *client)
         fail_stmt();
     }
     resetclear(stmt);
-    stmt = NULL;
+    stmt = nullptr;
 
     stmt = sql_main.update_groupinfo_add;
     sqlite3_bind_int64(stmt, 1, groupid);
@@ -1456,7 +1458,7 @@ do_add_article(client_t *client)
     if (status != SQLITE_DONE)
         fail_stmt();
     resetclear(stmt);
-    stmt = NULL;
+    stmt = nullptr;
 
     release_savepoint();
     have_savepoint = false;
@@ -1510,7 +1512,7 @@ do_get_artinfo(client_t *client)
     pack_now(respbuf, token, sizeof(TOKEN));
     finish_response(client);
     resetclear(stmt);
-    stmt = NULL;
+    stmt = nullptr;
     return;
 
     failhandling_stmt;
@@ -1555,7 +1557,7 @@ do_delete_article(client_t *client)
     low = sqlite3_column_int64(stmt, 1);
     oldcount = sqlite3_column_int64(stmt, 3);
     resetclear(stmt);
-    stmt = NULL;
+    stmt = nullptr;
 
     savepoint();
     have_savepoint = true;
@@ -1569,7 +1571,7 @@ do_delete_article(client_t *client)
     if (sqlite3_changes(connection) <= 0)
         fail(response_no_article);
     resetclear(stmt);
-    stmt = NULL;
+    stmt = nullptr;
 
     if (oldcount < 1)
         fail(response_corrupted);
@@ -1586,7 +1588,7 @@ do_delete_article(client_t *client)
     if (status != SQLITE_DONE)
         fail_stmt();
     resetclear(stmt);
-    stmt = NULL;
+    stmt = nullptr;
 
     release_savepoint();
     have_savepoint = false;
@@ -1756,7 +1758,7 @@ do_search_group(client_t *client)
                     }
 #        endif
                     flate->left = (char *) inflation.next_out - flate->data;
-                    inflation.next_in = NULL;
+                    inflation.next_in = nullptr;
                     inflation.avail_in = 0;
                     inflateReset(&inflation);
                     if (status != Z_STREAM_END || inflation.avail_out > 0)
@@ -1788,7 +1790,7 @@ do_search_group(client_t *client)
 
 done:
     resetclear(stmt);
-    stmt = NULL;
+    stmt = nullptr;
     memcpy(respbuf->data + off_count, &count, sizeof count);
     finish_response(client);
     return;
@@ -1826,7 +1828,7 @@ do_start_expire_group(client_t *client)
     if (sqlite3_changes(connection) <= 0)
         fail(response_no_group);
     resetclear(stmt);
-    stmt = NULL;
+    stmt = nullptr;
     simple_response(client, response_ok);
     commit_transaction();
     return;
@@ -1880,7 +1882,7 @@ do_expire_group(client_t *client)
     low = sqlite3_column_int64(stmt, 1);
     oldcount = sqlite3_column_int64(stmt, 3);
     resetclear(stmt);
-    stmt = NULL;
+    stmt = nullptr;
 
     savepoint();
     have_savepoint = true;
@@ -1895,7 +1897,7 @@ do_expire_group(client_t *client)
         if (status != SQLITE_DONE)
             fail_stmt();
         resetclear(stmt);
-        stmt = NULL;
+        stmt = nullptr;
         if (artnum == low)
             hit_low = true;
     }
@@ -1909,14 +1911,14 @@ do_expire_group(client_t *client)
         fail_stmt();
     changes = sqlite3_changes(connection);
     resetclear(stmt);
-    stmt = NULL;
+    stmt = nullptr;
 
     stmt = sql_main.clear_expireart;
     status = sqlite3_step(stmt);
     if (status != SQLITE_DONE)
         fail_stmt();
     sqlite3_reset(stmt);
-    stmt = NULL;
+    stmt = nullptr;
 
     if (changes > 0) {
         if ((uint64_t) changes > oldcount)
@@ -1934,7 +1936,7 @@ do_expire_group(client_t *client)
         if (status != SQLITE_DONE)
             fail_stmt();
         resetclear(stmt);
-        stmt = NULL;
+        stmt = nullptr;
         transaction_rowcount += changes;
     }
 
@@ -1967,7 +1969,7 @@ do_finish_expire(client_t *client)
             fail_stmt();
         changes = sqlite3_changes(connection);
         resetclear(stmt);
-        stmt = NULL;
+        stmt = nullptr;
 
         if (changes > 0)
             commit_transaction();
@@ -1980,7 +1982,7 @@ do_finish_expire(client_t *client)
         fail_stmt();
     changes = sqlite3_changes(connection);
     sqlite3_reset(stmt);
-    stmt = NULL;
+    stmt = nullptr;
     if (changes > 0)
         commit_transaction();
 
@@ -1998,7 +2000,7 @@ do_finish_expire(client_t *client)
         fail_stmt();
     }
     sqlite3_reset(stmt);
-    stmt = NULL;
+    stmt = nullptr;
 
     if (!groupid) {
         simple_response(client, response_done);
@@ -2016,7 +2018,7 @@ do_finish_expire(client_t *client)
     if (status != SQLITE_DONE)
         fail_stmt();
     resetclear(stmt);
-    stmt = NULL;
+    stmt = nullptr;
 
     stmt = sql_main.expire_articles;
     sqlite3_bind_int64(stmt, 1, groupid);
@@ -2025,14 +2027,14 @@ do_finish_expire(client_t *client)
         fail_stmt();
     changes = sqlite3_changes(connection);
     resetclear(stmt);
-    stmt = NULL;
+    stmt = nullptr;
 
     stmt = sql_main.clear_expireart;
     status = sqlite3_step(stmt);
     if (status != SQLITE_DONE)
         fail_stmt();
     sqlite3_reset(stmt);
-    stmt = NULL;
+    stmt = nullptr;
 
     transaction_rowcount += changes;
     release_savepoint();
@@ -2115,7 +2117,7 @@ handle_write(client_t *client)
     if (client->flags & client_flag_term) {
         del_client(client);
     } else {
-        buffer_set(client->request, NULL, 0);
+        buffer_set(client->request, nullptr, 0);
         FD_CLR(client->sock, &write_fds);
         FD_SET(client->sock, &read_fds);
     }
@@ -2217,7 +2219,7 @@ mainloop(void)
         if (in_transaction) {
             struct timeval now;
 
-            gettimeofday(&now, NULL);
+            gettimeofday(&now, nullptr);
             delta = timeval_difference(next_commit, now);
             if (delta.tv_sec < 0 || delta.tv_usec < 0
                 || transaction_rowcount >= transaction_row_limit) {
@@ -2229,11 +2231,11 @@ mainloop(void)
             /* Idle: no active transaction.  Checkpoint WAL if needed. */
             if (use_wal && wal_pages >= (int) wal_checkpoint_threshold)
                 checkpoint_wal();
-            nap = NULL;
+            nap = nullptr;
         }
         read_fds_out = read_fds;
         write_fds_out = write_fds;
-        n = select(maxsock + 1, &read_fds_out, &write_fds_out, NULL, nap);
+        n = select(maxsock + 1, &read_fds_out, &write_fds_out, nullptr, nap);
         if (n <= 0)
             continue;
         if (FD_ISSET(listensock, &read_fds_out)) {
@@ -2292,7 +2294,7 @@ main(int argc, char **argv)
         message_handlers_warn(1, message_log_syslog_err);
         message_handlers_die(1, message_log_syslog_err);
     }
-    if (!innconf_read(NULL))
+    if (!innconf_read(nullptr))
         exit(1);
     /* Normally started by rc.news or innd as the news user.  If started as
        root, switch to the news user before opening the database. */
@@ -2312,7 +2314,7 @@ main(int argc, char **argv)
     open_db();
     make_listener();
     innconf_free(innconf);
-    innconf = NULL;
+    innconf = nullptr;
     if (setfdlimit(FD_SETSIZE) == -1)
         syswarn("cannot set file descriptor limit");
     mainloop();
