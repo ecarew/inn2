@@ -16,6 +16,9 @@
 #include "inn/wire.h"
 #include "innd.h"
 
+#include <algorithm>
+#include <array>
+
 using IOVEC = struct iovec;
 
 #define ARTIOVCNT  16
@@ -42,14 +45,51 @@ typedef struct _HEADERP {
 **  name.  We also store the header field names in the tree to avoid
 **  doing an extra indirection.
 */
-typedef struct _TREE {
-    const char *Name;
-    const ARTHEADER *Header;
-    struct _TREE *Before;
-    struct _TREE *After;
-} TREE;
+namespace {
 
-static TREE *ARTheadertree;
+/*
+**  The known header fields (ARTheaders, whose order gives the HDR__
+**  indices), sorted case-insensitively by name and searched with
+**  std::lower_bound.  Filled once by ARTsetup; nothing is allocated.  It
+**  replaces a balanced tree of the same entries (CONVERSION_NOTES.md,
+**  "Article header lookup"; support/bench/header-lookup.sh).
+*/
+class HeaderTable {
+public:
+    void
+    init()
+    {
+        for (size_t i = 0; i < sorted_.size(); i++)
+            sorted_[i] = &ARTheaders[i];
+        std::sort(sorted_.begin(), sorted_.end(), less);
+    }
+
+    const ARTHEADER *
+    find(const char *name) const
+    {
+        auto it = std::lower_bound(
+            sorted_.begin(), sorted_.end(), name,
+            [](const ARTHEADER *h, const char *n) {
+                return strcasecmp(h->Name, n) < 0;
+            });
+        if (it != sorted_.end() && strcasecmp((*it)->Name, name) == 0)
+            return *it;
+        return nullptr;
+    }
+
+private:
+    static bool
+    less(const ARTHEADER *a, const ARTHEADER *b)
+    {
+        return strcasecmp(a->Name, b->Name) < 0;
+    }
+
+    std::array<const ARTHEADER *, MAX_ARTHEADER> sorted_{};
+};
+
+HeaderTable ARTheadertable;
+
+} // namespace
 
 /*
 **  For doing the overview database, we keep a list of the header fields and
@@ -183,52 +223,11 @@ ARTreadschema(void)
 
 
 /*
-**  Build a balanced tree for the headers in subscript range [lo..hi).
-**  This only gets called once, and the tree only has about 37 entries,
-**  so we don't bother to unroll the recursion.
-*/
-static TREE *
-ARTbuildtree(const ARTHEADER **Table, int lo, int hi)
-{
-    int mid;
-    TREE *tp;
-
-    mid = lo + (hi - lo) / 2;
-    tp = xmalloc(sizeof(TREE));
-    tp->Header = Table[mid];
-    tp->Name = tp->Header->Name;
-    if (mid == lo)
-        tp->Before = nullptr;
-    else
-        tp->Before = ARTbuildtree(Table, lo, mid);
-    if (mid == hi - 1)
-        tp->After = nullptr;
-    else
-        tp->After = ARTbuildtree(Table, mid + 1, hi);
-    return tp;
-}
-
-
-/*
-**  Sorting predicate for qsort call in ARTsetup.
-*/
-static int
-ARTcompare(const void *p1, const void *p2)
-{
-    const char *n1 = ((const ARTHEADER *const *) p1)[0]->Name;
-    const char *n2 = ((const ARTHEADER *const *) p2)[0]->Name;
-
-    return strcasecmp(n1, n2);
-}
-
-
-/*
 **  Setup the article processing.
 */
 void
 ARTsetup(void)
 {
-    const ARTHEADER **table;
     const unsigned char *p;
     unsigned int i;
 
@@ -248,30 +247,22 @@ ARTsetup(void)
     hostcclass['-'] = 1;
     hostcclass['_'] = 1;
 
-    /* Build the header tree. */
-    table = xmalloc(ARRAY_SIZE(ARTheaders) * sizeof(ARTHEADER *));
-    for (i = 0; i < ARRAY_SIZE(ARTheaders); i++)
-        table[i] = &ARTheaders[i];
-    qsort(table, ARRAY_SIZE(ARTheaders), sizeof *table, ARTcompare);
-    ARTheadertree = ARTbuildtree(table, 0, ARRAY_SIZE(ARTheaders));
-    free(table);
+    /* Sort the header table for lookups by name. */
+    ARTheadertable.init();
 
     /* Set up database; ignore errors. */
     ARTreadschema();
 }
 
 
-static void
-ARTfreetree(TREE *tp)
+/*
+**  The entry in ARTheaders for a header field name, in any case, or
+**  nullptr if it is not one innd knows.
+*/
+const ARTHEADER *
+ARTfindheader(const char *name)
 {
-    TREE *next;
-
-    for (; tp != nullptr; tp = next) {
-        if (tp->Before)
-            ARTfreetree(tp->Before);
-        next = tp->After;
-        free(tp);
-    }
+    return ARTheadertable.find(name);
 }
 
 
@@ -282,7 +273,6 @@ ARTclose(void)
         free(ARTfields);
         ARTfields = nullptr;
     }
-    ARTfreetree(ARTheadertree);
 }
 
 /*
@@ -632,7 +622,6 @@ ARTcheckheader(CHANNEL *cp, int size)
     ARTDATA *data = &cp->Data;
     char *header = cp->In.data + data->CurHeader;
     HDRCONTENT *hc = cp->Data.HdrContent;
-    TREE *tp;
     const ARTHEADER *hp;
     char c, *p, *colon;
     int i;
@@ -655,22 +644,12 @@ ARTcheckheader(CHANNEL *cp, int size)
         return;
     }
 
-    /* See if this is a system header field.
-       A fairly tightly-coded binary search. */
-    c = islower((unsigned char) *header) ? toupper((unsigned char) *header)
-                                         : *header;
-    for (*colon = '\0', tp = ARTheadertree; tp;) {
-        if ((i = c - tp->Name[0]) == 0
-            && (i = strcasecmp(header, tp->Name)) == 0)
-            break;
-        if (i < 0)
-            tp = tp->Before;
-        else
-            tp = tp->After;
-    }
+    /* See if this is a system header field. */
+    *colon = '\0';
+    hp = ARTfindheader(header);
     *colon = ':';
 
-    if (tp == nullptr) {
+    if (hp == nullptr) {
         /* Not a system header field, make sure we have <word><colon><space>.
          */
         for (p = colon; --p > header;) {
@@ -688,7 +667,6 @@ ARTcheckheader(CHANNEL *cp, int size)
         }
         return;
     }
-    hp = tp->Header;
     i = hp - ARTheaders;
     /* remember to ditch if it's the Bytes header field */
     if (i == HDR__BYTES)
