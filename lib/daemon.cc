@@ -36,7 +36,9 @@
 #if TESTING
 #    undef daemon
 #    define daemon test_daemon
+BEGIN_DECLS
 int test_daemon(int, int);
+END_DECLS
 #endif
 
 int
