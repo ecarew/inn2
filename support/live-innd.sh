@@ -870,6 +870,7 @@ hash1:*:Tf,Wm,Q1/2:hash1
 hash2:*:Tf,Wm,Q2/2:hash2
 qhash1:*:Tf,Wm,Q@1/2:qhash1
 qhash2:*:Tf,Wm,Q@2/2:qhash2
+sizes:*:Tf,WmbR:sizes
 EOF
 ctl reload newsfeeds "live routing feeds"
 
@@ -911,6 +912,11 @@ ok bash -c "$(declare -f fed hashsplit); tmp='$tmp'; hashsplit hash1 hash2"
 label="hashfeed (quickhash) splits articles between Q@1/2 and Q@2/2"
 ok bash -c "$(declare -f fed hashsplit); tmp='$tmp'; hashsplit qhash1 qhash2"
 
+# A file feed of the Message-ID, size (b) and Xref group list (R): the size
+# is the overview's Bytes, the list the article's own Xref entry.
+label="a feed's b and R fields give the Bytes and the Xref groups"
+ok bash -c "line=\$(grep '^<dist-local@live.test> ' '$tmp/spool/outgoing/sizes'); ov=\$('$bin/storage/tdx-util' -o -n test.live 2>/dev/null | grep '	<dist-local@live.test>	'); n=\$(printf '%s' \"\$ov\" | cut -f1); bytes=\$(printf '%s' \"\$ov\" | cut -f7); [ -n \"\$n\" ] && [ \"\$line\" = \"<dist-local@live.test> \$bytes test.live:\$n\" ]"
+
 # The ME entry's distributions decide what innd accepts at all.
 sed -i.bak 's|^ME:\*::|ME:*/!rejectme::|' "$tmp/etc/newsfeeds"
 ctl reload newsfeeds "live ME distributions"
@@ -922,6 +928,35 @@ ctl flush ''
 sleep 1
 label="ME distributions: an unwanted one is rejected, others accepted"
 ok sh -c "grep -q 'Unwanted distribution \"rejectme\"' '$tmp/log/news' && ! '$bin/frontends/sm' \"\$('$bin/expire/grephistory' '<dist-rejectme@live.test>' 2>/dev/null)\" >/dev/null 2>&1 && '$bin/expire/grephistory' '<dist-accepted@live.test>' >/dev/null 2>&1"
+
+# --- Crossposts and long Xref header fields (ARTassignnumbers) ----------------
+#
+# 40 groups with 30-character names make an Xref longer than an article
+# line may be (MAXARTLINELENGTH, 1000), so innd folds it; each group gets
+# its own number.
+
+xgroups=
+for i in $(seq -w 1 40); do
+    g=test.crosspost.long.name.g$i
+    ctl newgroup "$g" y tester@live.test
+    xgroups=${xgroups:+$xgroups,}$g
+done
+send_art crosspost "$xgroups"
+ctl flush ''
+sleep 1
+xtok=$("$bin/expire/grephistory" '<crosspost@live.test>' 2>/dev/null)
+"$bin/frontends/sm" "$xtok" 2>/dev/null | tr -d '\r' \
+    | awk '/^Xref:/ { x = 1; print; next } x && /^[ \t]/ { print; next }
+           { x = 0 }' >"$tmp/crosspost.xref"
+label="a crosspost gets one Xref entry per group, each numbered"
+ok sh -c "[ \$(grep -o 'test\.crosspost\.long\.name\.g[0-9]*:[0-9][0-9]*' '$tmp/crosspost.xref' | sort -u | wc -l) -eq 40 ]"
+label="a long Xref header field is folded at 1000 characters"
+# Two or more lines, each at most 998 characters (1000 with its CRLF), and
+# every line after the first a continuation (starting with a space).
+ok awk 'length > 998 { bad = 1 } NR > 1 && !/^ / { bad = 1 }
+        END { exit bad || NR < 2 }' "$tmp/crosspost.xref"
+label="the overview's Xref unfolds the long header field"
+ok sh -c "'$bin/storage/tdx-util' -o -n test.crosspost.long.name.g40 2>/dev/null | grep -q 'Xref: [^	]*g01:[0-9]*[^	]* test.crosspost.long.name.g40:[0-9]'"
 
 # --- Malformed articles (ARTclean) ---------------------------------------------
 #
