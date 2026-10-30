@@ -106,10 +106,14 @@ printf '%s 0000000000 0000000001 y\n' control control.cancel junk \
 printf '%s\tlive test group\n' control control.cancel junk test.live \
     >"$tmp/db/newsgroups"
 : >"$tmp/db/history"
-"$bin/expire/makedbz" -i -o >"$tmp/makedbz.log" 2>&1 \
-    && res "scratch installation created" PASS \
-    || { res "scratch installation created" "FAIL (makedbz)"; \
-         cat "$tmp/makedbz.log"; echo "RESULT: FAIL"; exit 1; }
+if "$bin/expire/makedbz" -i -o >"$tmp/makedbz.log" 2>&1; then
+    res "scratch installation created" PASS
+else
+    res "scratch installation created" "FAIL (makedbz)"
+    cat "$tmp/makedbz.log"
+    echo "RESULT: FAIL"
+    exit 1
+fi
 
 # --- Start innd ---------------------------------------------------------------
 
@@ -155,8 +159,11 @@ for i in $(seq 1 $narts); do
     "$bin/expire/grephistory" "<live$i@live.test>" >/dev/null 2>&1 \
         && found=$((found + 1))
 done
-[ $found = $narts ] && res "rnews articles reach history" "PASS ($found/$narts)" \
-    || res "rnews articles reach history" "FAIL ($found/$narts)"
+if [ $found = $narts ]; then
+    res "rnews articles reach history" "PASS ($found/$narts)"
+else
+    res "rnews articles reach history" "FAIL ($found/$narts)"
+fi
 
 stored=0
 for i in $(seq 1 $narts); do
@@ -164,27 +171,38 @@ for i in $(seq 1 $narts); do
     "$bin/frontends/sm" "$tok" 2>/dev/null | grep -q "live test article $i\." \
         && stored=$((stored + 1))
 done
-[ $stored = $narts ] && res "articles retrievable from spool (sm)" "PASS ($stored/$narts)" \
-    || res "articles retrievable from spool (sm)" "FAIL ($stored/$narts)"
+if [ $stored = $narts ]; then
+    res "articles retrievable from spool (sm)" "PASS ($stored/$narts)"
+else
+    res "articles retrievable from spool (sm)" "FAIL ($stored/$narts)"
+fi
 
 fed=$(grep -c '<live[0-9]*@live.test>' "$tmp/spool/outgoing/filefeed" 2>/dev/null)
-[ "${fed:-0}" = $narts ] && res "file feed records each article" "PASS ($fed/$narts)" \
-    || res "file feed records each article" "FAIL (${fed:-0}/$narts)"
+if [ "${fed:-0}" = $narts ]; then
+    res "file feed records each article" "PASS ($fed/$narts)"
+else
+    res "file feed records each article" "FAIL (${fed:-0}/$narts)"
+fi
 
 # Same batch again: innd must refuse every article as a duplicate.
 "$bin/frontends/rnews" <"$batch" >>"$tmp/rnews.log" 2>&1
 ctl flush ''
 sleep 1
 fed2=$(grep -c '<live[0-9]*@live.test>' "$tmp/spool/outgoing/filefeed" 2>/dev/null)
-[ "${fed2:-0}" = $narts ] && res "duplicates refused" PASS \
-    || res "duplicates refused" "FAIL (feed now ${fed2:-0})"
+if [ "${fed2:-0}" = $narts ]; then
+    res "duplicates refused" PASS
+else
+    res "duplicates refused" "FAIL (feed now ${fed2:-0})"
+fi
 
 # --- Control channel (ctlinnd) ------------------------------------------------
 
 ctl newgroup test.created y tester@live.test
-grep -q '^test.created ' "$tmp/db/active" \
-    && res "ctlinnd newgroup adds to active" PASS \
-    || res "ctlinnd newgroup adds to active" FAIL
+if grep -q '^test.created ' "$tmp/db/active"; then
+    res "ctlinnd newgroup adds to active" PASS
+else
+    res "ctlinnd newgroup adds to active" FAIL
+fi
 ctl throttle "live test"
 mode_t=$("$bin/frontends/ctlinnd" mode 2>&1 | head -1)
 ctl go "live test"
@@ -196,9 +214,11 @@ else
     res "ctlinnd throttle and go" "FAIL ($mode_t | $mode_r)"
 fi
 ctl rmgroup test.created
-grep -q '^test.created ' "$tmp/db/active" \
-    && res "ctlinnd rmgroup removes from active" FAIL \
-    || res "ctlinnd rmgroup removes from active" PASS
+if grep -q '^test.created ' "$tmp/db/active"; then
+    res "ctlinnd rmgroup removes from active" FAIL
+else
+    res "ctlinnd rmgroup removes from active" PASS
+fi
 
 # --- More ctlinnd commands ----------------------------------------------------
 
@@ -692,6 +712,7 @@ funnel() {
         [ -n "$t" ] && echo "$t <innfeed$i@live.test> $1"
     done
 }
+# shellcheck disable=SC2120  # extra innfeed options, when a caller has any
 inf() { "$bin/innfeed/innfeed" -c "$tmp/etc/innfeed.conf" \
             -l "$tmp/innfeed.log" -S "$tmp/innfeed.status" \
             -p "$tmp/run/innfeed-test.pid" "$@"; }
@@ -699,7 +720,7 @@ inf() { "$bin/innfeed/innfeed" -c "$tmp/etc/innfeed.conf" \
 # and keep the input open until the leaf spool holds WANT articles (or ten
 # seconds pass), so innfeed has time to connect and send before its input
 # ends; at the end of input it flushes, sends QUIT and exits.
-leafcount() { ls "$tmp/leaf" | wc -l | tr -d ' '; }
+leafcount() { find "$tmp/leaf" -type f | wc -l | tr -d ' '; }
 # peerstat PEER FIELD: a counter from the status file innfeed rewrites at
 # exit (its statistics otherwise go to syslog).
 peerstat() {
