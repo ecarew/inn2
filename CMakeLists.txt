@@ -2,6 +2,19 @@ cmake_minimum_required(VERSION 4.3)
 
 project(INN VERSION 2.8.0 LANGUAGES C CXX)
 
+# Compile through ccache when it is installed: verification rebuilds several
+# build directories for every commit.  A launcher given on the command line
+# (-DCMAKE_CXX_COMPILER_LAUNCHER=...) takes precedence.
+find_program(INN_CCACHE_PROGRAM ccache)
+option(INN_CCACHE "Compile through ccache if it is installed" ON)
+if(INN_CCACHE AND INN_CCACHE_PROGRAM)
+    foreach(lang C CXX)
+        if(NOT CMAKE_${lang}_COMPILER_LAUNCHER)
+            set(CMAKE_${lang}_COMPILER_LAUNCHER ${INN_CCACHE_PROGRAM})
+        endif()
+    endforeach()
+endif()
+
 # INN keeps assert() enabled in all builds, as configure's "-g -O2" does, but
 # CMake's Release-type defaults add -DNDEBUG.  Strip it.
 foreach(lang C CXX)
