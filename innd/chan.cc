@@ -340,30 +340,6 @@ CHANclose_nntp(CHANNEL *cp, const char *name)
                cp->Refused, cp->Rejected, cp->Duplicate, cp->Size,
                cp->DuplicateSize, cp->RejectSize);
     }
-    if (cp->Data.Newsgroups.Data != nullptr) {
-        free(cp->Data.Newsgroups.Data);
-        cp->Data.Newsgroups.Data = nullptr;
-    }
-    if (cp->Data.Newsgroups.List != nullptr) {
-        free(cp->Data.Newsgroups.List);
-        cp->Data.Newsgroups.List = nullptr;
-    }
-    if (cp->Data.Distribution.Data != nullptr) {
-        free(cp->Data.Distribution.Data);
-        cp->Data.Distribution.Data = nullptr;
-    }
-    if (cp->Data.Distribution.List != nullptr) {
-        free(cp->Data.Distribution.List);
-        cp->Data.Distribution.List = nullptr;
-    }
-    if (cp->Data.Path.Data != nullptr) {
-        free(cp->Data.Path.Data);
-        cp->Data.Path.Data = nullptr;
-    }
-    if (cp->Data.Path.List != nullptr) {
-        free(cp->Data.Path.List);
-        cp->Data.Path.List = nullptr;
-    }
     if (cp->Data.Overview.size != 0) {
         free(cp->Data.Overview.data);
         cp->Data.Overview.data = nullptr;

@@ -10,6 +10,7 @@
 #include "inn/innconf.h"
 #include "inn/ov.h"
 #include "innd.h"
+#include "article.h"
 
 
 /*
@@ -279,31 +280,22 @@ NGfind(const char *Name)
 **  number of newsgroups.  ' ' and '\t' are dropped when copying.
 */
 int
-NGsplit(char *p, int size, LISTBUFFER *list)
+NGsplit(char *p, int size, WordList &list)
 {
-    char **gp, *q;
+    char *q;
     int i;
 
-    /* setup buffer */
-    SetupListBuffer(size, list);
-
     /* loop over and copy */
-    for (i = 0, q = list->Data, gp = list->List; *p; p++, *q++ = '\0') {
+    for (i = 0, q = list.start(size); *p; p++, *q++ = '\0') {
         /* skip leading separators and white spaces. */
         for (; *p && (NG_ISSEP(*p) || ISWHITE(*p)); p++)
             continue;
         if (*p == '\0')
             break;
 
-        if (i == list->ListLength) {
-            list->ListLength += DEFAULTNGBOXSIZE;
-            list->List =
-                xrealloc(list->List, list->ListLength * sizeof(char *));
-            gp = &list->List[i];
-        }
         /* mark the start of the newsgroup, move to the end of it while copying
          */
-        for (*gp++ = q, i++; *p && !NG_ISSEP(*p) && !ISWHITE(*p);) {
+        for (list.add(q), i++; *p && !NG_ISSEP(*p) && !ISWHITE(*p);) {
             if (*p == ':')
                 /* reject if ':' is included */
                 return 0;
@@ -314,12 +306,7 @@ NGsplit(char *p, int size, LISTBUFFER *list)
             break;
     }
     *q = '\0';
-    if (i == list->ListLength) {
-        list->ListLength += DEFAULTNGBOXSIZE;
-        list->List = xrealloc(list->List, list->ListLength * sizeof(char *));
-        gp = &list->List[i];
-    }
-    *gp = nullptr;
+    list.finish();
     return i;
 }
 

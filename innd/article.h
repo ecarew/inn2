@@ -13,8 +13,74 @@
 #ifndef INND_ARTICLE_H
 #define INND_ARTICLE_H 1
 
+#include "portable/macros.h"
+
+#include <cstddef>
 #include <string>
 #include <string_view>
+#include <vector>
+
+/*
+**  The words of a header field body (newsgroups, path hosts,
+**  distributions), each a NUL-terminated copy in text, and the
+**  null-terminated list of pointers to them that innd's C-style code
+**  walks.  Replaces LISTBUFFER; its storage is kept between articles.
+**
+**  A parser calls start(size) for a size-byte field, writes the words into
+**  the returned buffer (at most size + 1 bytes, each word followed by a
+**  NUL), add()s a pointer to each, and calls finish().
+*/
+class WordList {
+public:
+    WordList() = default;
+    WordList(const WordList &) = delete;
+    WordList &operator=(const WordList &) = delete;
+
+    char *
+    start(size_t size)
+    {
+        if (text_.size() < size + 1)
+            text_.resize(size + 1);
+        words_.clear();
+        return text_.data();
+    }
+
+    void
+    add(char *word)
+    {
+        words_.push_back(word);
+    }
+
+    void
+    finish()
+    {
+        words_.push_back(nullptr);
+    }
+
+    /* The null-terminated list, or nullptr if nothing has been parsed. */
+    char **
+    list()
+    {
+        return words_.empty() ? nullptr : words_.data();
+    }
+
+    void
+    clear()
+    {
+        words_.clear();
+    }
+
+private:
+    std::string text_;
+    std::vector<char *> words_;
+};
+
+/* Split a Newsgroups header field body (ng.cc).  C linkage like the rest of
+   innd's functions (verify-cxx.sh checks innd's exports), though only C++
+   can call it. */
+BEGIN_DECLS
+int NGsplit(char *p, int size, WordList &list);
+END_DECLS
 
 struct ArticleState {
     ArticleState() = default;
@@ -34,6 +100,12 @@ struct ArticleState {
 
     /* The Lines value for overview (ARTmakeoverview). */
     std::string lines;
+
+    /* The Newsgroups, Path and Distribution header field bodies, split
+       (NGsplit, ARTparsepath, ARTparsedist). */
+    WordList newsgroups;
+    WordList path;
+    WordList distribution;
 
     /* The digits of the Bytes header field. */
     std::string_view
@@ -55,6 +127,9 @@ struct ArticleState {
         replic = {};
         bytes.clear();
         lines.clear();
+        newsgroups.clear();
+        path.clear();
+        distribution.clear();
     }
 };
 

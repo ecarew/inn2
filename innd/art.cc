@@ -225,6 +225,19 @@ ARTreadschema(void)
 
 
 /*
+**  The channel's ArticleState.  CHANcreate gives every channel one; create
+**  it here for channels built some other way (the tests build their own).
+*/
+static ArticleState &
+ARTstate(CHANNEL *cp)
+{
+    if (cp->Data.State == nullptr)
+        cp->Data.State = new ArticleState;
+    return *cp->Data.State;
+}
+
+
+/*
 **  Setup the article processing.
 */
 void
@@ -320,41 +333,27 @@ ARTlog(const ARTDATA *data, char code, const char *text)
 **  Parse a Path line, splitting it up into NULL-terminated array of strings.
 */
 static int
-ARTparsepath(const char *p, int size, LISTBUFFER *list)
+ARTparsepath(const char *p, int size, WordList &list)
 {
     int i;
-    char *q, **hp;
-
-    /* setup buffer */
-    SetupListBuffer(size, list);
+    char *q;
 
     /* loop over text and copy */
-    for (i = 0, q = list->Data, hp = list->List; *p; p++, *q++ = '\0') {
+    for (i = 0, q = list.start(size); *p; p++, *q++ = '\0') {
         /* skip leading separators. */
         for (; *p && !ARThostchar(*p) && ISWHITE(*p); p++)
             continue;
         if (*p == '\0')
             break;
 
-        if (list->ListLength <= i) {
-            list->ListLength += DEFAULTNGBOXSIZE;
-            list->List =
-                xrealloc(list->List, list->ListLength * sizeof(char *));
-            hp = &list->List[i];
-        }
         /* mark the start of the host, move to the end of it while copying */
-        for (*hp++ = q, i++; *p && ARThostchar(*p) && !ISWHITE(*p);)
+        for (list.add(q), i++; *p && ARThostchar(*p) && !ISWHITE(*p);)
             *q++ = *p++;
         if (*p == '\0')
             break;
     }
     *q = '\0';
-    if (i == list->ListLength) {
-        list->ListLength += DEFAULTNGBOXSIZE;
-        list->List = xrealloc(list->List, list->ListLength * sizeof(char *));
-        hp = &list->List[i];
-    }
-    *hp = nullptr;
+    list.finish();
     return i;
 }
 
@@ -390,9 +389,9 @@ ARTlogreject(CHANNEL *cp, const char *text)
             HDR_LASTCHAR_SAVE(HDR__PATH);
             HDR_PARSE_START(HDR__PATH);
             hopcount =
-                ARTparsepath(HDR(HDR__PATH), HDR_LEN(HDR__PATH), &data->Path);
+                ARTparsepath(HDR(HDR__PATH), HDR_LEN(HDR__PATH), data->State->path);
             HDR_PARSE_END(HDR__PATH);
-            hops = data->Path.List;
+            hops = data->State->path.list();
             if (hopcount > 0 && hops != nullptr && hops[0] != nullptr) {
                 data->Feedsite = hops[0];
             } else {
@@ -732,8 +731,7 @@ ARTprepare(CHANNEL *cp)
     data->BytesHeader = nullptr;
     data->Feedsite = "?";
     data->FeedsiteLength = strlen(data->Feedsite);
-    if (data->State != nullptr)
-        data->State->clear();
+    ARTstate(cp).clear();
     *cp->Error = '\0';
 }
 
@@ -948,6 +946,7 @@ ARTparsebody(CHANNEL *cp)
 void
 ARTparse(CHANNEL *cp)
 {
+    ARTstate(cp);
     if (cp->State == CSgetheader)
         ARTparseheader(cp);
     else
@@ -1086,7 +1085,7 @@ ARTclean(ARTDATA *data, char *buff, bool ihave)
     /* Assumes Newsgroups header field is required header field. */
     if ((data->Groupcount =
              NGsplit(HDR(HDR__NEWSGROUPS), HDR_LEN(HDR__NEWSGROUPS),
-                     &data->Newsgroups))
+                     data->State->newsgroups))
         == 0) {
         TMRstop(TMR_ARTCLEAN);
         sprintf(buff, "%d Unwanted character in \"Newsgroups\" header field",
@@ -1308,42 +1307,26 @@ ARTcontrol(ARTDATA *data, char *Control, CHANNEL *cp UNUSED)
 **  strings.
 */
 static void
-ARTparsedist(const char *p, int size, LISTBUFFER *list)
+ARTparsedist(const char *p, int size, WordList &list)
 {
-    int i;
-    char *q, **dp;
-
-    /* setup buffer */
-    SetupListBuffer(size, list);
+    char *q;
 
     /* loop over text and copy */
-    for (i = 0, q = list->Data, dp = list->List; *p; p++, *q++ = '\0') {
+    for (q = list.start(size); *p; p++, *q++ = '\0') {
         /* skip leading separators. */
         for (; *p && ((*p == ',') || ISWHITE(*p)); p++)
             continue;
         if (*p == '\0')
             break;
 
-        if (list->ListLength <= i) {
-            list->ListLength += DEFAULTNGBOXSIZE;
-            list->List =
-                xrealloc(list->List, list->ListLength * sizeof(char *));
-            dp = &list->List[i];
-        }
         /* mark the start of the host, move to the end of it while copying */
-        for (*dp++ = q, i++; *p && (*p != ',') && !ISWHITE(*p);)
+        for (list.add(q); *p && (*p != ',') && !ISWHITE(*p);)
             *q++ = *p++;
         if (*p == '\0')
             break;
     }
     *q = '\0';
-    if (i == list->ListLength) {
-        list->ListLength += DEFAULTNGBOXSIZE;
-        list->List = xrealloc(list->List, list->ListLength * sizeof(char *));
-        dp = &list->List[i];
-    }
-    *dp = nullptr;
-    return;
+    list.finish();
 }
 
 /*
@@ -2014,7 +1997,7 @@ ARTpost(CHANNEL *cp)
         ARTreject(REJECT_OTHER, cp);
         return false;
     }
-    hopcount = ARTparsepath(HDR(HDR__PATH), HDR_LEN(HDR__PATH), &data->Path);
+    hopcount = ARTparsepath(HDR(HDR__PATH), HDR_LEN(HDR__PATH), data->State->path);
     if (hopcount == 0) {
         snprintf(cp->Error, sizeof(cp->Error), "%d Illegal path element",
                  ihave ? NNTP_FAIL_IHAVE_REJECT : NNTP_FAIL_TAKETHIS_REJECT);
@@ -2024,7 +2007,7 @@ ARTpost(CHANNEL *cp)
         ARTreject(REJECT_OTHER, cp);
         return false;
     }
-    hops = data->Path.List;
+    hops = data->State->path.list();
 
     if (innconf->logipaddr) {
         if (strcmp("0.0.0.0", data->Feedsite) == 0
@@ -2168,16 +2151,16 @@ ARTpost(CHANNEL *cp)
             return false;
         } else {
             ARTparsedist(HDR(HDR__DISTRIBUTION), HDR_LEN(HDR__DISTRIBUTION),
-                         &data->Distribution);
-            if (ME.Distributions && data->Distribution.List != nullptr
-                && *data->Distribution.List != nullptr
-                && !DISTwantany(ME.Distributions, data->Distribution.List)) {
+                         data->State->distribution);
+            if (ME.Distributions && data->State->distribution.list() != nullptr
+                && *data->State->distribution.list() != nullptr
+                && !DISTwantany(ME.Distributions, data->State->distribution.list())) {
                 snprintf(cp->Error, sizeof(cp->Error),
                          "%d Unwanted distribution \"%s\"",
                          ihave ? NNTP_FAIL_IHAVE_REJECT
                                : NNTP_FAIL_TAKETHIS_REJECT,
-                         MaxLength(data->Distribution.List[0],
-                                   data->Distribution.List[0]));
+                         MaxLength(data->State->distribution.list()[0],
+                                   data->State->distribution.list()[0]));
                 ARTlog(data, ART_REJECT, cp->Error);
                 if (innconf->remembertrash && (Mode == OMrunning)
                     && !InndHisRemember(HDR(HDR__MESSAGE_ID), data->Posted))
@@ -2188,7 +2171,7 @@ ARTpost(CHANNEL *cp)
             }
         }
     } else {
-        ARTparsedist("", 0, &data->Distribution);
+        ARTparsedist("", 0, data->State->distribution);
     }
 
     for (i = nSites, sp = Sites; --i >= 0; sp++) {
@@ -2225,7 +2208,7 @@ ARTpost(CHANNEL *cp)
         data->Followcount = data->Groupcount;
     }
 
-    groups = data->Newsgroups.List;
+    groups = data->State->newsgroups.list();
     /* Parse the Control header field body. */
     LikeNewgroup = false;
     if (HDR_FOUND(HDR__CONTROL)) {
@@ -2448,15 +2431,15 @@ ARTpost(CHANNEL *cp)
                 snprintf(
                     cp->Error, sizeof(cp->Error), "%d Can't post to \"%s\"",
                     ihave ? NNTP_FAIL_IHAVE_REJECT : NNTP_FAIL_TAKETHIS_REJECT,
-                    MaxLength(data->Newsgroups.List[0],
-                              data->Newsgroups.List[0]));
+                    MaxLength(data->State->newsgroups.list()[0],
+                              data->State->newsgroups.list()[0]));
             } else {
                 snprintf(cp->Error, sizeof(cp->Error),
                          "%d Unwanted newsgroup \"%s\"",
                          ihave ? NNTP_FAIL_IHAVE_REJECT
                                : NNTP_FAIL_TAKETHIS_REJECT,
-                         MaxLength(data->Newsgroups.List[0],
-                                   data->Newsgroups.List[0]));
+                         MaxLength(data->State->newsgroups.list()[0],
+                                   data->State->newsgroups.list()[0]));
             }
 
             if (innconf->logtrash) {
@@ -2619,7 +2602,7 @@ ARTpost(CHANNEL *cp)
     }
 
     if (NeedStoredGroup)
-        data->StoredGroupLength = strlen(data->Newsgroups.List[0]);
+        data->StoredGroupLength = strlen(data->State->newsgroups.list()[0]);
 
     /* Start logging, then propagate the article. */
     if (data->CRwithoutLF > 0 || data->LFwithoutCR > 0) {
@@ -2663,7 +2646,7 @@ ARTpost(CHANNEL *cp)
         }
     }
 
-    ARTpropagate(data, (const char **) hops, hopcount, data->Distribution.List,
+    ARTpropagate(data, (const char **) hops, hopcount, data->State->distribution.list(),
                  ControlStore, OverviewCreated, Filtered);
 
     /* Now that it's been written, process the control message.  This has

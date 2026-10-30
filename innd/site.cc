@@ -425,7 +425,7 @@ SITEwritefromflags(SITE *sp, ARTDATA *Data)
         case FEED_STOREDGROUP:
             if (Dirty)
                 buffer_append(bp, ITEMSEP, strlen(ITEMSEP));
-            buffer_append(bp, Data->Newsgroups.List[0],
+            buffer_append(bp, Data->State->newsgroups.list()[0],
                           Data->StoredGroupLength);
             break;
         case FEED_TIMERECEIVED:

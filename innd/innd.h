@@ -84,13 +84,6 @@ typedef enum _OPERATINGMODE {
 } OPERATINGMODE;
 
 
-typedef struct _LISTBUFFER {
-    char *Data;
-    int DataLength;
-    char **List;
-    int ListLength;
-} LISTBUFFER;
-
 /*
 **  What program to handoff a connection to.
 */
@@ -244,13 +237,10 @@ typedef struct _ARTDATA {
                                 received article */
     char TokenText[(sizeof(TOKEN) * 2) + 3];
     /* token of stored article */
-    LISTBUFFER Newsgroups;   /* newsgroup list */
     int Groupcount;          /* number of newsgroups */
     int Followcount;         /* number of folloup to newsgroups */
-    LISTBUFFER Distribution; /* distribution list */
     const char *Feedsite;    /* who gives me this article */
     int FeedsiteLength;      /* length of Feedsite */
-    LISTBUFFER Path;         /* path name list */
     int StoredGroupLength;   /* 1st newsgroup name in Xref */
     HASH *Hash;              /* Message-ID hash */
     struct buffer Headers;   /* buffer for headers which will be sent
@@ -409,8 +399,6 @@ typedef struct _CHANNEL {
     ARTDATA Data;      /* used for processing article */
     char Name[SMBUF];  /* storage for CHANname */
 } CHANNEL;
-
-#define DEFAULTNGBOXSIZE 64
 
 /*
 **  Different types of rejected articles.
@@ -696,7 +684,6 @@ extern void InndHisLogStats(void);
 extern bool FormatLong(char *p, unsigned long value, int width);
 extern bool NeedShell(char *p, const char **av, const char **end);
 extern char **CommaSplit(char *text);
-extern void SetupListBuffer(int size, LISTBUFFER *list);
 extern char *MaxLength(const char *p, const char *q);
 extern pid_t Spawn(int niceval, int fd0, int fd1, int fd2, char *const av[]);
 extern void CleanupAndExit(int status, const char *why)
@@ -774,7 +761,6 @@ extern void KEYgenerate(HDRCONTENT *, const char *, size_t);
 extern void LCclose(void);
 extern void LCsetup(void);
 
-extern int NGsplit(char *p, int size, LISTBUFFER *list);
 extern NEWSGROUP *NGfind(const char *Name);
 extern void NGclose(void);
 extern CHANNEL *NCcreate(int fd, bool MustAuthorize, bool IsLocal);
