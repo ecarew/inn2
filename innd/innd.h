@@ -721,6 +721,7 @@ extern void ARTcancel(const ARTDATA *data, const char *MessageID,
                       bool Trusted);
 extern void ARTclose(void);
 extern void ARTsetup(void);
+extern const ARTHEADER *ARTfindheader(const char *name);
 extern void ARTprepare(CHANNEL *cp);
 extern void ARTparse(CHANNEL *cp);
 extern void ARTlogreject(CHANNEL *cp, const char *text);
