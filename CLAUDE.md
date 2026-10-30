@@ -168,8 +168,6 @@ from `cmake-build`; record method and raw numbers so rounds compare.
   repeated, with the spread.
 
 **Refactoring candidates (after the conversion)**
-- nnrpd `ARTpost` returns a `const char *` that `CMDpost` truncates through a
-  `const_cast`; return an owned string.
 - Retire ovdb and Berkeley DB, after a one-way ovdb → ovsqlite converter
   with no Berkeley DB dependency (CONVERSION_NOTES.md, "Retiring ovdb").
 - lib fallbacks vs the C++ standard library and Boost; pread/pwrite in
