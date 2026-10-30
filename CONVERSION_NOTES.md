@@ -686,12 +686,11 @@ the per-article loop):
    python.cc, the tests) get NUL-terminated copies or accessors.  It is on
    the hot path, so benchmark it.
 
-**Open question for the user:** Boost (proposed 2026-10-30, see "Boost in
-the design").  Boost.Container's `static_vector` (fixed capacity, no heap)
+**Boost** (required, see "Boost in the design"): Boost.Container's `static_vector` (fixed capacity, no heap)
 and `small_vector` (inline first, then heap) fit steps 4 and 5 better
 than `std::vector` where innd today uses fixed buffers.
 
-### Boost in the design (proposed by the user 2026-10-30; not yet decided)
+### Boost in the design (decided 2026-10-30: required)
 
 The user wants Boost formally in the design, for breadth beyond the standard
 library and for its review history; Boost libraries also tend to move into
@@ -713,11 +712,15 @@ Most useful here (header-only unless noted):
   in place of hand-written case-insensitive code.
 - Boost.Iostreams and Boost.Asio: see "Positioned file I/O" (pread/pwrite).
 
-To decide: required or optional dependency (optional means keeping both
-code paths); the minimum version (Homebrew has 1.92, Debian trixie
-libboost-dev 1.83); header-only components only, at first, so there is
-nothing to link; found with CMake's `find_package(Boost CONFIG)` (the old
-FindBoost module is gone in CMake 4).
+**Decided (the user, 2026-10-30): Boost is a required dependency.**  The
+user has used it for years on several platforms; an optional dependency
+would mean keeping two code paths wherever it is used.  Version 1.92 or
+later (the user's choice; Homebrew has 1.92, Debian trixie's libboost-dev
+only 1.83).  Header-only
+libraries only, at first, so nothing is linked: the root CMakeLists.txt
+requires it with `find_package(Boost 1.92 REQUIRED CONFIG)` (CMake 4 has
+no FindBoost module) and code that uses it links `Boost::headers`.  A
+compiled Boost library needs its own decision.
 
 ### Memory management: from C to standard C++ (goal, 2026-10-29)
 
