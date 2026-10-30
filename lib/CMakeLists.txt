@@ -1,9 +1,25 @@
 # libinn — general support library.
-# setproctitle.cc, sd-daemon.cc and reallocarray.cc are the replacement functions
-# configure selected (LIBOBJS) for macOS; other platforms may need others.
+
+# Replacement functions, compiled only where the system lacks the original
+# (configure's AC_REPLACE_FUNCS and LIBOBJS; the checks are in
+# cmake/InnConfigure.cmake).  sd-daemon.cc stands in for libsystemd, which
+# the CMake build does not use yet (HAVE_SD_NOTIFY).
+set(replacements)
+foreach(func asprintf daemon getaddrinfo getnameinfo getpagesize inet_aton
+        inet_ntoa inet_ntop mkstemp pread pwrite reallocarray setenv seteuid
+        setproctitle snprintf strcasecmp strlcat strlcpy strspn strtok symlink)
+    string(TOUPPER "HAVE_${func}" have)
+    if(NOT ${have})
+        list(APPEND replacements ${func}.cc)
+    endif()
+endforeach()
+if(NOT HAVE_SD_NOTIFY)
+    list(APPEND replacements sd-daemon.cc)
+endif()
+message(STATUS "libinn replacement functions: ${replacements}")
 
 add_library(inn STATIC
-    setproctitle.cc sd-daemon.cc reallocarray.cc
+    ${replacements}
     argparse.cc artnumber.cc bloom.cc buffer.cc cleanfrom.cc clientactive.cc
     clientlib.cc commands.cc concat.cc conffile.cc confparse.cc date.cc dbz.cc
     defdist.cc dispatch.cc fdflag.cc fdlimit.cc getfqdn.cc getmodaddr.cc hash.cc
