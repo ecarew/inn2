@@ -10,7 +10,10 @@
 root=$(cd "$(dirname "$0")/.." && pwd)
 data=$root/support/verify-cxx
 build=$root/${1:-build}
-tmp=$(mktemp -d "${TMPDIR:-/tmp}/verify-cxx.XXXXXX")
+# Under /tmp rather than $TMPDIR: macOS's $TMPDIR is long enough that
+# ovsqlite-integ's server socket path in the sandbox passes the 104-byte
+# sun_path limit, and ovsqlite-server truncates it silently.
+tmp=$(mktemp -d /tmp/verify-cxx.XXXXXX)
 trap 'rm -rf "$tmp"' EXIT
 fail=0
 
@@ -250,7 +253,7 @@ tests=(
     overview/api
     overview/buffindexed:overview/overview:-DOVTYPE=buffindexed
     overview/tradindexed:overview/overview:-DOVTYPE=tradindexed
-    overview/ovsqlite
+    overview/ovsqlite overview/ovsqlite-integ.t
     overview/tdx-group overview/tdx-util.t overview/xref
     storage/caf storage/cancel-tombstone storage/methods
     storage/makehistory.t storage/sm.t storage/archive.t
@@ -280,6 +283,20 @@ done
 # lib/hissqlite-convert runs the program by this path; its default is the
 # Make build's location.
 export HISSQLITE_CONVERT=$build/history/hissqlite-convert
+
+# overview/ovsqlite-integ.t starts this server and runs two helper programs,
+# which it expects as overview/ovsqlite-{write,read}.t beside it, and reads
+# ../include/config.h to see whether SQLite is built in.
+export OVSQLITE_SERVER=$build/storage/ovsqlite-server
+ln -s "$build/include" "$sb/include"
+mkdir -p "$sb/tests/overview"
+for h in write read; do
+    cc "${cflags[@]}" -c "tests/overview/ovsqlite-$h-t.c" -o "$tmp/ovsqlite-$h.o" \
+        2>>"$tmp/ovsqlite-helpers.log" \
+    && c++ "$tmp/ovsqlite-$h.o" "${tap[@]}" "${libs[@]}" -lm "${sanflags[@]}" \
+           "${covlink[@]}" -o "$sb/tests/overview/ovsqlite-$h.t" \
+           2>>"$tmp/ovsqlite-helpers.log"
+done
 
 base_cflags=("${cflags[@]}")
 for spec in "${tests[@]}"; do
