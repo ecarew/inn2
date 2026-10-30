@@ -612,6 +612,113 @@ tests/innd/headers-t.c tests (every name in four cases, 14 non-names).
 `TREE`, `ARTbuildtree`, `ARTcompare` and `ARTfreetree` are gone.  The
 first-letter shortcut the tree used was dropped with it.
 
+### innd's in-memory article: ARTDATA and HDRCONTENT in C++ (plan, 2026-10-30)
+
+Step 1 of the plan the user approved: who touches what, and what is
+tested, before any field changes.  No code has changed yet.
+
+**Today.**  innd never allocates per article: each `CHANNEL` embeds an
+`ARTDATA` (innd/innd.h) that is reused for every article on the channel,
+and the article is parsed in place in the channel's input buffer.
+`HDRCONTENT` (one per known header field, `HdrContent[MAX_ARTHEADER]`)
+points into that buffer with a length; `LastChar` keeps the byte the
+parser overwrites with `'\0'` (`HDR_PARSE_START`/`HDR_PARSE_END`) so a value
+can be used as a C string.  `ARTDATA` has 36 fields: offsets, times,
+counters, fixed `char[SMBUF]` buffers (LinesBuffer, Bytes), heap strings
+with separate length/capacity fields (Xref/XrefLength/XrefBufLength,
+Replic/ReplicLength), three `LISTBUFFER`s (Newsgroups, Distribution, Path:
+a data buffer plus a pointer list, each with a length) and two libinn
+`struct buffer`s (Headers, Overview).
+
+**Who touches it** (accesses through an `ARTDATA`, 2026-10-30): about 300,
+some 80% in art.cc; the rest in chan.cc (the `LISTBUFFER`s, Xref, Overview:
+it frees them), site.cc (what feeds write: times, Bytes, TokenText,
+Replic, Feedsite, the flags), cc.cc (times; it also builds two `ARTDATA`s
+on the stack, for ctlinnd cancel and addhist) and nc.cc (Body, CurHeader,
+BytesHeader).  perl.cc and python.cc read header values only through the
+`HDR()` macros (5 uses); keywords.cc reads `HDRCONTENT` directly (9).
+
+**Constraints found.**
+1. innd.h is compiled as C by tests/innd/artparse-t.c, chan-t.c and
+   headers-t.c (tests stay C).  They read only `Data.Body` of the article,
+   but they build whole `CHANNEL`s, by copying a zeroed C struct.  A C++
+   member (a `std::string`) in `ARTDATA` would stop them compiling.
+2. innd itself does the same: chan.cc fills its `xmalloc`ed channel table
+   with `*cp = CHANnull`, valid only for a plain C struct.
+3. Cleanup is by hand: chan.cc frees each `LISTBUFFER`'s pieces and the
+   Xref buffer; art.cc resets fields per article (ARTprepare).
+
+**Coverage of the paths involved** (build-cov, verify-cxx.sh plus
+live-innd.sh, region coverage, 2026-10-30): art.cc 43.5% overall.  Well
+covered: ARTparse, ARTprepare, ARTcheckheader 84%, ARTparseheader 89%,
+ARTcontrol 94%.  Partly: ARTassignnumbers 63%, ARTparsepath 62%,
+ARTmakeoverview 57%, ARTstore 47%, ARTclean 47%, ARTpropagate 42%,
+ARTpost 31%.  Not at all: ARTxrefslave (the Xref of xrefslave mode),
+ARTparsedist 8% and DISTwanted/DISTwantany (the Distribution list),
+ARTpoisongroup, ARTsendthegroup, the hashfeed functions.  So the Xref and
+Distribution fields, two of the first candidates, are the least tested.
+
+**Design.**  Keep `ARTDATA` a C struct for the C code and tests, and move
+the C++ state behind it: an opaque `struct ArticleState *` member (C sees an
+incomplete type) to a C++ class owned by the channel, created and destroyed
+in chan.cc (CHANcreate/CHANclose) instead of being copied in with
+`CHANnull`.  Fields move into the class one group at a time; C code and
+the tests reach them through small `extern "C"` accessors where needed.
+Per-article reset becomes one `clear()`, and frees go away.
+
+**Steps** (each its own verified commits; each measured with the live test,
+and with a parse benchmark like support/bench/header-lookup if it touches
+the per-article loop):
+1. Done: this analysis.
+2. Tests first: xrefslave mode (ARTxrefslave), distributions
+   (Distribution header against newsfeeds `/dist` lists), poison and
+   hashfeed paths, more of ARTclean and ARTpost.  Each untested path a step
+   below touches gets a test before the step.
+3. Add `ArticleState`, empty, with its creation and destruction in chan.cc
+   and cc.cc's stack uses.
+4. Generated strings: Xref (and its length/capacity), Replic, LinesBuffer,
+   Bytes to `std::string` in `ArticleState`.
+5. The `LISTBUFFER`s (Newsgroups, Distribution, Path) to
+   `std::vector<std::string_view>` over one owned buffer; then Headers and
+   Overview from `struct buffer` to `std::string`.
+6. `HDRCONTENT` last: values as `std::string_view` into the input buffer,
+   so the in-place `'\0'` and `LastChar` restore go; C users (perl.cc,
+   python.cc, the tests) get NUL-terminated copies or accessors.  It is on
+   the hot path, so benchmark it.
+
+**Open question for the user:** Boost (proposed 2026-10-30, see "Boost in
+the design").  Boost.Container's `static_vector` (fixed capacity, no heap)
+and `small_vector` (inline first, then heap) fit steps 4 and 5 better
+than `std::vector` where innd today uses fixed buffers.
+
+### Boost in the design (proposed by the user 2026-10-30; not yet decided)
+
+The user wants Boost formally in the design, for breadth beyond the standard
+library and for its review history; Boost libraries also tend to move into
+the standard later (Boost.Filesystem, Optional, Variant and Asio's
+networking work all did).  Proposed order of preference: the standard
+library, then Boost, then INN's own code.
+
+Most useful here (header-only unless noted):
+- Boost.Container: `static_vector` (fixed capacity, no heap: innd's
+  `char[SMBUF]` and `MAX_ARTHEADER` arrays), `small_vector` (newsgroup and
+  path lists, usually short), `flat_map`/`flat_set` (sorted-vector maps;
+  `std::flat_map` is C++23).
+- Boost.Intrusive: lists and trees whose nodes live inside the objects
+  (no allocation per element), for INN's pointer-linked structures: the
+  channel and site lists, the history cache, overview indexes.  Its trees
+  (red-black, AVL, splay, scapegoat) are what to compare INN's own trees
+  with.
+- Boost.Algorithm: `iequals`/`ilexicographical_compare` and string helpers,
+  in place of hand-written case-insensitive code.
+- Boost.Iostreams and Boost.Asio: see "Positioned file I/O" (pread/pwrite).
+
+To decide: required or optional dependency (optional means keeping both
+code paths); the minimum version (Homebrew has 1.92, Debian trixie
+libboost-dev 1.83); header-only components only, at first, so there is
+nothing to link; found with CMake's `find_package(Boost CONFIG)` (the old
+FindBoost module is gone in CMake 4).
+
 ### Memory management: from C to standard C++ (goal, 2026-10-29)
 
 **Goal.**  Move C-style memory management to standard C++ practice wherever
