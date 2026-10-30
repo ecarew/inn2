@@ -1,13 +1,30 @@
-# libinnhist — history database.  hismethods.c and hissqlite/*.c (except
-# hissqlite.c) are generated; see the root CMakeLists.txt.
+# libinnhist — history database.
+
+# Generated sources, written to the build tree: buildconfig scans the method
+# subdirectories' hismethod.config files for the history method table
+# (hismethods.cc/.h; it also writes Make.methods for the Make build, unused
+# here), and hissqlite's SQL becomes C++ through sqlite-helper-gen (root
+# CMakeLists.txt).
+file(GLOB history_method_configs CONFIGURE_DEPENDS
+    ${CMAKE_CURRENT_SOURCE_DIR}/*/hismethod.config)
+add_custom_command(
+    OUTPUT hismethods.cc hismethods.h Make.methods
+    COMMAND ${PERL_EXECUTABLE} buildconfig.in ${CMAKE_CURRENT_BINARY_DIR}
+    WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
+    DEPENDS buildconfig.in ${history_method_configs}
+    COMMENT "Generating the history method table"
+    VERBATIM)
+inn_sqlite_helper(hissqlite_sources
+    hissqlite/hissqlite-init.sql hissqlite/hissqlite-main.sql
+    hissqlite/hissqlite-read.sql)
 
 add_library(innhist STATIC
-    his.cc hismethods.c
-    hissqlite/hissqlite-init.c hissqlite/hissqlite-main.c
-    hissqlite/hissqlite-read.c hissqlite/hissqlite.cc
+    his.cc ${CMAKE_CURRENT_BINARY_DIR}/hismethods.cc
+    ${hissqlite_sources} hissqlite/hissqlite.cc
     hisv6/hisv6.cc
 )
-target_include_directories(innhist PRIVATE ${CMAKE_CURRENT_SOURCE_DIR})
+target_include_directories(innhist PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}
+    ${CMAKE_CURRENT_BINARY_DIR} ${CMAKE_CURRENT_BINARY_DIR}/hissqlite)
 target_link_libraries(innhist PUBLIC INN::inn SQLite3::SQLite3)
 # hisv6 uses libinnstorage's token functions (IsToken, TextToToken,
 # TokenToText), and libinnstorage's expire.cc uses HISlookup: the two
