@@ -37,7 +37,9 @@
 #if TESTING
 #    undef mkstemp
 #    define mkstemp test_mkstemp
+BEGIN_DECLS
 int test_mkstemp(char *);
+END_DECLS
 #endif
 
 /* Pick the longest available integer type. */
@@ -48,7 +50,7 @@ typedef unsigned long long_int_type;
 #endif
 
 int
-mkstemp(char *template)
+mkstemp(char *tmpl)
 {
     static const char letters[] =
         "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789";
@@ -62,12 +64,12 @@ mkstemp(char *template)
      * Make sure we have a valid template and initialize p to point at the
      * beginning of the template portion of the string.
      */
-    length = strlen(template);
+    length = strlen(tmpl);
     if (length < 6) {
         errno = EINVAL;
         return -1;
     }
-    XXXXXX = template + length - 6;
+    XXXXXX = tmpl + length - 6;
     if (strcmp(XXXXXX, "XXXXXX") != 0) {
         errno = EINVAL;
         return -1;
@@ -86,7 +88,7 @@ mkstemp(char *template)
             XXXXXX[i] = letters[working % 62];
             working /= 62;
         }
-        fd = open(template, O_RDWR | O_CREAT | O_EXCL, 0600);
+        fd = open(tmpl, O_RDWR | O_CREAT | O_EXCL, 0600);
         if (fd >= 0 || (errno != EEXIST && errno != EISDIR))
             return fd;
 
