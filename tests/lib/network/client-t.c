@@ -213,9 +213,14 @@ test_create_ipv4(const char *source)
 
 
 /*
- * Test connect timeouts using IPv4.  Bring up a server on port 11119 on the
+ * Test connect timeouts using IPv4.  Bring up a server on port 11120 on the
  * loopback address and test connections to it.  The server only accepts one
  * connection at a time, so a subsequent connection will time out.
+ *
+ * The port is not 11119, which the other tests use: the connection attempts
+ * this test leaves behind appear to make the next test's accepted connection
+ * fail with EPIPE under load (CONVERSION_NOTES.md, "Flaky test:
+ * lib/network/client").
  */
 static void
 test_timeout_ipv4(void)
@@ -232,7 +237,7 @@ test_timeout_ipv4(void)
      * connection attempts to succeed than the backlog size.  We'll therefore
      * have to hammer this server with connections to try to get it to fail.
      */
-    fd = network_bind_ipv4(SOCK_STREAM, "127.0.0.1", 11119);
+    fd = network_bind_ipv4(SOCK_STREAM, "127.0.0.1", 11120);
     if (fd == INVALID_SOCKET)
         sysbail("cannot create or bind socket");
     if (listen(fd, 1) < 0)
@@ -253,7 +258,7 @@ test_timeout_ipv4(void)
 
     /* In the parent.  Open that first connection. */
     socket_close(fd);
-    c = network_connect_host("127.0.0.1", 11119, NULL, 1);
+    c = network_connect_host("127.0.0.1", 11120, NULL, 1);
     ok(c != INVALID_SOCKET, "Timeout: first connection worked");
 
     /*
@@ -262,7 +267,7 @@ test_timeout_ipv4(void)
      */
     alarm(20);
     for (conn = 0; conn < ARRAY_SIZE(block); conn++) {
-        block[conn] = network_connect_host("127.0.0.1", 11119, NULL, 1);
+        block[conn] = network_connect_host("127.0.0.1", 11120, NULL, 1);
         if (block[conn] == INVALID_SOCKET)
             break;
     }
