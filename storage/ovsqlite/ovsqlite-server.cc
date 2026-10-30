@@ -186,7 +186,7 @@ catcher(int sig UNUSED)
 }
 
 static void
-catch_signals(void)
+catch_signals()
 {
     xsignal_norestart(SIGINT, catcher);
     xsignal_norestart(SIGTERM, catcher);
@@ -265,7 +265,7 @@ del_client(client_t *client)
 #    ifdef HAVE_UNIX_DOMAIN_SOCKETS
 
 static void
-make_unix_listener(void)
+make_unix_listener()
 {
     char *path;
     struct sockaddr_un sa;
@@ -327,7 +327,7 @@ make_inet_listener(void)
 #    endif /* ! HAVE_UNIX_DOMAIN_SOCKETS */
 
 static void
-make_listener(void)
+make_listener()
 {
 #    ifdef HAVE_UNIX_DOMAIN_SOCKETS
     make_unix_listener();
@@ -342,7 +342,7 @@ make_listener(void)
 }
 
 static void
-make_pidfile(void)
+make_pidfile()
 {
     FILE *pf;
 
@@ -357,7 +357,7 @@ make_pidfile(void)
 }
 
 static void
-load_config(void)
+load_config()
 {
     char *path;
     struct config_group *top;
@@ -536,7 +536,7 @@ wal_hook(void *data UNUSED, sqlite3 *db UNUSED, const char *dbname UNUSED,
 }
 
 static void
-checkpoint_wal(void)
+checkpoint_wal()
 {
     int rc;
 
@@ -564,7 +564,7 @@ checkpoint_wal(void)
 }
 
 static void
-open_db(void)
+open_db()
 {
     char *path;
     struct stat sb;
@@ -729,7 +729,7 @@ open_db(void)
 }
 
 static void
-close_db(void)
+close_db()
 {
     if (use_wal) {
         int wal_frames, checkpointed;
@@ -777,7 +777,7 @@ close_db(void)
 }
 
 static void
-close_sockets(void)
+close_sockets()
 {
     size_t ix;
 
@@ -833,7 +833,7 @@ simple_response(client_t *client, unsigned int code)
 }
 
 static void
-begin_transaction(void)
+begin_transaction()
 {
     struct timeval now;
     int status;
@@ -851,7 +851,7 @@ begin_transaction(void)
 }
 
 static void
-commit_transaction(void)
+commit_transaction()
 {
     int status;
 
@@ -867,7 +867,7 @@ commit_transaction(void)
 }
 
 static void
-savepoint(void)
+savepoint()
 {
     int status;
 
@@ -879,7 +879,7 @@ savepoint(void)
 }
 
 static void
-release_savepoint(void)
+release_savepoint()
 {
     int status;
 
@@ -891,7 +891,7 @@ release_savepoint(void)
 }
 
 static void
-rollback_savepoint(void)
+rollback_savepoint()
 {
     int status;
 
@@ -2190,7 +2190,7 @@ handle_read(client_t *client)
 }
 
 static void
-handle_accept(void)
+handle_accept()
 {
 #    ifdef HAVE_UNIX_DOMAIN_SOCKETS
     struct sockaddr_un sa;
@@ -2208,7 +2208,7 @@ handle_accept(void)
 }
 
 static void
-mainloop(void)
+mainloop()
 {
     while (!terminating) {
         fd_set read_fds_out, write_fds_out;
@@ -2257,7 +2257,7 @@ mainloop(void)
 }
 
 __attribute__((__noreturn__)) static void
-usage(void)
+usage()
 {
     fputs("Usage: ovsqlite-server [ -d ]\n", stderr);
     exit(1);
