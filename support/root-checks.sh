@@ -80,7 +80,7 @@ export INNCONF=$s/etc/inn.conf
 sed -e "s|/usr/local/news|$s|g" -e "s|^pathhistory:.*|pathhistory: $s/db|" \
     -e "s|^ovmethod:.*|ovmethod: ovsqlite|" \
     -e "s|^nnrpdpostport:.*|nnrpdpostport: 1|" \
-    "$root/samples/inn.conf" >"$INNCONF"
+    "$build/samples/inn.conf" >"$INNCONF"
 cat >>"$INNCONF" <<EOF
 runasuser:  $runas
 runasgroup: $runasgroup
