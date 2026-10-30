@@ -218,6 +218,8 @@ articles run in support/live-innd.sh.  Applied so far:
 | backends | 41.5% | live-innd.sh backends section (`29f5c80e4`) |
 | frontends | 50.4% | live-innd.sh frontends sections (`0380c3f5e`) |
 | storage: tdx-util | 81.9% | tests/overview/tdx-util.t (`6106a013f`) |
+| history: hissqlite-convert | 73.2% | lib/hissqlite-convert (`68cfe3743`, `d4d043362`) |
+| storage: ovsqlite-server | 39.1% | overview/ovsqlite-integ.t (`9ef23a564`, `fb394e519`) |
 
 tdx-util.t builds its overview from a tradspool spool and a history
 written by makehistory.  Its inn.conf must use absolute paths: makehistory
@@ -734,3 +736,14 @@ I/O.
    the bigger reason).
 3. Switch to a standard facility if one is adopted.
 Option 1 is the cheapest first step and does not rule out 2 or 3.
+
+### Lesson from the audit regression (2026-10-30)
+
+`ensure_news_user_grp()` is not a "drop root if root" call: when the
+process is not root it dies unless it already is the news user and group.
+Code that only means to drop root must guard it with `geteuid() == 0`.
+`af8441c0f` did not, for ovsqlite-server and innfeed, and the live harness
+could not notice because build-live makes the tester the news user.  The
+fix is `4780a0b0c` and `a885baf6d`.  When adding a privilege drop, also
+run the program as a non-root user who is not the news user (verify-cxx.sh's
+build/ is configured with the default news user, so its tests do this).
