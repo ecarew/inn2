@@ -45,8 +45,10 @@
 #if TESTING
 #    undef getnameinfo
 #    define getnameinfo test_getnameinfo
+BEGIN_DECLS
 int test_getnameinfo(const struct sockaddr *, socklen_t, char *, socklen_t,
                      char *, socklen_t, int);
+END_DECLS
 
 /* Linux doesn't provide EAI_OVERFLOW, so make up our own for testing. */
 #    ifndef EAI_OVERFLOW
