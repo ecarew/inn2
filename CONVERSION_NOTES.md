@@ -733,9 +733,33 @@ the per-article loop):
    feed file entry is split over two lines (upstream behavior, unchanged).
    SMstore takes `ARTHANDLE::groups` as `char *` though it only reads it,
    so art.cc passes `replic` through a `const_cast` at that C boundary.
-5. The `LISTBUFFER`s (Newsgroups, Distribution, Path) to
-   `std::vector<std::string_view>` over one owned buffer; then Headers and
-   Overview from `struct buffer` to `std::string`.
+5. The `LISTBUFFER`s (Newsgroups, Distribution, Path) done 2026-10-30;
+   Headers and Overview from `struct buffer` to `std::string` next (5b).
+
+   Not `std::vector<std::string_view>` as planned: every consumer of the
+   lists (NGfind, DISTwanted, ListHas, SITEwantsgroup, ARTpropagate,
+   uwildmat) walks a null-terminated `char **` of C strings.  So
+   `WordList` (innd/article.h) owns the words as NUL-terminated copies in
+   a `std::string` and the pointers in a `std::vector<char *>`, ending in
+   nullptr, and keeps both between articles; consumers are unchanged.
+   Views would mean rewriting every consumer at once.  Not Boost's
+   `small_vector` either: the storage is reused across a channel's
+   articles, so after the first few there are no allocations, and the
+   standard library covers it (CPP_GUIDELINES: standard library first).
+   Gone: `LISTBUFFER`, `SetupListBuffer`, `DEFAULTNGBOXSIZE`, the
+   `xrealloc` growth in ARTparsepath, ARTparsedist and NGsplit, and six
+   `free` blocks in chan.cc.  Code lines: art.cc -55 +38, ng.cc -16 +6,
+   chan.cc -24, util.cc -15, innd.h -12, article.h +52.  ARTstate() creates
+   a channel's ArticleState if it has none (the C tests build channels
+   themselves).  NGsplit is declared in article.h, keeping C linkage;
+   SetupListBuffer is listed in support/verify-cxx/innd-retired.txt, the
+   new record of innd exports removed on purpose, which verify-cxx.sh
+   leaves out of the export check and checks are gone.
+
+   Checked the same before and after (live test, dates and generated
+   Message-IDs masked): the stored data, all 12 outgoing feed files, and
+   the news log's list of sites for each article.  The live test passes
+   under ASan/UBSan.
 6. `HDRCONTENT` last: values as `std::string_view` into the input buffer,
    so the in-place `'\0'` and `LastChar` restore go; C users (perl.cc,
    python.cc, the tests) get NUL-terminated copies or accessors.  It is on
