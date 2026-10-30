@@ -57,8 +57,18 @@ list) are in [CLAUDE.md](CLAUDE.md).  This file is the rationale.
 
 - **CMake only, no Autoconf/Make in the end state** (2026-10-28).  The
   remaining steps are listed in CLAUDE.md, "Goal: CMake-only build".  Until
-  they are done, CMake reuses `./configure`'s `config.h` and the generated
-  sources from one Make pass (`dc61d2089`).
+  they are done, CMake reuses `./configure`'s `config.h` (`dc61d2089`).
+- **Generated sources are C++ and built by CMake** (2026-10-30,
+  `daa978cd1`-`f59b45640`).  The three Perl generators were changed to
+  write `.cc` and to take an output directory, rather than having CMake
+  compile `.c` output as C++, so each file's name says what it is.  CMake
+  runs them from their `.in` files with `add_custom_command` (fixscript
+  changes only the `#!` line), writes the output to the build tree, and
+  declares the generator and its inputs (every `method.config`,
+  `ovmethod.config`, `hismethod.config` and `.sql` file) as dependencies.
+  Generated output must not be left in the source tree: a quoted
+  `#include "methods.h"` finds a stale copy beside the including file
+  before the build tree's.
 - **C++20**, not C++23.  Neither standard is fully implemented in Clang/libc++
   (Apple's toolchain), but C++20 has only a few remaining gaps, none of
   which INN++ needs.  libc++ lists C++20 papers still partial: calendars and
