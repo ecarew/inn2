@@ -768,6 +768,13 @@ are added here.
 
 Open items from CLAUDE.md, moved here when done, newest first.
 
+- 2026-10-30: Refactoring candidate, expire/expireover boundary: closed,
+  no change.  An article with no Expires header is kept while its arrival
+  time is at or after the cutoff (`when >= Default`, expire/expire.cc and
+  storage/expire.cc), so a 0-day class keeps articles that arrived in the
+  same whole second expire started.  This is upstream INN's behavior;
+  changing it would change what existing sites expire, so it stays unless
+  the INN community agrees otherwise.  live-innd.sh keeps its `sleep 2`.
 - 2026-10-30: CMake-only goal item 1: CMake runs its own platform checks
   (`cmake/InnConfigure.cmake`, with configure's run tests in
   `cmake/checks/`) and writes config.h from `include/config.h.cmake.in`,
