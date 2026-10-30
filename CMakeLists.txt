@@ -113,6 +113,10 @@ include_directories(${CMAKE_SOURCE_DIR}/include)
 
 find_package(ZLIB REQUIRED)
 find_package(SQLite3 REQUIRED)
+# Boost is required, header-only libraries so far (CLAUDE.md, "Build
+# system"); code that uses it links Boost::headers.  CMake 4 has no
+# FindBoost module: this uses Boost's own BoostConfig.cmake.
+find_package(Boost 1.92 REQUIRED CONFIG)
 
 # Optional-feature hooks consumed by innd/CMakeLists.txt; empty until those
 # features (Perl, Python, systemd, canlock) are wired into CMake.
