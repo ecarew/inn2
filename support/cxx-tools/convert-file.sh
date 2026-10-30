@@ -20,8 +20,10 @@ d=$1 r=$2
 
 git mv "$d/$r.c" "$d/$r.cc" || exit 1
 esc=$(printf '%s' "$r" | sed 's|/|\\/|g; s|\.|\\.|g')
-sed -i '' -E "s/(^|[[:space:](])$esc\.c([[:space:]]|\)|$)/\1$esc.cc\2/g" \
-    "$d/CMakeLists.txt"
+# (sed -i takes different arguments in BSD and GNU sed; write a new copy.)
+sed -E "s/(^|[[:space:](])$esc\.c([[:space:]]|\)|$)/\1$esc.cc\2/g" \
+    "$d/CMakeLists.txt" >"$d/CMakeLists.txt.new" \
+    && mv "$d/CMakeLists.txt.new" "$d/CMakeLists.txt"
 grep -qE "(^|[[:space:](])$esc\.cc([[:space:]]|\)|$)" "$d/CMakeLists.txt" \
     || echo "WARNING: $d/CMakeLists.txt does not list $r.cc; update it by hand"
 
