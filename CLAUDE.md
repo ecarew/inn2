@@ -63,11 +63,14 @@ commits only if they pass; it refuses if unstaged changes remain.
 
 | Build | Configure | Run |
 |---|---|---|
-| build | `cmake -S . -B build` | `support/verify-cxx.sh` |
+| build | `cmake -S . -B build -G Ninja` | `support/verify-cxx.sh` |
 | build-live | `-DINN_RUNAS_USER=$(id -un) -DINN_RUNAS_GROUP=$(id -gn)` | `support/live-innd.sh build-live` (commit-verified.sh runs it) |
 | build-asan | `-DINN_SANITIZE=ON -DCMAKE_BUILD_TYPE=Debug` | `support/verify-cxx.sh build-asan`, for memory-handling changes |
 | build-cov | `-DINN_COVERAGE=ON -DCMAKE_BUILD_TYPE=Debug` | `verify-cxx.sh build-cov`, then `live-innd.sh build-cov`, then `support/coverage-report.sh build-cov [--html]` |
 
+- Configure every build directory with `-G Ninja` (the other rows add their
+  options to the first row's command).  ccache is used automatically when
+  installed (`INN_CCACHE`).
 - Never set INN_RUNAS_* on a production build.
 - Root paths: `sudo support/root-checks.sh` (the user runs it on macOS;
   output goes in the commit), and `support/docker-root-checks.sh` on Linux
