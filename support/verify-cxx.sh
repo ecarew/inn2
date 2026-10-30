@@ -270,6 +270,7 @@ tests=(
     nnrpd/auth-ext:::nnrpd/auth-ext
     innd/artparse:::tests/innd/fakeinnd,@lib/CMakeFiles/inn_canlock.dir/canlock.cc.o,@lib/CMakeFiles/inn_perl.dir/perl.cc.o
     innd/chan:::tests/innd/fakeinnd,@lib/CMakeFiles/inn_canlock.dir/canlock.cc.o,@lib/CMakeFiles/inn_perl.dir/perl.cc.o
+    innd/headers:::tests/innd/fakeinnd,@lib/CMakeFiles/inn_canlock.dir/canlock.cc.o,@lib/CMakeFiles/inn_perl.dir/perl.cc.o
     expire/tombstone expire/tombstone-e2e.t
     expire/tombstone-hisexpire
     overview/api
