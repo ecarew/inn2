@@ -393,12 +393,14 @@ SITEwritefromflags(SITE *sp, ARTDATA *Data)
         case FEED_HEADERS:
             if (Dirty)
                 buffer_append(bp, NL, strlen(NL));
-            buffer_append(bp, Data->Headers.data, Data->Headers.left);
+            buffer_append(bp, Data->State->headers.data(),
+                          Data->State->headers.size());
             break;
         case FEED_OVERVIEW:
             if (Dirty)
                 buffer_append(bp, ITEMSEP, strlen(ITEMSEP));
-            buffer_append(bp, Data->Overview.data, Data->Overview.left);
+            buffer_append(bp, Data->State->overview.data(),
+                          Data->State->overview.size());
             break;
         case FEED_PATH:
             if (Dirty)

@@ -123,22 +123,19 @@ static void ARTparsebody(CHANNEL *cp);
 
 
 /*
-**  Trim '\r' from buffer.
+**  Turn each CRLF in s into LF.
 */
 static void
-buffer_trimcr(struct buffer *bp)
+trimcr(std::string &s)
 {
-    char *p, *q;
-    int trimmed = 0;
+    size_t out = 0;
 
-    for (p = q = bp->data; p < bp->data + bp->left; p++) {
-        if (*p == '\r' && p + 1 < bp->data + bp->left && p[1] == '\n') {
-            trimmed++;
+    for (size_t in = 0; in < s.size(); in++) {
+        if (s[in] == '\r' && in + 1 < s.size() && s[in + 1] == '\n')
             continue;
-        }
-        *q++ = *p;
+        s[out++] = s[in];
     }
-    bp->left -= trimmed;
+    s.resize(out);
 }
 
 /*
@@ -436,7 +433,7 @@ ARTstore(CHANNEL *cp, bool filtered)
     int i, j, iovcnt = 0;
     long headersize = 0;
     TOKEN result;
-    struct buffer *headers = &data->Headers;
+    std::string &headers = data->State->headers;
     struct iovec iov[ARTIOVCNT];
     HEADERP hp[HPCOUNT];
 
@@ -593,18 +590,18 @@ ARTstore(CHANNEL *cp, bool filtered)
         return result;
 
     /* Add the data. */
-    buffer_resize(headers, headersize);
-    buffer_set(headers, data->State->bytes.data(), data->State->bytes.size());
+    headers.reserve(data->State->bytes.size() + headersize);
+    headers.assign(data->State->bytes);
     for (i = 0; i < iovcnt; i++) {
         if (i + 1 == iovcnt)
-            buffer_append(headers, static_cast<const char *>(iov[i].iov_base),
-                          Article->data + data->Body
-                              - static_cast<char *>(iov[i].iov_base));
+            headers.append(static_cast<const char *>(iov[i].iov_base),
+                           Article->data + data->Body
+                               - static_cast<char *>(iov[i].iov_base));
         else
-            buffer_append(headers, static_cast<const char *>(iov[i].iov_base),
-                          iov[i].iov_len);
+            headers.append(static_cast<const char *>(iov[i].iov_base),
+                           iov[i].iov_len);
     }
-    buffer_trimcr(headers);
+    trimcr(headers);
 
     return result;
 }
@@ -1826,11 +1823,10 @@ ARTmakeoverview(CHANNEL *cp)
     HDRCONTENT *hc = data->HdrContent;
     static char SEP[] = "\t";
     static char COLONSPACE[] = ": ";
-    struct buffer *overview = &data->Overview;
+    std::string &overview = data->State->overview;
     ARTOVERFIELD *fp;
     const ARTHEADER *hp;
     const char *p;
-    char *q;
     int i, j, len;
     bool keywords_generated = false;
 
@@ -1840,13 +1836,13 @@ ARTmakeoverview(CHANNEL *cp)
     }
 
     /* Setup. */
-    buffer_resize(overview, MED_BUFFER);
-    buffer_set(overview, "", 0);
+    overview.clear();
+    overview.reserve(MED_BUFFER);
 
     /* Write the data, a field at a time. */
     for (fp = ARTfields; fp->Header; fp++) {
         if (fp != ARTfields)
-            buffer_append(overview, SEP, strlen(SEP));
+            overview += SEP;
         hp = fp->Header;
         j = hp - ARTheaders;
 
@@ -1897,22 +1893,19 @@ ARTmakeoverview(CHANNEL *cp)
         if (len == 0)
             continue;
         if (fp->NeedHeader) {
-            buffer_append(overview, hp->Name, hp->Size);
-            buffer_append(overview, COLONSPACE, strlen(COLONSPACE));
+            overview.append(hp->Name, hp->Size);
+            overview += COLONSPACE;
         }
-        if (overview->used + overview->left + len > overview->size)
-            buffer_resize(overview, overview->size + len);
-        for (i = 0, q = overview->data + overview->left; i < len; p++, i++) {
+        for (i = 0; i < len; p++, i++) {
             if (*p == '\r' && i < len - 1 && p[1] == '\n') {
                 p++;
                 i++;
                 continue;
             }
             if (*p == '\0' || *p == '\t' || *p == '\n' || *p == '\r')
-                *q++ = ' ';
+                overview += ' ';
             else
-                *q++ = *p;
-            overview->left++;
+                overview += *p;
         }
 
         /* Patch the old keywords back in. */
@@ -2564,8 +2557,9 @@ ARTpost(CHANNEL *cp)
         ARTmakeoverview(cp);
         if (innconf->enableoverview && !innconf->useoverchan) {
             if ((result =
-                     OVadd(token, data->Overview.data, data->Overview.left,
-                           data->Arrived, data->Expires))
+                     OVadd(token, data->State->overview.data(),
+                           data->State->overview.size(), data->Arrived,
+                           data->Expires))
                 == OVADDFAILED) {
                 if (OVctl(OVSPACE, (void *) &f)
                     && (int) (f + 0.01f) == OV_NOSPACE)

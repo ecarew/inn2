@@ -340,13 +340,6 @@ CHANclose_nntp(CHANNEL *cp, const char *name)
                cp->Refused, cp->Rejected, cp->Duplicate, cp->Size,
                cp->DuplicateSize, cp->RejectSize);
     }
-    if (cp->Data.Overview.size != 0) {
-        free(cp->Data.Overview.data);
-        cp->Data.Overview.data = nullptr;
-        cp->Data.Overview.size = 0;
-        cp->Data.Overview.left = 0;
-        cp->Data.Overview.used = 0;
-    }
 
     /* If this was a peer who was connection-limited, take note that one of
        their connections was just closed and possibly wake up another one.

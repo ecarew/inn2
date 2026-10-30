@@ -243,9 +243,6 @@ typedef struct _ARTDATA {
     int FeedsiteLength;      /* length of Feedsite */
     int StoredGroupLength;   /* 1st newsgroup name in Xref */
     HASH *Hash;              /* Message-ID hash */
-    struct buffer Headers;   /* buffer for headers which will be sent
-                                to site */
-    struct buffer Overview;  /* buffer for overview data */
     int CRwithoutLF;         /* counter for '\r' without '\n' */
     int LFwithoutCR;         /* counter for '\n' without '\r' */
     int DotStuffedLines;     /* counter for lines beginning with '.' */
