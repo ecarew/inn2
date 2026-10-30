@@ -371,6 +371,12 @@ a document so the rounds can be compared.
   innd/, nnrpd/, backends/, frontends/, expire/, control/ and authprogs/
   (except auth_krb5) is run by a test; innfeed and the storage/history
   tools other than tdx-util and makehistory are not yet.
+- Upstream bug (found 2026-10-30, kept): `tdx-util` with no mode option says
+  "group must be specified for -" instead of "a mode option must be
+  specified", because `strchr("cgoOR", mode)` matches the terminating NUL
+  when mode is '\0'.  tests/overview/tdx-util.t records the current
+  message; fix (and update that check) in the refactoring phase, or report
+  upstream.
 
 - Kerberos (auth_krb5) is found through `krb5-config`, which on this Mac is
   Anaconda's (`/opt/anaconda3`), matching what configure picked.
@@ -414,6 +420,10 @@ a document so the rounds can be compared.
   (CMake-only goal items 4, 7 and 8).
 
 **Resolved**
+- 2026-10-30: tdx-util converted to C++ (`1c1d79bfa`, nullptr `5ece47ac3`;
+  nothing for void-arg or bool literals).  Tests first: tests/overview/tdx-util.t
+  (`6106a013f`, run by verify-cxx.sh from `eb260b8e9`), 24 checks, coverage
+  17.9% → 81.9%.
 - 2026-10-30: lib/ replacement functions converted to C++, all 22, one per
   commit (`4c0c33482` through `4cb841856`), then nullptr (`a1e7a91c7`)
   and void-arg (`18bc07d5d`); the bool-literal pass had nothing to change.
