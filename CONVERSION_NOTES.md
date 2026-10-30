@@ -544,7 +544,7 @@ refactoring (classes, memory management, containers) will get its own
 document once the conversion is complete and working (decided 2026-10-29);
 this file stays the record of the conversion itself.
 
-### Article header lookup: sorted array instead of a tree (decided 2026-10-28)
+### Article header lookup: sorted array instead of a tree (decided 2026-10-28, done 2026-10-30)
 
 `innd/art.cc` finds each header line's entry among the 76 known headers
 (`MAX_ARTHEADER`).  Today `ARTbuildtree()` builds a balanced binary search
@@ -576,9 +576,36 @@ Why the sorted array:
   so at n = 76 it is no faster and brings back allocation; a perfect hash adds a
   generator for no measurable gain.
 
-This is analysis, not measurement.  A benchmark of both with the 76 real
-header names is on the open-items list and would double as the first test of
-`HeaderTable`.
+That was analysis, not measurement.  **Measured 2026-10-30**
+(`support/bench/header-lookup.sh`: the 76 names from innd.cc, the header
+lines of tests/data/articles plus support/bench/header-mix.txt; ns per
+lookup, median of 15 rounds, hot cache):
+
+| | macOS arm64, Apple clang 21 | Debian aarch64, GCC 14 |
+|---|---|---|
+| Tree (before) | 21.1 | 14.2 |
+| Sorted array, `std::lower_bound` (chosen) | 37.4 (1.75×) | 20.8 (1.46×) |
+| Sorted array, the tree's own search | 23.3 (1.10×) | 15.3 (1.08×) |
+| Eytzinger (breadth-first) array | 20.0 (0.95×) | 13.7 (0.96×) |
+| `std::map` | 60.6 (2.8×) | 24.3 (1.7×) |
+
+So the claims above were wrong in part: the whole table fits in L1, so
+the array gains nothing from being contiguous, and `std::lower_bound` is
+slower because it cannot stop at a match (it runs every step, then compares
+once more).  Only the Eytzinger layout beats the tree, by about 5%.  The
+first benchmark run reported 0.5 ns for the tree: the compiler had hoisted
+the repeated lookups out of the loop.  The bench now hides each input and
+result from the optimizer.
+
+**Chosen (by the user): `std::lower_bound`**, for well-traveled standard
+library code over a hand-written search.  The cost is about 15 ns per header
+line, under half a microsecond per article, next to innd's history, disk and
+network work per article.  Done in innd/art.cc: a file-local `HeaderTable`
+(a `std::array` of pointers into `ARTheaders`, sorted once by ARTsetup, no
+allocation), reached through `ARTfindheader()` in innd.h, which
+tests/innd/headers-t.c tests (every name in four cases, 14 non-names).
+`TREE`, `ARTbuildtree`, `ARTcompare` and `ARTfreetree` are gone.  The
+first-letter shortcut the tree used was dropped with it.
 
 ### Memory management: from C to standard C++ (goal, 2026-10-29)
 
