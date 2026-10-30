@@ -271,7 +271,7 @@ const char *
 CCaddhist(char *av[])
 {
     static char DIGITS[] = "0123456789";
-    ARTDATA Data;
+    ARTDATA Data{};
     const char *p, *msgid;
     bool ok;
     TOKEN token;
@@ -478,7 +478,7 @@ CCchgroup(char *av[])
 const char *
 CCcancel(char *av[])
 {
-    ARTDATA Data;
+    ARTDATA Data{};
     const char *p, *msgid;
 
     Data.Posted = Data.Arrived = Now.tv_sec;
