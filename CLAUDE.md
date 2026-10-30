@@ -87,11 +87,13 @@ Current verification set:
   trash store/retrieve/cancel; written for this conversion)
 
 Not yet covered: shell-driven tests that need INN's command-line programs
-(`overview/ovsqlite-integ`, `overview/overchan`, `storage/sm`,
+(`overview/overchan`, `storage/sm`,
 `storage/archive`, `storage/makehistory`, `lib/hissqlite-util`,
 `lib/xmalloc`), until CMake builds those programs.
-`lib/canlock` and `lib/hissqlite-convert` report SKIP (no libcanlock; the
-hissqlite-convert program is not built); SKIP does not fail verification.
+`lib/canlock` reports SKIP (no libcanlock); SKIP does not fail
+verification.  `lib/hissqlite-convert` and `overview/ovsqlite-integ` find
+the CMake-built programs through HISSQLITE_CONVERT and OVSQLITE_SERVER,
+which verify-cxx.sh sets (2026-10-30).
 `samples/inn.conf` (needed by `lib/innconf`) is generated from
 `inn.conf.in`; verify-cxx.sh runs `make -C samples inn.conf` if it is missing.
 
@@ -370,7 +372,19 @@ a document so the rounds can be compared.
   builds all 49 programs (2026-10-28).  As of 2026-10-29 every program in
   innd/, nnrpd/, backends/, frontends/, expire/, control/ and authprogs/
   (except auth_krb5) is run by a test; innfeed and the storage/history
-  tools other than tdx-util and makehistory are not yet.
+  tools other than tdx-util and makehistory are not yet.  (2026-10-30:
+  tdx-util, hissqlite-convert and ovsqlite-server are now run by tests and
+  converted; see Resolved.)
+- Upstream behavior (found 2026-10-30): ovsqlite-server copies its socket
+  path into `sun_path` with strlcpy, so a `pathrun` that makes it longer
+  than 104 bytes (macOS; 108 on Linux) is silently truncated and the
+  server listens on a shortened name.  The client truncates the same way,
+  so they still meet, but a too-long path should be an error.  verify-cxx.sh
+  uses /tmp for its scratch directory because of this (`fb394e519`).
+- Root checks to rerun (2026-10-30): `sudo support/root-checks.sh` after
+  `4780a0b0c`/`a885baf6d` (ovsqlite-server and innfeed now call the news-user
+  drop only as root) and the ovsqlite-server conversion (`30461df12`).  The
+  root path is unchanged, so all checks are expected to pass.
 - Upstream bug (found 2026-10-30, kept): `tdx-util` with no mode option says
   "group must be specified for -" instead of "a mode option must be
   specified", because `strchr("cgoOR", mode)` matches the terminating NUL
@@ -420,6 +434,19 @@ a document so the rounds can be compared.
   (CMake-only goal items 4, 7 and 8).
 
 **Resolved**
+- 2026-10-30: hissqlite-convert and ovsqlite-server converted to C++
+  (`a850c63d9`, `30461df12`), then nullptr (`4aca04be5`, `06b1ce279`),
+  void-arg (`441fed69c`) and bool literal (`9a927d98c`).  Tests first: the
+  existing hissqlite-convert test had always skipped under verify-cxx.sh
+  (`68cfe3743`, `d4d043362`), and ovsqlite-integ.t was not run at all
+  (`9ef23a564`, `fb394e519`); coverage 0% → 73.2% and 0% → 39.1%
+  (ovsqlite.cc 7.5% → 49.9%).
+- 2026-10-30: regression from the security audit (`af8441c0f`) fixed:
+  ovsqlite-server and innfeed called ensure_news_user_grp() unconditionally,
+  so as any non-root user other than news they died ("can't resolve news to
+  a GID", or "must be run as news").  Now called only as root, like rnews
+  and nnrpd (`4780a0b0c`, `a885baf6d`).  Found by ovsqlite-integ.t; missed
+  by the live harness because build-live's news user is the tester.
 - 2026-10-30: tdx-util converted to C++ (`1c1d79bfa`, nullptr `5ece47ac3`;
   nothing for void-arg or bool literals).  Tests first: tests/overview/tdx-util.t
   (`6106a013f`, run by verify-cxx.sh from `eb260b8e9`), 24 checks, coverage
