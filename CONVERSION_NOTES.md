@@ -768,6 +768,16 @@ are added here.
 
 Open items from CLAUDE.md, moved here when done, newest first.
 
+- 2026-10-30: Refactoring candidate, nnrpd `ARTpost`: it returned a
+  `const char *` (string literals, post.cc's static `Error` buffer, or
+  other functions' buffers) that `CMDpost` cut at CR/LF by writing through
+  a `const_cast`, safe only because CR/LF came solely from innd's reply in
+  the writable buffer.  ARTpost now returns `std::optional<std::string>`
+  (empty when accepted); the old body is the file-local `ARTpostMessage`,
+  whose return sites are unchanged, and CMDpost trims its own copy.
+  Header, definition and caller changed in one commit so that it builds.
+  live-innd.sh checks that refused posts (innd's 435, and nnrpd's own
+  From-syntax literal) are each one 441 line.
 - 2026-10-30: Refactoring candidate, expire/expireover boundary: closed,
   no change.  An article with no Expires header is kept while its arrival
   time is at or after the cutoff (`when >= Default`, expire/expire.cc and
