@@ -45,9 +45,14 @@ writer="overview/ovsqlite-write.t"
 reader="overview/ovsqlite-read.t"
 util_source="../storage/ovsqlite/ovsqlite-util.in"
 
-# When run from the tests directory, adjust paths.
+# When run from the tests directory, adjust paths.  OVSQLITE_SERVER in the
+# environment overrides the server's location (the CMake build puts it
+# elsewhere).
 if [ ! -x "$server" ]; then
     server="../storage/ovsqlite/ovsqlite-server"
+fi
+if [ -n "$OVSQLITE_SERVER" ]; then
+    server="$OVSQLITE_SERVER"
 fi
 if [ ! -x "$writer" ]; then
     writer="./overview/ovsqlite-write.t"
