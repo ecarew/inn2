@@ -227,6 +227,9 @@ typedef struct _HDRCONTENT {
 **  Miscellaneous data we want to keep on an article.  All the fields
 **  are not always valid.
 */
+/* innd/article.h; an incomplete type in C. */
+struct ArticleState;
+
 typedef struct _ARTDATA {
     size_t Body;             /* where body begins in article
                                 it indicates offset from bp->Data */
@@ -277,6 +280,8 @@ typedef struct _ARTDATA {
     bool Hassamepath;    /* Whether this article matches Path */
     bool Hassamecluster; /* Whether this article matches
                             Pathcluster */
+    struct ArticleState *State; /* C++ state (article.h), owned by the
+                                   channel; null outside channels */
 } ARTDATA;
 
 
