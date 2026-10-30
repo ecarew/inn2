@@ -351,10 +351,6 @@ a document so the rounds can be compared.
   `storage/ovsqlite/sql-*.c`, `history/hismethods.c`,
   `history/hissqlite/hissqlite-{init,main,read}.c` (their generators: goal
   item 2).
-- `lib/` replacement functions (converted 2026-10-30, see Resolved): the
-  void-arg and bool-literal passes are still to run on them, by hand or
-  with clang-tidy called directly, since they are not in
-  compile_commands.json.
 - lib fallbacks vs the C++ standard library (2026-10-30): check which of
   the 22 replacement functions (asprintf, snprintf, strlcpy, strlcat,
   strcasecmp, strspn, strtok, setenv, mkstemp, pread, pwrite, fseeko,
@@ -419,7 +415,8 @@ a document so the rounds can be compared.
 
 **Resolved**
 - 2026-10-30: lib/ replacement functions converted to C++, all 22, one per
-  commit (`4c0c33482` through `4cb841856`), then nullptr (`a1e7a91c7`).
+  commit (`4c0c33482` through `4cb841856`), then nullptr (`a1e7a91c7`)
+  and void-arg (`18bc07d5d`); the bool-literal pass had nothing to change.
   The macOS build compiles none of them; each was checked with
   `c++ -std=c++20 -fsyntax-only`, with and without -DTESTING, and the 14
   with tests are run by verify-cxx.sh.  lib/ now has no `.c` files.
