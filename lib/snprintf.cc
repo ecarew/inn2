@@ -148,6 +148,13 @@
 
 #include <stdarg.h>
 
+#if TESTING
+BEGIN_DECLS
+int test_snprintf(char *, size_t, const char *, ...);
+int test_vsnprintf(char *, size_t, const char *, va_list);
+END_DECLS
+#endif
+
 /* Assume all compilers support long double, per Autoconf documentation. */
 #define LDOUBLE long double
 
@@ -442,7 +449,7 @@ dopr(char *buffer, size_t maxlen, const char *format, va_list args)
                                 max);
                 break;
             case 'p':
-                strvalue = va_arg(args, void *);
+                strvalue = static_cast<char *>(va_arg(args, void *));
                 total += fmtint(buffer, &currlen, maxlen, (long) strvalue, 16,
                                 min, max, flags);
                 break;
