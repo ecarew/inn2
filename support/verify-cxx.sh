@@ -344,6 +344,9 @@ for spec in "${tests[@]}"; do
         res "test $t" "PASS ($ok/$plan)"
     else
         res "test $t" "FAIL ($ok/${plan:-?}, exit $rc)"
+        # Show what the test printed, minus its passing lines, so an
+        # intermittent failure leaves something to diagnose.
+        echo "$out" | grep -vE '^ok ' | head -30 | sed 's/^/    | /'
     fi
 done
 
