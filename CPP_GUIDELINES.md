@@ -65,6 +65,9 @@ T& operator=(const T&) = delete;
 ```
 
 ## General
+- For containers, algorithms and utilities: the standard library first,
+  then Boost (required, 1.92 or later, header-only so far), then INN's own code.
+  When Boost and the standard both have it, use the standard one.
 - Prefer `std::string` / `std::string_view` over `char *` in new code; C
   interface boundaries keep `const char *`.
 - Range-based `for` where the index is not needed.
