@@ -458,6 +458,32 @@ sleep 1
 label="nnrpd POST reaches innd"
 ok sh -c "grep -q '^340 ' '$tmp/post.out' && grep -q '^240 ' '$tmp/post.out' && '$bin/expire/grephistory' '<nnrpdpost@live.test>' >/dev/null 2>&1"
 
+# Refused posts: a duplicate, refused by innd (its reply, CRLF and all, is
+# the reason), and a From address without a dot in its domain, refused by
+# nnrpd itself.  Each reason is sent as one 441 line: every line of the
+# session must be a status line.
+cmds='POST
+Path: live.test!not-for-mail
+From: reader@live.test
+Newsgroups: test.live
+Subject: posted through nnrpd again
+Message-ID: <nnrpdpost@live.test>
+
+Posted through nnrpd again.
+.
+POST
+Path: live.test!not-for-mail
+From: reader@localhost
+Newsgroups: test.live
+Subject: no dot in the From domain
+
+Refused.
+.
+'
+nntp post-refused.out
+label="nnrpd sends a refused post's reason as one line"
+ok sh -c "grep -q '^441 435 ' '$tmp/post-refused.out' && grep -q '^441 Address in From header field not in Internet syntax.\$' '$tmp/post-refused.out' && ! grep -vqE '^[0-9]{3} ' '$tmp/post-refused.out'"
+
 # COMPRESS DEFLATE (zlib.c): after the 206 reply the stream is compressed,
 # which nc cannot speak, so only the reply is checked.
 cmds='COMPRESS DEFLATE
