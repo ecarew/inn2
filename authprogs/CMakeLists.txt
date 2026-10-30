@@ -22,7 +22,10 @@ if(NOT INN_CRYPT_IN_LIBC)
     endif()
 endif()
 
-inn_program(ckpasswd SOURCES ckpasswd.cc INNONLY LIBS innauth ${_pam} ${_crypt})
+# dbm_open: in libc on macOS, in a dbm library on glibc systems
+# (INN_DBM_LIBS, from cmake/InnConfigure.cmake).
+inn_program(ckpasswd SOURCES ckpasswd.cc INNONLY
+            LIBS innauth ${_pam} ${_crypt} ${INN_DBM_LIBS})
 inn_program(domain   SOURCES domain.cc   INNONLY LIBS innauth)
 inn_program(ident    SOURCES ident.cc    INNONLY LIBS innauth)
 inn_program(radius   SOURCES radius.cc   INNONLY LIBS innauth)
