@@ -23,6 +23,7 @@
 #include "inn/innconf.h"
 #include "inn/libinn.h"
 #include "inn/messages.h"
+#include "inn/newsuser.h"
 #include "inn/overview.h"
 #include "inn/paths.h"
 #include "inn/qio.h"
@@ -170,6 +171,7 @@ main(int argc, char *argv[])
 
     /* First thing, set up our identity. */
     message_program_name = "overchan";
+    ensure_not_root();
 
     /* Log warnings and fatal errors to syslog unless we were given command
        line arguments, since we're probably running under innd. */

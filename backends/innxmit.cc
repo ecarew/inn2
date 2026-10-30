@@ -35,6 +35,7 @@
 #include "inn/innconf.h"
 #include "inn/libinn.h"
 #include "inn/messages.h"
+#include "inn/newsuser.h"
 #include "inn/nntp.h"
 #include "inn/paths.h"
 #include "inn/qio.h"
@@ -1150,6 +1151,7 @@ main(int ac, char *av[])
 
     openlog("innxmit", L_OPENLOG_FLAGS | LOG_PID, LOG_INN_PROG);
     message_program_name = "innxmit";
+    ensure_not_root();
 
     /* Set defaults. */
     if (!innconf_read(nullptr))

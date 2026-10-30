@@ -14,6 +14,7 @@
 #include "inn/innconf.h"
 #include "inn/libinn.h"
 #include "inn/messages.h"
+#include "inn/newsuser.h"
 #include "inn/paths.h"
 #include "inn/storage.h"
 #include "inn/timer.h"
@@ -202,6 +203,7 @@ main(int ac, char *av[])
     /* Set defaults. */
     openlog("batcher", L_OPENLOG_FLAGS | LOG_PID, LOG_INN_PROG);
     message_program_name = "batcher";
+    ensure_not_root();
     if (!innconf_read(nullptr))
         exit(1);
     Redirect = true;

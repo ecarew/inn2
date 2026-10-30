@@ -22,6 +22,10 @@ void ensure_news_user(bool may_setuid);
 void ensure_news_grp(bool may_setgid);
 void ensure_news_user_grp(bool may_setuid, bool may_setgid);
 
+/* Die if running as root (effective UID 0).  For programs that write INN's
+   data and should never create root-owned files in it. */
+void ensure_not_root(void);
+
 END_DECLS
 
 #endif /* INN_NEWSUSER_H */

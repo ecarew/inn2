@@ -11,6 +11,7 @@
 #include "inn/innconf.h"
 #include "inn/libinn.h"
 #include "inn/messages.h"
+#include "inn/newsuser.h"
 #include "inn/paths.h"
 
 static void Usage() __attribute__((__noreturn__));
@@ -40,6 +41,7 @@ main(int ac, char *av[])
     /* First thing, set up logging and our identity. */
     openlog("prunehistory", L_OPENLOG_FLAGS | LOG_PID, LOG_INN_PROG);
     message_program_name = "prunehistory";
+    ensure_not_root();
 
     /* Set defaults. */
     if (!innconf_read(nullptr))

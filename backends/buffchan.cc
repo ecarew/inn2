@@ -13,6 +13,7 @@
 #include "inn/innconf.h"
 #include "inn/libinn.h"
 #include "inn/messages.h"
+#include "inn/newsuser.h"
 #include "inn/paths.h"
 #include "inn/qio.h"
 
@@ -429,6 +430,7 @@ main(int ac, char *av[])
 
     /* First thing, set up our identity. */
     message_program_name = "buffchan";
+    ensure_not_root();
 
     /* Set defaults. */
     if (!innconf_read(nullptr))

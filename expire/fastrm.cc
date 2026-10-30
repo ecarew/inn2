@@ -23,6 +23,7 @@
 #include "inn/innconf.h"
 #include "inn/libinn.h"
 #include "inn/messages.h"
+#include "inn/newsuser.h"
 #include "inn/qio.h"
 #include "inn/storage.h"
 
@@ -653,6 +654,7 @@ main(int argc, char *argv[])
             name = p + 1;
     }
     message_program_name = name;
+    ensure_not_root();
     openlog(name, LOG_CONS | LOG_PID, LOG_INN_PROG);
 
     /* If we're running as root, unlink may remove directories. */

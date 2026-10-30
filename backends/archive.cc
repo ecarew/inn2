@@ -12,6 +12,7 @@
 #include "inn/innconf.h"
 #include "inn/libinn.h"
 #include "inn/messages.h"
+#include "inn/newsuser.h"
 #include "inn/paths.h"
 #include "inn/qio.h"
 #include "inn/storage.h"
@@ -365,6 +366,7 @@ main(int argc, char *argv[])
 
     /* First thing, set up our identity. */
     message_program_name = "archive";
+    ensure_not_root();
 
     /* Set defaults. */
     if (!innconf_read(nullptr))

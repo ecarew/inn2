@@ -114,6 +114,20 @@ ensure_news_grp(bool may_setgid)
 }
 
 /*
+ * Refuse to run as root.  Used by programs that write INN's spool, history,
+ * overview, batch files or logs, so that an administrator running one from a
+ * root shell cannot leave root-owned files behind.
+ */
+void
+ensure_not_root(void)
+{
+    if (geteuid() == 0) {
+        die("must not be run as root; run it as %s",
+            innconf != nullptr ? innconf->runasuser : RUNASUSER);
+    }
+}
+
+/*
  * Ensure running as runasuser user and runasgroup group.
  */
 void
