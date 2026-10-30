@@ -381,10 +381,6 @@ a document so the rounds can be compared.
   server listens on a shortened name.  The client truncates the same way,
   so they still meet, but a too-long path should be an error.  verify-cxx.sh
   uses /tmp for its scratch directory because of this (`fb394e519`).
-- Root checks to rerun (2026-10-30): `sudo support/root-checks.sh` after
-  `4780a0b0c`/`a885baf6d` (ovsqlite-server and innfeed now call the news-user
-  drop only as root) and the ovsqlite-server conversion (`30461df12`).  The
-  root path is unchanged, so all checks are expected to pass.
 - Upstream bug (found 2026-10-30, kept): `tdx-util` with no mode option says
   "group must be specified for -" instead of "a mode option must be
   specified", because `strchr("cgoOR", mode)` matches the terminating NUL
@@ -434,6 +430,11 @@ a document so the rounds can be compared.
   (CMake-only goal items 4, 7 and 8).
 
 **Resolved**
+- 2026-10-30: root checks rerun by the user on macOS after `4780a0b0c`,
+  `a885baf6d` and the ovsqlite-server conversion (`30461df12`):
+  `sudo support/root-checks.sh` RESULT: PASS, all 34 checks (lib/newsuser
+  3/3; rnews, ovsqlite-server x2, innfeed and nnrpd drop to news; the 9
+  programs and 19 scripts refuse root).
 - 2026-10-30: hissqlite-convert and ovsqlite-server converted to C++
   (`a850c63d9`, `30461df12`), then nullptr (`4aca04be5`, `06b1ce279`),
   void-arg (`441fed69c`) and bool literal (`9a927d98c`).  Tests first: the
