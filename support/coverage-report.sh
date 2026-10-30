@@ -23,7 +23,17 @@ ls "$covdir"/raw/*.profraw >/dev/null 2>&1 || {
     exit 1
 }
 
-xcrun llvm-profdata merge -sparse "$covdir"/raw/*.profraw \
+# The LLVM tools matching the compiler: Xcode's through xcrun on macOS, else
+# the ones on PATH (a coverage build needs clang; CMakeLists.txt, INN_COVERAGE).
+llvm() {
+    if command -v xcrun >/dev/null 2>&1; then
+        xcrun "$@"
+    else
+        "$@"
+    fi
+}
+
+llvm llvm-profdata merge -sparse "$covdir"/raw/*.profraw \
     -o "$covdir/merged.profdata" || exit 1
 
 # Every executable in the build (innd, tinyleaf, the other INN programs)
@@ -43,12 +53,12 @@ ignore='(^|/)tests/|^/Applications/|^/Library/|^/usr/|/build[^/]*/'
 
 # The repository path may contain regex characters (e.g. "inn++"); escape it.
 rootre=$(printf '%s' "${root#/}" | sed 's/[][\.*^$+?(){}|/]/\\&/g')
-xcrun llvm-cov report -instr-profile="$covdir/merged.profdata" \
+llvm llvm-cov report -instr-profile="$covdir/merged.profdata" \
     -ignore-filename-regex="$ignore" "${objects[@]}" \
     | sed -E "s|/?$rootre/||"
 
 if $html; then
-    xcrun llvm-cov show -format=html -output-dir="$covdir/html" \
+    llvm llvm-cov show -format=html -output-dir="$covdir/html" \
         -instr-profile="$covdir/merged.profdata" \
         -ignore-filename-regex="$ignore" "${objects[@]}" >/dev/null \
         && echo "HTML report: $covdir/html/index.html"
