@@ -1178,10 +1178,12 @@ Towire(char *p)
 
 
 /*
-**  The main function which handles POST and IHAVE.
+**  The main function which handles POST and IHAVE.  Returns nullptr, or the
+**  reason the article was not accepted, which may be a string literal or a
+**  static buffer here or in the functions it calls; ARTpost copies it.
 */
-const char *
-ARTpost(char *article, char *idbuff, bool *permanent)
+static const char *
+ARTpostMessage(char *article, char *idbuff, bool *permanent)
 {
     int i;
     size_t j;
@@ -1573,4 +1575,15 @@ ARTpost(char *article, char *idbuff, bool *permanent)
     }
 
     return nullptr;
+}
+
+
+std::optional<std::string>
+ARTpost(char *article, char *idbuff, bool *permanent)
+{
+    const char *message = ARTpostMessage(article, idbuff, permanent);
+
+    if (message == nullptr)
+        return std::nullopt;
+    return std::string(message);
 }

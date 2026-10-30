@@ -25,6 +25,11 @@
 #include "inn/timer.h"
 #include "inn/vector.h"
 
+#ifdef __cplusplus
+#    include <optional>
+#    include <string>
+#endif
+
 #ifdef HAVE_SASL
 #    include <sasl/sasl.h>
 #    include <sasl/saslutil.h>
@@ -242,7 +247,6 @@ extern bool encryption_layer_on;
 extern bool PerlLoaded;
 #endif
 
-extern const char *ARTpost(char *article, char *idbuff, bool *permanent);
 extern void ARTclose(void);
 extern int TrimSpaces(char *line);
 extern void InitBackoffConstants(void);
@@ -372,3 +376,9 @@ bool zlib_init(void);
 #endif /* HAVE_ZLIB */
 
 END_DECLS
+
+#ifdef __cplusplus
+/* The reason an article was not accepted, or nothing if it was. */
+std::optional<std::string> ARTpost(char *article, char *idbuff,
+                                   bool *permanent);
+#endif

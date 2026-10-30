@@ -631,7 +631,6 @@ CMDpost(int ac, char *av[])
     long l;
     long sleeptime;
     char *path;
-    const char *response;
     char idbuff[SMBUF];
     static int backoff_inited = false;
     bool ihave, permanent;
@@ -835,32 +834,30 @@ CMDpost(int ac, char *av[])
     }
 
     /* Send the article to the server. */
-    response = ARTpost(article, idbuff, &permanent);
-    if (response == nullptr) {
+    std::optional<std::string> response =
+        ARTpost(article, idbuff, &permanent);
+    if (!response) {
         notice("%s %s ok %s", Client.host, ihave ? "ihave" : "post", idbuff);
         Reply("%d Article received %s\r\n",
               ihave ? NNTP_OK_IHAVE : NNTP_OK_POST, idbuff);
         POSTreceived++;
     } else {
-        /* A CR or LF can only come from innd's reply, which ARTpost copies
-           into post.c's writable Error buffer, so the writes never reach the
-           string literals it also returns. */
-        if ((p = const_cast<char *>(strchr(response, '\r'))) != nullptr)
-            *p = '\0';
-        if ((p = const_cast<char *>(strchr(response, '\n'))) != nullptr)
-            *p = '\0';
+        /* Only the first line: innd's reply ends in CRLF. */
+        const size_t end = response->find_first_of("\r\n");
+        if (end != std::string::npos)
+            response->resize(end);
         notice("%s %s failed %s", Client.host, ihave ? "ihave" : "post",
-               response);
+               response->c_str());
         if (!ihave || permanent) {
             /* For permanent errors, reject the message. */
             Reply("%d %s\r\n",
                   ihave ? NNTP_FAIL_IHAVE_REJECT : NNTP_FAIL_POST_REJECT,
-                  response);
+                  response->c_str());
         } else {
             /* Non-permanent errors only have relevance to IHAVE, for
              * these we have the error status from the upstream
              * server to report.  It includes the answer code. */
-            Reply("%s\r\n", response);
+            Reply("%s\r\n", response->c_str());
         }
         POSTrejected++;
     }
