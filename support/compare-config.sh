@@ -39,6 +39,9 @@ dropped="AC_APPLE_UNIVERSAL_BUILD LT_OBJDIR STDC_HEADERS YYTEXT_POINTER
 # tm'" in config.log) even where the member exists, as on macOS and glibc.
 known="HAVE_STRUCT_TM_TM_GMTOFF"
 
+# The list above on one line, for matching with case.
+dropped_words=$(echo "$dropped" | tr -s ' \n' '  ')
+
 # symbols FILE: "NAME value" for each #define and "NAME undef" for each
 # commented-out #undef, outside the system-extensions block.
 symbols() {
@@ -61,7 +64,7 @@ while read -r name conf_value; do
                       '$1 == n { $1 = ""; sub(/^ /, ""); print }' \
                       "${TMPDIR:-/tmp}/cmake-syms.$$")
     if [ -z "$cmake_value" ]; then
-        case " $(echo $dropped) " in
+        case " $dropped_words " in
         *" $name "*) ;;
         *) echo "missing in CMake: $name (configure: $conf_value)"; status=1 ;;
         esac
