@@ -43,15 +43,15 @@ dump_index(const char *group)
     struct group_index *index;
 
     index = tdx_index_open(OV_READ);
-    if (index == NULL)
+    if (index == nullptr)
         return;
-    if (group == NULL)
+    if (group == nullptr)
         tdx_index_dump(index, stdout);
     else {
         const struct group_entry *entry;
 
         entry = tdx_index_entry(index, group);
-        if (entry == NULL) {
+        if (entry == nullptr) {
             warn("cannot find group %s", group);
             tdx_index_close(index);
             return;
@@ -73,16 +73,16 @@ dump_group_index(const char *group)
     struct group_data *data;
 
     index = tdx_index_open(OV_READ);
-    if (index == NULL)
+    if (index == nullptr)
         return;
     entry = tdx_index_entry(index, group);
-    if (entry == NULL) {
+    if (entry == nullptr) {
         warn("cannot find group %s in the index", group);
         tdx_index_close(index);
         return;
     }
     data = tdx_data_open(index, group, entry);
-    if (data == NULL) {
+    if (data == nullptr) {
         warn("cannot open group %s", group);
         tdx_index_close(index);
         return;
@@ -113,16 +113,16 @@ dump_overview(const char *group, ARTNUM low, ARTNUM high, bool overchan)
     char datestring[256];
 
     index = tdx_index_open(OV_READ);
-    if (index == NULL)
+    if (index == nullptr)
         return;
     entry = tdx_index_entry(index, group);
-    if (entry == NULL) {
+    if (entry == nullptr) {
         warn("cannot find group %s", group);
         tdx_index_close(index);
         return;
     }
     data = tdx_data_open(index, group, entry);
-    if (data == NULL) {
+    if (data == nullptr) {
         warn("cannot open group %s", group);
         tdx_index_close(index);
         return;
@@ -134,7 +134,7 @@ dump_overview(const char *group, ARTNUM low, ARTNUM high, bool overchan)
         high = entry->high;
     search = tdx_search_open(data, low, high, entry->high);
 
-    if (search == NULL) {
+    if (search == nullptr) {
         if (low == high)
             puts("Article not found");
         else
@@ -149,7 +149,7 @@ dump_overview(const char *group, ARTNUM low, ARTNUM high, bool overchan)
                 continue;
             p = static_cast<const char *>(
                 memchr(article.overview, '\t', article.overlen - 3));
-            if (p == NULL)
+            if (p == nullptr)
                 continue;
             p++;
             printf("%s %lu %lu ", TokenToText(article.token),
@@ -204,13 +204,13 @@ extract_messageid(const char *overview)
 
     for (p = overview, count = 0; count < 4; count++) {
         p = strchr(p + 1, '\t');
-        if (p == NULL)
-            return NULL;
+        if (p == nullptr)
+            return nullptr;
     }
     p++;
     end = strchr(p, '\t');
-    if (end == NULL)
-        return NULL;
+    if (end == nullptr)
+        return nullptr;
     return xstrndup(p, end - p);
 }
 
@@ -227,8 +227,8 @@ file_compare(const void *p1, const void *p2)
     const char *file2 = *((const char *const *) p2);
     ARTNUM n1, n2;
 
-    n1 = strtoul(file1, NULL, 10);
-    n2 = strtoul(file2, NULL, 10);
+    n1 = strtoul(file1, nullptr, 10);
+    n2 = strtoul(file2, nullptr, 10);
     if (n1 > n2)
         return 1;
     else if (n1 < n2)
@@ -250,9 +250,9 @@ article_list(const char *directory)
 
     list = vector_new();
     articles = opendir(directory);
-    if (articles == NULL)
+    if (articles == nullptr)
         sysdie("cannot open directory %s", directory);
-    while ((file = readdir(articles)) != NULL) {
+    while ((file = readdir(articles)) != nullptr) {
         if (!check_number(file->d_name))
             continue;
         vector_add(list, file->d_name);
@@ -274,7 +274,7 @@ group_create(const char *group, ARTNUM low, ARTNUM high, char flag)
     struct group_index *index;
 
     index = tdx_index_open(true);
-    if (index == NULL)
+    if (index == nullptr)
         die("cannot open group index");
     if (low == 0)
         low = 1;
@@ -296,7 +296,7 @@ group_rebuild(const char *group, const char *path)
     char *filename, *histpath, *article, *wireformat, *p;
     size_t size, length, file;
     int flags;
-    struct buffer *overview = NULL;
+    struct buffer *overview = nullptr;
     struct vector *extra, *files;
     struct history *history;
     struct group_index *index;
@@ -306,19 +306,19 @@ group_rebuild(const char *group, const char *path)
     struct stat st;
 
     index = tdx_index_open(OV_READ);
-    if (index == NULL)
+    if (index == nullptr)
         die("cannot open group index");
     entry = tdx_index_entry(index, group);
-    if (entry == NULL) {
+    if (entry == nullptr) {
         if (!tdx_index_add(index, group, 1, 0, NF_FLAG_OK_STRING))
             die("cannot create group %s", group);
         entry = tdx_index_entry(index, group);
-        if (entry == NULL)
+        if (entry == nullptr)
             die("cannot find group %s", group);
     }
     info = *entry;
     data = tdx_data_rebuild_start(group);
-    if (data == NULL)
+    if (data == nullptr)
         die("cannot start data rebuild for %s", group);
     if (!tdx_index_rebuild_start(index, entry))
         die("cannot start index rebuild for %s", group);
@@ -326,7 +326,7 @@ group_rebuild(const char *group, const char *path)
     histpath = concatpath(innconf->pathhistory, INN_PATH_HISTORY);
     flags = HIS_RDONLY | HIS_ONDISK;
     history = HISopen(histpath, innconf->hismethod, flags);
-    if (history == NULL)
+    if (history == nullptr)
         sysdie("cannot open history %s", histpath);
     free(histpath);
 
@@ -339,7 +339,7 @@ group_rebuild(const char *group, const char *path)
     for (file = 0; file < files->count; file++) {
         filename = concatpath(path, files->strings[file]);
         article = ReadInFile(filename, &st);
-        if (article == NULL) {
+        if (article == nullptr) {
             syswarn("cannot read in %s", filename);
             free(filename);
             continue;
@@ -349,9 +349,9 @@ group_rebuild(const char *group, const char *path)
         /* Check to see if the article is not in wire format.  If it isn't,
            convert it.  We only check the first line ending. */
         p = strchr(article, '\n');
-        if (p != NULL && (p == article || p[-1] != '\r')) {
+        if (p != nullptr && (p == article || p[-1] != '\r')) {
             wireformat = wire_from_native(article, size, &length);
-            if (wireformat == NULL) {
+            if (wireformat == nullptr) {
                 syswarn("cannot convert %s to wire format", filename);
                 free(filename);
                 free(article);
@@ -362,7 +362,7 @@ group_rebuild(const char *group, const char *path)
             size = length;
         }
 
-        artdata.number = strtoul(files->strings[file], NULL, 10);
+        artdata.number = strtoul(files->strings[file], nullptr, 10);
         if (artdata.number > info.high)
             info.high = artdata.number;
         if (artdata.number < info.low || info.low == 0)
@@ -373,13 +373,13 @@ group_rebuild(const char *group, const char *path)
         artdata.overview = overview->data;
         artdata.overlen = overview->left;
         p = extract_messageid(overview->data);
-        if (p == NULL) {
+        if (p == nullptr) {
             warn("cannot find message ID in %s", filename);
             free(filename);
             free(article);
             continue;
         }
-        if (HISlookup(history, p, &artdata.arrived, NULL, &artdata.expires,
+        if (HISlookup(history, p, &artdata.arrived, nullptr, &artdata.expires,
                       &artdata.token)) {
             if (!tdx_data_store(data, &artdata))
                 warn("cannot store data for %s", filename);
@@ -421,7 +421,7 @@ parse_range(char *range, ARTNUM *low, ARTNUM *high)
     *low = 0;
     *high = 0;
     hyphen = strchr(range, '-');
-    if (hyphen == NULL) {
+    if (hyphen == nullptr) {
         *low = strtoul(range, &end, 10);
         if (*low == 0 || *end != '\0')
             return false;
@@ -455,14 +455,14 @@ main(int argc, char *argv[])
     int option;
     char flag = 'y';
     char mode = '\0';
-    const char *newsgroup = NULL;
-    const char *path = NULL;
+    const char *newsgroup = nullptr;
+    const char *path = nullptr;
     ARTNUM artlow = 0;
     ARTNUM arthigh = 0;
 
     message_program_name = "tdx-util";
 
-    if (!innconf_read(NULL))
+    if (!innconf_read(nullptr))
         exit(1);
 
     /* Parse options. */
@@ -530,7 +530,7 @@ main(int argc, char *argv[])
     }
 
     /* Some modes require a group be specified. */
-    if (strchr("cgoOR", mode) != NULL && newsgroup == NULL)
+    if (strchr("cgoOR", mode) != nullptr && newsgroup == nullptr)
         die("group must be specified for -%c", mode);
 
     /* Run the specified function. */
@@ -539,17 +539,17 @@ main(int argc, char *argv[])
         tdx_index_audit(false);
         break;
     case 'F':
-        if (getenv(INN_ENV_TESTSUITE) == NULL)
+        if (getenv(INN_ENV_TESTSUITE) == nullptr)
             ensure_news_user_grp(true, true);
         tdx_index_audit(true);
         break;
     case 'R':
-        if (getenv(INN_ENV_TESTSUITE) == NULL)
+        if (getenv(INN_ENV_TESTSUITE) == nullptr)
             ensure_news_user_grp(true, true);
         group_rebuild(newsgroup, path);
         break;
     case 'c':
-        if (getenv(INN_ENV_TESTSUITE) == NULL)
+        if (getenv(INN_ENV_TESTSUITE) == nullptr)
             ensure_news_user_grp(true, true);
         group_create(newsgroup, artlow, arthigh, flag);
         break;
