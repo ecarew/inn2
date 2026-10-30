@@ -192,6 +192,7 @@ cflags+=("${covcflags[@]}")
 # with the same sanitizer flags.
 sanflags=()
 if grep -q '^INN_SANITIZE:BOOL=ON' "$build/CMakeCache.txt" 2>/dev/null; then
+    # shellcheck disable=SC2054  # the comma is part of the -fsanitize value
     sanflags=(-fsanitize=address,undefined -fno-omit-frame-pointer
               -fno-sanitize-recover=undefined)
     cflags+=("${sanflags[@]}")
@@ -227,6 +228,7 @@ extra_obj() {
 # with extra-sources separated by commas.  An extra source starting with "@" is an
 # object already built in the build directory.  innd tests link innd_core
 # with tests/innd/fakeinnd.c in place of innd.cc, as tests/Makefile does.
+# shellcheck disable=SC2054  # commas separate an entry's extra sources
 tests=(
     lib/artnumber lib/asprintf:::lib/asprintf lib/bloom lib/bloom-hiswalk
     lib/buffer lib/canlock lib/concat lib/conffile lib/confparse lib/date
@@ -336,7 +338,8 @@ for spec in "${tests[@]}"; do
               sh "$root/tests/$t.t" 2>&1)
         rc=$?
     elif ! $built \
-       || ! cc "${cflags[@]}" $extra -c "tests/$src-t.c" -o "$tmp/$n-t.o" \
+       || ! cc "${cflags[@]}" ${extra:+"$extra"} -c "tests/$src-t.c" \
+            -o "$tmp/$n-t.o" \
             2>>"$tmp/$n.log" \
        || ! c++ "$tmp/$n-t.o" "${objs[@]}" "${tap[@]}" "${libs[@]}" -lm "${sanflags[@]}" "${covlink[@]}" \
                 -o "$tmp/$n.t" 2>>"$tmp/$n.log"; then
@@ -354,14 +357,14 @@ for spec in "${tests[@]}"; do
     ok=$(echo "$out" | grep -cE '^ok ')
     if [[ "$plan" == "0 # skip"* ]]; then
         res "test $t" "SKIP (${plan#0 # skip })"
-    elif [ "$t" = authprogs/ident ] && [ $rc = 0 ] && [ "$plan" = 4 ] \
+    elif [ "$t" = authprogs/ident ] && [ "$rc" = 0 ] && [ "$plan" = 4 ] \
          && ! nc -z 127.0.0.1 113 >/dev/null 2>&1 \
          && [ "$(echo "$out" | grep -E '^(not )?ok ' | tr '\n' ' ')" \
               = "ok 1 not ok 2 ok 3 not ok 4 " ]; then
         # Tests 2 and 4 ask an identd on port 113, which this host lacks
         # (macOS runs none); the same two fail with the original C ident.
         res "test $t" "PASS (2/4; 2 need an identd on port 113)"
-    elif [ $rc = 0 ] && [ -n "$plan" ] && [ "$ok" = "$plan" ]; then
+    elif [ "$rc" = 0 ] && [ -n "$plan" ] && [ "$ok" = "$plan" ]; then
         res "test $t" "PASS ($ok/$plan)"
     else
         res "test $t" "FAIL ($ok/${plan:-?}, exit $rc)"
