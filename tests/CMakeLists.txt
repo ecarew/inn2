@@ -132,7 +132,7 @@ inn_tap_test(nnrpd/auth-ext EXTRA nnrpd/auth-ext)
 
 # innd tests link innd_core with tests/innd/fakeinnd.c in place of innd.cc,
 # as tests/Makefile does.
-foreach(t artparse chan)
+foreach(t artparse chan headers)
     inn_tap_test(innd/${t} EXTRA tests/innd/fakeinnd
                  OBJECTS inn_canlock inn_perl)
     target_link_libraries(test_innd_${t} PRIVATE innd_core)
