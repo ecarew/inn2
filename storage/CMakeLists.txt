@@ -29,7 +29,7 @@ add_library(INN::storage_deps ALIAS storage_deps)
 
 # Storage tools (storage/Make.methods).  ovsqlite-util is a script generated
 # from ovsqlite-util.in and is not built here yet.
-inn_program(tdx-util SOURCES tradindexed/tdx-util.c)
+inn_program(tdx-util SOURCES tradindexed/tdx-util.cc)
 inn_program(ovsqlite-server
     SOURCES ovsqlite/ovsqlite-server.c ovsqlite/sql-main.c ovsqlite/sql-init.c
             ovsqlite/ovsqlite-private.cc)
