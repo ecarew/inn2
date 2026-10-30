@@ -317,6 +317,13 @@ a document so the rounds can be compared.
   verify-cxx.sh on build/ (refusing a notes-only commit), then 22 of 22 in
   three reruns.  Not investigated; possibly a port or timing race in the
   test's local server.  Note any recurrence here.
+  Recurred twice on 2026-10-30 during the lib series (build-asan/, then
+  build/), both times 16 of 22 with exit status 0, and 22 of 22 in 14
+  reruns by hand, including under full CPU load.  Exit 0 means no check
+  failed: six "ok" lines were lost from the captured output (suspect:
+  the forked child's output interleaving with the parent's in the pipe).
+  verify-cxx.sh now prints a failing test's non-"ok" lines (`2892a1a8a`);
+  read them at the next recurrence.
 - 49 struct/enum `typedef`s with bodies left by `modernize-use-using`; convert
   to `struct X { ... };` during struct/class modernization.  Do not use
   clang-tidy 23.1.4's `-fix` for this check: it corrupts anonymous struct
@@ -344,9 +351,24 @@ a document so the rounds can be compared.
   `storage/ovsqlite/sql-*.c`, `history/hismethods.c`,
   `history/hissqlite/hissqlite-{init,main,read}.c` (their generators: goal
   item 2).
-- `lib/` replacement functions not used on macOS (`asprintf`, `inet_*`,
-  `snprintf`, `strlc*`, `setenv`, `mkstemp`, `pread`, `pwrite`,
-  `getaddrinfo`, `getnameinfo`, `daemon`) are still C.
+- `lib/` replacement functions (converted 2026-10-30, see Resolved): the
+  void-arg and bool-literal passes are still to run on them, by hand or
+  with clang-tidy called directly, since they are not in
+  compile_commands.json.
+- lib fallbacks vs the C++ standard library (2026-10-30): check which of
+  the 22 replacement functions (asprintf, snprintf, strlcpy, strlcat,
+  strcasecmp, strspn, strtok, setenv, mkstemp, pread, pwrite, fseeko,
+  ftello, getpagesize, seteuid, symlink, daemon, inet_aton, inet_ntoa,
+  inet_ntop, getaddrinfo, getnameinfo) the C++ standard library covers
+  (`std::snprintf`, `std::format`, `std::string`, `std::filesystem`, ...),
+  and whether those fallbacks and their HAVE_* checks can be retired.
+  Cite the libc++/cppreference status pages.  The POSIX ones (networking,
+  daemon, seteuid, mkstemp, fseeko/ftello) have no standard C++
+  equivalent.  For pread/pwrite, `std::spanstream` (memory only) and
+  Boost.Iostreams (seek then read, moves the file offset) do not match;
+  Boost.Asio's `random_access_file::read_some_at`/`write_some_at` does,
+  at the cost of a Boost dependency.  macOS and Linux both have all 22,
+  so dropping a fallback may need no replacement at all.
 - The Autoconf/Make build can no longer build libinn, libinnhist or
   libinnstorage (their Makefiles list `.c` files that are now `.cc`).  CMake
   builds all 49 programs (2026-10-28).  As of 2026-10-29 every program in
@@ -396,6 +418,11 @@ a document so the rounds can be compared.
   (CMake-only goal items 4, 7 and 8).
 
 **Resolved**
+- 2026-10-30: lib/ replacement functions converted to C++, all 22, one per
+  commit (`4c0c33482` through `4cb841856`), then nullptr (`a1e7a91c7`).
+  The macOS build compiles none of them; each was checked with
+  `c++ -std=c++20 -fsyntax-only`, with and without -DTESTING, and the 14
+  with tests are run by verify-cxx.sh.  lib/ now has no `.c` files.
 - 2026-10-29: commit-verified.sh left the paths it had staged staged when it
   refused (unstaged changes left, verification or live test failed), so the
   next run committed them too; this merged two ovdb fixes into one commit
