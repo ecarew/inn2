@@ -2,9 +2,10 @@
 #
 #  Runs inside the container started by support/docker-root-checks.sh, as
 #  the container's root, in a fresh copy of the source in the current
-#  directory: run autogen and configure, generate the sources the CMake
-#  build still takes from ./configure and Make, build with CMake for the
-#  newstest account, and run support/root-checks.sh.
+#  directory: run autogen and configure (still needed for samples/inn.conf,
+#  CMake-only goal item 3), build with CMake for the newstest account, and
+#  run support/root-checks.sh.  CMake generates its own config.h and other
+#  headers and sources; configure's copies are not used.
 
 set -e
 src=$(pwd)
@@ -18,18 +19,8 @@ step "autogen and configure"
     --with-sendmail=/usr/sbin/sendmail \
     >/tmp/configure.log 2>&1 || { tail -30 /tmp/configure.log; exit 1; }
 
-step "generated sources (Make)"
-{
-    make -C include
-    make -C samples inn.conf
-    make -C lib sqlite-helper-gen
-    make -C storage methods.c methods.h ovmethods.c ovmethods.h \
-        ovsqlite/sql-main.c ovsqlite/sql-init.c ovsqlite/sql-read.c
-    make -C history hismethods.c hismethods.h \
-        hissqlite/hissqlite-main.c hissqlite/hissqlite-init.c \
-        hissqlite/hissqlite-read.c
-} >/tmp/make.log 2>&1 || { tail -30 /tmp/make.log; exit 1; }
-
+step "samples/inn.conf (Make)"
+make -C samples inn.conf >/tmp/make.log 2>&1 || { tail -30 /tmp/make.log; exit 1; }
 step "CMake build"
 cmake -S . -B build-linux -DINN_RUNAS_USER=newstest -DINN_RUNAS_GROUP=newstest \
     >/tmp/cmake.log 2>&1 || { tail -30 /tmp/cmake.log; exit 1; }
