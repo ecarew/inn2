@@ -12,6 +12,10 @@
 #  directory, so no root-owned files are left in the tree or the build.
 #  Prints one line per check and a RESULT line, like support/verify-cxx.sh.
 
+# Test output is indented line by line with sed 's/^/    /' (SC2001 would
+# have it done with ${var//...}, which does not see line starts).
+# shellcheck disable=SC2001
+
 root=$(cd "$(dirname "$0")/.." && pwd)
 build=$root/${1:-build-live}
 fail=0
@@ -113,7 +117,7 @@ owned_by_news() {
 art=$'Path: root-checks.test!not-for-mail\nFrom: t@root-checks.test\nNewsgroups: test.root\nSubject: root checks\nMessage-ID: <rnews@root-checks.test>\nDate: Thu, 29 Oct 2026 00:00:00 +0000\n\nBody.\n'
 printf '#! rnews %d\n%s' "${#art}" "$art" \
     | "$build/frontends/rnews" >"$tmp/rnews.out" 2>&1
-spooled=$(ls "$s/spool/incoming"/* 2>/dev/null | head -1)
+spooled=$(find "$s/spool/incoming" -type f 2>/dev/null | head -1)
 owned_by_news "rnews as root spools as the news user and group" \
     "${spooled:-$s/spool/incoming/(nothing spooled)}"
 
@@ -191,7 +195,8 @@ for p in backends/innxmit backends/batcher backends/buffchan \
          backends/overchan backends/archive expire/fastrm \
          expire/prunehistory backends/shrinkfile backends/innxbatch; do
     out=$("$build/$p" </dev/null 2>&1)
-    if [ $? -ne 0 ] && echo "$out" | grep -q 'must not be run as root'; then
+    status=$?
+    if [ $status -ne 0 ] && echo "$out" | grep -q 'must not be run as root'; then
         res "$(basename "$p") refuses root" PASS
     else
         res "$(basename "$p") refuses root" "FAIL ($(echo "$out" | head -1))"
@@ -211,7 +216,8 @@ for p in scripts/news.daily scripts/scanlogs scripts/innwatch \
     { sed -n 1p "$root/$p.in"; echo "NEWSUSER=$runas"
       sed 1,2d "$root/$p.in"; } >"$tmp/script"
     out=$(sh "$tmp/script" </dev/null 2>&1)
-    if [ $? -ne 0 ] && echo "$out" | grep -q 'must not be run as root'; then
+    status=$?
+    if [ $status -ne 0 ] && echo "$out" | grep -q 'must not be run as root'; then
         res "$(basename "$p") refuses root" PASS
     else
         res "$(basename "$p") refuses root" "FAIL ($(echo "$out" | head -1))"
@@ -223,7 +229,8 @@ for p in backends/send-uucp control/controlchan control/perl-nocem \
     { echo "BEGIN { \$INN::Config::runasuser = '$runas'; }"
       sed 1,2d "$root/$p.in"; } >"$tmp/script"
     out=$(perl "$tmp/script" </dev/null 2>&1)
-    if [ $? -ne 0 ] && echo "$out" | grep -q 'must not be run as root'; then
+    status=$?
+    if [ $status -ne 0 ] && echo "$out" | grep -q 'must not be run as root'; then
         res "$(basename "$p") refuses root" PASS
     else
         res "$(basename "$p") refuses root" "FAIL ($(echo "$out" | head -1))"
