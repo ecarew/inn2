@@ -107,6 +107,13 @@ struct ArticleState {
     WordList path;
     WordList distribution;
 
+    /* The headers for feeds that want them (the H flag): the Bytes header
+       field, then the stored article's, with CRLF as LF (ARTstore). */
+    std::string headers;
+
+    /* The overview data (ARTmakeoverview). */
+    std::string overview;
+
     /* The digits of the Bytes header field. */
     std::string_view
     bytes_value() const
@@ -130,6 +137,8 @@ struct ArticleState {
         newsgroups.clear();
         path.clear();
         distribution.clear();
+        headers.clear();
+        overview.clear();
     }
 };
 
