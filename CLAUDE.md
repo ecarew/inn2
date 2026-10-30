@@ -168,8 +168,6 @@ from `cmake-build`; record method and raw numbers so rounds compare.
   repeated, with the spread.
 
 **Refactoring candidates (after the conversion)**
-- expire/expireover: articles expire only when strictly older than "now" in
-  whole seconds; decide if intended, then drop live-innd.sh's `sleep 2`.
 - nnrpd `ARTpost` returns a `const char *` that `CMDpost` truncates through a
   `const_cast`; return an owned string.
 - Retire ovdb and Berkeley DB, after a one-way ovdb → ovsqlite converter
