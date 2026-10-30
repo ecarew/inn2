@@ -55,6 +55,17 @@ three libraries.  CMake runs its own platform checks and generates
 ## Test
 
 ```sh
+ctest --test-dir build
+```
+
+runs INN's test programs (written in C, built with the rest; `-DINN_TESTS=OFF`
+leaves them out).  Expected skips: `lib/canlock` (needs libcanlock) and
+`lib/newsuser` (needs root; see below).  The tests take turns even under
+`ctest -j`: they share directories and fixed ports.
+
+The full verification, which is what each commit was checked with:
+
+```sh
 support/verify-cxx.sh build
 ```
 
