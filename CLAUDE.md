@@ -171,6 +171,8 @@ from `cmake-build`; record method and raw numbers so rounds compare.
   repeated, with the spread.
 
 **Refactoring candidates (after the conversion)**
+- innd/art.cc `HashFeedMatch`: `else continue;` does not advance `hf`, so an
+  unknown hash type would loop for ever (unreachable today).
 - Retire ovdb and Berkeley DB, after a one-way ovdb → ovsqlite converter
   with no Berkeley DB dependency (CONVERSION_NOTES.md, "Retiring ovdb").
 - lib fallbacks vs the C++ standard library and Boost; pread/pwrite in
