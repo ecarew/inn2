@@ -13,7 +13,8 @@
 # Otherwise, the destination section remains unchanged.
 #
 # After the entire input is read, sqlite-helper-gen writes two output
-# files: a C header file and a C source file.
+# files: a C header file and a C++ source file (NAME.h and NAME.cc), beside
+# the input or, with "-o DIR" before the inputs, in DIR.
 #
 # The header file contains this:
 #   * a struct type definition with a prepared statement pointer
@@ -198,17 +199,23 @@ __BODY__
       or die "$path: close: $!\n";
 }
 
+my $outdir;
+if (@ARGV >= 2 && $ARGV[0] eq '-o') {
+    (undef, $outdir) = splice(@ARGV, 0, 2);
+}
+
 foreach my $src (@ARGV) {
     my ($dir, $base, $name, %state);
 
     ($dir, $base) = $src =~ m,^((?:.*/)?)([-_a-zA-Z][-_a-zA-Z0-9]*)[^/]*$,
       or die "$src: Bad input filename\n";
+    $dir = "$outdir/" if defined($outdir);
     $name = $base;
     $name =~ tr/-/_/;
     $state{name} = $name;
     $state{base} = $base;
     parse($src, \%state);
     generate_head("$dir$base.h", \%state);
-    generate_body("$dir$base.c", \%state);
+    generate_body("$dir$base.cc", \%state);
 }
 
