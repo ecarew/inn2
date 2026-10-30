@@ -72,10 +72,12 @@ extern int h_errno;
 #    define gai_strerror test_gai_strerror
 #    define freeaddrinfo test_freeaddrinfo
 #    define getaddrinfo  test_getaddrinfo
+BEGIN_DECLS
 const char *test_gai_strerror(int);
 void test_freeaddrinfo(struct addrinfo *);
 int test_getaddrinfo(const char *, const char *, const struct addrinfo *,
                      struct addrinfo **);
+END_DECLS
 #endif
 
 /*
@@ -198,10 +200,11 @@ gai_addrinfo_new(int socktype, const char *canonical, struct in_addr addr,
     struct addrinfo *ai;
     struct sockaddr_in *sin;
 
-    ai = malloc(sizeof(*ai));
+    ai = static_cast<struct addrinfo *>(malloc(sizeof(*ai)));
     if (ai == NULL)
         return NULL;
-    sin = calloc(1, sizeof(struct sockaddr_in));
+    sin = static_cast<struct sockaddr_in *>(
+        calloc(1, sizeof(struct sockaddr_in)));
     if (sin == NULL) {
         free(ai);
         return NULL;
