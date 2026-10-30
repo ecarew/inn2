@@ -46,7 +46,7 @@ inet_aton(const char *s, struct in_addr *addr)
     unsigned int base, i;
     unsigned int part = 0;
 
-    if (s == NULL)
+    if (s == nullptr)
         return 0;
 
     /*
@@ -166,7 +166,7 @@ inet_aton(const char *s, struct in_addr *addr)
     if (octet[i] > (0xffffffffUL >> (i * 8)))
         return 0;
     address |= octet[i];
-    if (addr != NULL)
+    if (addr != nullptr)
         addr->s_addr = htonl(address);
     return 1;
 }

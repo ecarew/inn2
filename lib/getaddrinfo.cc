@@ -153,7 +153,7 @@ freeaddrinfo(struct addrinfo *ai)
 {
     struct addrinfo *next;
 
-    while (ai != NULL) {
+    while (ai != nullptr) {
         next = ai->ai_next;
         free(ai->ai_addr);
         free(ai->ai_canonname);
@@ -201,23 +201,23 @@ gai_addrinfo_new(int socktype, const char *canonical, struct in_addr addr,
     struct sockaddr_in *sin;
 
     ai = static_cast<struct addrinfo *>(malloc(sizeof(*ai)));
-    if (ai == NULL)
-        return NULL;
+    if (ai == nullptr)
+        return nullptr;
     sin = static_cast<struct sockaddr_in *>(
         calloc(1, sizeof(struct sockaddr_in)));
-    if (sin == NULL) {
+    if (sin == nullptr) {
         free(ai);
-        return NULL;
+        return nullptr;
     }
-    ai->ai_next = NULL;
-    if (canonical == NULL)
-        ai->ai_canonname = NULL;
+    ai->ai_next = nullptr;
+    if (canonical == nullptr)
+        ai->ai_canonname = nullptr;
     else {
         ai->ai_canonname = strdup(canonical);
-        if (ai->ai_canonname == NULL) {
+        if (ai->ai_canonname == nullptr) {
             free(sin);
             free(ai);
-            return NULL;
+            return nullptr;
         }
     }
     ai->ai_flags = 0;
@@ -261,7 +261,7 @@ gai_service(const char *servname, int flags, int *type, unsigned short *port)
         if (*type != 0)
             protocol = (*type == SOCK_DGRAM) ? "udp" : "tcp";
         else
-            protocol = NULL;
+            protocol = nullptr;
 
         /*
          * We really technically should be generating an addrinfo struct for
@@ -269,7 +269,7 @@ gai_service(const char *servname, int flags, int *type, unsigned short *port)
          * enough for what I need this for.
          */
         servent = getservbyname(servname, protocol);
-        if (servent == NULL)
+        if (servent == nullptr)
             return EAI_NONAME;
         if (strcmp(servent->s_proto, "udp") == 0)
             *type = SOCK_DGRAM;
@@ -304,9 +304,9 @@ gai_lookup(const char *nodename, int flags, int socktype, unsigned short port,
     int i;
 
     if (inet_aton(nodename, &addr)) {
-        canonical = (flags & AI_CANONNAME) ? nodename : NULL;
+        canonical = (flags & AI_CANONNAME) ? nodename : nullptr;
         ai = gai_addrinfo_new(socktype, canonical, addr, port);
-        if (ai == NULL)
+        if (ai == nullptr)
             return EAI_MEMORY;
         *res = ai;
         return 0;
@@ -314,7 +314,7 @@ gai_lookup(const char *nodename, int flags, int socktype, unsigned short port,
         if (flags & AI_NUMERICHOST)
             return EAI_NONAME;
         host = gethostbyname(nodename);
-        if (host == NULL)
+        if (host == nullptr)
             switch (h_errno) {
             case HOST_NOT_FOUND:
                 return EAI_NONAME;
@@ -327,25 +327,25 @@ gai_lookup(const char *nodename, int flags, int socktype, unsigned short port,
             default:
                 return EAI_SYSTEM;
             }
-        if (host->h_addr_list[0] == NULL)
+        if (host->h_addr_list[0] == nullptr)
             return EAI_FAIL;
         canonical = (flags & AI_CANONNAME)
-                        ? ((host->h_name != NULL) ? host->h_name : nodename)
-                        : NULL;
-        first = NULL;
-        prev = NULL;
-        for (i = 0; host->h_addr_list[i] != NULL; i++) {
+                        ? ((host->h_name != nullptr) ? host->h_name : nodename)
+                        : nullptr;
+        first = nullptr;
+        prev = nullptr;
+        for (i = 0; host->h_addr_list[i] != nullptr; i++) {
             if (host->h_length != sizeof(addr)) {
                 freeaddrinfo(first);
                 return EAI_FAIL;
             }
             memcpy(&addr, host->h_addr_list[i], sizeof(addr));
             ai = gai_addrinfo_new(socktype, canonical, addr, port);
-            if (ai == NULL) {
+            if (ai == nullptr) {
                 freeaddrinfo(first);
                 return EAI_MEMORY;
             }
-            if (first == NULL) {
+            if (first == nullptr) {
                 first = ai;
                 prev = ai;
             } else {
@@ -372,7 +372,7 @@ getaddrinfo(const char *nodename, const char *servname,
     unsigned short port;
 
     /* Take the hints into account and check them for validity. */
-    if (hints != NULL) {
+    if (hints != nullptr) {
         flags = hints->ai_flags;
         socktype = hints->ai_socktype;
         if ((flags & AI_INTERNAL_ALL) != flags)
@@ -399,24 +399,24 @@ getaddrinfo(const char *nodename, const char *servname,
      * address.  Otherwise, we're getting information for connecting to a
      * remote system.
      */
-    if (servname == NULL)
+    if (servname == nullptr)
         port = 0;
     else {
         status = gai_service(servname, flags, &socktype, &port);
         if (status != 0)
             return status;
     }
-    if (nodename != NULL)
+    if (nodename != nullptr)
         return gai_lookup(nodename, flags, socktype, port, res);
     else {
-        if (servname == NULL)
+        if (servname == nullptr)
             return EAI_NONAME;
         if ((flags & AI_PASSIVE) == AI_PASSIVE)
             addr.s_addr = INADDR_ANY;
         else
             addr.s_addr = htonl(0x7f000001UL);
-        ai = gai_addrinfo_new(socktype, NULL, addr, port);
-        if (ai == NULL)
+        ai = gai_addrinfo_new(socktype, nullptr, addr, port);
+        if (ai == nullptr)
             return EAI_MEMORY;
         *res = ai;
         return 0;

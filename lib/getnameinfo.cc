@@ -77,7 +77,7 @@ try_name(const char *name, char *node, socklen_t nodelen, int *status)
     bool found_nondigit = false;
 
     /* Reject unqualified names. */
-    if (strchr(name, '.') == NULL)
+    if (strchr(name, '.') == nullptr)
         return false;
 
     /*
@@ -120,13 +120,13 @@ lookup_name(const struct in_addr *addr, char *node, socklen_t nodelen,
     if (!(flags & NI_NUMERICHOST)) {
         host = gethostbyaddr((const void *) addr, sizeof(struct in_addr),
                              AF_INET);
-        if (host == NULL) {
+        if (host == nullptr) {
             if (flags & NI_NAMEREQD)
                 return EAI_NONAME;
         } else {
             if (try_name(host->h_name, node, nodelen, &status))
                 return status;
-            for (alias = host->h_aliases; *alias != NULL; alias++)
+            for (alias = host->h_aliases; *alias != nullptr; alias++)
                 if (try_name(*alias, node, nodelen, &status))
                     return status;
         }
@@ -166,7 +166,7 @@ lookup_service(unsigned short port, char *service, socklen_t servicelen,
     if (!(flags & NI_NUMERICSERV)) {
         protocol = (flags & NI_DGRAM) ? "udp" : "tcp";
         srv = getservbyport(htons(port), protocol);
-        if (srv != NULL) {
+        if (srv != nullptr) {
             namelen = strlen(srv->s_name);
             if (namelen + 1 > (size_t) servicelen)
                 return EAI_OVERFLOW;
@@ -205,7 +205,8 @@ getnameinfo(const struct sockaddr *sa, socklen_t salen UNUSED, char *node,
     int status;
     unsigned short port;
 
-    if ((node == NULL || nodelen <= 0) && (service == NULL || servicelen <= 0))
+    if ((node == nullptr || nodelen <= 0)
+        && (service == nullptr || servicelen <= 0))
         return EAI_NONAME;
 
     /* We only support AF_INET. */
@@ -214,14 +215,14 @@ getnameinfo(const struct sockaddr *sa, socklen_t salen UNUSED, char *node,
     sin = (const struct sockaddr_in *) (const void *) sa;
 
     /* Name lookup. */
-    if (node != NULL && nodelen > 0) {
+    if (node != nullptr && nodelen > 0) {
         status = lookup_name(&sin->sin_addr, node, nodelen, flags);
         if (status != 0)
             return status;
     }
 
     /* Service lookup. */
-    if (service != NULL && servicelen > 0) {
+    if (service != nullptr && servicelen > 0) {
         port = ntohs(sin->sin_port);
         return lookup_service(port, service, servicelen, flags);
     } else

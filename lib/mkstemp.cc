@@ -76,7 +76,7 @@ mkstemp(char *tmpl)
     }
 
     /* Get some more-or-less random information. */
-    gettimeofday(&tv, NULL);
+    gettimeofday(&tv, nullptr);
     randnum = ((long_int_type) tv.tv_usec << 16) ^ tv.tv_sec ^ getpid();
 
     /*

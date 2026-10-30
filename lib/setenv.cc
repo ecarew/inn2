@@ -41,7 +41,7 @@ setenv(const char *name, const char *value, int overwrite)
     char *envstring;
 
     /* Do nothing if not overwriting and the variable is already set. */
-    if (!overwrite && getenv(name) != NULL)
+    if (!overwrite && getenv(name) != nullptr)
         return 0;
 
     /*

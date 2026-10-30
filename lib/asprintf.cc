@@ -64,14 +64,14 @@ vasprintf(char **strp, const char *fmt, va_list args)
     int status, needed, oerrno;
 
     va_copy(args_copy, args);
-    needed = vsnprintf(NULL, 0, fmt, args_copy);
+    needed = vsnprintf(nullptr, 0, fmt, args_copy);
     va_end(args_copy);
     if (needed < 0) {
-        *strp = NULL;
+        *strp = nullptr;
         return needed;
     }
     *strp = static_cast<char *>(malloc(needed + 1));
-    if (*strp == NULL)
+    if (*strp == nullptr)
         return -1;
     status = vsnprintf(*strp, needed + 1, fmt, args);
     if (status >= 0)
@@ -79,7 +79,7 @@ vasprintf(char **strp, const char *fmt, va_list args)
     else {
         oerrno = errno;
         free(*strp);
-        *strp = NULL;
+        *strp = nullptr;
         errno = oerrno;
         return status;
     }

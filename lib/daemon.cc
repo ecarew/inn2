@@ -69,7 +69,7 @@ daemon(int nochdir, int noclose)
 #elif defined(TIOCNOTTY)
     fd = open("/dev/tty", O_RDWR);
     if (fd >= 0) {
-        if (ioctl(fd, TIOCNOTTY, NULL) < 0) {
+        if (ioctl(fd, TIOCNOTTY, nullptr) < 0) {
             status = errno;
             close(fd);
             errno = status;

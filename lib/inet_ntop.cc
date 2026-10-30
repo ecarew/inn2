@@ -59,11 +59,11 @@ inet_ntop(int af, const void *src, char *dst, socklen_t size)
 
     if (af != AF_INET) {
         socket_set_errno(EAFNOSUPPORT);
-        return NULL;
+        return nullptr;
     }
     if (size < INET_ADDRSTRLEN) {
         errno = ENOSPC;
-        return NULL;
+        return nullptr;
     }
     p = static_cast<const unsigned char *>(src);
     /* clang-format off */
@@ -74,6 +74,6 @@ inet_ntop(int af, const void *src, char *dst, socklen_t size)
                       (unsigned int) (p[3] & 0xff));
     /* clang-format on */
     if (status < 0 || (size_t) status >= (size_t) size)
-        return NULL;
+        return nullptr;
     return dst;
 }

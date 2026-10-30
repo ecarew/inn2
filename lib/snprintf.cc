@@ -495,7 +495,7 @@ dopr(char *buffer, size_t maxlen, const char *format, va_list args)
             break; /* some picky compilers need this */
         }
     }
-    if (buffer != NULL) {
+    if (buffer != nullptr) {
         if (currlen < maxlen - 1)
             buffer[currlen] = '\0';
         else
@@ -512,7 +512,7 @@ fmtstr(char *buffer, size_t *currlen, size_t maxlen, const char *value,
     int cnt = 0;
     int total = 0;
 
-    if (value == 0) {
+    if (value == nullptr) {
         value = "(null)";
     }
 
@@ -887,7 +887,7 @@ dopr_outch(char *buffer, size_t *currlen, size_t maxlen, char c)
 int
 vsnprintf(char *str, size_t count, const char *fmt, va_list args)
 {
-    if (str != NULL)
+    if (str != nullptr)
         str[0] = 0;
     return dopr(str, count, fmt, args);
 }

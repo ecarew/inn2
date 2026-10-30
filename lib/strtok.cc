@@ -34,8 +34,8 @@ strtok(char *s, const char *delim)
     static char *last;
 
 
-    if (s == NULL && (s = last) == NULL)
-        return (NULL);
+    if (s == nullptr && (s = last) == nullptr)
+        return (nullptr);
 
     /*
      * Skip (span) leading delimiters (s += strspn(s, delim), sort of).
@@ -48,8 +48,8 @@ cont:
     }
 
     if (c == 0) { /* no non-delimiter characters */
-        last = NULL;
-        return (NULL);
+        last = nullptr;
+        return (nullptr);
     }
     tok = s - 1;
 
@@ -63,7 +63,7 @@ cont:
         do {
             if ((sc = *spanp++) == c) {
                 if (c == 0)
-                    s = NULL;
+                    s = nullptr;
                 else
                     s[-1] = 0;
                 last = s;
