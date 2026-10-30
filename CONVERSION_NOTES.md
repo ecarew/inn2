@@ -190,7 +190,18 @@ headers on the include path; the commits give the exact commands.
   Berkeley DB 1.85 `db.h`, which `ovdb-private.h` rejects ("Need Berkeley
   DB 4.4 or higher").
 
-None of this links or runs the code; that waits for CMake-only goal item 8
+- lib's 22 replacement functions (2026-10-30, `4c0c33482` through
+  `4cb841856`): macOS and Linux have every function they replace, so
+  neither build compiles them.  Each was checked with and without
+  -DTESTING.  The 14 with tests are compiled into their tests with
+  -DTESTING and run.  Changes: the TESTING prototypes got C linkage
+  (BEGIN_DECLS/END_DECLS), four `void *` casts (asprintf, getaddrinfo,
+  inet_ntop, snprintf), mkstemp's `template` parameter renamed `tmpl`, and
+  strcasecmp's table written as octal integers instead of character
+  literals ('\200' is negative where char is signed, a narrowing error).
+  nullptr was applied with clang-tidy run directly (`a1e7a91c7`).
+
+Apart from those lib tests, none of this links or runs the code; that waits for CMake-only goal item 8
 (optional features).
 
 ### Testing gate for each directory
