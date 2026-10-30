@@ -4,7 +4,7 @@
 #  the ordinary user "tester" (not the news user), in a fresh copy of the
 #  source in the current directory: what someone who clones the repository
 #  does on Linux.  Configure and build with CMake alone (no Autoconf or
-#  Make), then run support/verify-cxx.sh on a normal build and
+#  Make), then run ctest and support/verify-cxx.sh on a normal build and
 #  support/live-innd.sh on a build for the tester's own account.
 
 set -e
@@ -23,8 +23,15 @@ cmake -S . -B build-live -G Ninja \
 cmake --build build-live >/tmp/build-live.log 2>&1 \
     || { grep -B12 -m3 -E 'error' /tmp/build-live.log | head -60; exit 1; }
 
-# Run both even if the first fails; report the worse result.
+# Run all of them even if one fails; report the worst result.
 status=0
+step "ctest --test-dir build"
+if ! ctest --test-dir build --output-on-failure >/tmp/ctest.log 2>&1; then
+    status=1
+    tail -60 /tmp/ctest.log
+else
+    grep -E 'tests passed|\(Skipped\)' /tmp/ctest.log || true
+fi
 step "support/verify-cxx.sh build"
 support/verify-cxx.sh build || status=1
 step "support/live-innd.sh build-live"
