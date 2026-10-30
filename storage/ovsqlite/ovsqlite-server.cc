@@ -336,7 +336,7 @@ make_listener()
 #    endif
     if (listen(listensock, innconf->maxlisten) == -1)
         sysdie("cannot listen on socket");
-    fdflag_nonblocking(listensock, 1);
+    fdflag_nonblocking(listensock, true);
     FD_SET(listensock, &read_fds);
     maxsock = listensock;
 }
