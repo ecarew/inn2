@@ -19,4 +19,4 @@ add_library(INN::hist ALIAS innhist)
 
 # History tools (history/Make.methods).  hissqlite-util is a script generated
 # from hissqlite-util.in and is not built here yet.
-inn_program(hissqlite-convert SOURCES hissqlite/hissqlite-convert.c)
+inn_program(hissqlite-convert SOURCES hissqlite/hissqlite-convert.cc)

@@ -73,7 +73,7 @@ static bool
 convert_cb(void *cookie, const HASH *hash, time_t arrived, time_t posted,
            time_t expires, const TOKEN *token)
 {
-    struct convstate *st = cookie;
+    struct convstate *st = static_cast<struct convstate *>(cookie);
     sqlite3_stmt *ins = st->insert;
     int rc;
 
