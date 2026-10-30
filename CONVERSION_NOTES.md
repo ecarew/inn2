@@ -217,6 +217,13 @@ articles run in support/live-innd.sh.  Applied so far:
 | nnrpd | 42.3% | live-innd.sh nnrpd section (`33d778dfa`) |
 | backends | 41.5% | live-innd.sh backends section (`29f5c80e4`) |
 | frontends | 50.4% | live-innd.sh frontends sections (`0380c3f5e`) |
+| storage: tdx-util | 81.9% | tests/overview/tdx-util.t (`6106a013f`) |
+
+tdx-util.t builds its overview from a tradspool spool and a history
+written by makehistory.  Its inn.conf must use absolute paths: makehistory
+changes to the history directory before reading the spool, so with
+relative paths it finds no articles and writes an empty history without
+an error.
 
 nntpget and innxbatch always connect to port 119, so only their argument
 and error paths run (15.4% and 15.9%); innbind (8.5%) binds ports for innd
