@@ -68,6 +68,7 @@ overview/overchan
 overview/ovsqlite
 overview/ovsqlite-integ
 overview/tdx-group
+overview/tdx-util
 overview/tradindexed
 overview/xref
 perl/minimum-version
