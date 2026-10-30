@@ -670,10 +670,31 @@ Per-article reset becomes one `clear()`, and frees go away.
 and with a parse benchmark like support/bench/header-lookup if it touches
 the per-article loop):
 1. Done: this analysis.
-2. Tests first: xrefslave mode (ARTxrefslave), distributions
-   (Distribution header against newsfeeds `/dist` lists), poison and
-   hashfeed paths, more of ARTclean and ARTpost.  Each untested path a step
-   below touches gets a test before the step.
+2. Done 2026-10-30: tests first, in support/live-innd.sh: site and ME
+   distributions (including `!` negation), a poisoned nonexistent group, a
+   newgroup for a group that does not exist yet, MD5 and quickhash
+   hashfeeds, xrefslave mode (innd restarted with `xrefslave: true`: filed
+   under the Xref numbers, malformed entries skipped, missing or useless
+   Xref rejected), and ARTclean's rejections (missing required field, bad
+   Message-ID, Lines with linecountfuzz, bad Date and Injection-Date, too
+   old, future, a colon in Newsgroups; Expires accepted, valid or not).
+   Region coverage: art.cc lines 48.9% to 65.9%; ARTxrefslave 0 to 84%,
+   ARTparsedist 8 to 72%, DISTwanted 0 to 100%, ARTpoisongroup and
+   ARTsendthegroup 0 to 100%, hashfeed 0 to 83-94%, ARTclean 47 to 87%,
+   ARTpost 31 to 45%.  Each untested path a step below touches still gets
+   a test before the step.
+
+   Learned on the way: in newsfeeds, distributions go in the pattern field
+   (`site:*/local:...`); `site/x` lists exclusions.  ME's subscription is
+   put in front of every site's, so a site that wants only some groups
+   starts with `!*`.  rnews checks Subject and Message-ID itself, so those
+   rejections are tested over IHAVE.  In xrefslave mode tradspool takes
+   the article's path from the first Xref entry and refuses the article if
+   that entry is malformed, though ARTxrefslave skips such entries (upstream
+   behavior, left as is).  HashFeedMatch's `else continue;` does not
+   advance to the next entry, so an unknown hash type would loop for ever;
+   unreachable today (the parser makes only the two known types), listed as
+   a refactoring candidate.
 3. Add `ArticleState`, empty, with its creation and destruction in chan.cc
    and cc.cc's stack uses.
 4. Generated strings: Xref (and its length/capacity), Replic, LinesBuffer,
