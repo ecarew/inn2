@@ -60,6 +60,7 @@ done
 live=false
 if [ -f build-live/CMakeCache.txt ]; then
     live=true
+    # shellcheck disable=SC2015  # the failure block is for either step failing
     cmake --build build-live -j8 >"$tmp/build-live.log" 2>&1 \
         && support/live-innd.sh build-live >"$tmp/live.txt" 2>&1 \
         || { echo "LIVE INND TEST FAILED; not committing"; \
