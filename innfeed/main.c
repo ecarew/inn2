@@ -135,7 +135,8 @@ main(int argc, char **argv)
 
     /* Normally started by innd as the news user.  If started as root,
        switch to the news user before opening anything. */
-    ensure_news_user_grp(true, true);
+    if (geteuid() == 0)
+        ensure_news_user_grp(true, true);
 
     message_handlers_die(2, error_log_stderr_date, message_log_syslog_err);
     message_handlers_warn(1, message_log_syslog_warning);
