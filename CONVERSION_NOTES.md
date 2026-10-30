@@ -695,8 +695,18 @@ the per-article loop):
    advance to the next entry, so an unknown hash type would loop for ever;
    unreachable today (the parser makes only the two known types), listed as
    a refactoring candidate.
-3. Add `ArticleState`, empty, with its creation and destruction in chan.cc
-   and cc.cc's stack uses.
+3. Done 2026-10-30: `struct ArticleState` in innd/article.h (C++ only;
+   not copyable; `clear()` empty so far), reached from `ARTDATA::State`,
+   an incomplete type to C.  CHANcreate keeps a slot's existing one across
+   its `*cp = CHANnull` reset (as it does the In/Out buffers) or creates
+   one; CHANclose deletes it; ARTprepare calls `clear()` before each
+   article.  cc.cc's two stack `ARTDATA`s are value-initialized (`{}`), so
+   `State` is null there instead of uninitialized.  Checked with
+   LeakSanitizer on Debian: tests/innd/chan leaks nothing, and leaks
+   exactly the one `ArticleState` with the `delete` removed (macOS's
+   `leaks` cannot inspect the test process, so it proves nothing there).
+   tests/innd/artparse already leaked about 135 KB (its fake channels are
+   never closed), none of it ArticleState.
 4. Generated strings: Xref (and its length/capacity), Replic, LinesBuffer,
    Bytes to `std::string` in `ArticleState`.
 5. The `LISTBUFFER`s (Newsgroups, Distribution, Path) to
