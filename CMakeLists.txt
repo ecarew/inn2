@@ -107,6 +107,7 @@ set(INN_RUNAS_GROUP "" CACHE STRING "Override RUNASGROUP (default: news)")
 include(cmake/InnConfigure.cmake)
 configure_file(include/config.h.cmake.in ${CMAKE_BINARY_DIR}/include/config.h)
 add_subdirectory(include)
+add_subdirectory(samples)
 include_directories(BEFORE ${CMAKE_BINARY_DIR}/include)
 include_directories(${CMAKE_SOURCE_DIR}/include)
 
