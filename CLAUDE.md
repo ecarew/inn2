@@ -25,6 +25,9 @@ behind them, and the history of the work, are in
   detect, with a comment saying why.
 - Per-file compile flags (Perl, Python) use
   `set_source_files_properties … COMPILE_OPTIONS`.
+- Boost 1.92 or later is required (decided 2026-10-30), header-only
+  libraries only until a compiled one is agreed; link `Boost::headers`.
+  Prefer the standard library, then Boost, then INN's own code.
 
 ## Inclusion of C headers
 
