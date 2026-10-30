@@ -757,3 +757,269 @@ could not notice because build-live makes the tester the news user.  The
 fix is `4780a0b0c` and `a885baf6d`.  When adding a privilege drop, also
 run the program as a non-root user who is not the news user (verify-cxx.sh's
 build/ is configured with the default news user, so its tests do this).
+
+## Conversion log
+
+History moved here from CLAUDE.md on 2026-10-30, verbatim, so CLAUDE.md
+holds only the rules and the open items.  New resolved items and findings
+are added here.
+
+### Resolved
+
+Open items from CLAUDE.md, moved here when done, newest first.
+
+- 2026-10-30: CMake-only goal item 1: CMake runs its own platform checks
+  (`cmake/InnConfigure.cmake`, with configure's run tests in
+  `cmake/checks/`) and writes config.h from `include/config.h.cmake.in`,
+  plus inn/system.h, version.h, paths.h and the five inn/portable-*.h
+  (`include/CMakeLists.txt`), into the build tree (`8198bbda2` through
+  `377c0a4e6`).  libinn's replacement functions are chosen by the checks
+  (`a18ea0736`).  Checked with support/compare-config.sh against configure's
+  config.h on macOS and Linux: identical except HAVE_STRUCT_TM_TM_GMTOFF,
+  where configure is wrong (no <time.h> in its test).  configure's headers
+  were moved out of include/; only samples/inn.conf still needs ./configure
+  (goal item 3).
+- 2026-10-30: CMake-only goal item 2: CMake generates the method tables
+  (methods, ovmethods, hismethods) and the ovsqlite and hissqlite SQL
+  helpers as C++ in the build tree, rerunning a generator when it or its
+  inputs change (`daa978cd1` through `f59b45640`).  The generators write
+  `.cc` and take an output directory.  CMake now needs only the three
+  headers ./configure writes.  The stale generated .c/.h files a Make build
+  had left in the source tree were moved out (they would shadow the
+  generated headers through quoted includes).  With this, every source
+  compiled into the three libraries is C++.
+- 2026-10-30: root checks rerun by the user on macOS after `4780a0b0c`,
+  `a885baf6d` and the ovsqlite-server conversion (`30461df12`):
+  `sudo support/root-checks.sh` RESULT: PASS, all 34 checks (lib/newsuser
+  3/3; rnews, ovsqlite-server x2, innfeed and nnrpd drop to news; the 9
+  programs and 19 scripts refuse root).
+- 2026-10-30: hissqlite-convert and ovsqlite-server converted to C++
+  (`a850c63d9`, `30461df12`), then nullptr (`4aca04be5`, `06b1ce279`),
+  void-arg (`441fed69c`) and bool literal (`9a927d98c`).  Tests first: the
+  existing hissqlite-convert test had always skipped under verify-cxx.sh
+  (`68cfe3743`, `d4d043362`), and ovsqlite-integ.t was not run at all
+  (`9ef23a564`, `fb394e519`); coverage 0% → 73.2% and 0% → 39.1%
+  (ovsqlite.cc 7.5% → 49.9%).
+- 2026-10-30: regression from the security audit (`af8441c0f`) fixed:
+  ovsqlite-server and innfeed called ensure_news_user_grp() unconditionally,
+  so as any non-root user other than news they died ("can't resolve news to
+  a GID", or "must be run as news").  Now called only as root, like rnews
+  and nnrpd (`4780a0b0c`, `a885baf6d`).  Found by ovsqlite-integ.t; missed
+  by the live harness because build-live's news user is the tester.
+- 2026-10-30: tdx-util converted to C++ (`1c1d79bfa`, nullptr `5ece47ac3`;
+  nothing for void-arg or bool literals).  Tests first: tests/overview/tdx-util.t
+  (`6106a013f`, run by verify-cxx.sh from `eb260b8e9`), 24 checks, coverage
+  17.9% → 81.9%.
+- 2026-10-30: lib/ replacement functions converted to C++, all 22, one per
+  commit (`4c0c33482` through `4cb841856`), then nullptr (`a1e7a91c7`)
+  and void-arg (`18bc07d5d`); the bool-literal pass had nothing to change.
+  The macOS build compiles none of them; each was checked with
+  `c++ -std=c++20 -fsyntax-only`, with and without -DTESTING, and the 14
+  with tests are run by verify-cxx.sh.  lib/ now has no `.c` files.
+- 2026-10-29: commit-verified.sh left the paths it had staged staged when it
+  refused (unstaged changes left, verification or live test failed), so the
+  next run committed them too; this merged two ovdb fixes into one commit
+  (split again before pushing).  It now restores the index as it was before
+  the run whenever it does not commit.
+- 2026-10-29: frontends/ converted to C++, all 12 built programs
+  (`a1363a6fe` through `efb8bfd9b`), the ovdb tools' Berkeley DB code
+  fixed after a syntax check (`57e431e0b`, `74499a1fa`), then nullptr,
+  void-arg and bool-literal passes (`3e1e529f4`, `66389a61e`, `e6519ac69`;
+  no single-line typedefs).  Tests first: `0380c3f5e`, 50.4% line coverage.
+  feedone.c and sys2nf.c stay C for now (see "Other known gaps").
+- 2026-10-29: backends/ converted to C++, all 14 files (`2bc8f526b`
+  through `c0629da2d`), then nullptr, void-arg, bool-literal and typedef
+  passes (`a3fe3102b`, `fd95a8aee`, `85d3bca07`, `0cd2d54e5`).  Tests first:
+  `29f5c80e4`, 41.5% line coverage.
+- 2026-10-29: nnrpd/ converted to C++, all 18 files (`d298ec362` through
+  `5952b3822`), then nullptr, void-arg, bool-literal and typedef passes
+  (`624fc7f51`, `e19b4ec63`, `68e73ed90`, `9d6b989d2`).  Tests first: the
+  nnrpd section of support/live-innd.sh (`33d778dfa`).
+- 2026-10-29: innd coverage gate passed: innd/ 33.9% (from 2.0%) with
+  innd/artparse, innd/chan and the live test support/live-innd.sh.  The gate
+  (33% before further C++ conversion anywhere, decided 2026-10-28) no longer
+  blocks; keep innd above it by adding tests with changes.
+
+### Upstream bugs and quirks found
+
+Behavior of upstream INN found while testing, kept as is unless noted.
+
+- Upstream bug (found 2026-10-30, kept): history/buildconfig, run from the
+  top directory, looks for `history/cnfs` (a storage method) instead of
+  `history/hisv6`, so it only works when run from history/ (as both builds
+  do).
+- Upstream behavior (found 2026-10-30): ovsqlite-server copies its socket
+  path into `sun_path` with strlcpy, so a `pathrun` that makes it longer
+  than 104 bytes (macOS; 108 on Linux) is silently truncated and the
+  server listens on a shortened name.  The client truncates the same way,
+  so they still meet, but a too-long path should be an error.  verify-cxx.sh
+  uses /tmp for its scratch directory because of this (`fb394e519`).
+- Upstream bug (found 2026-10-30, kept): `tdx-util` with no mode option says
+  "group must be specified for -" instead of "a mode option must be
+  specified", because `strchr("cgoOR", mode)` matches the terminating NUL
+  when mode is '\0'.  tests/overview/tdx-util.t records the current
+  message; fix (and update that check) in the refactoring phase, or report
+  upstream.
+- Upstream bug, control/gencancel.c: without -n, gencancel copies the
+  Newsgroups value from the wire-format spool with its trailing \r, so the
+  cancel article it writes has a malformed header that innd refuses.  Same in
+  the original C (checked 2026-10-29).  Strip the \r when converting or
+  fixing gencancel; support/live-innd.sh works around it.
+- Upstream bug, innfeed/article.c:37: `#define VALIDATE_HASH_TABLE() (void(0))`
+  is C++ syntax and does not compile as C when NDEBUG is defined.  Latent,
+  since NDEBUG is no longer defined; fix when innfeed is converted.
+- Kerberos (auth_krb5) is found through `krb5-config`, which on this Mac is
+  Anaconda's (`/opt/anaconda3`), matching what configure picked.
+
+### Flaky test: lib/network/client
+
+- Flaky test (2026-10-29): `lib/network/client` once passed 16 of 22 in
+  verify-cxx.sh on build/ (refusing a notes-only commit), then 22 of 22 in
+  three reruns.  Not investigated; possibly a port or timing race in the
+  test's local server.  Note any recurrence here.
+  Recurred twice on 2026-10-30 during the lib series (build-asan/, then
+  build/), both times 16 of 22 with exit status 0, and 22 of 22 in 14
+  reruns by hand, including under full CPU load.  Exit 0 means no check
+  failed: six "ok" lines were lost from the captured output (suspect:
+  the forked child's output interleaving with the parent's in the pipe).
+  verify-cxx.sh now prints a failing test's non-"ok" lines (`2892a1a8a`);
+  read them at the next recurrence.
+  Recurred 2026-10-30 (generator series, build/), with output: tests 12-18
+  fail, all in test_network_read.  The parent accepts a connection, and the
+  first network_read on it fails; the errno check expects ETIMEDOUT (60)
+  and gets EPIPE (32).  So the accepted connection is already dead: likely
+  not the delay_writer child's but a leftover from test_timeout_ipv4, which
+  just before hammered the same port 11119 with connection attempts (that
+  run timed out at socket 1).  Unconfirmed; a fix would give each section
+  its own port or drain the old attempts.  Also unexplained: verify-cxx.sh
+  reports exit status 0 although the test prints six "not ok" lines.
+
+2026-10-30: `test_timeout_ipv4` moved to its own port (11120) on the
+evidence above; the fix is unconfirmed, since the failure never reproduced
+outside verify-cxx.sh (50 back-to-back runs under load passed, old and
+new).  If it recurs, the port race was not the cause.
+
+### Coverage history
+
+**Test coverage (support/coverage-report.sh)**
+- Measure with `support/verify-cxx.sh build-cov`, then
+  `support/live-innd.sh build-cov` (it adds to the profiles; verify-cxx.sh
+  clears them), then the report.  Until 33d778dfa live-innd.sh did not set
+  `LLVM_PROFILE_FILE`, so a plain run of it counted nothing; earlier figures
+  that include it came from profiles left in `build-cov/coverage/raw`, and
+  the "before" numbers in that commit's message were stale ones.
+- 2026-10-29, fresh profiles, line coverage by directory: innd/ 42.9%,
+  nnrpd/ 42.3%, expire/ 39.4%, lib/ 74.4%, history/ 70.3%, storage/ 40.0%,
+  authprogs/ 60.4%, control/ 72.1%.
+- nnrpd lowest: sasl.cc 6.9% (no SASL mechanism in the tests), misc.cc
+  22.5%, commands.cc 32.5%, perm.cc 35.3%.
+- 2026-10-29: backends/ 41.5%, frontends/ 50.4% (each measured before its
+  conversion).  backends lowest: innbind 8.5%, nntpget 15.4%, innxbatch
+  15.9%.  nntpget and innxbatch always connect to port 119 (NNTP_PORT, no
+  port option), so only their argument and error paths can run without
+  root; a test would need an option for the port or a server on 119.
+  frontends lowest: inews 41.0%, ctlinnd 41.2%, rnews 42.1%.
+- innd lowest (2026-10-29): nc.cc 21.1% (no NNTP streaming, MODE READER or
+  error responses yet), rc.cc 26.2%, site.cc 33.0% (only file and exploder
+  feeds), newsfeeds.cc 38.1%.
+- 0% also in storage/overdata.cc, lib/inndcomm.cc, lib/network-innbind.cc
+  (as of 2026-10-28).
+- The report warns "N functions have mismatched data" even with fresh
+  profiles; probably sources compiled into more than one binary (tests build
+  lib sources with -DTESTING).  Not yet investigated.
+
+### Security work status (2026-10-29 to 2026-10-30)
+
+**Security: no root at run time (decided 2026-10-29; next task after the
+coverage gate)**
+- Goal: no INN executable runs as root in production; they run as an
+  unprivileged account such as `news`.  Tests run as the tester's own user.
+- Current state: innd switches to the news user if started as root
+  (`ensure_news_user_grp()`, innd.cc), and programs install owned by news
+  (0550/0555).  The exception is `innbind`, installed setuid root (4550, group
+  news, `LI_SPRI`) solely to bind ports below 1024 for innd and nnrpd.
+- Policy refined (2026-10-29): root used only transiently at startup and
+  then dropped, or a setuid helper that exits right away, is acceptable.
+  innbind meets this: it dies unless run by the news user, binds only the
+  allowed ports (119 by default), passes each socket back, and exits
+  (backends/innbind.c).  So the post-gate task is an audit: confirm no other
+  setuid-root or root-retaining paths (including scripts and install rules),
+  that innd drops to news before doing anything else, and add tests for it.
+- Audit first pass done 2026-10-29 (CONVERSION_NOTES.md, "Security audit,
+  first pass").  innbind, innd, nnrpd -D and rc.news held.  Fixed
+  2026-10-29: (1) the privilege drop clears root's supplementary groups;
+  (2) nnrpd without -D drops from root; (3) rnews as root drops its group
+  too; (4) innfeed and ovsqlite-server drop from root; (5) programs that
+  write INN's data refuse root (`ensure_not_root()`; read-only tools are
+  exempt).  Started-as-root paths are tested by `support/root-checks.sh`:
+  run by hand with sudo on macOS, and as root in Docker on Linux
+  (support/docker-root-checks.sh); outputs go in the commit.
+- Audit second pass done 2026-10-29: the writer scripts (11 shell, 8 Perl)
+  refuse root; contrib/ reviewed (not installed; recommendations recorded);
+  fastrm's dead root branch removed.  Remaining: audit the CMake install
+  rules when goal item 5 writes them (innbind must stay the only
+  setuid-root file).
+- Alternatives if ever wanted: systemd socket activation (innd accepts
+  `sd_listen_fds` sockets), launchd sockets, Linux `CAP_NET_BIND_SERVICE`.
+
+### Linux and the Make build
+
+10. Portability: build and test on Linux and a BSD, not just macOS.
+    Started 2026-10-29: `support/docker-root-checks.sh` builds the tree on
+    Debian trixie (aarch64, GCC, GNU ld) in Docker and runs root-checks.sh
+    as the container's root.  Fixed on the way: libcrypt for ckpasswd
+    (8c93d26fa), the libinnhist/libinnstorage link cycle (ef4885a92).  Not
+    yet run there: verify-cxx.sh and live-innd.sh.
+- The Autoconf/Make build can no longer build libinn, libinnhist or
+  libinnstorage (their Makefiles list `.c` files that are now `.cc`).  CMake
+  builds all 49 programs (2026-10-28).  As of 2026-10-29 every program in
+  innd/, nnrpd/, backends/, frontends/, expire/, control/ and authprogs/
+  (except auth_krb5) is run by a test; innfeed and the storage/history
+  tools other than tdx-util and makehistory are not yet.  (2026-10-30:
+  tdx-util, hissqlite-convert and ovsqlite-server are now run by tests and
+  converted; see Resolved.)
+- The Make build's storage/ and history/ Makefiles still name the generated
+  sources `.c` (`methods.c`, `sql-*.c`, ...); the generators now write `.cc`.
+  Those libraries were already unbuildable with Make (next item).
+
+### Other findings
+
+- Learned: offering a peer an article that is missing from the spool makes
+  innfeed send an empty article (a bare "."), which hung tinyleaf; tests
+  must feed articles that exist.  innfeed keeps reading its channel input
+  until EOF, so the test holds the input open until delivery finishes.
+- ident's INN test needs an identd on port 113 (tests 2 and 4); the new
+  authprogs/identport test covers ident with a stand-in server instead.
+
+### Verification set (as of 2026-10-30)
+
+Current verification set:
+- CMake build of lib, history, storage and innd succeeds
+- `innd` exports every symbol the Makefile-built `innd` does (169)
+- No C++-mangled exported symbols in `innd`, `libinn.a`, `libinnhist.a` or
+  `libinnstorage.a` (C linkage kept)
+- `innd -h` starts and reaches the news-group check
+- `tinyleaf` smoke test: HELP, IHAVE, duplicate IHAVE, unknown command, QUIT
+- INN tap tests built against the CMake libraries: all 49 C-based `lib/`
+  tests in `tests/TESTS` (replacement-function tests compile their
+  `lib/X` source with `-DTESTING`, from `.cc` once converted),
+  `expire/tombstone-hisexpire`, `overview/api`,
+  `overview/buffindexed`, `overview/tradindexed`, `overview/ovsqlite`,
+  `overview/tdx-group`, `overview/xref`, `storage/caf`,
+  `storage/cancel-tombstone`, `storage/methods` (cnfs, timecaf, timehash and
+  trash store/retrieve/cancel; written for this conversion)
+
+Not yet covered: shell-driven tests that need INN's command-line programs
+(`overview/overchan`, `storage/sm`,
+`storage/archive`, `storage/makehistory`, `lib/hissqlite-util`,
+`lib/xmalloc`), until CMake builds those programs.
+`lib/canlock` reports SKIP (no libcanlock); SKIP does not fail
+verification.  `lib/hissqlite-convert` and `overview/ovsqlite-integ` find
+the CMake-built programs through HISSQLITE_CONVERT and OVSQLITE_SERVER,
+which verify-cxx.sh sets (2026-10-30).
+`samples/inn.conf` (needed by `lib/innconf`) is generated from
+`inn.conf.in`; verify-cxx.sh runs `make -C samples inn.conf` if it is missing.
+
+Add the relevant INN tests when converting a new area (e.g. storage tests for
+`storage/`). Commits before this rule have retroactive `git notes`
+(`git log --notes`) recording checks run after the fact.
