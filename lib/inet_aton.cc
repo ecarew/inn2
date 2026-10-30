@@ -32,7 +32,9 @@
 #if TESTING
 #    undef inet_aton
 #    define inet_aton test_inet_aton
+BEGIN_DECLS
 int test_inet_aton(const char *, struct in_addr *);
+END_DECLS
 #endif
 
 int
