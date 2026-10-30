@@ -46,7 +46,9 @@
 #if TESTING
 #    undef inet_ntop
 #    define inet_ntop test_inet_ntop
+BEGIN_DECLS
 const char *test_inet_ntop(int, const void *, char *, socklen_t);
+END_DECLS
 #endif
 
 const char *
@@ -63,7 +65,7 @@ inet_ntop(int af, const void *src, char *dst, socklen_t size)
         errno = ENOSPC;
         return NULL;
     }
-    p = src;
+    p = static_cast<const unsigned char *>(src);
     /* clang-format off */
     status = snprintf(dst, size, "%u.%u.%u.%u",
                       (unsigned int) (p[0] & 0xff),
