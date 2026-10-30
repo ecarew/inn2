@@ -30,7 +30,9 @@
 #if TESTING
 #    undef setenv
 #    define setenv test_setenv
+BEGIN_DECLS
 int test_setenv(const char *, const char *, int);
+END_DECLS
 #endif
 
 int
