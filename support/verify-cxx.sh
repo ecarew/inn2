@@ -251,7 +251,7 @@ tests=(
     overview/buffindexed:overview/overview:-DOVTYPE=buffindexed
     overview/tradindexed:overview/overview:-DOVTYPE=tradindexed
     overview/ovsqlite
-    overview/tdx-group overview/xref
+    overview/tdx-group overview/tdx-util.t overview/xref
     storage/caf storage/cancel-tombstone storage/methods
     storage/makehistory.t storage/sm.t storage/archive.t
 )
@@ -273,7 +273,7 @@ shm_cleanup() {
 # and authprogs pointing at the CMake-built programs.
 sb=$tmp/sandbox
 mkdir -p "$sb/tests" && cp -R tests/data "$sb/tests/data"
-for d in authprogs backends control expire frontends innfeed nnrpd; do
+for d in authprogs backends control expire frontends innfeed nnrpd storage; do
     [ -d "$build/$d" ] && ln -s "$build/$d" "$sb/$d"
 done
 
