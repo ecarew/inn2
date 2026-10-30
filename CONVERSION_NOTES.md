@@ -707,8 +707,32 @@ the per-article loop):
    `leaks` cannot inspect the test process, so it proves nothing there).
    tests/innd/artparse already leaked about 135 KB (its fake channels are
    never closed), none of it ArticleState.
-4. Generated strings: Xref (and its length/capacity), Replic, LinesBuffer,
-   Bytes to `std::string` in `ArticleState`.
+4. Done 2026-10-30: `ArticleState` holds `std::string xref` (was `Xref`,
+   `XrefLength`, `XrefBufLength`: a buffer grown by hand with `xmalloc`,
+   `xrealloc` and `sprintf`), `std::string_view replic` (was `Replic`,
+   `ReplicLength`: a pointer into Xref, or into the received header in
+   xrefslave mode), `std::string bytes` with `bytes_value()` (was
+   `Bytes[SMBUF]`, `BytesLength`) and `std::string lines` (was
+   `LinesBuffer[SMBUF]`); `clear()` empties them and keeps their capacity.
+   ARTassignnumbers appends instead of `sprintf`ing into a buffer it grows
+   itself, with the same 1000-character folding rule.  chan.cc's Xref
+   `free` is gone; eight fields left `ARTDATA`.  Code lines: art.cc -56
+   +43, site.cc -3 +5, chan.cc -5, innd.h -11, article.h +22.  The header,
+   art.cc, site.cc and chan.cc changed in one commit (moving fields out of
+   the struct does not build in parts).
+
+   Tests first: live-innd.sh gained a 40-group crosspost (one Xref entry
+   per group, folded at 1000 characters, unfolded in overview) and a file
+   feed with the `b` and `R` fields; both pass on the old and new code.
+   Checked the same: the stored articles' Xref headers and the overview's
+   Bytes, Lines and Xref (dates masked) are identical before and after,
+   and so is the `b`/`R` feed file; the live test also passes under
+   ASan/UBSan.
+
+   Found: a feed's `R` field copies a folded Xref with its CRLF, so the
+   feed file entry is split over two lines (upstream behavior, unchanged).
+   SMstore takes `ARTHANDLE::groups` as `char *` though it only reads it,
+   so art.cc passes `replic` through a `const_cast` at that C boundary.
 5. The `LISTBUFFER`s (Newsgroups, Distribution, Path) to
    `std::vector<std::string_view>` over one owned buffer; then Headers and
    Overview from `struct buffer` to `std::string`.
