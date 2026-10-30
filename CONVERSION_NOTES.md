@@ -683,3 +683,47 @@ option, pointing to ovsqlite.  (2) Ship and test the converter.
 (3) Remove ovdb in a later release.  Because this changes what INN
 supports, raise it with the upstream INN maintainers first; they may
 already have a position the documentation does not show.
+
+### Positioned file I/O: pread/pwrite in modern C++ (noted 2026-10-30, refactoring phase)
+
+**What INN uses them for.**  `pread` and `pwrite` read or write at a given
+file offset in one call and leave the descriptor's file position alone,
+so code sharing a descriptor does not race on `lseek`.  Callers: the
+storage methods (`storage/cnfs/cnfs.cc`, `storage/buffindexed/buffindexed.cc`,
+`storage/tombstone.cc`), history (`history/hisv6/hisv6.cc`, `lib/dbz.cc`),
+`expire/expireover.cc`, and `lib/xwrite.cc` (`xpwrite`).  `lib/pread.cc` and
+`lib/pwrite.cc` are fallbacks for systems without them; macOS and Linux
+both have them, so neither build compiles the fallbacks.
+
+**Standard C++ has no equivalent** (as of C++23).  Candidates looked at:
+- `std::spanstream` (C++23) is a stream over a buffer in memory.  It does
+  no file I/O, so it cannot replace either call.
+- Boost.Iostreams wraps files as streams, but a positioned read is a seek
+  then a read: two calls, and it moves the shared file position, which is
+  exactly what `pread` avoids.
+- **Boost.Asio's `random_access_file`** (Boost 1.78 and later) has
+  `read_some_at` and `write_some_at`, which match `pread`/`pwrite`, plus
+  asynchronous forms.  This is the only real match found.  Costs: a Boost
+  dependency INN does not have today, and rewriting the callers.
+
+**Why Boost is worth considering anyway.**  Boost libraries have often
+moved into the standard after a few years: smart pointers, `function`,
+`bind`, regex, thread, chrono and random in C++11; `optional`, `variant`,
+`any`, `string_view` and `filesystem` in C++17.  Asio was the basis of the
+Networking TS (ISO/IEC TS 19216:2018), though that TS has not been merged
+into the standard; C++26 took the senders/receivers model (`std::execution`)
+instead.  To check, with citations (cppreference / WG21 papers), before
+relying on it: whether any C++26 or later proposal adds positioned file
+I/O.
+
+**Options for the refactoring phase.**
+1. Keep `pread`/`pwrite` behind a small C++ wrapper of INN's own (for
+   example a file class with `read_at`/`write_at` returning a span or an
+   expected-style result), and drop the C fallbacks, since every target
+   platform has the calls.  No new dependency; the wrapper's interface can
+   follow Asio's so a later switch is mechanical.
+2. Adopt Boost.Asio's `random_access_file` directly, if INN takes on
+   Boost for other reasons too (networking in innd/nnrpd/innfeed would be
+   the bigger reason).
+3. Switch to a standard facility if one is adopted.
+Option 1 is the cheapest first step and does not rule out 2 or 3.
