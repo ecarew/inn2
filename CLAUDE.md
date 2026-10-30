@@ -179,15 +179,18 @@ coverage gate)**
   setuid-root or root-retaining paths (including scripts and install rules),
   that innd drops to news before doing anything else, and add tests for it.
 - Audit first pass done 2026-10-29 (CONVERSION_NOTES.md, "Security audit,
-  first pass").  innbind, innd, nnrpd -D and rc.news hold.  (1) Fixed: the
-  privilege drop now clears root's supplementary groups.  To fix: (2) nnrpd without -D started as root keeps root;
-  (3) rnews as root drops only its UID; (4) innfeed and ovsqlite-server
-  never check their user; (5) policy question: should programs that write
-  INN's data refuse root?  Decided 2026-10-29: yes, programs that write
-  INN's data refuse root (read-only tools such as ctlinnd and grephistory
-  are exempt); started-as-root paths are tested by
-  `sudo support/root-checks.sh`, run by hand, its output in the commit.  Not yet covered: the Perl and shell
-  scripts beyond rc.news, contrib/, and the planned CMake install rules.
+  first pass").  innbind, innd, nnrpd -D and rc.news held.  Fixed
+  2026-10-29: (1) the privilege drop clears root's supplementary groups;
+  (2) nnrpd without -D drops from root; (3) rnews as root drops its group
+  too; (4) innfeed and ovsqlite-server drop from root; (5) programs that
+  write INN's data refuse root (`ensure_not_root()`; read-only tools are
+  exempt).  Started-as-root paths are tested by `support/root-checks.sh`:
+  run by hand with sudo on macOS, and as root in Docker on Linux
+  (support/docker-root-checks.sh); outputs go in the commit.
+- Still to audit: the Perl and shell scripts beyond rc.news, contrib/, and
+  the CMake install rules once they exist (goal item 5).  Follow-up:
+  fastrm's `unlink_dangerous` branch (root may unlink directories) is dead
+  now that fastrm refuses root; remove it in a cleanup commit.
 - Alternatives if ever wanted: systemd socket activation (innd accepts
   `sd_listen_fds` sockets), launchd sockets, Linux `CAP_NET_BIND_SERVICE`.
 
@@ -289,6 +292,10 @@ a document so the rounds can be compared.
   hits (`if (ptr)`, `while (n)`).  Style; low priority.
 
 **Other known gaps (2026-10-28)**
+- Flaky test (2026-10-29): `lib/network/client` once passed 16 of 22 in
+  verify-cxx.sh on build/ (refusing a notes-only commit), then 22 of 22 in
+  three reruns.  Not investigated; possibly a port or timing race in the
+  test's local server.  Note any recurrence here.
 - 49 struct/enum `typedef`s with bodies left by `modernize-use-using`; convert
   to `struct X { ... };` during struct/class modernization.  Do not use
   clang-tidy 23.1.4's `-fix` for this check: it corrupts anonymous struct

@@ -295,34 +295,55 @@ install macros in `Makefile.global.in` and `m4/modes.m4`;
 2. **nnrpd started as root without -D keeps root.**  The drop is inside
    the daemon-mode block only.  Run from inetd/xinetd as root (the docs say
    to use the news user, but nothing enforces it), nnrpd serves the whole
-   reader session as root.  Fix: drop (or refuse) in every mode, before
-   reading readers.conf or talking to the client.
+   reader session as root.  **Fixed** (2026-10-29): the non-daemon branch
+   calls `ensure_news_user_grp` when the effective UID is root, before
+   `SetupDaemon()` opens storage and before any client I/O; only
+   `innconf_read` runs earlier.
 3. **rnews started as root drops only its UID.**  It calls `setuid(news)`
    but not `setgid` or `setgroups` (rnews.cc:870), so it keeps group 0 and
    root's supplementary groups while it processes batches from the network.
    It avoids `ensure_news_user` on purpose, to allow rnews installed setuid
    news; the group drop can still be done when the real UID is root.
+   **Fixed** (2026-10-29): when the effective UID is root, rnews calls
+   `ensure_news_grp(true)` (group and supplementary groups) before its
+   `setuid`.  Before the fix, the root check saw its spooled batch owned
+   by the news UID but group 0.
 4. **innfeed and ovsqlite-server never check their user.**  Both are
    long-running servers normally started by innd or rc.news as news; run
-   directly as root, each keeps root for its lifetime.  Fix: drop to news
-   (or refuse) at startup, like innd.
+   directly as root, each keeps root for its lifetime.  **Fixed**
+   (2026-10-29): both call `ensure_news_user_grp` right after
+   `innconf_read`, before opening anything.  `inn/newsuser.h` now includes
+   `<sys/types.h>` itself, which ovsqlite-server.c needed.
 5. **Most other programs never check their user** (ctlinnd, inews, innxmit,
    batcher, the authenticators, ...).  Run as root by an administrator they
    act as root, and may leave root-owned files in news-owned directories.
    That is a correctness and hygiene issue more than an escalation (root is
    already root); a candidate policy is that programs which write INN's
-   data refuse root, as rc.news does.
+   data refuse root, as rc.news does.  **Decided and done** (2026-10-29):
+   `ensure_not_root()` (lib/newsuser) dies when the effective UID is 0, and
+   the programs that change INN's spool, history, overview, batch files or
+   logs call it first thing: innxmit, batcher, buffchan, overchan, archive,
+   fastrm, prunehistory, shrinkfile, innxbatch.  Exempt: read-only tools
+   (ctlinnd, grephistory, sm without -d, getlist, inndf, convdate,
+   innconfval, cvtbatch, actsync, gencancel), inews (posts through the
+   server), shlock (a general locking utility for scripts), ninpaths
+   (writes only the file it is given; links no INN library).  Programs
+   that already drop from root (expire, makehistory, ...) keep doing so.
 
 **Test builds.**  build-live and build-cov compile in the tester's account
 as `RUNASUSER` (INN_RUNAS_USER), so an innbind from those builds would
 accept the tester; they must never be installed.
 
-**Testing the fixes.**  The policy runs tests as the tester, so the
-started-as-root paths cannot run in the normal checks.  Options: refusal
-and wrong-user paths in the normal tests; the root paths in a separate
-test run under sudo by hand, recorded in the commit; or a helper whose
-privilege calls can be replaced in a unit test.  To be decided before
-fixing.
+**Testing the fixes** (decided 2026-10-29: a separate root run).  The
+policy runs tests as the tester, so the started-as-root paths cannot run
+in the normal checks.  `support/root-checks.sh` runs them as root against
+a build whose news user is the tester (build-live on macOS, run by hand
+with sudo; build-linux in Docker on Linux via
+support/docker-root-checks.sh, as the container's root).  It uses a
+scratch installation owned by the news user and checks ownership of what
+each program creates rather than polling processes, except for nnrpd,
+whose UID is read while a client holds its session open.  Every new check
+was also run against the code without the fixes, and failed there.
 
 ### Running innd as the tester for live tests (decided 2026-10-29)
 

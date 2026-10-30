@@ -21,6 +21,7 @@ step "autogen and configure"
 step "generated sources (Make)"
 {
     make -C include
+    make -C samples inn.conf
     make -C lib sqlite-helper-gen
     make -C storage methods.c methods.h ovmethods.c ovmethods.h \
         ovsqlite/sql-main.c ovsqlite/sql-init.c ovsqlite/sql-read.c

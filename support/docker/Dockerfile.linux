@@ -7,7 +7,7 @@ FROM debian:trixie
 RUN apt-get update \
     && DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends \
        build-essential autoconf perl python3 python3-venv flex bison \
-       libsqlite3-dev zlib1g-dev ca-certificates \
+       libsqlite3-dev zlib1g-dev ca-certificates procps netcat-openbsd \
     && rm -rf /var/lib/apt/lists/*
 
 # The CMake build requires CMake 4.3 or later, newer than Debian ships;
