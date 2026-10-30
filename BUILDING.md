@@ -9,21 +9,22 @@ install rules so far.
 ## Requirements
 
 CMake 4.3 or later, a C/C++20 compiler (Apple clang or GCC), Ninja, Perl,
-Python 3 (used by the verification script), flex, bison, SQLite 3 and zlib.
+Python 3 (used by the verification script), flex, bison, SQLite 3, zlib and
+Boost 1.92 or later (header-only libraries, nothing to link).
 No Autoconf or Make: `./configure` is not used.
 
 **macOS** (Xcode command-line tools for the compiler, SQLite and zlib):
 
 ```sh
 xcode-select --install
-brew install cmake ninja
+brew install cmake ninja boost
 ```
 
 **Debian or Ubuntu** (Debian trixie is what is tested):
 
 ```sh
 sudo apt-get install build-essential ninja-build perl python3 python3-venv \
-    flex bison libsqlite3-dev zlib1g-dev netcat-openbsd procps
+    flex bison libsqlite3-dev zlib1g-dev netcat-openbsd procps curl bzip2
 ```
 
 Debian's own CMake is older than 4.3; take it from PyPI (as
@@ -33,6 +34,20 @@ Debian's own CMake is older than 4.3; take it from PyPI (as
 python3 -m venv ~/cmake && ~/cmake/bin/pip install 'cmake>=4.3'
 export PATH=~/cmake/bin:$PATH
 ```
+
+Debian trixie's Boost (`libboost-dev`) is 1.83, older than the 1.92 INN++
+requires; install the official release's headers (nothing is compiled),
+checked against the SHA-256 Boost publishes in
+`boost_1_92_0.tar.bz2.json` beside the archive:
+
+```sh
+curl -fLO https://archives.boost.io/release/1.92.0/source/boost_1_92_0.tar.bz2
+echo "5c1d40cb8e19adbf740a4ec2da35b3e58f3f5804b1dce44deb53df72193cbc6c  boost_1_92_0.tar.bz2" | sha256sum -c
+tar xjf boost_1_92_0.tar.bz2 && cd boost_1_92_0
+./bootstrap.sh && sudo ./b2 --prefix=/usr/local --with-headers install
+```
+
+A distribution's own package works once it is 1.92 or later.
 
 **Optional:** `ccache` (used automatically when installed), PAM, Cyrus SASL
 and Kerberos development files (found if present: `libpam0g-dev`,
