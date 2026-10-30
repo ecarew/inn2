@@ -371,11 +371,6 @@ CHANclose_nntp(CHANNEL *cp, const char *name)
         cp->Data.Overview.left = 0;
         cp->Data.Overview.used = 0;
     }
-    if (cp->Data.XrefBufLength != 0) {
-        free(cp->Data.Xref);
-        cp->Data.Xref = nullptr;
-        cp->Data.XrefBufLength = 0;
-    }
 
     /* If this was a peer who was connection-limited, take note that one of
        their connections was just closed and possibly wake up another one.

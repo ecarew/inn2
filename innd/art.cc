@@ -18,6 +18,7 @@
 #include "article.h"
 
 #include <algorithm>
+#include <cassert>
 #include <array>
 
 using IOVEC = struct iovec;
@@ -492,9 +493,9 @@ ARTstore(CHANNEL *cp, bool filtered)
                 iov[iovcnt++].iov_len = HDR(HDR__XREF) - p;
                 arth.len += HDR(HDR__XREF) - p;
                 /* replace with new one */
-                iov[iovcnt].iov_base = data->Xref;
-                iov[iovcnt++].iov_len = data->XrefLength - 2;
-                arth.len += data->XrefLength - 2;
+                iov[iovcnt].iov_base = data->State->xref.data();
+                iov[iovcnt++].iov_len = data->State->xref.size() - 2;
+                arth.len += data->State->xref.size() - 2;
                 /* next to write */
                 /* this points where trailing "\r\n" of original Xref header
                  * field exists */
@@ -527,9 +528,9 @@ ARTstore(CHANNEL *cp, bool filtered)
         iov[iovcnt].iov_base = (char *) "Xref: ";
         iov[iovcnt++].iov_len = sizeof("Xref: ") - 1;
         arth.len += sizeof("Xref: ") - 1;
-        iov[iovcnt].iov_base = data->Xref;
-        iov[iovcnt++].iov_len = data->XrefLength;
-        arth.len += data->XrefLength;
+        iov[iovcnt].iov_base = data->State->xref.data();
+        iov[iovcnt++].iov_len = data->State->xref.size();
+        arth.len += data->State->xref.size();
         p = Article->data + (data->Body - 2);
     }
     /* write rest of data */
@@ -550,8 +551,10 @@ ARTstore(CHANNEL *cp, bool filtered)
     arth.expires = data->Expires;
     arth.filtered = filtered;
     if (innconf->storeonxref) {
-        arth.groups = data->Replic;
-        arth.groupslen = data->ReplicLength;
+        /* ARTHANDLE's groups is not const in the C storage API, but SMstore
+           only reads it. */
+        arth.groups = const_cast<char *>(data->State->replic.data());
+        arth.groupslen = data->State->replic.size();
     } else {
         arth.groups = HDR(HDR__NEWSGROUPS);
         arth.groupslen = HDR_LEN(HDR__NEWSGROUPS);
@@ -585,17 +588,14 @@ ARTstore(CHANNEL *cp, bool filtered)
      * RFC 3977. */
     data->BytesValue -= 3 + data->DotStuffedLines;
     /* Figure out how much space we'll need and get it. */
-    snprintf(data->Bytes, sizeof(data->Bytes), "Bytes: %ld\r\n",
-             data->BytesValue);
-    /* does not include strlen("Bytes: \r\n") */
-    data->BytesLength = strlen(data->Bytes) - 9;
+    data->State->bytes = "Bytes: " + std::to_string(data->BytesValue) + "\r\n";
 
     if (!NeedHeaders)
         return result;
 
     /* Add the data. */
     buffer_resize(headers, headersize);
-    buffer_set(headers, data->Bytes, strlen(data->Bytes));
+    buffer_set(headers, data->State->bytes.data(), data->State->bytes.size());
     for (i = 0; i < iovcnt; i++) {
         if (i + 1 == iovcnt)
             buffer_append(headers, static_cast<const char *>(iov[i].iov_base),
@@ -1433,17 +1433,13 @@ ARTpoisongroup(char *name)
 static bool
 ARTassignnumbers(ARTDATA *data)
 {
-    char *p, *q;
-    int i, len, linelen, buflen;
+    int i, linelen;
     NEWSGROUP *ngp;
 
-    if (data->XrefBufLength == 0) {
-        data->XrefBufLength = MED_BUFFER * 2 + 1;
-        data->Xref = xmalloc(data->XrefBufLength);
-        strncpy(data->Xref, Path.data, Path.used - 1);
-    }
-    len = Path.used - 1;
-    p = q = data->Xref + len;
+    assert(data->State != nullptr);
+    std::string &xref = data->State->xref;
+    xref.assign(Path.data, Path.used - 1);
+    const size_t hostlen = xref.size();
     for (linelen = i = 0; (ngp = GroupPointers[i]) != nullptr; i++) {
         /* If already went to this group (i.e., multiple groups are aliased
          * into it), then skip it. */
@@ -1463,38 +1459,27 @@ ARTassignnumbers(ARTDATA *data)
             continue;
         }
         ngp->Filenum = ngp->Last;
-        /*  len  ' ' "news_groupname"  ':' "#" "\r\n"
-            plus an extra 2 bytes for "\r\n" in case of a continuation line. */
-        if (len + 1 + ngp->NameLength + 1 + ARTNUMPRINTSIZE + 2 + 2
-            > data->XrefBufLength) {
-            data->XrefBufLength += MED_BUFFER;
-            data->Xref = xrealloc(data->Xref, data->XrefBufLength);
-            p = data->Xref + len;
-        }
         /* Trailing CRLF is counted in the maximum length. */
         if (linelen + 1 + ngp->NameLength + 1 + ARTNUMPRINTSIZE + 2
             > MAXARTLINELENGTH) {
-            /* Line exceeded. */
-            sprintf(p, "\r\n %s:%lu", ngp->Name, ngp->Filenum);
-            buflen = strlen(p);
-            linelen = buflen - 2;
-        } else {
-            sprintf(p, " %s:%lu", ngp->Name, ngp->Filenum);
-            buflen = strlen(p);
-            linelen += buflen;
+            /* Line exceeded: continue on a new line. */
+            xref += "\r\n";
+            linelen = 0;
         }
-        len += buflen;
-        p += buflen;
+        const size_t start = xref.size();
+        xref += ' ';
+        xref.append(ngp->Name, ngp->NameLength);
+        xref += ':';
+        xref += std::to_string(ngp->Filenum);
+        linelen += xref.size() - start;
     }
-    /* p[0] is replaced with '\r' to be wireformatted when stored.  p[1] needs
-       to be '\n'.  We have enough place to modify p here (checked during the
-       reallocation above). */
-    p[0] = '\r';
-    p[1] = '\n';
-    /* data->XrefLength includes trailing "\r\n". */
-    data->XrefLength = len + 2;
-    data->Replic = q + 1;
-    data->ReplicLength = len - (q + 1 - data->Xref);
+    xref += "\r\n";
+    /* The group:num list: after the host and its space, without the CRLF. */
+    if (xref.size() > hostlen + 3)
+        data->State->replic =
+            std::string_view(xref).substr(hostlen + 1, xref.size() - hostlen - 3);
+    else
+        data->State->replic = {};
 
     return true;
 }
@@ -1524,8 +1509,8 @@ ARTxrefslave(ARTDATA *data)
         ;
     if (*p == '\0')
         return false;
-    data->Replic = p;
-    data->ReplicLength = HDR_LEN(HDR__XREF) - (p - HDR(HDR__XREF));
+    data->State->replic =
+        std::string_view(p, HDR_LEN(HDR__XREF) - (p - HDR(HDR__XREF)));
     for (i = 0; (*p != '\0') && (p < HDR(HDR__XREF) + HDR_LEN(HDR__XREF));
          p = next) {
         /* Mark end of this entry and where next one starts. */
@@ -1861,7 +1846,8 @@ ARTmakeoverview(CHANNEL *cp)
     struct buffer *overview = &data->Overview;
     ARTOVERFIELD *fp;
     const ARTHEADER *hp;
-    char *p, *q;
+    const char *p;
+    char *q;
     int i, j, len;
     bool keywords_generated = false;
 
@@ -1903,23 +1889,22 @@ ARTmakeoverview(CHANNEL *cp)
 
         switch (j) {
         case HDR__BYTES:
-            p = data->Bytes + 7; /* skip "Bytes: " */
-            len = data->BytesLength;
+            p = data->State->bytes_value().data();
+            len = data->State->bytes_value().size();
             break;
         case HDR__XREF:
             if (innconf->xrefslave) {
                 p = HDR(j);
                 len = HDR_LEN(j);
             } else {
-                p = data->Xref;
-                len = data->XrefLength - 2;
+                p = data->State->xref.data();
+                len = data->State->xref.size() - 2;
             }
             break;
         case HDR__LINES:
-            snprintf(data->LinesBuffer, sizeof(data->LinesBuffer), "%d",
-                     data->Lines);
-            p = data->LinesBuffer;
-            len = strlen(data->LinesBuffer);
+            data->State->lines = std::to_string(data->Lines);
+            p = data->State->lines.data();
+            len = data->State->lines.size();
             break;
         default:
             p = HDR(j);

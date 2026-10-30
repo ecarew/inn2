@@ -8,6 +8,7 @@
 #include "inn/fdflag.h"
 #include "inn/innconf.h"
 #include "innd.h"
+#include "article.h"
 
 
 static int SITEcount;
@@ -362,8 +363,8 @@ SITEwritefromflags(SITE *sp, ARTDATA *Data)
         case FEED_BYTESIZE:
             if (Dirty)
                 buffer_append(bp, ITEMSEP, strlen(ITEMSEP));
-            buffer_append(bp, Data->Bytes + sizeof("Bytes: ") - 1,
-                          Data->BytesLength);
+            buffer_append(bp, Data->State->bytes_value().data(),
+                          Data->State->bytes_value().size());
             break;
         case FEED_FULLNAME:
         case FEED_NAME:
@@ -418,7 +419,8 @@ SITEwritefromflags(SITE *sp, ARTDATA *Data)
         case FEED_REPLIC:
             if (Dirty)
                 buffer_append(bp, ITEMSEP, strlen(ITEMSEP));
-            buffer_append(bp, Data->Replic, Data->ReplicLength);
+            buffer_append(bp, Data->State->replic.data(),
+                          Data->State->replic.size());
             break;
         case FEED_STOREDGROUP:
             if (Dirty)
