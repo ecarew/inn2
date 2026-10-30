@@ -32,7 +32,9 @@
 #if TESTING
 #    undef strlcpy
 #    define strlcpy test_strlcpy
+BEGIN_DECLS
 size_t test_strlcpy(char *, const char *, size_t);
+END_DECLS
 #endif
 
 size_t
