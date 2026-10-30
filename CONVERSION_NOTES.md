@@ -734,7 +734,8 @@ the per-article loop):
    SMstore takes `ARTHANDLE::groups` as `char *` though it only reads it,
    so art.cc passes `replic` through a `const_cast` at that C boundary.
 5. The `LISTBUFFER`s (Newsgroups, Distribution, Path) done 2026-10-30;
-   Headers and Overview from `struct buffer` to `std::string` next (5b).
+   Headers and Overview from `struct buffer` to `std::string` done
+   2026-10-30 (5b, below).
 
    Not `std::vector<std::string_view>` as planned: every consumer of the
    lists (NGfind, DISTwanted, ListHas, SITEwantsgroup, ARTpropagate,
@@ -760,6 +761,20 @@ the per-article loop):
    Message-IDs masked): the stored data, all 12 outgoing feed files, and
    the news log's list of sites for each article.  The live test passes
    under ASan/UBSan.
+
+   5b: `ArticleState::headers` and `overview` (`std::string`) replace
+   `ARTDATA::Headers` and `Overview` (libinn `struct buffer`).  ARTstore
+   builds the headers by appending; `trimcr()` replaces `buffer_trimcr`;
+   ARTmakeoverview appends instead of writing through pointers into a
+   buffer it resized itself.  Fixed on the way: the Headers buffer was
+   never freed (CHANcreate dropped it when it reset a reused slot); it is
+   now owned.  Test first: a file feed with the `H` flag, whose path had no
+   coverage, checking the Bytes line, the headers and that no CR is left.
+   Same before and after: stored data, the 13 feed files, the news log.
+   Two differences between any two runs come from the test's inputs (two
+   articles race, and nnrpd's PID in Injection-Info changes a post's size
+   by a byte).  ctest 77/77 (also under ASan), live test under ASan/UBSan,
+   Linux checks pass.
 6. `HDRCONTENT` last: values as `std::string_view` into the input buffer,
    so the in-place `'\0'` and `LastChar` restore go; C users (perl.cc,
    python.cc, the tests) get NUL-terminated copies or accessors.  It is on
