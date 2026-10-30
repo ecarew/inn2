@@ -12,7 +12,7 @@
 #endif
 
 int
-getpagesize(void)
+getpagesize()
 {
     int pagesize;
 
