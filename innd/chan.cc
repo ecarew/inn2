@@ -24,6 +24,7 @@
 #include "inn/innconf.h"
 #include "inn/network.h"
 #include "innd.h"
+#include "article.h"
 
 /* These errno values don't exist on all systems, but may be returned as an
    (ignorable) error to setting the accept socket nonblocking.  Define them
@@ -206,7 +207,9 @@ CHANcreate(int fd, enum channel_type type, enum channel_state state,
        FIXME: Design a better data structure that can be resized easily. */
     cp = &channels.table[fd];
 
-    /* Don't lose the existing buffers when overwriting with CHANnull. */
+    /* Don't lose the existing buffers or article state when overwriting
+       with CHANnull. */
+    ArticleState *article = cp->Data.State;
     in = cp->In;
     buffer_resize(&in, START_BUFF_SIZE);
     in.used = 0;
@@ -229,6 +232,7 @@ CHANcreate(int fd, enum channel_type type, enum channel_state state,
     cp->LastActive = Now.tv_sec;
     cp->In = in;
     cp->Out = out;
+    cp->Data.State = article != nullptr ? article : new ArticleState;
     cp->Tracing = Tracing;
     HashClear(&cp->CurrentMessageIDHash);
     ARTprepare(cp);
@@ -444,6 +448,8 @@ CHANclose(CHANNEL *cp, const char *name)
         free(cp->Argument);
     cp->Argument = nullptr;
     cp->ActiveCnx = 0;
+    delete cp->Data.State;
+    cp->Data.State = nullptr;
 
     /* Free the buffers if they got big. */
     if (cp->In.size > BIG_BUFFER) {
