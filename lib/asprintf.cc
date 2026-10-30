@@ -35,10 +35,12 @@
 #    undef vasprintf
 #    define asprintf  test_asprintf
 #    define vasprintf test_vasprintf
+BEGIN_DECLS
 int test_asprintf(char **, const char *, ...)
     __attribute__((__format__(printf, 2, 3)));
 int test_vasprintf(char **, const char *, va_list)
     __attribute__((__format__(printf, 2, 0)));
+END_DECLS
 #endif
 
 
@@ -68,7 +70,7 @@ vasprintf(char **strp, const char *fmt, va_list args)
         *strp = NULL;
         return needed;
     }
-    *strp = malloc(needed + 1);
+    *strp = static_cast<char *>(malloc(needed + 1));
     if (*strp == NULL)
         return -1;
     status = vsnprintf(*strp, needed + 1, fmt, args);
