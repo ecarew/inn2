@@ -277,6 +277,10 @@ for d in authprogs backends control expire frontends innfeed nnrpd storage; do
     [ -d "$build/$d" ] && ln -s "$build/$d" "$sb/$d"
 done
 
+# lib/hissqlite-convert runs the program by this path; its default is the
+# Make build's location.
+export HISSQLITE_CONVERT=$build/history/hissqlite-convert
+
 base_cflags=("${cflags[@]}")
 for spec in "${tests[@]}"; do
     shm_ids >"$tmp/shm.before"
