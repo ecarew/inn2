@@ -892,6 +892,24 @@ release notes.
 Order: after the in-memory article plan and the pointer-and-length libinn
 phase, unless the user moves it.
 
+### qsort to std::sort (decided 2026-10-31)
+
+Found by the Linux sanitizer run: nnrpd's NEWGROUPS called
+`qsort(nullptr, 0, ...)` when no group was new, undefined behavior (glibc
+declares the argument never null; macOS does not, so UBSan there missed
+it).  Upstream bug, fixed with `std::sort` (unique names, no ties).
+support/docker/linux-checks.sh now also runs the live test on a build with
+the sanitizers and `INN_KEYWORDS`.
+
+Rule (CPP_GUIDELINES.md): `std::sort` for unique keys, `std::stable_sort`
+where ties are possible and the order shows.  The other 19 `qsort` calls,
+one file per commit, each checked for ties and with a test where the order
+shows, the hot ones benchmarked: backends/actsync.cc (4),
+expire/fastrm.cc, frontends/ovdb_stat.cc, innd/art.cc, innd/ng.cc,
+storage/buffindexed/buffindexed.cc, storage/expire.cc,
+storage/tradindexed/tdx-util.cc; innd/keywords.cc (7) with its
+noise-regex fix (ask first); innfeed/endpoint.c with innfeed's conversion.
+
 ### Boost in the design (decided 2026-10-30: required)
 
 The user wants Boost formally in the design, for breadth beyond the standard
