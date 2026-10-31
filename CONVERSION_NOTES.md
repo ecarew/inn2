@@ -969,9 +969,20 @@ code does today (read-only audit, not yet tested unless noted):
 | innbind (setuid root) | errors only (crit) | successful privileged binds not logged |
 
 Plan, agreed in outline:
-1. Make syslog output testable: an INN++ inn.conf option to also write
-   these messages to a file (off by default; also for containers without
-   syslog), so the live test can check each security event.
+1. Configurable log destination (decided 2026-10-31): one INN logging
+   interface with the printf-style signature, behind which inn.conf's
+   `logdestination` picks `syslog` (the default, today's behavior) or
+   `file` (with `logfile:`).  Our own small backends, not Boost.Log: the
+   user wants no more binary dependencies, and Boost.Log is a compiled
+   library (with Boost.Thread and Filesystem), unsafe with asynchronous
+   sinks across innd's and nnrpd's forks.  No UDP destination: secure
+   off-box logging is the system syslog daemon's job (syslog-ng or rsyslog
+   forwarding over TLS), documented rather than built into INN; plain UDP
+   syslog is unencrypted, lossy and spoofable.  The 676 `syslog()` calls
+   and lib/messages.cc's handlers move to the interface one file per
+   commit; the file backend reopens on `ctlinnd flushlogs` and SIGHUP so
+   news.daily's rotation works.  The live test uses `file` to check each
+   security event.
 2. Fill the gaps above that change no behavior (user names in `bad_auth`,
    command results, SIGUSR1, trace toggle level, signal senders).  A
    failed-login limit or delay is a behavior change: ask first.
