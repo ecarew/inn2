@@ -132,6 +132,8 @@ static const struct config config_table[] = {
     {K(linecountfuzz),              UNUMBER(0)        },
     {K(logartsize),                 BOOL(true)        },
     {K(logcancelcomm),              BOOL(false)       },
+    {K(logdestination),             STRING("syslog")  },
+    {K(logfile),                    STRING(NULL)      },
     {K(logipaddr),                  BOOL(true)        },
     {K(logsitename),                BOOL(true)        },
     {K(logstatus),                  BOOL(true)        },
@@ -326,6 +328,8 @@ innconf_set_defaults()
         innconf->pathrun = concatpath(innconf->pathnews, "run");
     if (innconf->pathlog == nullptr)
         innconf->pathlog = concatpath(innconf->pathnews, "log");
+    if (innconf->logfile == nullptr)
+        innconf->logfile = concatpath(innconf->pathlog, "inn.log");
     if (innconf->pathhttp == nullptr)
         innconf->pathhttp = concatpath(innconf->pathnews, "http");
     if (innconf->pathspool == nullptr)
@@ -508,6 +512,12 @@ innconf_validate(struct config_group *group)
                            "hissqlitepagesize must be a power of 2 between 512"
                            " and 65536");
         innconf->hissqlitepagesize = 4096;
+    }
+
+    if (strcasecmp(innconf->logdestination, "syslog") != 0
+        && strcasecmp(innconf->logdestination, "file") != 0) {
+        warn("logdestination must be syslog or file");
+        okay = false;
     }
 
     if (innconf->docancels != nullptr
