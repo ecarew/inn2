@@ -96,6 +96,7 @@
 #    define LOG_CRIT    EVENTLOG_ERROR_TYPE
 #endif
 
+#include "inn/logging.h"
 #include "inn/macros.h"
 #include "inn/messages.h"
 #include "inn/xmalloc.h"
@@ -217,7 +218,8 @@ message_log_stderr(size_t len UNUSED, const char *fmt, va_list args, int err)
 
 
 /*
- * Log a message to syslog.  This is a helper function used to implement all
+ * Log a message to syslog, or to the log file inn.conf names (see
+ * lib/logging.cc).  This is a helper function used to implement all
  * of the syslog message log handlers.  It takes the same arguments as a
  * regular message handler function but with an additional priority argument.
  *
@@ -254,9 +256,9 @@ message_log_syslog(int pri, size_t len, const char *fmt, va_list args, int err)
     }
 #else  /* !_WIN32 */
     if (err == 0)
-        syslog(pri, "%s", buffer);
+        inn_syslog(pri, "%s", buffer);
     else
-        syslog(pri, "%s: %s", buffer, strerror(err));
+        inn_syslog(pri, "%s: %s", buffer, strerror(err));
 #endif /* !_WIN32 */
     free(buffer);
 }
