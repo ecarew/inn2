@@ -66,6 +66,15 @@ sed -e "s|/usr/local/news|$tmp|g" \
     -e "s|^docancels:.*|docancels: \"auth\"|" \
     -e "s|^linecountfuzz:.*|linecountfuzz: 1|" \
     "$build/samples/inn.conf" >"$INNCONF"
+# On a build with keyword generation (INN_KEYWORDS), turn it on and put
+# Keywords in overview, so the keywords checks below run.
+keywords=false
+if grep -q '^INN_KEYWORDS:BOOL=ON' "$build/CMakeCache.txt" 2>/dev/null; then
+    keywords=true
+    sed -i.bak -e 's|^keywords:.*|keywords: true|' \
+        -e 's|^extraoverviewadvertised:.*|extraoverviewadvertised: [ Keywords ]|' \
+        "$INNCONF" && rm -f "$INNCONF.bak"
+fi
 cat >>"$INNCONF" <<EOF
 runasuser:   $user
 runasgroup:  $group
@@ -963,6 +972,46 @@ ok awk 'length > 998 { bad = 1 } NR > 1 && !/^ / { bad = 1 }
         END { exit bad || NR < 2 }' "$tmp/crosspost.xref"
 label="the overview's Xref unfolds the long header field"
 ok sh -c "'$bin/storage/tdx-util' -o -n test.crosspost.long.name.g40 2>/dev/null | grep -q 'Xref: [^	]*g01:[0-9]*[^	]* test.crosspost.long.name.g40:[0-9]'"
+
+# --- Generated keywords (ARTmakeoverview, KEYgenerate) --------------------------
+#
+# Only on an INN_KEYWORDS build.  An article without a Keywords header field
+# gets one in overview from its body's words: most frequent first, then
+# longest, without the noise words.  Bodies under 100 bytes are skipped.
+# Only the first three are checked: words seen once tie on length (qsort is
+# not stable), and the noise words are not removed where the C library's
+# basic regex lacks the GNU \| alternation the noise pattern uses (macOS).
+
+# send_body ID BODY [HEADER...]: like send_art, with the given body.
+send_body() {
+    local id=$1 body=$2 art extra=
+    shift 2
+    for h in "$@"; do extra="$extra$h"$'\n'; done
+    art=$(printf 'Path: live.test!not-for-mail\nFrom: tester@live.test\nNewsgroups: test.live\nSubject: %s\nMessage-ID: <%s@live.test>\nDate: %s\n%s\n%s\n' \
+          "$id" "$id" "$(date -u '+%a, %d %b %Y %H:%M:%S +0000')" \
+          "$extra" "$body")
+    printf '#! rnews %d\n%s\n' "$(( ${#art} + 1 ))" "$art" \
+        | "$bin/frontends/rnews" >>"$tmp/rnews.log" 2>&1
+}
+# ovline ID: the article's overview line in test.live.
+ovline() { "$bin/storage/tdx-util" -o -n test.live 2>/dev/null | grep "	<$1@live.test>	"; }
+if $keywords; then
+    words='Zebra zebra zebra zebra quokka quokka quokka narwhal narwhal axolotl.
+The animals were there, about after also because, and before being here.'
+    send_body kw-generated "$words"
+    send_body kw-own "$words" 'Keywords: own, words'
+    send_body kw-short 'Zebra zebra zebra quokka.'
+    ctl flush ''
+    sleep 1
+    label="keywords: generated from the body for overview"
+    ok sh -c "$(declare -f ovline); bin='$bin'; ovline kw-generated | grep -q '	Keywords: zebra,quokka,narwhal,'"
+    label="keywords: an article's own Keywords field is kept"
+    ok sh -c "$(declare -f ovline); bin='$bin'; ovline kw-own | grep -q '	Keywords: own, words	'"
+    label="keywords: none generated for a short body"
+    ok sh -c "$(declare -f ovline); bin='$bin'; l=\$(ovline kw-short); [ -n \"\$l\" ] && ! printf '%s' \"\$l\" | grep -q 'Keywords:'"
+else
+    printf '  %-42s %s\n' "keywords checks" "skipped (INN_KEYWORDS off)"
+fi
 
 # --- Malformed articles (ARTclean) ---------------------------------------------
 #
