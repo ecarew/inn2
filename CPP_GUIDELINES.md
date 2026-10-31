@@ -72,3 +72,9 @@ T& operator=(const T&) = delete;
   interface boundaries keep `const char *`.
 - Range-based `for` where the index is not needed.
 - No `using namespace std` at file scope.
+- Sorting: `std::sort` where keys are unique, `std::stable_sort` where
+  ties are possible and the order shows (output, files, the network); not
+  `qsort`, whose comparator cannot be inlined and whose null-with-zero-count
+  call is undefined.  Boost.Sort (`pdqsort`, `spreadsort`) only where a
+  benchmark shows a gain.  Converting a `qsort` call: check the comparator
+  for ties first, and test the order where it shows.
