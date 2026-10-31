@@ -1050,6 +1050,16 @@ Message-ID: <no-at-sign>
 Date: $now
 
 "
+# A NUL byte in a header field or in the body: innd's parser refuses the
+# article before any header value is used as a C string.  A shell variable
+# cannot hold a NUL, so it goes in printf's format.
+ihave_nul() {
+    { printf 'IHAVE <%s>\r\n' "$1"
+      printf "Path: live.test!not-for-mail\r\nFrom: tester@live.test\r\nNewsgroups: test.live\r\nMessage-ID: <$1>\r\nDate: $now\r\n$3.\r\n"
+      printf 'QUIT\r\n'; } | nc -w 10 127.0.0.1 "$port" >"$tmp/$2" 2>&1
+}
+ihave_nul bad-nulhdr@live.test ihave-nulhdr.out 'Subject: nul\0here\r\n\r\nBody.\r\n'
+ihave_nul bad-nulbody@live.test ihave-nulbody.out 'Subject: nul body\r\n\r\nBo\0dy.\r\n'
 send_raw "$std
 Subject: bad lines
 Message-ID: <bad-lines@live.test>
@@ -1103,6 +1113,10 @@ label="innd rejects a missing required header field"
 ok grep -q '^437 Missing "Subject" header field' "$tmp/ihave-nosubject.out"
 label="innd rejects a bad Message-ID"
 ok grep -q '^437 Bad "Message-ID" header field' "$tmp/ihave-badmid.out"
+label="innd rejects a NUL in a header field or the body"
+ok sh -c "grep -q '^437 Nul character in header' '$tmp/ihave-nulhdr.out' && grep -q '^437 Nul character in body' '$tmp/ihave-nulbody.out'"
+label="an article with a NUL is not stored"
+ok sh -c "for id in bad-nulhdr bad-nulbody; do ! '$bin/frontends/sm' \"\$('$bin/expire/grephistory' \"<\$id@live.test>\" 2>/dev/null)\" >/dev/null 2>&1 || exit 1; done"
 label="innd rejects a wrong Lines count (linecountfuzz)"
 ok rejected 'bad-lines@live.test.* Linecount 9 != 1 +- 1'
 label="innd rejects a bad Date and a bad Injection-Date"
