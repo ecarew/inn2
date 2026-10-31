@@ -910,6 +910,36 @@ storage/buffindexed/buffindexed.cc, storage/expire.cc,
 storage/tradindexed/tdx-util.cc; innd/keywords.cc (7) with its
 noise-regex fix (ask first); innfeed/endpoint.c with innfeed's conversion.
 
+### Load testing and profiling (decided 2026-10-31)
+
+Measure first, then optimize where the measurements point (the header
+benchmark and the sanitizer runs showed it pays).  In support/perf/, a
+scratch installation as the tester (never root), like live-innd.sh.
+
+- Traffic generator in C++ (decided): reproducible articles from a fixed
+  seed with `std::mt19937` (its output is fixed by the standard), so
+  before and after runs send identical bytes: realistic sizes, header
+  shapes, crossposts, and a set share of duplicates offered by several
+  dummy peers.  Written once to a file, replayed each run.
+- Scenarios, in order: (A) innd intake through innfeed streaming, varying
+  one thing at a time: unique vs 80% duplicates, 1/50/200 newsfeeds sites,
+  tradspool vs CNFS, tradindexed vs ovsqlite; (B) nnrpd: connect to `200`
+  greeting and memory per child, TLS and a Perl auth hook on and off,
+  OVER on a 100k-article group, concurrent readers; (C) innfeed to K
+  dummy peers; (D) expire and expireover on an N-article spool.
+- Measures: wall time, user and system CPU (rusage), memory per process,
+  innd's own per-phase timers (inn.conf `timer`), profiles (perf on Linux,
+  Instruments or sample on macOS) for the hot scenarios.
+- Repeat each run (5), report median and spread; compare only before and
+  after on the same machine; time natively on macOS, Linux as a second
+  view.
+- Results (decided): only summary tables, before and after, in these notes
+  with each optimization; raw data stays local and is not kept.  The
+  numbers decide both whether a change helped and where to work next.
+
+First: the generator, scenario A and innd's timer breakdown, then
+profiles; then B, which orders the nnrpd setup-before-fork work.
+
 ### Security logging audit (2026-10-31)
 
 The user's requirement: every failed login, and every action that needs
