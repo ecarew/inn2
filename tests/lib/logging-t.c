@@ -14,6 +14,7 @@
 #include <sys/wait.h>
 #include <syslog.h>
 
+#include "inn/innconf.h"
 #include "inn/logging.h"
 #include "tap/basic.h"
 
@@ -72,7 +73,7 @@ main(void)
     pid_t pid;
     int status;
 
-    plan(23);
+    plan(27);
     if (mkdtemp(dir) == NULL)
         sysbail("cannot create a temporary directory");
     snprintf(file, sizeof(file), "%s/inn.log", dir);
@@ -172,6 +173,23 @@ main(void)
            "messages resume in the file");
         inn_log_file(NULL);
     }
+
+    /* inn.conf's logdestination and logfile. */
+    innconf = bcalloc(1, sizeof(*innconf));
+    innconf->logdestination = bstrdup("file");
+    innconf->logfile = bstrdup(file);
+    ok(inn_log_configure(), "logdestination file");
+    inn_syslog(LOG_NOTICE, "configured");
+    ok(has(file, "notice: configured\n"), "to inn.conf's logfile");
+    free(innconf->logdestination);
+    innconf->logdestination = bstrdup("syslog");
+    ok(inn_log_configure(), "logdestination syslog");
+    inn_syslog(LOG_NOTICE, "configured for syslog");
+    ok(!has(file, "configured for syslog"), "not to the file");
+    free(innconf->logdestination);
+    free(innconf->logfile);
+    free(innconf);
+    innconf = NULL;
 
     inn_closelog();
     unlink(subfile);
