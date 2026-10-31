@@ -5,7 +5,11 @@
 #  source in the current directory: what someone who clones the repository
 #  does on Linux.  Configure and build with CMake alone (no Autoconf or
 #  Make), then run ctest and support/verify-cxx.sh on a normal build and
-#  support/live-innd.sh on a build for the tester's own account.
+#  support/live-innd.sh on a build for the tester's own account, and again
+#  on one with AddressSanitizer, UndefinedBehaviorSanitizer and keyword
+#  generation: glibc marks more arguments as never null than macOS does, so
+#  UBSan finds things here that it cannot there (NEWGROUPS' qsort of a null
+#  list, 2026-10-31).
 
 set -e
 step() { echo "=== $*"; }
@@ -23,6 +27,14 @@ cmake -S . -B build-live -G Ninja \
 cmake --build build-live >/tmp/build-live.log 2>&1 \
     || { grep -B12 -m3 -E 'error' /tmp/build-live.log | head -60; exit 1; }
 
+step "CMake build (build-asan-live: sanitizers, INN_KEYWORDS)"
+cmake -S . -B build-asan-live -G Ninja -DINN_SANITIZE=ON -DINN_KEYWORDS=ON \
+    -DINN_RUNAS_USER="$(id -un)" -DINN_RUNAS_GROUP="$(id -gn)" \
+    >/tmp/cmake-asan-live.log 2>&1 \
+    || { tail -30 /tmp/cmake-asan-live.log; exit 1; }
+cmake --build build-asan-live >/tmp/build-asan-live.log 2>&1 \
+    || { grep -B12 -m3 -E 'error' /tmp/build-asan-live.log | head -60; exit 1; }
+
 # Run all of them even if one fails; report the worst result.
 status=0
 step "ctest --test-dir build"
@@ -36,4 +48,8 @@ step "support/verify-cxx.sh build"
 support/verify-cxx.sh build || status=1
 step "support/live-innd.sh build-live"
 support/live-innd.sh build-live || status=1
+# No leak checks here: short-lived tools (rnews, sm, ...) do not free what
+# they allocate before exiting, and LeakSanitizer fails them for it.
+step "support/live-innd.sh build-asan-live"
+ASAN_OPTIONS=detect_leaks=0 support/live-innd.sh build-asan-live || status=1
 exit $status
