@@ -14,6 +14,7 @@
 #include "nnrpd.h"
 #include "tls.h"
 
+#include <algorithm>
 
 typedef struct {
     char *name;
@@ -580,7 +581,13 @@ CMDnewgroups(int ac, char *av[])
 
         return;
     }
-    qsort(grouplist, numgroups, sizeof(GROUPDATA), GroupCompare);
+    /* By name, for the bsearch below; names are unique, so no ties.  An
+       empty range is fine (qsort was called with a null list when no group
+       was new, undefined behavior). */
+    std::sort(grouplist, grouplist + numgroups,
+              [](const GROUPDATA &a, const GROUPDATA &b) {
+                  return strcmp(a.name, b.name) < 0;
+              });
     Reply("%d New newsgroups follow\r\n", NNTP_OK_NEWGROUPS);
     for (numfound = numgroups; (p = QIOread(qp)) && numfound;) {
         /* p will contain the name of the newsgroup.
