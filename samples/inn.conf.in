@@ -176,6 +176,8 @@ incominglogfrequency:        200
 logartsize:                  true
 logcancelcomm:               false
 logcycles:                   3
+logdestination:              syslog
+#logfile:
 logipaddr:                   true
 logsitename:                 true
 logstatus:                   true
