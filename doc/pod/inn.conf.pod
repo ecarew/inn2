@@ -1659,6 +1659,30 @@ How many old logs scanlogs(8) keeps.  scanlogs(8) is generally run by
 news.daily(8) and will archive compressed copies of this many days worth
 of old logs.  The default value is C<3>.
 
+=item I<logdestination>
+
+Where INN's programs send their log messages (the ones that otherwise go
+to syslog, not the article log written by B<innd>): C<syslog>, the
+default, or C<file>, the file named by I<logfile>.  A file gets one line
+per message, with the time, the program's name and process ID, and the
+severity (C<crit>, C<err>, C<warning>, C<notice>, C<info> or C<debug>);
+control characters in a message are written as C<#> and three octal
+digits, so that a message cannot start a line of its own.  If the file
+cannot be opened or written, messages go to syslog.  This is a new
+parameter in INN++.
+
+To keep logs on another machine, leave this set to C<syslog> and have the
+system's syslog daemon forward them: syslog-ng or rsyslog can forward
+over TLS, so that log messages cannot be read or forged on the way.
+INN does not send log messages over the network itself.
+
+=item I<logfile>
+
+The file log messages go to when I<logdestination> is C<file>.  It is
+opened for appending (and created with mode 0640 if it does not exist),
+and must not be a symbolic link.  The default value is
+I<pathlog>/inn.log.  This is a new parameter in INN++.
+
 =item I<logipaddr>
 
 Whether the verified name of the remote feeding host should be logged to
