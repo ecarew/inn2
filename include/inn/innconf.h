@@ -190,6 +190,8 @@ struct innconf {
     bool logartsize;          /* Log article sizes? */
     bool logcancelcomm;       /* Log ctlinnd cancel commands to syslog? */
     unsigned long logcycles;  /* How many old logs scanlogs should keep */
+    char *logdestination;     /* Where log messages go: syslog or file */
+    char *logfile;            /* The log file, if logdestination is file */
     bool logipaddr;           /* Log by host IP address? */
     bool logsitename;         /* Log outgoing site names? */
     bool logstatus;           /* Send a status report to syslog? */
