@@ -80,6 +80,10 @@ private:
    can call it. */
 BEGIN_DECLS
 int NGsplit(char *p, int size, WordList &list);
+
+/* Generate a Keywords header field body from an article body (keywords.cc);
+   empty if none, or if built without INN_KEYWORDS. */
+void KEYgenerate(std::string &keywords, const char *body, size_t bodylen);
 END_DECLS
 
 struct ArticleState {
@@ -114,6 +118,10 @@ struct ArticleState {
     /* The overview data (ARTmakeoverview). */
     std::string overview;
 
+    /* Keywords generated for overview when the article has no Keywords
+       header field and inn.conf's keywords is set (ARTmakeoverview). */
+    std::string keywords;
+
     /* The digits of the Bytes header field. */
     std::string_view
     bytes_value() const
@@ -139,6 +147,7 @@ struct ArticleState {
         distribution.clear();
         headers.clear();
         overview.clear();
+        keywords.clear();
     }
 };
 

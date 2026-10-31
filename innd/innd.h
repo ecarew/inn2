@@ -753,8 +753,6 @@ extern void ICDwriteactive(void);
 extern void CCclose(void);
 extern void CCsetup(void);
 
-extern void KEYgenerate(HDRCONTENT *, const char *, size_t);
-
 extern void LCclose(void);
 extern void LCsetup(void);
 

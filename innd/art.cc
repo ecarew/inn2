@@ -1828,7 +1828,6 @@ ARTmakeoverview(CHANNEL *cp)
     const ARTHEADER *hp;
     const char *p;
     int i, j, len;
-    bool keywords_generated = false;
 
     if (ARTfields == nullptr) {
         /* User error. */
@@ -1845,26 +1844,6 @@ ARTmakeoverview(CHANNEL *cp)
             overview += SEP;
         hp = fp->Header;
         j = hp - ARTheaders;
-
-        /* If requested, generate keywords from the body of the article and
-           patch them into the apparent value of the Keywords header field so
-           that they make it into overview. */
-        if (DO_KEYWORDS && innconf->keywords) {
-            /* Ensure that there are keywords to shovel. */
-            if (hp == &ARTheaders[HDR__KEYWORDS]
-                && HDR(HDR__KEYWORDS) == nullptr) {
-                keywords_generated = true;
-                KEYgenerate(&hc[HDR__KEYWORDS], cp->In.data + data->Body,
-                            cp->Next - data->Body);
-                /* Do not memorize an empty Keywords header field body. */
-                if (HDR_LEN(HDR__KEYWORDS) == 0) {
-                    if (HDR(HDR__KEYWORDS) != nullptr)
-                        free(HDR(HDR__KEYWORDS)); /* malloc'd within. */
-                    HDR(HDR__KEYWORDS) = nullptr;
-                    keywords_generated = false;
-                }
-            }
-        }
 
         switch (j) {
         case HDR__BYTES:
@@ -1884,6 +1863,20 @@ ARTmakeoverview(CHANNEL *cp)
             data->State->lines = std::to_string(data->Lines);
             p = data->State->lines.data();
             len = data->State->lines.size();
+            break;
+        case HDR__KEYWORDS:
+            /* If requested, generate keywords from the body of the article
+               when it has no Keywords header field, so that some make it
+               into overview. */
+            if (DO_KEYWORDS && innconf->keywords && HDR(j) == nullptr) {
+                KEYgenerate(data->State->keywords, cp->In.data + data->Body,
+                            cp->Next - data->Body);
+                p = data->State->keywords.data();
+                len = data->State->keywords.size();
+            } else {
+                p = HDR(j);
+                len = HDR_LEN(j);
+            }
             break;
         default:
             p = HDR(j);
@@ -1906,17 +1899,6 @@ ARTmakeoverview(CHANNEL *cp)
                 overview += ' ';
             else
                 overview += *p;
-        }
-
-        /* Patch the old keywords back in. */
-        if (DO_KEYWORDS && innconf->keywords) {
-            if (keywords_generated) {
-                if (HDR(HDR__KEYWORDS) != nullptr)
-                    free(HDR(HDR__KEYWORDS)); /* malloc'd within. */
-                HDR(HDR__KEYWORDS) = nullptr;
-                HDR_LEN(HDR__KEYWORDS) = 0;
-                keywords_generated = false;
-            }
         }
     }
 }

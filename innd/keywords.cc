@@ -19,14 +19,19 @@
 #include "inn/innconf.h"
 #include "innd.h"
 
+#include "article.h"
+
+#include <algorithm>
+
 /*  If keyword support wasn't requested, stub out the main function provided by
 **  this file.
 */
 #if !DO_KEYWORDS
 void
-KEYgenerate(HDRCONTENT *hc UNUSED, const char *body UNUSED,
+KEYgenerate(std::string &keywords, const char *body UNUSED,
             size_t bodylen UNUSED)
 {
+    keywords.clear();
 }
 
 #else
@@ -79,8 +84,8 @@ wvec_length_cmp(const void *p1, const void *p2)
 static int
 ptr_strcmp(const void *p1, const void *p2)
 {
-    const char *const *s1 = p1;
-    const char *const *s2 = p2;
+    const char *const *s1 = static_cast<const char *const *>(p1);
+    const char *const *s2 = static_cast<const char *const *>(p2);
 
     return strcmp(*s1, *s2);
 }
@@ -91,14 +96,14 @@ ptr_strcmp(const void *p1, const void *p2)
 */
 
 void
-KEYgenerate(HDRCONTENT *hc,   /* Header data. */
-            const char *body, /* Article body. */
-            size_t bodylen)   /* Article body length. */
+KEYgenerate(std::string &keywords, /* Generated body, replaced. */
+            const char *body,      /* Article body. */
+            size_t bodylen)        /* Article body length. */
 {
 
     unsigned long word_count, word_index, word_length, distinct_words;
     int last;
-    char *text, *orig_text, *text_end, *this_word, *chase, *punc;
+    char *text, *text_end, *this_word, *chase, *punc;
     static struct word_entry *word_vec;
     static char **word;
     static const char *whitespace = " \t\r\n";
@@ -150,11 +155,9 @@ KEYgenerate(HDRCONTENT *hc,   /* Header data. */
         }
     }
 
-    /* Initialize a fresh Keywords header field body, limited to the size
+    /* Start a fresh Keywords header field body, limited to the size
      * specified by the keylimit parameter in inn.conf. */
-    hc->Value = xmalloc(innconf->keylimit + 1);
-    *hc->Value = '\0';
-    hc->Length = 0;
+    keywords.clear();
 
     /* Now figure acceptable extents, and copy body to working string.
      * (Memory-intensive for hefty articles: limit to non-ABSURD articles.) */
@@ -162,11 +165,9 @@ KEYgenerate(HDRCONTENT *hc,   /* Header data. */
         || (bodylen > innconf->keyartlimit)) /* Too small/big to bother. */
         return;
 
-    /* Nul-terminate the body.  orig_text will be freed later. */
-    orig_text = xmalloc(bodylen + 1);
-    memcpy(orig_text, body, bodylen);
-    orig_text[bodylen] = '\0';
-    text = orig_text;
+    /* A NUL-terminated copy of the body, which the word scan cuts up. */
+    std::string orig_text(body, bodylen);
+    text = orig_text.data();
 
     text_end = text + bodylen;
 
@@ -209,7 +210,7 @@ KEYgenerate(HDRCONTENT *hc,   /* Header data. */
 
     /* If there were no words, we're done. */
     if (word_count < 1)
-        goto out;
+        return;
 
     /* Sort the words. */
     qsort(word, word_count, sizeof(word[0]), ptr_strcmp);
@@ -251,34 +252,26 @@ KEYgenerate(HDRCONTENT *hc,   /* Header data. */
         qsort(&word_vec[last], word_index - last, sizeof(struct word_entry),
               wvec_length_cmp);
 
-    /* Write the Keywords header field body. */
-    for (chase = hc->Value, word_index = 0; word_index < distinct_words;
-         word_index++) {
+    /* Write the Keywords header field body, at most keylimit bytes. */
+    for (word_index = 0; word_index < distinct_words; word_index++) {
+        const char *this_one = word[word_vec[word_index].index];
+        size_t length = word_vec[word_index].length;
 
         /* "Noise" words don't count. */
-        if (regexec(&preg, word[word_vec[word_index].index], 0, NULL, 0) == 0)
+        if (regexec(&preg, this_one, 0, NULL, 0) == 0)
             continue;
 
         /* Add to list. */
-        if (chase != hc->Value)
-            *chase++ = ',';
-
-        strlcpy(chase, word[word_vec[word_index].index],
-                innconf->keylimit + 1 - (chase - hc->Value));
+        if (!keywords.empty())
+            keywords += ',';
+        keywords.append(this_one, std::min<size_t>(length, innconf->keylimit
+                                                               - keywords.size()));
 
         /* Is there enough space to go on?  (comma + longest word) */
-        if (chase + word_vec[word_index].length - hc->Value
+        if ((long) keywords.size()
             > (long) (innconf->keylimit - MAX_WORD_LENGTH - 1))
             break;
-        else
-            chase += word_vec[word_index].length;
     }
-
-    hc->Length = strlen(hc->Value);
-
-out:
-    /* We must dispose of the original strdup'd text area. */
-    free(orig_text);
 }
 
 #endif /* DO_KEYWORDS */
