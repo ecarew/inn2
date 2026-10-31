@@ -42,6 +42,10 @@ void inn_vsyslog(int priority, const char *format, va_list args)
    opened. */
 bool inn_log_file(const char *path);
 
+/* Apply inn.conf's logdestination and logfile (innconf must have been read):
+   log to that file, or to syslog.  Returns inn_log_file's result. */
+bool inn_log_configure(void);
+
 /* Reopen the log file by name, after it was moved for rotation.  Nothing to
    do when logging to syslog.  Returns false if it cannot be reopened, in
    which case messages go to syslog until it can. */
