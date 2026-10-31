@@ -814,6 +814,42 @@ the per-article loop):
 and `small_vector` (inline first, then heap) fit steps 4 and 5 better
 than `std::vector` where innd today uses fixed buffers.
 
+### Pointer-and-length libinn (planned 2026-10-31)
+
+The follow-on to the in-memory article plan, agreed with the user.  innd's
+header values stay NUL-terminated in the input buffer (step 6) because
+the libinn functions it calls per article read C strings.  Modern network
+code (HTTP parsers, BoringSSL's CBS, Rust and Go slices) passes pointer and
+length instead: every read has a known bound, and no layer can see a
+shorter string than another at an embedded NUL.  innd already refuses a NUL
+anywhere in an article while parsing (artparse-t.c; live-innd.sh since
+2026-10-31), so this is hardening and clarity, not a known hole.
+
+1. Protocol limits first.  An audit of where each RFC limit is enforced
+   today, each checked against the RFC text before it is written down:
+   RFC 5322 line length (998 + CRLF; INN's `MAXARTLINELENGTH`), RFC 5536
+   Message-ID length (250), RFC 3977 command and response lines (512).
+   Then one header of `constexpr` constants citing their sections, used
+   by innd, nnrpd and libinn in place of local copies, with
+   `static_assert`s on fixed buffers sized from them.  Enforcing a limit
+   INN does not enforce today (a SHOULD such as 78-character lines) is a
+   behavior change: list it as a proposal and ask the community.
+2. `std::string_view` overloads of the per-article functions:
+   `uwildmat` (and `uwildmat_simple`, `uwildmat_poison`), the history
+   lookups (`HIScheck`, `HISlookup`, `InndHisRemember`, `InndHisWrite`),
+   `IsValidMessageID`, `parsedate`.  The C versions stay for nnrpd, expire
+   and the tests until they move; tests/lib gets cases for each overload.
+3. Then header values become views (step 6's first plan), the in-place NUL
+   and step 6b's guard go.
+
+Later, an experiment only: a `WildmatPattern` compiled when a config is
+loaded (Boost.Regex or not), replacing `uwildmat` only if it passes every
+case in tests/lib/uwildmat-t.c and a benchmark shows a gain.  A plain
+glob-to-regex translation is not enough: wildmat has comma lists where the
+last match wins, `!` and `@` (poison) elements, `\` escapes and its own
+character classes, and matches UTF-8 characters, not bytes; and Boost.Regex
+can throw where `uwildmat` cannot.
+
 ### Boost in the design (decided 2026-10-30: required)
 
 The user wants Boost formally in the design, for breadth beyond the standard
