@@ -14,6 +14,7 @@
 #include <syslog.h>
 #include <unistd.h>
 
+#include "inn/innconf.h"
 #include "inn/logging.h"
 
 /* The identifier from inn_openlog; openlog(3) keeps a pointer to it. */
@@ -72,15 +73,13 @@ expand_errno(const char *format, int err)
     return out;
 }
 
-/* The message formatted, with control characters other than tab written as
-   "#" and three octal digits (as rsyslog does), so a message cannot start a
-   line of its own, and without trailing newlines. */
+/* The message formatted, as syslog(3) would get it. */
 static std::string __attribute__((__format__(printf, 1, 0)))
 format_message(const char *format, va_list args)
 {
     va_list copy;
     int length;
-    std::string raw, out;
+    std::string raw;
 
     va_copy(copy, args);
     length = vsnprintf(nullptr, 0, format, copy);
@@ -90,9 +89,20 @@ format_message(const char *format, va_list args)
     raw.resize(static_cast<size_t>(length) + 1);
     vsnprintf(raw.data(), raw.size(), format, args);
     raw.resize(static_cast<size_t>(length));
+    return raw;
+}
+
+/* The message for a line of the log file: without trailing newlines, and
+   with control characters other than tab written as "#" and three octal
+   digits (as rsyslog does), so a message cannot start a line of its own.
+   syslog gets the message as is; its daemon does the same. */
+static std::string
+file_message(std::string raw)
+{
+    std::string out;
+
     while (!raw.empty() && raw.back() == '\n')
         raw.pop_back();
-
     for (unsigned char c : raw) {
         if ((c < 0x20 && c != '\t') || c == 0x7f) {
             char octal[5];
@@ -127,8 +137,8 @@ write_line(int priority, const std::string &message)
         || strftime(stamp, sizeof(stamp), "%Y-%m-%dT%H:%M:%S%z", &tm) == 0)
         snprintf(stamp, sizeof(stamp), "%ld", static_cast<long>(now));
     line = std::string(stamp) + " " + ident + "["
-           + std::to_string(static_cast<long>(getpid()))
-           + "]: " + level_name(priority) + ": " + message + "\n";
+           + std::to_string(static_cast<long>(getpid())) + "]: "
+           + level_name(priority) + ": " + file_message(message) + "\n";
     do
         status = write(fd, line.data(), line.size());
     while (status < 0 && errno == EINTR);
@@ -221,4 +231,13 @@ inn_log_reopen(void)
         return false;
     }
     return true;
+}
+
+
+bool
+inn_log_configure(void)
+{
+    if (innconf != nullptr && strcasecmp(innconf->logdestination, "file") == 0)
+        return inn_log_file(innconf->logfile);
+    return inn_log_file(nullptr);
 }
