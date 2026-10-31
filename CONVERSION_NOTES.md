@@ -994,6 +994,19 @@ Plan, agreed in outline:
    messages go to syslog until it can.  tests/lib/logging-t.c (23 checks,
    C): format, `%m`, errno kept, escaping, rotation, symbolic link
    refused, forked writers, back to syslog, an unwritable directory.
+   Step 2 done 2026-10-31: inn.conf `logdestination` (`syslog`, the
+   default, or `file`; validated) and `logfile` (default
+   *pathlog*/inn.log), documented in inn.conf.pod with the advice to
+   forward off-box through syslog-ng or rsyslog over TLS;
+   `inn_log_configure()` applies them.  lib/messages.cc's syslog handlers
+   go through `inn_syslog`, so every `notice`/`warn`/`die` a program sends
+   to syslog follows the setting once the program calls
+   `inn_log_configure()` (step 3, program by program).  The escaping and
+   newline trimming apply to the file only: syslog gets each message
+   exactly as before.  Still to do with step 3: scanlogs must rotate
+   `logfile` (with syslog, it rotates news.crit, news.err and
+   news.notice), and innd must call `inn_log_reopen()` on `ctlinnd
+   flushlogs`.
 2. Fill the gaps above that change no behavior (user names in `bad_auth`,
    command results, SIGUSR1, trace toggle level, signal senders).  A
    failed-login limit or delay is a behavior change: ask first.
