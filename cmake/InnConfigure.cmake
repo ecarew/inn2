@@ -45,7 +45,18 @@ endif()
 
 # --- Optional features (CMake-only goal item 8 adds options for the rest) ----
 
+# Keyword generation for overview (configure's --enable-keywords).  It
+# needs POSIX regex; configure also searched -lregex, but every supported
+# platform has it in the C library.
+option(INN_KEYWORDS "Generate Keywords for overview from article bodies" OFF)
 set(DO_KEYWORDS 0)
+if(INN_KEYWORDS)
+    check_symbol_exists(regexec regex.h INN_HAVE_REGEXEC)
+    if(NOT INN_HAVE_REGEXEC)
+        message(FATAL_ERROR "INN_KEYWORDS needs regexec(), which was not found")
+    endif()
+    set(DO_KEYWORDS 1)
+endif()
 foreach(feature DO_LARGEFILES DO_PERL DO_PYTHON DO_TAGGED_HASH HAVE_BDB
         HAVE_BDB_NDBM HAVE_BLACKLIST HAVE_BLOCKLIST HAVE_CANLOCK HAVE_OPENSSL
         HAVE_SD_NOTIFY)
