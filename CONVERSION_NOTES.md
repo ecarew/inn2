@@ -775,10 +775,40 @@ the per-article loop):
    articles race, and nnrpd's PID in Injection-Info changes a post's size
    by a byte).  ctest 77/77 (also under ASan), live test under ASan/UBSan,
    Linux checks pass.
-6. `HDRCONTENT` last: values as `std::string_view` into the input buffer,
-   so the in-place `'\0'` and `LastChar` restore go; C users (perl.cc,
-   python.cc, the tests) get NUL-terminated copies or accessors.  It is on
-   the hot path, so benchmark it.
+6. `HDRCONTENT` last.  Revised 2026-10-30: not values as `std::string_view`
+   as first planned.  Nearly every consumer needs a NUL-terminated C string
+   (74 uses in art.cc: history, IsValidMessageID, parsedate, uwildmat,
+   strpbrk, strlcpy, syslog; perl.cc's newSVpv), so views would add a copy
+   per use on every article, and ARTstore builds the stored article from
+   offsets into the input buffer, so the values stay there anyway.
+   Instead:
+   - 6a: generated Keywords (ARTmakeoverview, KEYgenerate) go into
+     `ArticleState::keywords`, so a header value never points at
+     `malloc`ed memory and the hand-written `free`s go.  Needs an
+     `INN_KEYWORDS` CMake option first (autoconf's `--enable-keywords`;
+     `DO_KEYWORDS` was hard-coded to 0, so this path was never built).
+     Done 2026-10-31.  `INN_KEYWORDS` (off by default, as upstream) checks
+     for `regexec` and sets `DO_KEYWORDS`; keywords.cc then needed one fix
+     to compile as C++ (the qsort comparator's casts).  Test first:
+     live-innd.sh, on an `INN_KEYWORDS` build, turns `keywords` on, puts
+     Keywords in overview and checks generated keywords, an article's own
+     Keywords field, and none for a short body; it reports the checks as
+     skipped on other builds.  Then `KEYgenerate(std::string &, ...)`
+     (declared in article.h) fills `ArticleState::keywords`, which
+     ARTmakeoverview's `HDR__KEYWORDS` case reads; `HdrContent` is no longer
+     patched, the four `free`s and the restore go, and the body copy is a
+     `std::string` (no `goto`).  Same output for the same keylimit cases
+     (truncation and the room check keep the original arithmetic).  Live
+     test passes under ASan/UBSan with keywords on; ctest 77/77 on the
+     normal, ASan and keywords builds.
+   - 6b: the in-place NUL (the `HDR_LASTCHAR_SAVE`/`HDR_PARSE_START`/
+     `HDR_PARSE_END` pairs, 9 places in art.cc and one in nc.cc) behind a
+     scope guard that restores the saved characters on every exit, and
+     `string_view` accessors for consumers that take pointer and length
+     (site.cc, python.cc, ARTstore's iovecs).  No copies; benchmark only to
+     confirm no slowdown.
+   The full move to views waits until the C-string consumers take
+   pointer and length.
 
 **Boost** (required, see "Boost in the design"): Boost.Container's `static_vector` (fixed capacity, no heap)
 and `small_vector` (inline first, then heap) fit steps 4 and 5 better
@@ -1126,6 +1156,15 @@ Open items from CLAUDE.md, moved here when done, newest first.
 ### Upstream bugs and quirks found
 
 Behavior of upstream INN found while testing, kept as is unless noted.
+
+- Upstream bug (found 2026-10-31, kept): innd/keywords.cc's noise-word
+  pattern is a POSIX basic regex using `\|` alternation, a GNU extension.
+  glibc honours it; macOS's regex library takes it literally, so no noise
+  words ("the", "and", ...) are removed from generated Keywords there.  The
+  pattern also has a typo, `their\!|them`, so "their" and "them" are kept
+  even on glibc.  Fix with `REG_EXTENDED` and `|` (and the typo), which
+  changes generated Keywords on glibc only for those two words; ask first.
+  live-innd.sh checks only what is the same on both.
 
 - Upstream bug (found 2026-10-30, kept): history/buildconfig, run from the
   top directory, looks for `history/cnfs` (a storage method) instead of
