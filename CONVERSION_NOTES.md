@@ -983,6 +983,17 @@ Plan, agreed in outline:
    commit; the file backend reopens on `ctlinnd flushlogs` and SIGHUP so
    news.daily's rotation works.  The live test uses `file` to check each
    security event.
+   Step 1 done 2026-10-31: include/inn/logging.h and lib/logging.cc
+   (`inn_openlog`, `inn_syslog`/`inn_vsyslog`, `inn_log_file`,
+   `inn_log_reopen`, `inn_closelog`), not yet used.  Lines are
+   `<ISO 8601 time> <ident>[<pid>]: <level>: <message>`, one write(2)
+   each, the file opened `O_APPEND | O_NOFOLLOW | O_CLOEXEC`, mode 0640;
+   `%m` expanded as syslog(3) does; control characters other than tab
+   escaped as `#` and octal, as rsyslog does, so text from a client cannot
+   start a forged line.  If the file cannot be written or reopened,
+   messages go to syslog until it can.  tests/lib/logging-t.c (23 checks,
+   C): format, `%m`, errno kept, escaping, rotation, symbolic link
+   refused, forked writers, back to syslog, an unwritable directory.
 2. Fill the gaps above that change no behavior (user names in `bad_auth`,
    command results, SIGUSR1, trace toggle level, signal senders).  A
    failed-login limit or delay is a behavior change: ask first.
