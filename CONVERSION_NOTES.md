@@ -850,6 +850,48 @@ last match wins, `!` and `@` (poison) elements, `\` escapes and its own
 character classes, and matches UTF-8 characters, not bytes; and Boost.Regex
 can throw where `uwildmat` cannot.
 
+### nnrpd: setup before fork, reload on SIGHUP (decided 2026-10-31)
+
+Per connection, nnrpd starts either by fork and exec (innd's RChandoff,
+innd/util.cc `Spawn`; inetd) or, as `nnrpd -D`, by fork alone
+(nnrpd.cc, the accept and pre-fork loops).  Even with `-D` the listener
+only reads inn.conf and opens its sockets; each child then repeats all
+the setup that does not depend on the client: `SetupDaemon` (storage.conf,
+`SMinit`, the overview schema, `OVopen`), `tls_init` (certificate, key,
+TLS context) and `PERMgetaccess` (readers.conf, Perl and Python hooks).
+
+Decided with the user: in the `-D` listener, do the client-independent
+setup once before forking, and reload it when the admin sends SIGHUP, the
+convention for daemons (sshd, nginx, Postfix), so the admin chooses when
+configuration changes take effect.  Today every connection rereads its
+configuration; that changes for `-D`, documented in nnrpd.pod and the
+release notes.
+
+- Signals (option A): in the `-D` listener SIGHUP reloads and the tracing
+  toggle moves to SIGUSR1; per-connection processes keep SIGHUP for
+  tracing (nnrpd.pod documents SIGHUP as toggling `-t` tracing; update it).
+- Measure first: time to the `200` greeting and memory per child, with
+  TLS and a Perl auth hook on and off; the numbers decide the order.
+- Before fork, shared copy-on-write: the TLS context (each connection
+  makes its own session), the Perl and Python interpreters and hook
+  scripts, readers.conf and storage.conf parsed (each child still matches
+  its own client).  Opened in the child as today: overview and any
+  database handle that must not cross a fork (SQLite, Berkeley DB); check
+  each storage and overview method.
+- Reload: reread everything into new objects and swap them in only if
+  all of it loaded; on an error log it and keep the old configuration (as
+  `nginx -s reload`).  Children already running keep what they started
+  with.
+- Test: live test starts `nnrpd -D`, changes readers.conf, checks the
+  change waits for SIGHUP, sends it, checks it applies; SIGUSR1 toggles
+  tracing.
+- Not covered: innd's fork and exec of nnrpd shares nothing; busy sites
+  already use `-D`.  Handing the accepted socket to a running nnrpd
+  (`SCM_RIGHTS`) would be a separate design.
+
+Order: after the in-memory article plan and the pointer-and-length libinn
+phase, unless the user moves it.
+
 ### Boost in the design (decided 2026-10-30: required)
 
 The user wants Boost formally in the design, for breadth beyond the standard
