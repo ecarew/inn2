@@ -910,6 +910,45 @@ storage/buffindexed/buffindexed.cc, storage/expire.cc,
 storage/tradindexed/tdx-util.cc; innd/keywords.cc (7) with its
 noise-regex fix (ask first); innfeed/endpoint.c with innfeed's conversion.
 
+### Security logging audit (2026-10-31)
+
+The user's requirement: every failed login, and every action that needs
+privilege (control commands, signals, reloads), is logged.  INN logs
+through syslog (facility news; `L_FATAL` = crit, `L_ERROR` = err,
+`L_NOTICE` = warning, `L_TRACE` = debug, include/inn/options.h); the
+sample syslog.conf routes them to news.crit, news.err and news.notice in
+the log directory.  innd's own `news` file logs articles only.  What the
+code does today (read-only audit, not yet tested unless noted):
+
+| Event | Logged | Gap |
+|---|---|---|
+| nnrpd AUTHINFO failure | `bad_auth` (notice) with host; user only on the commands.cc:307 path | perm.cc:2204, :2241 and commands.cc:421 omit the user |
+| nnrpd login success | `user <name>` / `auth <name>` with host | — |
+| nnrpd SASL failure | `bad_auth` (sasl.cc:319), host only | no user, no mechanism |
+| auth_krb5, ckpasswd, radius | through nnrpd's `bad_auth` (exit status) | auth_krb5 untested (KDC test planned) |
+| Perl/Python auth hooks | errors logged; failures as `bad_auth` | — |
+| readers.conf denial | `no_permission`, `no_user` | — |
+| repeated failed logins | no limit or delay found | to check; a limit is a behavior change |
+| ctlinnd command | every command, centrally: `ctlinnd command ...` (cc.cc, notice) before it runs | result not logged (a `1 ...` failure leaves no trace); caller not identified |
+| ctlinnd unknown command | `bad_message` (notice) | — |
+| control socket | file permissions only (umask 002, pathrun) | prove with a root test that another user cannot send; datagram socket, so no peer credentials on macOS (Linux: `SCM_CREDENTIALS`) |
+| innd SIGTERM/SIGHUP | `SERVER shutdown received signal N` (warning) | sender not logged (`SA_SIGINFO` gives pid and uid, POSIX) |
+| innd SIGUSR1 (recreate control channel) | not logged | log it |
+| nnrpd SIGHUP (trace toggle) | `trace enabled/disabled` at `L_TRACE` = debug | usually discarded by syslog; log at notice |
+| innfeed SIGHUP/USR1/USR2 | logged (`ME reloading log file`, logging level) | sender not logged |
+| innbind (setuid root) | errors only (crit) | successful privileged binds not logged |
+
+Plan, agreed in outline:
+1. Make syslog output testable: an INN++ inn.conf option to also write
+   these messages to a file (off by default; also for containers without
+   syslog), so the live test can check each security event.
+2. Fill the gaps above that change no behavior (user names in `bad_auth`,
+   command results, SIGUSR1, trace toggle level, signal senders).  A
+   failed-login limit or delay is a behavior change: ask first.
+3. Tests: live-test checks per event; the Kerberos KDC test (Homebrew
+   krb5 configured with `INN_KRB5_CONFIG`; Docker as fallback); root tests
+   for the control socket's permissions.
+
 ### Boost in the design (decided 2026-10-30: required)
 
 The user wants Boost formally in the design, for breadth beyond the standard
