@@ -124,12 +124,12 @@ warn_krb5(krb5_context ctx, krb5_error_code code, const char *format, ...)
     va_start(args, format);
     xvasprintf(&message, format, args);
     va_end(args);
-    if (k5_msg == NULL)
+    if (k5_msg == nullptr)
         warn("%s", message);
     else
         warn("%s: %s", message, k5_msg);
     free(message);
-    if (k5_msg != NULL)
+    if (k5_msg != nullptr)
         krb5_free_error_message(ctx, k5_msg);
 }
 
@@ -144,14 +144,14 @@ krb5_check_password(const char *principal, const char *password)
     krb5_error_code code;
     krb5_context ctx;
     krb5_creds creds;
-    krb5_principal princ = NULL;
-    krb5_get_init_creds_opt *opts = NULL;
+    krb5_principal princ = nullptr;
+    krb5_get_init_creds_opt *opts = nullptr;
     bool creds_valid = false;
     int result = 0;
 
     code = krb5_init_context(&ctx);
     if (code != 0) {
-        warn_krb5(NULL, code, "cannot initialize Kerberos");
+        warn_krb5(nullptr, code, "cannot initialize Kerberos");
         return 0;
     }
 
@@ -171,14 +171,15 @@ krb5_check_password(const char *principal, const char *password)
     krb5_get_init_creds_opt_set_proxiable(opts, 0);
     memset(&creds, 0, sizeof(creds));
     code = krb5_get_init_creds_password(ctx, &creds, princ, (char *) password,
-                                        NULL, NULL, 0, NULL, opts);
+                                        nullptr, nullptr, 0, nullptr, opts);
     if (code == 0) {
         krb5_verify_init_creds_opt vopts;
 
         creds_valid = true;
         memset(&vopts, 0, sizeof(vopts));
         krb5_verify_init_creds_opt_init(&vopts);
-        code = krb5_verify_init_creds(ctx, &creds, princ, NULL, NULL, &vopts);
+        code = krb5_verify_init_creds(ctx, &creds, princ, nullptr, nullptr,
+                                      &vopts);
     }
 
     if (code == 0)
@@ -201,9 +202,9 @@ krb5_check_password(const char *principal, const char *password)
 cleanup:
     if (creds_valid)
         krb5_free_cred_contents(ctx, &creds);
-    if (opts != NULL)
+    if (opts != nullptr)
         krb5_get_init_creds_opt_free(ctx, opts);
-    if (princ != NULL)
+    if (princ != nullptr)
         krb5_free_principal(ctx, princ);
     krb5_free_context(ctx);
     return result;
@@ -224,11 +225,11 @@ main(int argc, char *argv[])
       is there to prevent authentication against another Kerberos realm; there
       should be a -r <realm> command line option to make this check unnecessary
       in the future. */
-    if (authinfo == NULL)
+    if (authinfo == nullptr)
         die("no authentication information from nnrpd");
     if (authinfo->username[0] == '\0')
         die("null username");
-    if (strchr(authinfo->username, '@') != NULL)
+    if (strchr(authinfo->username, '@') != nullptr)
         die("username contains @, not allowed");
 
     /* May need to prepend instance name if -i option was given. */
