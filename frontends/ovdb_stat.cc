@@ -9,6 +9,7 @@
 
 #include "portable/system.h"
 
+#include <algorithm>
 #include <errno.h>
 #include <signal.h>
 #include <syslog.h>
@@ -425,16 +426,10 @@ display_mem(int all)
     return 0;
 }
 
-static int
-txn_compare(const void *a, const void *b)
+static bool
+txn_compare(const DB_TXN_ACTIVE &a, const DB_TXN_ACTIVE &b)
 {
-    if (((const DB_TXN_ACTIVE *) a)->txnid
-        > ((const DB_TXN_ACTIVE *) b)->txnid)
-        return 1;
-    if (((const DB_TXN_ACTIVE *) a)->txnid
-        < ((const DB_TXN_ACTIVE *) b)->txnid)
-        return -1;
-    return 0;
+    return a.txnid < b.txnid;
 }
 
 #    undef F
@@ -481,8 +476,8 @@ display_txn(void)
     display_data(sp, TXN_tab);
 
     if (sp->st_nactive) {
-        qsort(sp->st_txnarray, sp->st_nactive, sizeof(sp->st_txnarray[0]),
-              txn_compare);
+        std::sort(sp->st_txnarray, sp->st_txnarray + sp->st_nactive,
+                  txn_compare);
         start_table("Active Transactions", TXNA_tab);
         for (i = 0; i < sp->st_nactive; ++i)
             display_row(&(sp->st_txnarray[i]), TXNA_tab);
