@@ -2858,7 +2858,7 @@ buffindexed_close(void)
 
 #ifdef BUFF_DEBUG
 static int
-countgdb(void)
+countgdb()
 {
     int i, count = 0;
     GROUPDATABLOCK *gdb;
