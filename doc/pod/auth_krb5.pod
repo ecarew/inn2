@@ -22,6 +22,18 @@ Kerberos PAM module.  A full Kerberos PAM module is more sophisticated
 about how it validates passwords and has a much broader array of options
 than this authenticator.
 
+B<auth_krb5> checks the ticket it obtains against the host key in the
+system keytab (normally F</etc/krb5.keytab>, or the file named by
+C<KRB5_KTNAME>), so that a forged KDC answering for the real one is not
+believed.  B<nnrpd> must be able to read that keytab.  With MIT Kerberos,
+if there is no keytab this check is skipped and the password is accepted
+on the KDC's word alone, unless F<krb5.conf> sets:
+
+    [libdefaults]
+        verify_ap_req_nofail = true
+
+which is recommended.
+
 =head1 OPTIONS
 
 =over 4
