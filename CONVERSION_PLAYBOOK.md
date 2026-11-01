@@ -116,6 +116,7 @@ time.
 | `gersemi` | CMake formatter. |
 | `hyperfine`, `tokei`, `cloc`, `bloaty` | Comparing the original and converted builds: timing, lines of code, binary size. |
 | `krb5` (keg-only), `dovecot` | Test stand-ins: a scratch Kerberos KDC, a local IMAP/LMTP server (run in the foreground as the tester, not as a service). |
+| libcanlock (not in Homebrew) | Cancel-Lock support, so `lib/canlock.cc` is built and tested.  Build the author's release outside the repository into a prefix you own (`./configure --prefix=$HOME/.local/libcanlock --disable-shared && make install`) and configure each build directory with `-DCMAKE_PREFIX_PATH=$HOME/.local/libcanlock`; static, so the binaries do not depend on it at run time. |
 | Docker | Linux builds and root-path tests. |
 | Homebrew `llvm` | clang-tidy, clang-format, clang-apply-replacements. |
 
