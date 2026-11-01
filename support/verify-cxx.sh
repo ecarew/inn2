@@ -159,30 +159,54 @@ fi
 
 # gencancel (control/) has no INN test.  Check the cancel articles it writes
 # for several option sets; Date and Message-ID vary per run and are masked.
-gencancel_runs() {
+# It runs where ./etc/inn-secrets.conf (pathetc in the test inn.conf) holds
+# Cancel-Lock secrets, which a build with libcanlock uses.
+canlock=false
+grep -q '^#define HAVE_CANLOCK 1' "$build/include/config.h" 2>/dev/null \
+    && canlock=true
+gcdir=$tmp/gencancel
+mkdir -p "$gcdir/etc"
+printf 'cancels {\n    canlockuser:  [ "user-secret" ]\n    canlockadmin: [ "admin-secret" ]\n}\n' \
+    >"$gcdir/etc/inn-secrets.conf"
+gencancel_runs() (
     local g=$1
     export INNCONF=$root/tests/data/etc/inn.conf
+    cd "$gcdir" || exit 1
     "$g" -n test.group -f admin@live.test -s 'cancel test' -b 'Body.' \
         '<orig@live.test>'
     echo "--"; "$g" -a -n test.group -f admin@live.test '<orig@live.test>'
     echo "--"; "$g" -m -c UTF-8 -n test.group -f admin@live.test '<o@l.t>'
     echo "--"; "$g" -d -n a.b,c.d -f admin@live.test '<o@l.t>'
-    echo "--"; "$g" -k -n x '<a@b>' 2>&1 | grep -v inn-secrets; echo "exit $?"
-    echo "--"; "$g" -L -n x '<a@b>' 2>&1 | grep -v inn-secrets; echo "exit $?"
-}
+    echo "--"; "$g" -k -n x -f admin@live.test '<a@b>' 2>&1 | grep -v inn-secrets
+    echo "exit $?"
+    echo "--"; "$g" -L -n x -f admin@live.test '<a@b>' 2>&1 | grep -v inn-secrets
+    echo "exit $?"
+)
 mask='s/^(Date|Message-ID): .*/\1: (masked)/'
 gencancel_runs "$build/control/gencancel" 2>/dev/null | sed -E "$mask" \
     >"$tmp/gencancel.out"
 g=$tmp/gencancel.out
+# The -L run writes an article too when built with libcanlock.
+arts=3
+$canlock && arts=4
 if grep -q '^Control: cancel <orig@live.test>$' "$g" \
    && grep -q '^Subject: cancel test$' "$g" \
    && grep -q '^Subject: cmsg cancel <o@l.t>$' "$g" \
    && grep -q '^Newsgroups: a.b,c.d$' "$g" \
    && grep -q '^Content-Type: text/plain; charset="UTF-8"$' "$g" \
-   && [ "$(grep -c '^Approved: ' "$g")" = 3 ] \
-   && [ "$(grep -c '^Message-ID: ' "$g")" = 3 ] \
-   && [ "$(grep -c 'not built with Cancel-Lock support' "$g")" = 2 ] \
-   && grep -q '^Body\.$' "$g"; then
+   && [ "$(grep -c '^Approved: ' "$g")" = "$arts" ] \
+   && [ "$(grep -c '^Message-ID: ' "$g")" = "$arts" ] \
+   && grep -q '^Body\.$' "$g" \
+   && if $canlock; then
+          # -k prints the key, HMAC-SHA1 and HMAC-SHA256 of the Message-ID
+          # keyed with the admin secret (checked with openssl dgst -hmac);
+          # the four plain runs carry it as Cancel-Key, and -L leaves it out.
+          grep -qx 'sha1:1C5dxKGRl/DgcrsYGyk8rNP+zTk= sha256:XzwWzWVDSlpA7UGeFTFOXEfOPMrkDbTtLDsXcV91lJk=' "$g" \
+          && [ "$(grep -c '^Cancel-Key: sha1:' "$g")" = 4 ] \
+          && [ "$(grep -c '^Control: cancel <a@b>$' "$g")" = 1 ]
+      else
+          [ "$(grep -c 'not built with Cancel-Lock support' "$g")" = 2 ]
+      fi; then
     res "gencancel output (6 option sets)" PASS
 else
     res "gencancel output (6 option sets)" FAIL
@@ -214,6 +238,9 @@ fi
 libs=("$build/innd/libinnd_core.a" "$build/storage/libinnstorage.a"
       "$build/history/libinnhist.a" "$build/storage/libinnstorage.a"
       "$build/lib/libinn.a" -lz -lsqlite3)
+# With libcanlock, for the tests given inn_canlock's objects.
+canlock_lib=$(sed -n 's/^INN_CANLOCK_LIB:FILEPATH=//p' "$build/CMakeCache.txt")
+$canlock && libs+=("$canlock_lib")
 cflags=(-g -I"$build/include" -I"$root/include" -I"$root/tests" -I"$root/history"
         -I"$root/storage")
 cflags+=("${covcflags[@]}")
@@ -260,7 +287,7 @@ extra_obj() {
 # shellcheck disable=SC2054  # commas separate an entry's extra sources
 tests=(
     lib/artnumber lib/asprintf:::lib/asprintf lib/bloom lib/bloom-hiswalk
-    lib/buffer lib/canlock lib/concat lib/conffile lib/confparse lib/date
+    lib/buffer lib/canlock:::@lib/CMakeFiles/inn_canlock.dir/canlock.cc.o lib/concat lib/conffile lib/confparse lib/date
     lib/daemon:::lib/daemon lib/dispatch lib/fdflag
     lib/getaddrinfo:::lib/getaddrinfo lib/getnameinfo:::lib/getnameinfo
     lib/hash lib/hashtab lib/headers lib/hex lib/hissqlite
