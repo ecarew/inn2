@@ -141,10 +141,20 @@ Items 1 (native configuration), 2 (generated sources) and 9 (CTest:
 **Still C**
 - innfeed/ (10 files; deferred).  Open: after a duplicate reply from
   tinyleaf innfeed sleeps the connection and spools the rest; replaying a
-  backlog with `-x` offers nothing.  imapfeed needs an IMAP/LMTP stand-in.
-  Coverage not measured.  Convert its parser to bison lalr1.cc / flex C++
-  output at the same time.  Fix `VALIDATE_HASH_TABLE()` in article.c:37
-  (C++ syntax, breaks C builds with NDEBUG).
+  backlog with `-x` offers nothing.  Coverage not measured.  Convert its
+  parser to bison lalr1.cc / flex C++ output at the same time.  Fix
+  `VALIDATE_HASH_TABLE()` in article.c:37 (C++ syntax, breaks C builds
+  with NDEBUG).
+- imapfeed (innfeed/imap_connection.c) needs a close review of its memory
+  handling before or during conversion.  live-innd.sh now feeds a dovecot
+  (support/dovecot-imapfeed.sh; macOS needs it started with sudo).  Found
+  and fixed: in-place NUL writes into the read-only article map (addrcpt,
+  addto); a 5-byte minimum read that hung on Dovecot's 4-byte "+ "
+  continuation; a double free (QueueForgetAbout left current_control
+  dangling, disconnect freed it again); GetLine's overlapping memcpy.
+  Still open: gethostbyname in init_net (UBSan misaligned load on macOS;
+  use getaddrinfo, which also gives IPv6); fixed-size strbuf/in[4096]
+  buffers; ports fixed at 143/2003.
 - frontends/feedone.c, sys2nf.c: not built by CMake (OPTIONAL in Make).
 - Code compiled out in this build (`innd/perl.cc`, `innd/python.cc`,
   `lib/perl.cc`, `lib/canlock.cc`): run the `-fsyntax-only` check with the
