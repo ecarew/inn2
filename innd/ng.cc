@@ -5,6 +5,7 @@
 
 #include "portable/system.h"
 
+#include <algorithm>
 #include <dirent.h>
 
 #include "inn/innconf.h"
@@ -47,17 +48,14 @@ static int NGHcount;
 
 
 /*
-**  Sorting predicate for qsort call in NGparsefile.  Put newsgroups in
+**  Sorting predicate for std::sort in NGparsefile.  Put newsgroups in
 **  rough order of their activity.  Will be better if we write a "counts"
 **  file sometime.
 */
-static int
-NGcompare(const void *p1, const void *p2)
+static bool
+NGcompare(const NEWSGROUP *n1, const NEWSGROUP *n2)
 {
-    const NEWSGROUP *const *n1 = static_cast<const NEWSGROUP *const *>(p1);
-    const NEWSGROUP *const *n2 = static_cast<const NEWSGROUP *const *>(p2);
-
-    return n1[0]->Last - n2[0]->Last;
+    return n1->Last < n2->Last;
 }
 
 
@@ -205,7 +203,7 @@ NGparsefile(void)
     /* Sort each bucket. */
     for (i = NGH_SIZE, htp = NGHtable; --i >= 0; htp++)
         if (htp->Used > 1)
-            qsort(htp->Groups, htp->Used, sizeof htp->Groups[0], NGcompare);
+            std::sort(htp->Groups, htp->Groups + htp->Used, NGcompare);
 
     /* Chase down any alias flags. */
     for (ngp = Groups, i = nGroups; --i >= 0; ngp++)
