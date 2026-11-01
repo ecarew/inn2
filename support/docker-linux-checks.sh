@@ -32,6 +32,7 @@ else
         || { echo "cannot build the source tree" >&2; exit 1; }
 fi
 git archive --format=tar "$tree" \
-    | docker run --rm -i "$image" bash -c \
+    | docker run --rm -i --sysctl net.ipv4.ip_unprivileged_port_start=0 \
+        "$image" bash -c \
         'mkdir /src && tar -x -C /src && chown -R tester /src && cd /src \
          && su tester -c "bash support/docker/linux-checks.sh"'
