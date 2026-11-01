@@ -15,7 +15,10 @@
 #include "inn/vector.h"
 
 #if defined(HAVE_CANLOCK)
+/* libcanlock's header has no extern "C" of its own. */
+extern "C" {
 #    include <libcanlock-3/canlock.h>
+}
 
 static bool
 alloc_canlock_buffer(char **canbuff, size_t *length)
