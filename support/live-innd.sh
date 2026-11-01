@@ -29,6 +29,7 @@ port=${LIVE_INND_PORT:-11119}
 fail=0
 innd_pid=
 nnrpd_pid=
+dv=
 
 res() {
     printf '  %-42s %s\n' "$1" "$2"
@@ -37,6 +38,7 @@ res() {
 
 cleanup() {
     [ -n "$nnrpd_pid" ] && kill "$nnrpd_pid" 2>/dev/null
+    [ -n "$dv" ] && "$root/support/dovecot-imapfeed.sh" stop "$dv"
     if [ -n "$innd_pid" ] && kill -0 "$innd_pid" 2>/dev/null; then
         kill "$innd_pid" 2>/dev/null
         sleep 1
@@ -813,6 +815,109 @@ rm -f "$tmp/leaf"/*
 feed leaf 999
 label="innfeed backlogs articles while the peer is down"
 ok sh -c "[ -s '$tmp/spool/innfeed/leaf' ] || [ -s '$tmp/spool/innfeed/leaf.output' ]"
+
+# --- imapfeed -----------------------------------------------------------------
+
+# imapfeed delivers articles over LMTP and carries out cancels over IMAP.
+# Its ports are fixed (IMAP 143, LMTP 2003, IPv4), so the dovecot from
+# support/dovecot-imapfeed.sh listens on exactly those.  This script starts
+# one as the current user, which works where that user may bind 143 (Linux
+# with net.ipv4.ip_unprivileged_port_start=0); elsewhere start it with sudo
+# beforehand and name its directory in LIVE_IMAP_DIR (see that script).
+# Skipped when there is no dovecot or it cannot get the ports.  LMTP to
+# news+GROUP saves into the mailbox GROUP; imapfeed cancels with SELECT,
+# UID SEARCH, STORE \Deleted and CLOSE, which expunges.
+imap=${LIVE_IMAP_DIR:-$tmp/imap}
+imap_ok=false
+if [ ! -x "$bin/innfeed/imapfeed" ]; then
+    printf '  %-42s %s\n' "imapfeed checks" "skipped (no imapfeed)"
+elif [ -n "$LIVE_IMAP_DIR" ]; then
+    if [ -s "$imap/base_dir" ]; then
+        imap_ok=true
+    else
+        printf '  %-42s %s\n' "imapfeed checks" \
+            "skipped (no dovecot running in $imap)"
+    fi
+elif "$root/support/dovecot-imapfeed.sh" start "$imap" >"$tmp/dovecot.out" 2>&1
+then
+    dv=$imap
+    imap_ok=true
+else
+    printf '  %-42s %s\n' "imapfeed checks" \
+        "skipped (dovecot could not start on 143/2003)"
+    tail -3 "$tmp/dovecot.out" "$imap/dovecot.log" 2>/dev/null | sed 's/^/    /'
+    "$root/support/dovecot-imapfeed.sh" stop "$imap"
+fi
+if $imap_ok; then
+        cat >"$tmp/etc/imapfeed.conf" <<EOF
+backlog-directory: $tmp/spool/innfeed
+deliver-username: news
+deliver-authname: news
+deliver-password: news-pw
+deliver-rcpt-to: news+%s
+peer imap {
+    ip-name: 127.0.0.1
+}
+EOF
+        for i in 1 2 3; do send_one "imap$i"; done
+        ctl flush ''
+        sleep 1
+        # mailed ID: <ID@live.test> is in a message file in the test.live
+        # mailbox (new/ or cur/, not one marked deleted but not yet expunged).
+        mailed() {
+            grep -rlq "^Message-ID: <$1@live.test>" \
+                "$imap/mail/news"/.test.live/new \
+                "$imap/mail/news"/.test.live/cur 2>/dev/null
+        }
+        # imapf ID...: run imapfeed with the channel lines for those articles,
+        # keeping its input open until CHECK (a shell command) succeeds or
+        # ten seconds pass.
+        imapf() {
+            local check=$1 i t
+            shift
+            { for i in "$@"; do
+                  t=$(gh "$i" | head -1)
+                  [ -n "$t" ] && echo "$t <$i@live.test> imap"
+              done
+              for _ in $(seq 1 50); do
+                  sh -c "$check" && break
+                  sleep 0.2
+              done
+            } | ASAN_OPTIONS="${ASAN_OPTIONS:+$ASAN_OPTIONS:}log_path=$tmp/imapfeed.san" \
+                UBSAN_OPTIONS="${UBSAN_OPTIONS:+$UBSAN_OPTIONS:}log_path=$tmp/imapfeed.san" \
+                "$bin/innfeed/imapfeed" -c "$tmp/etc/imapfeed.conf" \
+                  -l "$tmp/imapfeed.log" -S "$tmp/imapfeed.status" \
+                  -p "$tmp/run/imapfeed.pid" >>"$tmp/imapfeed.out" 2>&1
+        }
+        md=$(declare -f mailed)
+        imapf "imap='$imap'; $md; mailed imap1 && mailed imap2 && mailed imap3" \
+            imap1 imap2 imap3
+        label="imapfeed delivers over LMTP to dovecot"
+        ok sh -c "imap='$imap'; $md; mailed imap1 && mailed imap2 && mailed imap3"
+
+        # A cancel for imap1: innd files the control article, and imapfeed,
+        # given it, removes imap1 from the mailbox over IMAP.
+        art=$(printf 'Path: live.test!not-for-mail\nFrom: tester@live.test\nNewsgroups: test.live\nSubject: cmsg cancel <imap1@live.test>\nControl: cancel <imap1@live.test>\nMessage-ID: <imapcancel@live.test>\nDate: %s\n\nCancel.\n' \
+              "$(date -u '+%a, %d %b %Y %H:%M:%S +0000')")
+        printf '#! rnews %d\n%s\n' "$(( ${#art} + 1 ))" "$art" \
+            | "$bin/frontends/rnews" >>"$tmp/rnews.log" 2>&1
+        ctl flush ''
+        sleep 1
+        imapf "imap='$imap'; $md; ! mailed imap1" imapcancel
+        label="imapfeed cancels over IMAP"
+        ok sh -c "imap='$imap'; $md; ! mailed imap1 && mailed imap2"
+        # imapfeed sends its standard error to its log, so a sanitizer
+        # build's report goes to a file of its own; show it.
+        for f in "$tmp"/imapfeed.san.*; do
+            [ -f "$f" ] || continue
+            res "imapfeed sanitizer report" FAIL
+            grep -E 'ERROR|runtime error|^    #[0-9] |SUMMARY' "$f" | head -12 | sed 's/^/    /'
+        done
+    if [ -n "$dv" ]; then
+        "$root/support/dovecot-imapfeed.sh" stop "$dv"
+        dv=
+    fi
+fi
 
 # --- expire tools -------------------------------------------------------------
 
