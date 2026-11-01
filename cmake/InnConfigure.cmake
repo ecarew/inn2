@@ -58,7 +58,7 @@ if(INN_KEYWORDS)
     set(DO_KEYWORDS 1)
 endif()
 foreach(feature DO_LARGEFILES DO_PERL DO_PYTHON DO_TAGGED_HASH HAVE_BDB
-        HAVE_BDB_NDBM HAVE_BLACKLIST HAVE_BLOCKLIST HAVE_CANLOCK HAVE_OPENSSL
+        HAVE_BDB_NDBM HAVE_BLACKLIST HAVE_BLOCKLIST HAVE_OPENSSL
         HAVE_SD_NOTIFY)
     set(${feature} FALSE)
 endforeach()
@@ -97,6 +97,20 @@ check_include_file(sasl/sasl.h INN_HAVE_SASL_SASL_H)
 find_library(INN_SASL_LIB sasl2)
 if(INN_HAVE_SASL_SASL_H AND INN_SASL_LIB)
     set(HAVE_SASL TRUE)
+endif()
+
+# libcanlock (RFC 8315 Cancel-Lock), found as configure does: the
+# libcanlock-3/canlock.h header and a libcanlock with cl_verify_multi().
+find_path(INN_CANLOCK_INCLUDE libcanlock-3/canlock.h)
+find_library(INN_CANLOCK_LIB canlock)
+set(HAVE_CANLOCK FALSE)
+if(INN_CANLOCK_INCLUDE AND INN_CANLOCK_LIB)
+    set(CMAKE_REQUIRED_LIBRARIES ${INN_CANLOCK_LIB})
+    check_function_exists(cl_verify_multi INN_HAVE_CL_VERIFY_MULTI)
+    unset(CMAKE_REQUIRED_LIBRARIES)
+    if(INN_HAVE_CL_VERIFY_MULTI)
+        set(HAVE_CANLOCK TRUE)
+    endif()
 endif()
 
 # Kerberos v5, through krb5-config as configure uses it.
