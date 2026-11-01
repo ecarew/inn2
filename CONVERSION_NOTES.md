@@ -910,6 +910,45 @@ storage/buffindexed/buffindexed.cc, storage/expire.cc,
 storage/tradindexed/tdx-util.cc; innd/keywords.cc (7) with its
 noise-regex fix (ask first); innfeed/endpoint.c with innfeed's conversion.
 
+**Done 2026-11-01** except frontends/ovdb_stat.cc (compiled only with
+Berkeley DB; see "Retiring ovdb and Berkeley DB") and innfeed/endpoint.c.
+Every converted key is unique or its ties are invisible, so `std::sort`
+throughout.  keywords.cc's noise-regex fix is still separate and still
+needs asking.  Not benchmarked: these sort a few dozen to a few thousand
+elements, and `std::sort` inlines its comparison where `qsort` calls it
+through a pointer.  Three comparators (innd/ng.cc, storage/expire.cc,
+buffindexed.cc) subtracted unsigned article numbers and truncated the
+result to `int`, which orders wrongly once numbers differ by 2^31; they
+now compare with `<`.
+
+**actsync's comparators: a design that relied on qsort.**  Each of its
+three comparators (`merge_cmp`, `active_cmp`, `eq_merge_cmp`) did two
+jobs.  It ordered the groups for the merge walk, the active-style output
+and the =alias resolution, and it asserted an invariant: two distinct
+elements never compare equal, else `die("two internal grp elements
+match!")`, with an address test (`a == b`) first to let a self-comparison
+through.  The invariant holds by construction: every key ends in (hostid,
+linenum), and the line number is assigned per line read
+(`actsync.cc:829`); every eqgrp points at a different grp.  So the die was
+a guard against internal bugs, not a check on input.
+
+The flaw is where the check lives.  Distinct address plus equal key means
+distinct elements only because C promises that qsort passes the
+comparator pointers to elements of the array (C11 7.22.5).  `std::sort`
+promises no such thing: it requires a strict weak ordering, which must
+answer `false` for equal elements, and it may compare against a copy (libc++
+holds the partition pivot in a local).  A copy fails the address test, so
+the comparator would die on a valid run.  The intent, a total order plus a
+uniqueness assertion, is kept by separating them (`e3de2b343`):
+`merge_less`, `active_less` and `eq_merge_less` only order, and
+`sorted_unique` sorts and then looks for adjacent equal elements in the
+sorted array, where any duplicate must sit, dying with the same message.
+Because the order is total the result is the one sorted sequence qsort
+produced; tests/data/actsync/expected.txt, recorded from the qsort build
+(`ab6e65440`), checks it in verify-cxx.sh (`6c38d9f67`).  The same commit
+corrects `eq_merge_cmp`'s comment, which said skipped groups sort first;
+the code sorts them last, and its callers depend on that.
+
 ### Load testing and profiling (decided 2026-10-31)
 
 Measure first, then optimize where the measurements point (the header
@@ -1264,6 +1303,19 @@ are added here.
 
 Open items from CLAUDE.md, moved here when done, newest first.
 
+- 2026-11-01: qsort to std::sort in 8 files (`e3de2b343`, `e18602a26`
+  through `e98aca97b`); actsync's design finding and the subtraction
+  comparators are under "qsort to std::sort".  actsync got its first output
+  test (`89836c560`, `461dd75e1`, `ab6e65440`, `6c38d9f67`).
+- 2026-11-01: date-t's DST flake fixed (`620923e6f`).  In the repeated hour
+  a local date and time names two timestamps; the test now accepts either,
+  as tests 39-44 already did, and test_times holds both 01:30s of
+  29 Oct 2000 (PST8PDT), so the case runs every time (tests 87 and 88 fail
+  without the fix).
+- 2026-11-01: the verify-cxx.sh path for builds without libcanlock run
+  once (build-nocl, HAVE_CANLOCK off): gencancel PASS on the "not built"
+  messages, lib/canlock SKIP, RESULT: PASS.
+
 - 2026-11-01: Cancel-Lock (libcanlock) built and tested.  CMake had no
   detection and forced HAVE_CANLOCK off, so lib/canlock.cc compiled to a
   stub and lib/canlock skipped.  cmake/InnConfigure.cmake now finds it as
@@ -1397,6 +1449,18 @@ Open items from CLAUDE.md, moved here when done, newest first.
 ### Upstream bugs and quirks found
 
 Behavior of upstream INN found while testing, kept as is unless noted.
+
+- Upstream bug (found 2026-11-01, kept): actsync misses a group listed
+  twice by host2 when host1 also has it.  `merge_grps` looks for duplicates
+  only forward from the current group, and after sorting by (name, hostid,
+  linenum) host1's entry sits between host2's two copies, so the second
+  copy is never compared with the first and comes out as a new group
+  (`newgroup comp.lang.c` although host1 has it; written twice with `-o a`).
+  The intended warning ("lines 1 and 10 ... refer to the same group") and
+  ERROR_DUP only happen when host1 lacks the group.  Fix: look for
+  duplicates per (name, hostid) before the cross-host walk.
+  tests/data/actsync/expected.txt records the current output; update it
+  with the fix.
 
 - Upstream bug (found 2026-10-31, kept): innd/keywords.cc's noise-word
   pattern is a POSIX basic regex using `\|` alternation, a GNU extension.
