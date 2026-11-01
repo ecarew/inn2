@@ -708,6 +708,9 @@ QueueForgetAbout(connection_t *cxn, article_queue_t *item,
 
     if (item == cxn->current_article)
         cxn->current_article = NULL;
+    /* Or imap_DisconnectNoDelete gives the freed item back again. */
+    if (item == cxn->current_control)
+        cxn->current_control = NULL;
 
     switch (item->type) {
     case DELIVER:
@@ -913,8 +916,9 @@ GetLine(char *buf, char *ret, int retmaxsize)
             memcpy(ret, str_base, str - str_base);
             ret[str - str_base - 1] = '\0';
 
-            memcpy(str_base, str_base + (str - str_base) + 1,
-                   size - (str - str_base));
+            /* The rest of the buffer moves down over what it overlaps. */
+            memmove(str_base, str_base + (str - str_base) + 1,
+                    size - (str - str_base));
             str_base[size - (str - str_base)] = '\0';
 
             return RET_OK;
@@ -2423,9 +2427,11 @@ imap_writeCB(EndPoint e, IoStatus i, Buffer *b, void *d)
         return;
     }
 
-    /* set up to receive */
+    /* set up to receive: at least one byte, since an empty continuation
+       request ("+ " CRLF, as Dovecot sends for AUTHENTICATE PLAIN) is only
+       four */
     readBuffers = makeBufferArray(bufferTakeRef(cxn->imap_rBuffer), NULL);
-    if (!prepareRead(cxn->imap_endpoint, readBuffers, imap_readCB, cxn, 5)) {
+    if (!prepareRead(cxn->imap_endpoint, readBuffers, imap_readCB, cxn, 1)) {
         freeBufferArray(readBuffers);
         imap_Disconnect(cxn);
         return;
@@ -3728,13 +3734,13 @@ reset:
  */
 
 static void
-addrcpt(char *newrcpt, int newrcptlen, char **out, int *outalloc)
+addrcpt(const char *newrcpt, int newrcptlen, char **out, int *outalloc)
 {
     int size = strlen(*out);
     int fsize = size;
     int newsize = size + 9 + strlen(deliver_rcpt_to) + newrcptlen + 3;
     int rc;
-    char c;
+    char *rcpt;
 
     /* see if we need to grow the string */
     if (newsize > *outalloc) {
@@ -3745,12 +3751,14 @@ addrcpt(char *newrcpt, int newrcptlen, char **out, int *outalloc)
     strlcpy((*out) + size, "RCPT TO:<", newsize - size);
     size += 9;
 
-    c = newrcpt[newrcptlen];
-    newrcpt[newrcptlen] = '\0';
+    /* newrcpt points into the article, which may be mapped read-only, so
+       format from a NUL-terminated copy rather than terminating it in
+       place. */
+    rcpt = xstrndup(newrcpt, newrcptlen);
 #if __GNUC__ > 4 || defined(__llvm__) || defined(__clang__)
 #    pragma GCC diagnostic ignored "-Wformat-nonliteral"
 #endif
-    rc = snprintf((*out) + size, newsize - size, deliver_rcpt_to, newrcpt);
+    rc = snprintf((*out) + size, newsize - size, deliver_rcpt_to, rcpt);
 #if __GNUC__ > 4 || defined(__llvm__) || defined(__clang__)
 #    pragma GCC diagnostic warning "-Wformat-nonliteral"
 #endif
@@ -3761,7 +3769,7 @@ addrcpt(char *newrcpt, int newrcptlen, char **out, int *outalloc)
     } else {
         size += rc;
     }
-    newrcpt[newrcptlen] = c;
+    free(rcpt);
 
     strlcpy((*out) + size, ">\r\n", newsize - size);
 
@@ -3817,14 +3825,14 @@ ConvertRcptList(char *in, char *in_end, int *num)
 }
 
 static void
-addto(char *newrcpt, int newrcptlen, const char *sep, char **out,
+addto(const char *newrcpt, int newrcptlen, const char *sep, char **out,
       int *outalloc)
 {
     int size = strlen(*out);
     int newsize =
         size + strlen(sep) + 1 + strlen(deliver_to_header) + newrcptlen + 1;
     int rc;
-    char c;
+    char *rcpt;
 
     /* see if we need to grow the string */
     if (newsize > *outalloc) {
@@ -3841,12 +3849,14 @@ addto(char *newrcpt, int newrcptlen, const char *sep, char **out,
         size += rc;
     }
 
-    c = newrcpt[newrcptlen];
-    newrcpt[newrcptlen] = '\0';
+    /* newrcpt points into the article, which may be mapped read-only, so
+       format from a NUL-terminated copy rather than terminating it in
+       place. */
+    rcpt = xstrndup(newrcpt, newrcptlen);
 #if __GNUC__ > 4 || defined(__llvm__) || defined(__clang__)
 #    pragma GCC diagnostic ignored "-Wformat-nonliteral"
 #endif
-    rc = snprintf((*out) + size, newsize - size, deliver_to_header, newrcpt);
+    rc = snprintf((*out) + size, newsize - size, deliver_to_header, rcpt);
 #if __GNUC__ > 4 || defined(__llvm__) || defined(__clang__)
 #    pragma GCC diagnostic warning "-Wformat-nonliteral"
 #endif
@@ -3857,7 +3867,7 @@ addto(char *newrcpt, int newrcptlen, const char *sep, char **out,
     } else {
         size += rc;
     }
-    newrcpt[newrcptlen] = c;
+    free(rcpt);
 
     strlcpy((*out) + size, ">", newsize - size);
 }
