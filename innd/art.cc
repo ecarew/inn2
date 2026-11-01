@@ -411,15 +411,6 @@ ARTlogreject(CHANNEL *cp, const char *text)
         HDR_PARSE_END(HDR__MESSAGE_ID);
 }
 
-/*
-**  Sorting pointer where header field starts
-*/
-static int
-ARTheaderpcmp(const void *p1, const void *p2)
-{
-    return (((const HEADERP *) p1)->p - ((const HEADERP *) p2)->p);
-}
-
 /* Write an article using the storage api.  Put it together in memory and
    call out to the api. */
 static TOKEN
@@ -451,7 +442,8 @@ ARTstore(CHANNEL *cp, bool filtered)
         hp[i++].index = HDR__BYTES;
     }
     /* get the order of header fields appearance */
-    qsort(hp, i, sizeof(HEADERP), ARTheaderpcmp);
+    std::sort(hp, hp + i,
+              [](const HEADERP &a, const HEADERP &b) { return a.p < b.p; });
     /* p always points where the next data should be written from */
     for (p = Article->data + cp->Start, j = 0; j < i; j++) {
         switch (hp[j].index) {
