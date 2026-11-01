@@ -114,7 +114,7 @@ foreach(h write read)
                  OUTPUT ${sandbox}/tests/overview/ovsqlite-${h}.t)
 endforeach()
 
-foreach(t artnumber bloom bloom-hiswalk buffer canlock concat conffile
+foreach(t artnumber bloom bloom-hiswalk buffer concat conffile
           confparse date dispatch fdflag hash hashtab headers hex hissqlite
           hissqlite-convert innconf list logging md5 messageid messages newsuser
           network/addr-ipv4 network/addr-ipv6 network/client network/server
@@ -127,6 +127,9 @@ foreach(t asprintf daemon getaddrinfo getnameinfo inet_aton inet_ntoa
     inn_tap_test(lib/${t} EXTRA lib/${t})
 endforeach()
 inn_tap_test(lib/xwrite EXTRA lib/xwrite tests/lib/fakewrite)
+# Takes libinn's canlock code from its own object library, as programs do,
+# with libcanlock when it was found.
+inn_tap_test(lib/canlock OBJECTS inn_canlock)
 
 inn_tap_test(authprogs/ident)
 inn_tap_test(authprogs/identport)
@@ -144,6 +147,13 @@ foreach(t artparse chan headers)
                  OBJECTS inn_canlock inn_perl)
     target_link_libraries(test_innd_${t} PRIVATE innd_core)
 endforeach()
+
+# Tests given inn_canlock's objects directly need libcanlock as well.
+if(HAVE_CANLOCK)
+    foreach(t lib_canlock innd_artparse innd_chan innd_headers)
+        target_link_libraries(test_${t} PRIVATE ${INN_CANLOCK_LIB})
+    endforeach()
+endif()
 
 inn_tap_test(expire/tombstone)
 inn_tap_test(expire/tombstone-hisexpire)
