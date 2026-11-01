@@ -93,8 +93,9 @@ pass_conv(int num_msg, PAM_CONST struct pam_message **msgm UNUSED,
 {
     int i;
 
-    *response = static_cast<struct pam_response *>(malloc(num_msg * sizeof(struct pam_response)));
-    if (*response == NULL)
+    *response = static_cast<struct pam_response *>(
+        malloc(num_msg * sizeof(struct pam_response)));
+    if (*response == nullptr)
         return PAM_CONV_ERR;
     for (i = 0; i < num_msg; i++) {
         (*response)[i].resp = strdup((char *) appdata_ptr);
@@ -174,14 +175,14 @@ password_dbm(char *name, const char *file)
     char *password;
 
     database = dbm_open(file, O_RDONLY, 0600);
-    if (database == NULL)
-        return NULL;
+    if (database == nullptr)
+        return nullptr;
     key.dptr = name;
     key.dsize = strlen(name);
     value = dbm_fetch(database, key);
-    if (value.dptr == NULL) {
+    if (value.dptr == nullptr) {
         dbm_close(database);
-        return NULL;
+        return nullptr;
     }
     password = xstrndup(static_cast<const char *>(value.dptr), value.dsize);
     dbm_close(database);
@@ -199,7 +200,7 @@ password_dbm(char *name, const char *file)
 static char *
 password_shadow(const char *user UNUSED)
 {
-    return NULL;
+    return nullptr;
 }
 #else
 static char *
@@ -224,12 +225,12 @@ password_file(const char *username, const char *file)
 {
     QIOSTATE *qp;
     char *line, *password;
-    struct cvector *info = NULL;
+    struct cvector *info = nullptr;
 
     qp = QIOopen(file);
-    if (qp == NULL)
-        return NULL;
-    for (line = QIOread(qp); line != NULL; line = QIOread(qp)) {
+    if (qp == nullptr)
+        return nullptr;
+    for (line = QIOread(qp); line != nullptr; line = QIOread(qp)) {
         if (*line == '#' || *line == '\n')
             continue;
         info = cvector_split(line, ':', info);
@@ -246,7 +247,7 @@ password_file(const char *username, const char *file)
         sysdie("error reading %s", file);
     QIOclose(qp);
     cvector_free(info);
-    return NULL;
+    return nullptr;
 }
 
 
@@ -261,9 +262,9 @@ password_system(const char *username)
     struct passwd *pwd;
 
     pwd = getpwnam(username);
-    if (pwd != NULL)
+    if (pwd != nullptr)
         return xstrdup(pwd->pw_passwd);
-    return NULL;
+    return nullptr;
 }
 
 
@@ -280,11 +281,11 @@ group_system(const char *username)
     struct group *gr;
 
     pwd = getpwnam(username);
-    if (pwd == NULL)
-        return NULL;
+    if (pwd == nullptr)
+        return nullptr;
     gr = getgrgid(pwd->pw_gid);
-    if (gr == NULL)
-        return NULL;
+    if (gr == nullptr)
+        return nullptr;
     return xstrdup(gr->gr_name);
 }
 
@@ -297,7 +298,7 @@ output_user(const char *username, bool wantgroup)
 {
     if (wantgroup) {
         char *group = group_system(username);
-        if (group == NULL)
+        if (group == nullptr)
             die("group info for user %s not available", username);
         printf("User:%s@%s\r\n", username, group);
     } else
@@ -325,9 +326,9 @@ main(int argc, char *argv[])
     const char *hash;
     enum authtype type = AUTH_NONE;
     bool wantgroup = false;
-    const char *filename = NULL;
-    struct auth_info *authinfo = NULL;
-    char *password = NULL;
+    const char *filename = nullptr;
+    struct auth_info *authinfo = nullptr;
+    char *password = nullptr;
 
     message_program_name = "ckpasswd";
 
@@ -360,16 +361,16 @@ main(int argc, char *argv[])
             type = AUTH_SHADOW;
             break;
         case 'u':
-            if (authinfo == NULL) {
+            if (authinfo == nullptr) {
                 authinfo = xmalloc(sizeof(struct auth_info));
-                authinfo->password = NULL;
+                authinfo->password = nullptr;
             }
             authinfo->username = optarg;
             break;
         case 'p':
-            if (authinfo == NULL) {
+            if (authinfo == nullptr) {
                 authinfo = xmalloc(sizeof(struct auth_info));
-                authinfo->username = NULL;
+                authinfo->username = nullptr;
             }
             authinfo->password = optarg;
             break;
@@ -379,16 +380,16 @@ main(int argc, char *argv[])
     }
     if (argc != optind)
         die("extra arguments given");
-    if (authinfo != NULL && authinfo->username == NULL)
+    if (authinfo != nullptr && authinfo->username == nullptr)
         die("-u option is required if -p option is given");
-    if (authinfo != NULL && authinfo->password == NULL)
+    if (authinfo != nullptr && authinfo->password == nullptr)
         die("-p option is required if -u option is given");
 
     /* Unless a username or password was given on the command line, assume
        we're being run by nnrpd. */
-    if (authinfo == NULL)
+    if (authinfo == nullptr)
         authinfo = get_auth_info(stdin);
-    if (authinfo == NULL)
+    if (authinfo == nullptr)
         die("no authentication information from nnrpd");
     if (authinfo->username[0] == '\0')
         die("null username");
@@ -397,7 +398,7 @@ main(int argc, char *argv[])
     switch (type) {
     case AUTH_SHADOW:
         password = password_shadow(authinfo->username);
-        if (password == NULL)
+        if (password == nullptr)
             password = password_system(authinfo->username);
         break;
     case AUTH_FILE:
@@ -415,10 +416,10 @@ main(int argc, char *argv[])
         break;
     }
 
-    if (password == NULL)
+    if (password == nullptr)
         die("user %s unknown", authinfo->username);
     hash = crypt(authinfo->password, password);
-    if (hash == NULL || strcmp(password, hash) != 0)
+    if (hash == nullptr || strcmp(password, hash) != 0)
         die("invalid password for user %s", authinfo->username);
 
     /* The password matched. */
