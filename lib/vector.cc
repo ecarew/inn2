@@ -81,7 +81,7 @@ vector_resize(struct vector *vector, size_t size)
 {
     size_t i;
 
-    assert(vector != NULL);
+    assert(vector != nullptr);
     if (vector->count > size) {
         for (i = size; i < vector->count; i++)
             free(vector->strings[i]);
@@ -96,7 +96,7 @@ vector_resize(struct vector *vector, size_t size)
 void
 cvector_resize(struct cvector *vector, size_t size)
 {
-    assert(vector != NULL);
+    assert(vector != nullptr);
     if (vector->count > size)
         vector->count = size;
     if (size == 0)
@@ -115,7 +115,7 @@ cvector_resize(struct cvector *vector, size_t size)
 void
 vector_add(struct vector *vector, const char *string)
 {
-    assert(vector != NULL);
+    assert(vector != nullptr);
     if (vector->count == vector->allocated)
         vector_resize(vector, vector->allocated + 1);
     vector->strings[vector->count] = xstrdup(string);
@@ -125,7 +125,7 @@ vector_add(struct vector *vector, const char *string)
 void
 cvector_add(struct cvector *vector, const char *string)
 {
-    assert(vector != NULL);
+    assert(vector != nullptr);
     if (vector->count == vector->allocated)
         cvector_resize(vector, vector->allocated + 1);
     vector->strings[vector->count] = string;
@@ -142,7 +142,7 @@ cvector_add(struct cvector *vector, const char *string)
 void
 vector_addn(struct vector *vector, const char *string, size_t length)
 {
-    assert(vector != NULL);
+    assert(vector != nullptr);
     if (vector->count == vector->allocated)
         vector_resize(vector, vector->allocated + 1);
     vector->strings[vector->count] = xstrndup(string, length);
@@ -158,7 +158,7 @@ vector_clear(struct vector *vector)
 {
     size_t i;
 
-    assert(vector != NULL);
+    assert(vector != nullptr);
     for (i = 0; i < vector->count; i++)
         free(vector->strings[i]);
     vector->count = 0;
@@ -167,7 +167,7 @@ vector_clear(struct vector *vector)
 void
 cvector_clear(struct cvector *vector)
 {
-    assert(vector != NULL);
+    assert(vector != nullptr);
     vector->count = 0;
 }
 
@@ -461,7 +461,7 @@ vector_join(const struct vector *vector, const char *separator)
     size_t i, length, offset, size, seplen;
 
     /* If the vector is empty, this is trivial. */
-    assert(vector != NULL);
+    assert(vector != nullptr);
     if (vector->count == 0)
         return xstrdup("");
 
@@ -501,7 +501,7 @@ cvector_join(const struct cvector *vector, const char *separator)
     size_t i, length, offset, size, seplen;
 
     /* If the vector is empty, this is trivial. */
-    assert(vector != NULL);
+    assert(vector != nullptr);
     if (vector->count == 0)
         return xstrdup("");
 
@@ -544,7 +544,7 @@ cvector_join(const struct cvector *vector, const char *separator)
 int
 vector_exec(const char *path, struct vector *vector)
 {
-    assert(vector != NULL);
+    assert(vector != nullptr);
     if (vector->allocated == vector->count)
         vector_resize(vector, vector->count + 1);
     vector->strings[vector->count] = nullptr;
@@ -554,7 +554,7 @@ vector_exec(const char *path, struct vector *vector)
 int
 cvector_exec(const char *path, struct cvector *vector)
 {
-    assert(vector != NULL);
+    assert(vector != nullptr);
     if (vector->allocated == vector->count)
         cvector_resize(vector, vector->count + 1);
     vector->strings[vector->count] = nullptr;
