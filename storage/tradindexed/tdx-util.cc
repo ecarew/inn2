@@ -14,6 +14,7 @@
 
 #include "portable/system.h"
 
+#include <algorithm>
 #include <ctype.h>
 #include <dirent.h>
 #include <sys/stat.h>
@@ -218,23 +219,12 @@ extract_messageid(const char *overview)
 /*
 **  Compare two file names assuming they're numbers, used to sort the list of
 **  articles numerically.  Suitable for use as a comparison function for
-**  qsort.
+**  std::sort.
 */
-static int
-file_compare(const void *p1, const void *p2)
+static bool
+file_compare(const char *file1, const char *file2)
 {
-    const char *file1 = *((const char *const *) p1);
-    const char *file2 = *((const char *const *) p2);
-    ARTNUM n1, n2;
-
-    n1 = strtoul(file1, nullptr, 10);
-    n2 = strtoul(file2, nullptr, 10);
-    if (n1 > n2)
-        return 1;
-    else if (n1 < n2)
-        return -1;
-    else
-        return 0;
+    return strtoul(file1, nullptr, 10) < strtoul(file2, nullptr, 10);
 }
 
 
@@ -259,7 +249,7 @@ article_list(const char *directory)
     }
     closedir(articles);
 
-    qsort(list->strings, list->count, sizeof(list->strings[0]), file_compare);
+    std::sort(list->strings, list->strings + list->count, file_compare);
     return list;
 }
 
