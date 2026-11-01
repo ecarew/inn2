@@ -14,6 +14,7 @@
 
 #include "portable/system.h"
 
+#include <algorithm>
 #include <ctype.h>
 #include <dirent.h>
 #include <errno.h>
@@ -542,7 +543,9 @@ unlink_filelist(filelist *list, int filecount)
     for (sorted = true, i = 1; sorted && i < list->count; i++)
         sorted = (strcmp(list->files[i - 1], list->files[i]) <= 0);
     if (!sorted)
-        qsort(list->files, list->count, sizeof(char *), file_compare);
+        std::sort(
+            list->files, list->files + list->count,
+            [](const char *a, const char *b) { return strcmp(a, b) < 0; });
 
     /* Now, begin doing our optimized unlinks.  The technique we use is to
        open the directory containing the files and read through it, checking
