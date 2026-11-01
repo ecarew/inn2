@@ -65,6 +65,7 @@
 
 #include "portable/system.h"
 
+#include <algorithm>
 #include <ctype.h>
 #include <dirent.h>
 #include <errno.h>
@@ -73,6 +74,7 @@
 #include <signal.h>
 #include <sys/stat.h>
 #include <sys/wait.h>
+#include <tuple>
 
 #include "inn/hashtab.h"
 #include "inn/innconf.h"
@@ -321,12 +323,12 @@ static struct grp *get_active(char *host, int hostid, int *len, struct grp *,
 static int bad_grpname(char *name, int num_chk);
 static struct pat *get_ignore(char *filename, int *len);
 static void ignore_grps(struct grp *, int grplen, struct pat *, int iglen);
-static int merge_cmp(const void *, const void *);
+static bool merge_less(const struct grp &, const struct grp &);
 static void merge_grps(struct grp *, int grplen, char *host1, char *host2);
-static int active_cmp(const void *, const void *);
+static bool active_less(const struct grp &, const struct grp &);
 static void output_grps(struct grp *, int grplen);
 static void error_mark(struct grp *, int grplen, int hostid);
-static int eq_merge_cmp(const void *, const void *);
+static bool eq_merge_less(const struct eqgrp &, const struct eqgrp &);
 static int mark_eq_probs(struct grp *, int grplen, int hostid, char *host1,
                          char *host2);
 static int exec_cmd(int mode, const char *cmd, char *grp, char *type,
@@ -1541,16 +1543,14 @@ ignore_grps(struct grp *grp, int grplen, struct pat *igcl, int iglen)
 }
 
 /*
- * merge_cmp - qsort compare function for later group merge
+ * merge_less - std::sort ordering for the later group merge
  *
  * given:
  *    a    group a to compare
  *    b    group b to compare
  *
  * returns:
- *    >0    a > b
- *    0     a == b elements match (fatal error if a and b are different)
- *    <0    a < b
+ *    true if a sorts before b
  *
  * To speed up group comparison, we compare by the following items listed
  * in order of sorting:
@@ -1558,49 +1558,36 @@ ignore_grps(struct grp *grp, int grplen, struct pat *igcl, int iglen)
  *    group name
  *    hostid            (host1 ahead of host2)
  *    linenum           (active file line number)
+ *
+ * hostid and linenum make the key unique; sorted_unique checks that after
+ * the sort, since std::sort may compare copies of elements.
  */
-static int
-merge_cmp(const void *arg_a, const void *arg_b)
+static bool
+merge_less(const struct grp &a, const struct grp &b)
 {
-    const struct grp *a =
-        static_cast<const struct grp *>(arg_a); /* group a to compare */
-    const struct grp *b =
-        static_cast<const struct grp *>(arg_b); /* group b to compare */
-    int i;
+    int i = strcmp(a.name, b.name);
 
-    /* firewall */
-    if (a == b) {
-        /* we guess this could happen */
-        return (0);
-    }
+    if (i != 0)
+        return i < 0;
+    return std::tie(a.hostid, a.linenum) < std::tie(b.hostid, b.linenum);
+}
 
-    /* compare group names */
-    i = strcmp(a->name, b->name);
-    if (i != 0) {
-        return i;
-    }
-
-    /* compare hostid's */
-    if (a->hostid != b->hostid) {
-        if (a->hostid > b->hostid) {
-            return 1;
-        } else {
-            return -1;
-        }
-    }
-
-    /* compare active line numbers */
-    if (a->linenum != b->linenum) {
-        if (a->linenum > b->linenum) {
-            return 1;
-        } else {
-            return -1;
-        }
-    }
-
-    /* two different elements match, this should not happen! */
-    die("two internal grp elements match!");
-    /*NOTREACHED*/
+/*
+ * sorted_unique - sort an array and check that no two elements are equal
+ *
+ * Two different elements with an equal key would be an internal error;
+ * the check runs on the sorted array, where equal elements are adjacent.
+ */
+template <typename T, typename Less>
+static void
+sorted_unique(T *array, int len, Less less, const char *what)
+{
+    std::sort(array, array + len, less);
+    if (std::adjacent_find(
+            array, array + len,
+            [less](const T &a, const T &b) { return !less(a, b); })
+        != array + len)
+        die("two internal %s elements match!", what);
 }
 
 /*
@@ -1631,7 +1618,7 @@ merge_grps(struct grp *grp, int grplen, char *host1, char *host2)
     /* sort groups for the merge */
     if (D_BUG)
         warn("STATUS: sorting groups");
-    qsort((char *) grp, grplen, sizeof(grp[0]), merge_cmp);
+    sorted_unique(grp, grplen, merge_less, "grp");
 
     /* mark =type problem groups from host2, if needed */
     h2_probs = mark_eq_probs(grp, grplen, l_host2_flag, host1, host2);
@@ -1758,16 +1745,14 @@ merge_grps(struct grp *grp, int grplen, char *host1, char *host2)
 }
 
 /*
- * active_cmp - qsort compare function for active file style output
+ * active_less - std::sort ordering for active file style output
  *
  * given:
  *    a    group a to compare
  *    b    group b to compare
  *
  * returns:
- *    >0    a > b
- *    0     a == b elements match (fatal error if a and b are different)
- *    <0    a < b
+ *    true if a sorts before b
  *
  * This sort will sort groups so that the lines that will be output
  * are host1 lines followed by host2 lines.  Thus, we will sort by
@@ -1776,41 +1761,10 @@ merge_grps(struct grp *grp, int grplen, char *host1, char *host2)
  *    hostid            (host1 ahead of host2)
  *    linenum           (active file line number)
  */
-static int
-active_cmp(const void *arg_a, const void *arg_b)
+static bool
+active_less(const struct grp &a, const struct grp &b)
 {
-    const struct grp *a =
-        static_cast<const struct grp *>(arg_a); /* group a to compare */
-    const struct grp *b =
-        static_cast<const struct grp *>(arg_b); /* group b to compare */
-
-    /* firewall */
-    if (a == b) {
-        /* we guess this could happen */
-        return (0);
-    }
-
-    /* compare hostid's */
-    if (a->hostid != b->hostid) {
-        if (a->hostid > b->hostid) {
-            return 1;
-        } else {
-            return -1;
-        }
-    }
-
-    /* compare active line numbers */
-    if (a->linenum != b->linenum) {
-        if (a->linenum > b->linenum) {
-            return 1;
-        } else {
-            return -1;
-        }
-    }
-
-    /* two different elements match, this should not happen! */
-    die("two internal grp elements match!");
-    /*NOTREACHED*/
+    return std::tie(a.hostid, a.linenum) < std::tie(b.hostid, b.linenum);
 }
 
 /*
@@ -1908,7 +1862,7 @@ output_grps(struct grp *grp, int grplen)
     if (o_flag == OUTPUT_ACTIVE) {
         if (D_BUG)
             warn("STATUS: sorting groups in output order");
-        qsort((char *) grp, grplen, sizeof(grp[0]), active_cmp);
+        sorted_unique(grp, grplen, active_less, "grp");
     }
 
     /*
@@ -2243,84 +2197,39 @@ error_mark(struct grp *grp, int grplen, int hostid)
 }
 
 /*
- * eq_merge_cmp - qsort compare function for =type group processing
+ * eq_merge_less - std::sort ordering for =type group processing
  *
  * given:
  *    a    =group a to compare
  *    b    =group b to compare
  *
  * returns:
- *    >0    a > b
- *    0     a == b elements match (fatal error if a and b are different)
- *    <0    a < b
+ *    true if a sorts before b
  *
  * To speed up group comparison, we compare by the following items listed
  * in order of sorting:
  *
- *    skip            (non-skipped groups after skipped ones)
+ *    skip            (skipped groups after non-skipped ones)
  *    group equiv name
  *    group name
  *    hostid          (host1 ahead of host2)
  *    linenum         (active file line number)
  */
-static int
-eq_merge_cmp(const void *arg_a, const void *arg_b)
+static bool
+eq_merge_less(const struct eqgrp &a, const struct eqgrp &b)
 {
-    const struct eqgrp *a =
-        static_cast<const struct eqgrp *>(arg_a); /* group a to compare */
-    const struct eqgrp *b =
-        static_cast<const struct eqgrp *>(arg_b); /* group b to compare */
     int i;
 
-    /* firewall */
-    if (a == b) {
-        /* we guess this could happen */
-        return (0);
-    }
-
-    /* compare skip values */
-    if (a->skip != b->skip) {
-        if (a->skip > b->skip) {
-            /* a is skipped, b is not */
-            return 1;
-        } else {
-            /* b is skipped, a is not */
-            return -1;
-        }
-    }
-
-    /* compare the names the groups are equivalenced to */
-    i = strcmp(a->eq, b->eq);
-    if (i != 0) {
-        return i;
-    }
-
-    /* compare the group names themselves */
-    i = strcmp(a->g->name, b->g->name);
-    if (i != 0) {
-        return i;
-    }
-
-    /* compare hostid's */
-    if (a->g->hostid != b->g->hostid) {
-        if (a->g->hostid > b->g->hostid) {
-            return 1;
-        } else {
-            return -1;
-        }
-    }
-
-    /* compare active line numbers */
-    if (a->g->linenum != b->g->linenum) {
-        if (a->g->linenum > b->g->linenum) {
-            return 1;
-        } else {
-            return -1;
-        }
-    }
-
-    /* two different elements match, this should not happen! */
-    die("two internal eqgrp elements match!");
+    if (a.skip != b.skip)
+        return a.skip < b.skip;
+    i = strcmp(a.eq, b.eq);
+    if (i != 0)
+        return i < 0;
+    i = strcmp(a.g->name, b.g->name);
+    if (i != 0)
+        return i < 0;
+    return std::tie(a.g->hostid, a.g->linenum)
+           < std::tie(b.g->hostid, b.g->linenum);
 }
 
 /*
@@ -2397,7 +2306,7 @@ mark_eq_probs(struct grp *grp, int grplen, int hostid, char *host1,
     for (step = 0; step < EQ_LOOP && new_eq_cnt >= 0; ++step) {
 
         /* sort the =group record array */
-        qsort((char *) eqgrp, eq_cnt, sizeof(eqgrp[0]), eq_merge_cmp);
+        sorted_unique(eqgrp, eq_cnt, eq_merge_less, "eqgrp");
 
         /* look for the groups to which =type group point at */
         eq_cnt = new_eq_cnt;
@@ -2493,7 +2402,7 @@ mark_eq_probs(struct grp *grp, int grplen, int hostid, char *host1,
 
     /* note groups that are in a long chain or loop */
     chained = new_eq_cnt;
-    qsort((char *) eqgrp, eq_cnt, sizeof(eqgrp[0]), eq_merge_cmp);
+    sorted_unique(eqgrp, eq_cnt, eq_merge_less, "eqgrp");
     for (j = 0; j < new_eq_cnt; ++j) {
 
         /* skip if already skipped */
