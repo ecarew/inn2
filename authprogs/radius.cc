@@ -92,7 +92,7 @@ static CONFTOKEN radtoks[] = {
 };
 
 static rad_config_t *
-get_radconf(void)
+get_radconf()
 {
     rad_config_t *conf;
 
