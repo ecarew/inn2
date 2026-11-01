@@ -192,6 +192,12 @@ from `cmake-build`; record method and raw numbers so rounds compare.
   with no Berkeley DB dependency (CONVERSION_NOTES.md, "Retiring ovdb").
 - lib fallbacks vs the C++ standard library and Boost; pread/pwrite in
   CONVERSION_NOTES.md, "Positioned file I/O".  Cite libc++/cppreference.
+- Legacy C functions with standard C++ replacements (qsort, bsearch, ...):
+  once the last use of one is converted, remove what remains of it from
+  the source tree: leftover comparators and helpers, INN's own
+  replacement implementations, their CMake checks and config.h symbols.
+  qsort's last use is innfeed/endpoint.c; bsearch has three
+  (expire/fastrm.cc, lib/dispatch.cc, nnrpd/commands.cc).
 - 49 struct/enum typedefs with bodies → `struct X { ... };` during class
   work (not clang-tidy's fix).
 - Upstream bugs to fix or report: CONVERSION_NOTES.md, "Upstream bugs and
