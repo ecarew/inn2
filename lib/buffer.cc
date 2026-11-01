@@ -112,7 +112,7 @@ void
 buffer_set(struct buffer *buffer, const char *data, size_t length)
 {
     if (length > 0) {
-        assert(data != NULL);
+        assert(data != nullptr);
         buffer_resize(buffer, length);
         memmove(buffer->data, data, length);
     }
