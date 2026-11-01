@@ -145,7 +145,6 @@ Items 1 (native configuration), 2 (generated sources) and 9 (CTest:
   Coverage not measured.  Convert its parser to bison lalr1.cc / flex C++
   output at the same time.  Fix `VALIDATE_HASH_TABLE()` in article.c:37
   (C++ syntax, breaks C builds with NDEBUG).
-- authprogs/auth_krb5.c: needs a Kerberos KDC to test.
 - frontends/feedone.c, sys2nf.c: not built by CMake (OPTIONAL in Make).
 - Code compiled out in this build (`innd/perl.cc`, `innd/python.cc`,
   `lib/perl.cc`, `lib/canlock.cc`): run the `-fsyntax-only` check with the
