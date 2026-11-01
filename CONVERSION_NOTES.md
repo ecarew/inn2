@@ -1264,6 +1264,19 @@ are added here.
 
 Open items from CLAUDE.md, moved here when done, newest first.
 
+- 2026-10-31: authprogs/auth_krb5 tested and converted.
+  `tests/authprogs/auth_krb5.t` runs a throwaway MIT KDC as the current
+  user (127.0.0.1:18888, temporary database and keytab; the KDC tools are
+  found beside INN_KRB5_CONFIG's krb5-config) and checks 8 cases: right
+  and wrong passwords, unknown user, foreign realm, `-i`, and the keytab
+  check.  Without a keytab MIT Kerberos skips krb5_verify_init_creds
+  unless `verify_ap_req_nofail = true`, so a forged KDC would be believed;
+  auth_krb5.pod now recommends setting it.  Passes on macOS (Homebrew
+  krb5 1.22.2, Anaconda's krb5) and Linux (Debian's, now in
+  Dockerfile.linux; auth_krb5 was not built there before).  The .c
+  compiled as C++20 unchanged; nullptr pass applied.  The other
+  authprogs files have not had the tidy-fix passes yet.
+
 - 2026-10-30: Refactoring candidate, nnrpd `ARTpost`: it returned a
   `const char *` (string literals, post.cc's static `Error` buffer, or
   other functions' buffers) that `CMDpost` cut at CR/LF by writing through
