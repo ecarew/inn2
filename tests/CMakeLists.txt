@@ -93,6 +93,12 @@ endfunction()
 set(inn_test_env
     HISSQLITE_CONVERT=$<TARGET_FILE:hissqlite-convert>
     OVSQLITE_SERVER=$<TARGET_FILE:ovsqlite-server>)
+# authprogs/auth_krb5.t runs its own KDC, from the tools beside the
+# krb5-config the build used; it skips if auth_krb5 was not built.
+if(TARGET auth_krb5)
+    list(APPEND inn_test_env AUTH_KRB5=$<TARGET_FILE:auth_krb5>
+         INN_KRB5_CONFIG=${INN_KRB5_CONFIG})
+endif()
 
 # A fresh sandbox before the tests run.  overview/ovsqlite-integ.t also
 # reads ../include/config.h from it.
@@ -125,6 +131,7 @@ inn_tap_test(lib/xwrite EXTRA lib/xwrite tests/lib/fakewrite)
 inn_tap_test(authprogs/ident)
 inn_tap_test(authprogs/identport)
 inn_tap_test(authprogs/radius)
+inn_shell_test(authprogs/auth_krb5)
 inn_shell_test(authprogs/ckpasswd)
 inn_shell_test(authprogs/domain)
 
