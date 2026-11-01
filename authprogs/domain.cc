@@ -24,7 +24,7 @@ main(int argc, char *argv[])
 
     /* Read the connection information from stdin. */
     res = get_res_info(stdin);
-    if (res == NULL)
+    if (res == nullptr)
         die("did not get ClientHost data from nnrpd");
     host = res->clienthostname;
 
@@ -34,7 +34,7 @@ main(int argc, char *argv[])
     p = strstr(host, argv[1]);
     if (p == host)
         die("host %s matches the domain exactly", host);
-    if (p == NULL || (argv[1][0] != '.' && p != host && *(p - 1) != '.'))
+    if (p == nullptr || (argv[1][0] != '.' && p != host && *(p - 1) != '.'))
         die("host %s didn't match domain %s", host, argv[1]);
 
     /* Peel off the portion of the host before where the provided domain
