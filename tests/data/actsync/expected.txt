@@ -1,0 +1,77 @@
+=== -o c -p 0 -v 2
+actsync: alias.bad from host2.active line 6 isn't equiv to a valid group
+actsync: loop.a from host2.active line 7 =loops around to itself
+actsync: loop.b from host2.active line 8 =loops around to itself
+ctlinnd rmgroup alt.old
+ctlinnd rmgroup local.only
+ctlinnd newgroup alias.two =alias.one actsync
+ctlinnd newgroup comp.lang.c y actsync
+ctlinnd changegroup misc.moderated y
+ctlinnd newgroup news.new y actsync
+actsync: STATUS: 9 group(s)
+actsync: STATUS: 3 group(s) to be added
+actsync: STATUS: 2 group(s) to be removed
+actsync: STATUS: 1 group(s) to be changed
+actsync: STATUS: 3 group(s) are the same
+actsync: STATUS: 33.33% of lines unchanged
+actsync: STATUS: 0 group(s) ignored
+exit 0
+=== -o a -p 0 -v 2
+actsync: alias.bad from host2.active line 6 isn't equiv to a valid group
+actsync: loop.a from host2.active line 7 =loops around to itself
+actsync: loop.b from host2.active line 8 =loops around to itself
+comp.lang.c 0000000100 0000000001 y
+comp.lang.c++ 0000000050 0000000001 y
+misc.moderated 0000000005 0000000001 y
+alias.one 0000000000 0000000001 =comp.lang.c
+alias.two 0000000000 0000000001 =alias.one
+news.new 0000000000 0000000001 y
+comp.lang.c 0000000000 0000000001 y
+actsync: STATUS: 9 group(s)
+actsync: STATUS: 3 group(s) to be added
+actsync: STATUS: 2 group(s) to be removed
+actsync: STATUS: 1 group(s) to be changed
+actsync: STATUS: 3 group(s) are the same
+actsync: STATUS: 33.33% of lines unchanged
+actsync: STATUS: 0 group(s) ignored
+exit 0
+=== -o a1K -m -p 0 -v 2
+actsync: alias.bad from host2.active line 6 isn't equiv to a valid group
+actsync: loop.a from host2.active line 7 =loops around to itself
+actsync: loop.b from host2.active line 8 =loops around to itself
+comp.lang.c 0000000200 0000000001 y
+comp.lang.c++ 0000000080 0000000001 y
+alt.old 0000000010 0000000001 y
+misc.moderated 0000000009 0000000001 y
+alias.one 0000000000 0000000001 =comp.lang.c
+local.only 0000000003 0000000001 y
+alias.two 0000000000 0000000001 =alias.one
+news.new 0000000000 0000000001 y
+comp.lang.c 0000000200 0000000001 y
+actsync: STATUS: 9 group(s)
+actsync: STATUS: 3 group(s) to be added
+actsync: STATUS: 0 group(s) to be removed
+actsync: STATUS: 1 group(s) to be changed
+actsync: STATUS: 5 group(s) are the same
+actsync: STATUS: 55.56% of lines unchanged
+actsync: STATUS: 0 group(s) ignored
+exit 0
+=== -o c -p 0 -l 0 -v 3
+actsync: STATUS: marked 0 error groups for removal
+ctlinnd rmgroup alt.old
+ctlinnd rmgroup local.only
+ctlinnd newgroup alias.bad =no.such.group actsync
+ctlinnd newgroup alias.two =alias.one actsync
+ctlinnd newgroup comp.lang.c y actsync
+ctlinnd newgroup loop.a =loop.b actsync
+ctlinnd newgroup loop.b =loop.a actsync
+ctlinnd changegroup misc.moderated y
+ctlinnd newgroup news.new y actsync
+actsync: STATUS: 12 group(s)
+actsync: STATUS: 6 group(s) to be added
+actsync: STATUS: 2 group(s) to be removed
+actsync: STATUS: 1 group(s) to be changed
+actsync: STATUS: 3 group(s) are the same
+actsync: STATUS: 25.00% of lines unchanged
+actsync: STATUS: 0 group(s) ignored
+exit 0
