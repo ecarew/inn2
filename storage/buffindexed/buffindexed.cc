@@ -22,6 +22,7 @@
 #include "portable/system.h"
 
 #include "portable/mmap.h"
+#include <algorithm>
 #include <assert.h>
 #include <ctype.h>
 #include <errno.h>
@@ -2031,13 +2032,10 @@ searchgdb(OV *ov)
     return gdb;
 }
 
-static int
-INDEXcompare(const void *p1, const void *p2)
+static bool
+INDEXcompare(const OVINDEX &oi1, const OVINDEX &oi2)
 {
-    const OVINDEX *oi1 = static_cast<const OVINDEX *>(p1);
-    const OVINDEX *oi2 = static_cast<const OVINDEX *>(p2);
-
-    return oi1->artnum - oi2->artnum;
+    return oi1.artnum < oi2.artnum;
 }
 
 static bool
@@ -2128,7 +2126,7 @@ ovgroupmmap(GROUPENTRY *ge, ARTNUM low, ARTNUM high, bool needov)
         munmap(addr, len);
     }
     Gibcount = count;
-    qsort(Gib, Gibcount, sizeof(OVINDEX), INDEXcompare);
+    std::sort(Gib, Gib + Gibcount, INDEXcompare);
     /* Remove duplicates. */
     for (i = 0; i < Gibcount - 1; i++) {
         if (Gib[i].artnum == Gib[i + 1].artnum) {
