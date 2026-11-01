@@ -231,6 +231,30 @@ else
     res "gencancel matches original C" "SKIP (no original Make build)"
 fi
 
+# actsync (backends/) has no INN test.  Compare its output for two active
+# files (shared, added, removed and changed groups, a duplicate line, and
+# =alias groups: a chain, a missing target, a loop) with output recorded
+# from the build before its sorts moved to std::sort.
+actsync_runs() (
+    local a=$1 d=$root/tests/data/actsync o
+    export INNCONF=$root/tests/data/etc/inn.conf
+    for o in "-o c -p 0 -v 2" "-o a -p 0 -v 2" "-o a1K -m -p 0 -v 2" \
+             "-o c -p 0 -l 0 -v 3"; do
+        echo "=== $o"
+        # shellcheck disable=SC2086 # $o holds several options.
+        "$a" -i /dev/null $o "$d/host1.active" "$d/host2.active" 2>&1
+        echo "exit $?"
+    done | sed "s|$d/||g"
+)
+actsync_runs "$build/backends/actsync" >"$tmp/actsync.out"
+if cmp -s "$root/tests/data/actsync/expected.txt" "$tmp/actsync.out"; then
+    res "actsync output (4 option sets)" PASS
+else
+    res "actsync output (4 option sets)" FAIL
+    diff -u "$root/tests/data/actsync/expected.txt" "$tmp/actsync.out" \
+        | sed 's/^/    | /'
+fi
+
 # INN tap tests, built against the CMake libraries.
 # libinnstorage and libinnhist use each other.  Apple's ld resolves symbols
 # in any order, but GNU ld only searches forward, so name libinnstorage again
