@@ -88,7 +88,7 @@ static CONFTOKEN radtoks[] = {
     {RADprefix,  (char *) "prefix:"       },
     {RADsuffix,  (char *) "suffix:"       },
     {RADsource,  (char *) "ignore-source:"},
-    {0,          NULL                     }
+    {0,          nullptr                  }
 };
 
 static rad_config_t *
@@ -97,7 +97,7 @@ get_radconf(void)
     rad_config_t *conf;
 
     conf = xcalloc(1, sizeof(rad_config_t));
-    conf->next = NULL;
+    conf->next = nullptr;
 
     return conf;
 }
@@ -106,28 +106,28 @@ static int
 read_config(char *authfile, rad_config_t *radconf)
 {
     int inbrace;
-    rad_config_t *radconfig = NULL;
+    rad_config_t *radconfig = nullptr;
     CONFFILE *file;
     CONFTOKEN *token;
     int type;
     char *iter;
 
-    if ((file = CONFfopen(authfile)) == NULL)
+    if ((file = CONFfopen(authfile)) == nullptr)
         sysdie("cannot open config file %s", authfile);
 
     inbrace = 0;
-    while ((token = CONFgettoken(radtoks, file)) != NULL) {
+    while ((token = CONFgettoken(radtoks, file)) != nullptr) {
         if (!inbrace) {
             if (token->type != RADserver)
                 die("expected server keyword on line %d", file->lineno);
-            if ((token = CONFgettoken(0, file)) == NULL)
+            if ((token = CONFgettoken(nullptr, file)) == nullptr)
                 die("expected server name on line %d", file->lineno);
-            if ((token = CONFgettoken(radtoks, file)) == NULL
+            if ((token = CONFgettoken(radtoks, file)) == nullptr
                 || token->type != RADlbrace)
                 die("expected { on line %d", file->lineno);
             inbrace = 1;
 
-            if (radconfig == NULL)
+            if (radconfig == nullptr)
                 radconfig = radconf;
             else {
                 radconfig->next = get_radconf();
@@ -138,7 +138,7 @@ read_config(char *authfile, rad_config_t *radconf)
             if (type == RADrbrace)
                 inbrace = 0;
             else {
-                if ((token = CONFgettoken(0, file)) == NULL)
+                if ((token = CONFgettoken(nullptr, file)) == nullptr)
                     die("keyword with no value on line %d", file->lineno);
                 iter = token->name;
 
@@ -263,20 +263,20 @@ rad_auth(rad_config_t *radconfig, char *uname, char *pass)
     /* set up the linked list */
     config = radconfig;
 
-    if (config == NULL) {
+    if (config == nullptr) {
         warn("no configuration file");
         return (-2);
     } else {
         /* setting sreq to NULL guarantees reqtop will be properly set later */
-        sreq = NULL;
-        reqtop = NULL;
+        sreq = nullptr;
+        reqtop = nullptr;
     }
 
-    while (config != NULL) {
+    while (config != nullptr) {
         entry = xmalloc(sizeof(sending_t));
-        entry->next = NULL;
+        entry->next = nullptr;
 
-        if (sreq == NULL) {
+        if (sreq == nullptr) {
             reqtop = entry;
             sreq = entry;
         } else {
@@ -290,7 +290,7 @@ rad_auth(rad_config_t *radconfig, char *uname, char *pass)
         memset(&sreq->sinr, '\0', sizeof(sreq->sinr));
         sinl.sin_family = AF_INET;
         sreq->sinr.sin_family = AF_INET;
-        if (config->lochost == NULL) {
+        if (config->lochost == nullptr) {
             if (gethostname(hostname, sizeof(hostname)) != 0) {
                 syswarn("cannot get local hostname");
                 return (-2);
@@ -299,7 +299,7 @@ rad_auth(rad_config_t *radconfig, char *uname, char *pass)
         }
         if (config->lochost) {
             if (inet_aton(config->lochost, &sinl.sin_addr) != 1) {
-                if ((hent = gethostbyname(config->lochost)) == NULL) {
+                if ((hent = gethostbyname(config->lochost)) == nullptr) {
                     warn("cannot gethostbyname lochost %s", config->lochost);
                     return (-2);
                 }
@@ -308,7 +308,7 @@ rad_auth(rad_config_t *radconfig, char *uname, char *pass)
             }
         }
         if (inet_aton(config->radhost, &sreq->sinr.sin_addr) != 1) {
-            if ((hent = gethostbyname(config->radhost)) == NULL) {
+            if ((hent = gethostbyname(config->radhost)) == nullptr) {
                 warn("cannot gethostbyname radhost %s", config->radhost);
                 return (-2);
             }
@@ -322,7 +322,7 @@ rad_auth(rad_config_t *radconfig, char *uname, char *pass)
             sreq->sinr.sin_port = htons(PW_AUTH_UDP_PORT);
 
         /* seed the random number generator for the auth vector */
-        gettimeofday(&seed, 0);
+        gettimeofday(&seed, nullptr);
         srandom((unsigned) seed.tv_sec + seed.tv_usec);
         /* build the visible part of the auth vector randomly */
         for (i = 0; i < AUTH_VECTOR_LEN; i++)
@@ -432,7 +432,7 @@ rad_auth(rad_config_t *radconfig, char *uname, char *pass)
     }
 
     for (done = 0; authtries > 0 && !done; authtries--) {
-        for (config = radconfig, sreq = reqtop; sreq != NULL && !done;
+        for (config = radconfig, sreq = reqtop; sreq != nullptr && !done;
              config = config->next, sreq = sreq->next) {
             req_copyto(&req, sreq);
 
@@ -447,7 +447,7 @@ rad_auth(rad_config_t *radconfig, char *uname, char *pass)
             }
 
             /* wait 5 seconds maximum for a radius reply. */
-            now = time(0);
+            now = time(nullptr);
             end = now + 5;
             tmout.tv_sec = 6;
             tmout.tv_usec = 0;
@@ -456,13 +456,13 @@ rad_auth(rad_config_t *radconfig, char *uname, char *pass)
             memcpy(secbuf + sizeof(req.vector), req.vector,
                    sizeof(req.vector));
             FD_SET(sock, &rdfds);
-            got = select(sock + 1, &rdfds, 0, 0, &tmout);
+            got = select(sock + 1, &rdfds, nullptr, nullptr, &tmout);
             if (got < 0) {
                 syswarn("cannot not select");
                 break;
             } else if (got == 0) {
                 /* timer ran out */
-                now = time(0);
+                now = time(nullptr);
                 tmout.tv_sec = end - now + 1;
                 tmout.tv_usec = 0;
                 warn("timeout talking to remote radius server %s:%d",
@@ -528,7 +528,7 @@ main(int argc, char *argv[])
 
     message_program_name = "radius";
 
-    if (!innconf_read(NULL))
+    if (!innconf_read(nullptr))
         exit(1);
 
     memset(&radconfig, '\0', sizeof(rad_config_t));
@@ -562,7 +562,7 @@ main(int argc, char *argv[])
     }
 
     authinfo = get_auth_info(stdin);
-    if (authinfo == NULL)
+    if (authinfo == nullptr)
         die("failed getting auth info");
     if (authinfo->username[0] == '\0')
         die("empty username");
