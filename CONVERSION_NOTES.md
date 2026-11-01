@@ -1264,6 +1264,34 @@ are added here.
 
 Open items from CLAUDE.md, moved here when done, newest first.
 
+- 2026-11-01: Cancel-Lock (libcanlock) built and tested.  CMake had no
+  detection and forced HAVE_CANLOCK off, so lib/canlock.cc compiled to a
+  stub and lib/canlock skipped.  cmake/InnConfigure.cmake now finds it as
+  configure did (libcanlock-3/canlock.h, -lcanlock with cl_verify_multi);
+  the include path and library hang on the inn_canlock object library.
+  Compiling it as C++ for the first time showed libcanlock's header has no
+  extern "C", so canlock.cc wraps the include.  lib/canlock passes 58/58;
+  verify-cxx.sh's gencancel check gives gencancel test secrets and, built
+  with libcanlock, compares its Cancel-Key with HMAC-SHA1/SHA256 of the
+  Message-ID computed by openssl.  Linux: Debian's libcanlock-dev (3.3.1)
+  in Dockerfile.linux.  macOS: the author's 3.3.4 in
+  ~/.local/libcanlock (CONVERSION_PLAYBOOK.md, setup).  The verify-cxx
+  branch for builds without libcanlock is no longer exercised by any of
+  our builds.
+
+- 2026-11-01: tests/lib/date-t.c is flaky in the hour repeated when
+  daylight saving time ends: check_nntp(time(NULL)) round-trips local
+  time, and 01:xx then names two instants (seen 3600 s off, 01:38 EST on
+  2026-11-01).  Tests 43 and 44 already accept either; the time(NULL)
+  case should too.  Upstream bug.
+
+- 2026-11-01: Planned: lib/date.cc onto <chrono>.  Formatting via
+  std::format; calendar arithmetic via year_month_day/sys_days instead of
+  mktime and offset workarounds; zoned_time with an explicit choose for
+  ambiguous local times.  The lenient RFC 5322 parser stays hand-written
+  (std::chrono::parse takes fixed formats) but produces chrono values.
+  Check tzdb support on the libc++ and libstdc++ status pages first.
+
 - 2026-10-31: authprogs/auth_krb5 tested and converted.
   `tests/authprogs/auth_krb5.t` runs a throwaway MIT KDC as the current
   user (127.0.0.1:18888, temporary database and keytab; the KDC tools are
