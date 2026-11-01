@@ -9,12 +9,14 @@ FROM debian:trixie
 # against it, and tests/authprogs/auth_krb5.t runs a throwaway KDC with it.
 # Dovecot (dovecot-imapd, dovecot-lmtpd): support/live-innd.sh feeds it with
 # imapfeed.
+# libcanlock (libcanlock-dev): Cancel-Lock support, so lib/canlock.cc is
+# built and tests/lib/canlock runs.
 RUN apt-get update \
     && DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends \
        build-essential ninja-build perl python3 python3-venv flex bison \
        libsqlite3-dev zlib1g-dev ca-certificates procps netcat-openbsd \
        curl bzip2 libkrb5-dev krb5-kdc krb5-admin-server \
-       dovecot-imapd dovecot-lmtpd \
+       dovecot-imapd dovecot-lmtpd libcanlock-dev \
     && rm -rf /var/lib/apt/lists/*
 
 # The CMake build requires CMake 4.3 or later, newer than Debian ships;
