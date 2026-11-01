@@ -132,7 +132,8 @@ Items 1 (native configuration), 2 (generated sources) and 9 (CTest:
 6. Man pages from `doc/pod`.
 7. Perl module `perl/INN/` (INN::Config, ovsqlite_client) and `contrib/`.
 8. Optional features as CMake options: Perl and Python hooks, Berkeley DB
-   (ovdb), OpenSSL/TLS, libcanlock, systemd, blocklist.  Before ovdb can be
+   (ovdb), OpenSSL/TLS, systemd, blocklist (libcanlock done 2026-11-01:
+   found when present).  Before ovdb can be
    on, fix `storage/ovdb/ovdb.cc` (fails a `-DHAVE_BDB` syntax check).
 10. Portability: a BSD.  Linux runs everything (verify-cxx.sh,
     live-innd.sh, root checks) via `support/docker-linux-checks.sh` and
@@ -157,7 +158,7 @@ Items 1 (native configuration), 2 (generated sources) and 9 (CTest:
   buffers; ports fixed at 143/2003.
 - frontends/feedone.c, sys2nf.c: not built by CMake (OPTIONAL in Make).
 - Code compiled out in this build (`innd/perl.cc`, `innd/python.cc`,
-  `lib/perl.cc`, `lib/canlock.cc`): run the `-fsyntax-only` check with the
+  `lib/perl.cc`): run the `-fsyntax-only` check with the
   feature on, as was done for nnrpd's (CONVERSION_NOTES.md, "Code compiled
   out in this build").
 
