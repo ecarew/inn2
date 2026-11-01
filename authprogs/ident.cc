@@ -48,7 +48,7 @@ main(int argc, char *argv[])
     alarm(15);
 
     s = getservbyname("ident", "tcp");
-    if (s == NULL)
+    if (s == nullptr)
         identport = IDENT_PORT;
     else
         identport = ntohs(s->s_port);
@@ -62,7 +62,7 @@ main(int argc, char *argv[])
             if (*iter) {
                 /* not entirely numeric */
                 s = getservbyname(optarg, "tcp");
-                if (s == NULL)
+                if (s == nullptr)
                     die("cannot getsrvbyname(%s, tcp)", optarg);
                 identport = s->s_port;
             } else
@@ -76,7 +76,7 @@ main(int argc, char *argv[])
 
     /* Read the connection info from stdin. */
     res = get_res_info(stdin);
-    if (res == NULL)
+    if (res == nullptr)
         die("did not get client information from nnrpd");
 
     /* Connect back to the client system. */
@@ -155,7 +155,7 @@ main(int argc, char *argv[])
     *p = '\0';
     if (truncate_domain) {
         p = strchr(iter, '@');
-        if (p != NULL)
+        if (p != nullptr)
             *p = '\0';
     }
     print_user(iter);
