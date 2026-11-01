@@ -23,6 +23,8 @@ static const time_t test_times[] = {
     954669599UL, /* Sun,  2 Apr 2000 01:59:59 -0800 (PST) */
     954669600UL, /* Sun,  2 Apr 2000 03:00:00 -0700 (PDT) */
     967707668UL, /* Thu, 31 Aug 2000 07:41:08 +0000 (UTC) */
+    972808200UL, /* Sun, 29 Oct 2000 01:30:00 -0700 (PDT), repeated hour */
+    972811800UL, /* Sun, 29 Oct 2000 01:30:00 -0800 (PST), repeated hour */
     972813600UL  /* Sun, 29 Oct 2000 02:00:00 -0800 (PST) */
 };
 
@@ -96,6 +98,21 @@ ok_nntp(int n, time_t right, const char *date, const char *hour, bool local)
     time_t seen;
 
     seen = parsedate_nntp(date, hour, local);
+
+    /* In the hour repeated when daylight saving time ends, a local time
+       names two timestamps an hour apart; accept the other one too. */
+    if (local && seen != right
+        && (seen == right - 3600 || seen == right + 3600)) {
+        struct tm want_tm, seen_tm;
+
+        want_tm = *localtime(&right);
+        seen_tm = *localtime(&seen);
+        if (want_tm.tm_hour == seen_tm.tm_hour
+            && want_tm.tm_min == seen_tm.tm_min
+            && want_tm.tm_sec == seen_tm.tm_sec
+            && want_tm.tm_mday == seen_tm.tm_mday)
+            seen = right;
+    }
     ok_time(n, right, seen);
 }
 
