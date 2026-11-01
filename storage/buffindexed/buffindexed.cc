@@ -2864,7 +2864,7 @@ countgdb(void)
     GROUPDATABLOCK *gdb;
 
     for (i = 0; i < GROUPDATAHASHSIZE; i++) {
-        for (gdb = groupdatablock[i]; gdb != NULL; gdb = gdb->next)
+        for (gdb = groupdatablock[i]; gdb != nullptr; gdb = gdb->next)
             count++;
     }
     return count;
@@ -2885,8 +2885,8 @@ main(int argc, char **argv)
         exit(1);
     }
     /* if innconf isn't already read in, do so. */
-    if (innconf == NULL) {
-        if (!innconf_read(NULL)) {
+    if (innconf == nullptr) {
+        if (!innconf_read(nullptr)) {
             fprintf(stderr, "reading inn.conf failed\n");
             exit(1);
         }
@@ -2912,12 +2912,12 @@ main(int argc, char **argv)
             fprintf(stderr, "ovgroupmmap failed\n");
             GROUPlock(gloc, INN_LOCK_UNLOCK);
         }
-        for (giblist = Giblist, i = 0; giblist != NULL;
+        for (giblist = Giblist, i = 0; giblist != nullptr;
              giblist = giblist->next, i++)
             ;
         fprintf(stdout, "%d index block(s)\n", i);
         fprintf(stdout, "%d data block(s)\n", countgdb());
-        for (giblist = Giblist; giblist != NULL; giblist = giblist->next) {
+        for (giblist = Giblist; giblist != nullptr; giblist = giblist->next) {
             fprintf(stdout, "  % 8d(% 5d)\n", (int) giblist->ov.blocknum,
                     giblist->ov.index);
         }
@@ -2936,7 +2936,7 @@ main(int argc, char **argv)
         GROUPlock(gloc, INN_LOCK_UNLOCK);
         exit(0);
     }
-    gloc = GROUPfind(group, false, NULL);
+    gloc = GROUPfind(group, false, nullptr);
     if (GROUPLOCempty(gloc)) {
         fprintf(stderr, "gloc is null\n");
     }
@@ -2954,18 +2954,18 @@ main(int argc, char **argv)
     flag[1] = '\0';
     fprintf(stdout, "%s: low is %d, high is %d, count is %d, flag is '%s'\n",
             group, lo, hi, count, flag);
-    if ((search = (OVSEARCH *) ovopensearch(group, lo, hi, true)) == NULL) {
+    if ((search = (OVSEARCH *) ovopensearch(group, lo, hi, true)) == nullptr) {
         fprintf(stderr, "ovopensearch failed for group %s\n", group);
         exit(1);
     }
     fprintf(stdout, "  gloc is %d(0x%08x)\n", search->gloc.recno,
             (unsigned int) search->gloc.recno);
-    for (giblist = Giblist, i = 0; giblist != NULL;
+    for (giblist = Giblist, i = 0; giblist != nullptr;
          giblist = giblist->next, i++)
         ;
     fprintf(stdout, "%d index block(s)\n", i);
     fprintf(stdout, "%d data block(s)\n", countgdb());
-    for (giblist = Giblist; giblist != NULL; giblist = giblist->next) {
+    for (giblist = Giblist; giblist != nullptr; giblist = giblist->next) {
         fprintf(stdout, "  % 8d(% 5d)\n", (int) giblist->ov.blocknum,
                 giblist->ov.index);
     }
@@ -2981,11 +2981,11 @@ main(int argc, char **argv)
     }
     {
         ARTNUM artnum = 0;
-        char *data = NULL;
+        char *data = nullptr;
         int len = 0;
         TOKEN token;
         while (buffindexed_search((void *) search, &artnum, &data, &len,
-                                  &token, NULL)) {
+                                  &token, nullptr)) {
             if (len == 0)
                 fprintf(stdout, "%lu: len is 0\n", artnum);
             else {
