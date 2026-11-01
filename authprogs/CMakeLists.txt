@@ -31,7 +31,7 @@ inn_program(ident    SOURCES ident.cc    INNONLY LIBS innauth)
 inn_program(radius   SOURCES radius.cc   INNONLY LIBS innauth)
 
 if(HAVE_KRB5)
-    inn_program(auth_krb5 SOURCES auth_krb5.c INNONLY
+    inn_program(auth_krb5 SOURCES auth_krb5.cc INNONLY
                 LIBS innauth ${INN_KRB5_LIBS})
     target_compile_options(auth_krb5 PRIVATE ${INN_KRB5_CFLAGS})
 endif()
