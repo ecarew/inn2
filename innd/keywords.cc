@@ -57,37 +57,25 @@ struct word_entry {
 
 
 /*
-**  Wrapper for qsort(3) comparison of word_entry (frequency).
+**  std::sort predicates for word_entry: decreasing frequency, then
+**  decreasing word length; and for strings.
 */
-static int
-wvec_freq_cmp(const void *p1, const void *p2)
+static bool
+wvec_freq_cmp(const struct word_entry &a, const struct word_entry &b)
 {
-    return ((const struct word_entry *) p2)->count - /* Decreasing sort. */
-           ((const struct word_entry *) p1)->count;
+    return a.count > b.count;
 }
 
-
-/*
-**  Wrapper for qsort(3) comparison of word_entry (word length).
-*/
-static int
-wvec_length_cmp(const void *p1, const void *p2)
+static bool
+wvec_length_cmp(const struct word_entry &a, const struct word_entry &b)
 {
-    return ((const struct word_entry *) p2)->length - /* Decreasing sort. */
-           ((const struct word_entry *) p1)->length;
+    return a.length > b.length;
 }
 
-
-/*
-**  Wrapper for qsort(3), for pointer-to-pointer strings.
-*/
-static int
-ptr_strcmp(const void *p1, const void *p2)
+static bool
+ptr_strcmp(const char *a, const char *b)
 {
-    const char *const *s1 = static_cast<const char *const *>(p1);
-    const char *const *s2 = static_cast<const char *const *>(p2);
-
-    return strcmp(*s1, *s2);
+    return strcmp(a, b) < 0;
 }
 
 
@@ -213,7 +201,7 @@ KEYgenerate(std::string &keywords, /* Generated body, replaced. */
         return;
 
     /* Sort the words. */
-    qsort(word, word_count, sizeof(word[0]), ptr_strcmp);
+    std::sort(word, word + word_count, ptr_strcmp);
 
     /* Count unique words. */
     distinct_words = 0; /* The 1st word is "pre-figured". */
@@ -235,22 +223,21 @@ KEYgenerate(std::string &keywords, /* Generated body, replaced. */
 
     /* Sort the counts. */
     distinct_words++; /* We were off-by-1 until this. */
-    qsort(word_vec, distinct_words, sizeof(struct word_entry), wvec_freq_cmp);
+    std::sort(word_vec, word_vec + distinct_words, wvec_freq_cmp);
 
     /* Sub-sort same-frequency words on word length. */
     for (last = 0, word_index = 1; /* Again, (N-1)th and Nth entries. */
          word_index < distinct_words; word_index++) {
         if (word_vec[last].count != word_vec[word_index].count) {
             if ((word_index - last) != 1) /* 2+ entries to sub-sort. */
-                qsort(&word_vec[last], word_index - last,
-                      sizeof(struct word_entry), wvec_length_cmp);
+                std::sort(&word_vec[last], &word_vec[word_index],
+                          wvec_length_cmp);
             last = word_index;
         }
     }
     /* Do it one last time for the only-one-appearance words. */
     if ((word_index - last) != 1)
-        qsort(&word_vec[last], word_index - last, sizeof(struct word_entry),
-              wvec_length_cmp);
+        std::sort(&word_vec[last], &word_vec[word_index], wvec_length_cmp);
 
     /* Write the Keywords header field body, at most keylimit bytes. */
     for (word_index = 0; word_index < distinct_words; word_index++) {
