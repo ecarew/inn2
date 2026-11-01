@@ -15,6 +15,7 @@
 
 #include "portable/system.h"
 
+#include <algorithm>
 #include <ctype.h>
 #include <errno.h>
 
@@ -143,13 +144,10 @@ NGfind(char *Name)
 /*
 **  Sorting predicate to put newsgroups in rough order of their activity.
 */
-static int
-NGcompare(const void *p1, const void *p2)
+static bool
+NGcompare(const NEWSGROUP *ng1, const NEWSGROUP *ng2)
 {
-    const NEWSGROUP *const *ng1 = static_cast<const NEWSGROUP *const *>(p1);
-    const NEWSGROUP *const *ng2 = static_cast<const NEWSGROUP *const *>(p2);
-
-    return ng1[0]->Last - ng2[0]->Last;
+    return ng1->Last < ng2->Last;
 }
 
 /*
@@ -253,7 +251,7 @@ BuildGroups(char *active)
     /* Sort each hash bucket. */
     for (i = NGH_SIZE, htp = NGHtable; --i >= 0; htp++)
         if (htp->Used > 1)
-            qsort(htp->Groups, htp->Used, sizeof htp->Groups[0], NGcompare);
+            std::sort(htp->Groups, htp->Groups + htp->Used, NGcompare);
 
     /* Ok, now change our use of the Last field.  Set them all to maxint. */
     for (i = NGH_SIZE, htp = NGHtable; --i >= 0; htp++) {
