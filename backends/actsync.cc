@@ -1624,11 +1624,39 @@ merge_grps(struct grp *grp, int grplen, char *host1, char *host2)
     h2_probs = mark_eq_probs(grp, grplen, l_host2_flag, host1, host2);
 
     /*
+     * Mark duplicate groups from the same host.  The sort is by name,
+     * then host, so a host's copies of a group are next to each other
+     * even when the other host also has the group (its copy sorts
+     * before or after the run, never inside it).  The first copy that is
+     * not already ignored is kept; the later ones are marked ERROR_DUP.
+     * (This used to happen in the walk below, which looked only from
+     * host1's copy onwards and so missed host2's duplicates of a group
+     * host1 also has: the second copy came out as a new group.)
+     */
+    {
+        int keep = -1; /* first kept copy in the current run, or -1 */
+
+        for (int i = 0; i < grplen; ++i) {
+            if (i > 0 && grp[i].hostid == grp[i - 1].hostid
+                && strcmp(grp[i].name, grp[i - 1].name) == 0) {
+                if (keep >= 0) {
+                    grp[i].ignore |= ERROR_DUP;
+                    if (!QUIET(grp[i].hostid))
+                        warn("lines %d and %d from %s refer to the same group",
+                             grp[keep].linenum, grp[i].linenum,
+                             ((grp[i].hostid == HOSTID1) ? host1 : host2));
+                } else if (!grp[i].ignore) {
+                    keep = i;
+                }
+            } else {
+                keep = (grp[i].ignore ? -1 : i);
+            }
+        }
+    }
+
+    /*
      * We will walk through the sorted group array, looking for pairs
      * among the groups that we have not already ignored.
-     *
-     * If a host has duplicate groups, then the duplicates will
-     * be next to each other.
      *
      * If both hosts have the name group, they will be next to each other.
      */
@@ -1646,25 +1674,6 @@ merge_grps(struct grp *grp, int grplen, char *host1, char *host2)
             continue;
         }
         /* assert: cur is not ignored */
-
-        /* check for duplicate groups from the same host */
-        while (nxt < grplen) {
-
-            /* mark the later as a duplicate */
-            if (grp[cur].hostid == grp[nxt].hostid
-                && strcmp(grp[cur].name, grp[nxt].name) == 0) {
-                grp[nxt].ignore |= ERROR_DUP;
-                if (!QUIET(grp[cur].hostid))
-                    warn("lines %d and %d from %s refer to the same group",
-                         grp[cur].linenum, grp[nxt].linenum,
-                         ((grp[cur].hostid == HOSTID1) ? host1 : host2));
-                ++nxt;
-            } else {
-                break;
-            }
-        }
-        /* assert: cur is not ignored */
-        /* assert: cur & nxt are not the same group from the same host */
 
         /* if nxt is ignored, look for the next non-ignored group */
         while (nxt < grplen && grp[nxt].ignore) {
