@@ -18,6 +18,8 @@
 #include "misc.h"
 #include <stdio.h>
 
+BEGIN_DECLS
+
 
 /* Variables to export. */
 extern InnListener mainListener;
@@ -67,5 +69,7 @@ void openDroppedArticleFile(void);
 void closeDroppedArticleFile(void);
 
 void listenerLogStatus(FILE *fp);
+
+END_DECLS
 
 #endif /* INNLISTENER_H */
