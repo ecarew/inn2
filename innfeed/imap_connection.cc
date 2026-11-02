@@ -35,6 +35,8 @@
 #include <syslog.h>
 #include <time.h>
 
+#include <string>
+
 #include "inn/libinn.h"
 #include "inn/messages.h"
 
@@ -895,40 +897,31 @@ FindHeader(Buffer *bufs, const char *header, char **start, char **end)
     return RET_NO;
 }
 
-static conn_ret
-GetLine(char *buf, char *ret, int retmaxsize)
+/* Append what was just read to a connection's response buffer, growing
+   it to fit: a server's response line has no length limit. */
+static void
+AppendResponse(char **buf, const char *p)
 {
-    char *str_base;
-    char *str;
+    size_t have = strlen(*buf), add = strlen(p);
 
-    int size = strlen(buf);
-    str_base = buf;
-    str = str_base;
+    *buf = static_cast<char *>(xrealloc(*buf, have + add + 1));
+    memcpy(*buf + have, p, add + 1);
+}
 
-    while ((*str) != '\0') {
-        if ((*str) == '\n') {
-            if (str - str_base > retmaxsize) {
-                d_printf(0, "Max size exceeded! %s\n", str_base);
-                return RET_FAIL;
-            }
+/* Take the first full line out of buf into line, without its LF and a CR
+   before it; the rest of buf moves to the front. */
+static conn_ret
+GetLine(char *buf, std::string &line)
+{
+    char *nl = strchr(buf, '\n');
+    size_t len;
 
-            /* fill in the return string */
-            memcpy(ret, str_base, str - str_base);
-            ret[str - str_base - 1] = '\0';
-
-            /* The rest of the buffer moves down over what it overlaps. */
-            memmove(str_base, str_base + (str - str_base) + 1,
-                    size - (str - str_base));
-            str_base[size - (str - str_base)] = '\0';
-
-            return RET_OK;
-        }
-
-        str++;
-    }
-
-    /* couldn't find a full line */
-    return RET_NO_FULLLINE;
+    if (nl == NULL)
+        return RET_NO_FULLLINE;
+    len = nl - buf;
+    line.assign(buf, (len > 0 && buf[len - 1] == '\r') ? len - 1 : len);
+    memmove(buf, nl + 1, strlen(nl + 1) + 1);
+    return RET_OK;
 }
 
 
@@ -2909,7 +2902,7 @@ imap_readCB(EndPoint e, IoStatus i, Buffer *b, void *d)
 
     int okno;
     char *str;
-    char strbuf[4096];
+    std::string line;
     conn_ret ret;
     char *p;
 
@@ -2952,7 +2945,7 @@ imap_readCB(EndPoint e, IoStatus i, Buffer *b, void *d)
 
     /* we got something. add to our buffer and free b */
 
-    strcat(cxn->imap_respBuffer, p);
+    AppendResponse(&cxn->imap_respBuffer, p);
 
     bufferSetDataSize(b[0], 0);
 
@@ -2963,8 +2956,8 @@ imap_readCB(EndPoint e, IoStatus i, Buffer *b, void *d)
 reset:
 
     /* see if we have a full line */
-    ret = GetLine(cxn->imap_respBuffer, strbuf, sizeof(strbuf));
-    str = strbuf;
+    ret = GetLine(cxn->imap_respBuffer, line);
+    str = line.data();
 
     /* if we don't have a full line */
     if (ret == RET_NO_FULLLINE) {
@@ -3296,7 +3289,8 @@ static void
 lmtp_readCB(EndPoint e, IoStatus i, Buffer *b, void *d)
 {
     connection_t *cxn = (connection_t *) d;
-    char str[4096];
+    std::string line;
+    char *str = NULL;
     Buffer *readBuffers;
     conn_ret result;
     int response_code;
@@ -3346,7 +3340,7 @@ lmtp_readCB(EndPoint e, IoStatus i, Buffer *b, void *d)
     clearTimer(cxn->lmtp_readBlockedTimerId);
 
     /* Add what we got to our internal read buffer */
-    strcat(cxn->lmtp_respBuffer, p);
+    AppendResponse(&cxn->lmtp_respBuffer, p);
 
     bufferSetDataSize(b[0], 0);
 
@@ -3354,7 +3348,8 @@ lmtp_readCB(EndPoint e, IoStatus i, Buffer *b, void *d)
 
 reset:
     /* see if we have a full line */
-    ret = GetLine(cxn->lmtp_respBuffer, str, sizeof(str));
+    ret = GetLine(cxn->lmtp_respBuffer, line);
+    str = line.data();
 
     /* get a line */
     if (ret != RET_OK) {
