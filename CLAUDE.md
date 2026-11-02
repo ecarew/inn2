@@ -204,6 +204,14 @@ from `cmake-build`; record method and raw numbers so rounds compare.
   tree would take, error messages and line numbers, and whether it drops
   the bison/flex build dependency.  An alternative to the lalr1.cc move
   (innfeed, under Still C); decide between them before doing either.
+  Boost's config-file readers are not an option without changing the file
+  format (2026-11-02): ProgramOptions is flat INI; PropertyTree's INFO
+  format nests but has no `key: value` colon, uses `;` comments and
+  `#include`, and keeps every value a string.  Either breaks existing
+  innfeed.conf files and innfeed.conf(5).  A PropertyTree `ptree` could
+  still replace the hand-rolled scope/value tree, filled by whichever
+  parser reads the current format.  Decision 2026-11-02: keep the
+  bison/flex parser for now.
 - 49 struct/enum typedefs with bodies → `struct X { ... };` during class
   work (not clang-tidy's fix).
 - Upstream bugs to fix or report: CONVERSION_NOTES.md, "Upstream bugs and
