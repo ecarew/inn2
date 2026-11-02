@@ -1268,7 +1268,7 @@ getBanner(EndPoint e, IoStatus i, Buffer *b, void *d)
 {
     Buffer *readBuffers;
     Connection cxn = (Connection) d;
-    char *p = bufferBase(b[0]);
+    char *p = static_cast<char *>(bufferBase(b[0]));
     int code;
     bool isOk = false;
     const char *peerName;
@@ -1368,7 +1368,7 @@ issueAuthUser(EndPoint e, Connection cxn)
     /* 17 == strlen("AUTHINFO USER \r\n\0") */
     lenBuff = (17 + strlen(hostUsername(cxn->myHost)));
     authUserBuffer = newBuffer(lenBuff);
-    t = bufferBase(authUserBuffer);
+    t = static_cast<char *>(bufferBase(authUserBuffer));
 
     sprintf(t, "AUTHINFO USER %s\r\n", hostUsername(cxn->myHost));
     bufferSetDataSize(authUserBuffer, strlen(t));
@@ -1404,7 +1404,7 @@ issueAuthPass(EndPoint e, Connection cxn)
     /* 17 == strlen("AUTHINFO PASS \r\n\0") */
     lenBuff = (17 + strlen(hostPassword(cxn->myHost)));
     authPassBuffer = newBuffer(lenBuff);
-    t = bufferBase(authPassBuffer);
+    t = static_cast<char *>(bufferBase(authPassBuffer));
 
     sprintf(t, "AUTHINFO PASS %s\r\n", hostPassword(cxn->myHost));
     bufferSetDataSize(authPassBuffer, strlen(t));
@@ -1439,7 +1439,7 @@ issueModeStream(EndPoint e, Connection cxn)
 #define MODE_CMD "MODE STREAM\r\n"
 
     modeBuffer = newBuffer(strlen(MODE_CMD) + 1);
-    p = bufferBase(modeBuffer);
+    p = static_cast<char *>(bufferBase(modeBuffer));
 
     /* now issue the MODE STREAM command */
     d_printf(1, "%s:%u Issuing the streaming command\n",
@@ -1477,7 +1477,7 @@ getAuthUserResponse(EndPoint e, IoStatus i, Buffer *b, void *d)
 {
     Connection cxn = (Connection) d;
     int code;
-    char *p = bufferBase(b[0]);
+    char *p = static_cast<char *>(bufferBase(b[0]));
     char *q;
     Buffer *buffers;
     const char *peerName;
@@ -1560,7 +1560,7 @@ getAuthPassResponse(EndPoint e, IoStatus i, Buffer *b, void *d)
 {
     Connection cxn = (Connection) d;
     int code;
-    char *p = bufferBase(b[0]);
+    char *p = static_cast<char *>(bufferBase(b[0]));
     char *q;
     Buffer *buffers;
     const char *peerName;
@@ -1645,7 +1645,7 @@ getModeResponse(EndPoint e, IoStatus i, Buffer *b, void *d)
 {
     Connection cxn = (Connection) d;
     int code;
-    char *p = bufferBase(b[0]);
+    char *p = static_cast<char *>(bufferBase(b[0]));
     char *q;
     Buffer *buffers;
     const char *peerName;
@@ -1810,7 +1810,7 @@ responseIsRead(EndPoint e, IoStatus i, Buffer *b, void *d)
     }
 
     buf = b[0];
-    bufBase = bufferBase(buf);
+    bufBase = static_cast<char *>(bufferBase(buf));
 
     /* check that we have (at least) a full line response. If not expand
        the buffer and resubmit the read. */
@@ -3608,7 +3608,7 @@ issueIHAVE(Connection cxn)
 
     ASSERT(ihaveBuff != NULL);
 
-    p = bufferBase(ihaveBuff);
+    p = static_cast<char *>(bufferBase(ihaveBuff));
     sprintf(p, "IHAVE %s\r\n", msgid);
     bufferSetDataSize(ihaveBuff, strlen(p));
 
@@ -3800,7 +3800,7 @@ buildCheckBuffer(Connection cxn)
         size_t tlen = 0;
 
         checkBuffer = newBuffer(lenBuff);
-        t = bufferBase(checkBuffer);
+        t = static_cast<char *>(bufferBase(checkBuffer));
 
         p = cxn->checkHead;
         while (p != NULL) {
@@ -3898,7 +3898,7 @@ buildTakethisBuffers(Connection cxn, Buffer checkBuffer)
                    12 == strlen ("TAKETHIS \n\r") */
                 takeBuffLen = 12 + strlen(msgid);
                 takeBuffer = newBuffer(takeBuffLen);
-                t = bufferBase(takeBuffer);
+                t = static_cast<char *>(bufferBase(takeBuffer));
 
                 sprintf(t, "TAKETHIS %s\r\n", msgid);
                 bufferSetDataSize(takeBuffer, strlen(t));
@@ -3972,7 +3972,7 @@ issueQUIT(Connection cxn)
             cxnWait(cxn);
     } else {
         quitBuffer = newBuffer(7);
-        strlcpy(bufferBase(quitBuffer), "QUIT\r\n", 7);
+        strlcpy(static_cast<char *>(bufferBase(quitBuffer)), "QUIT\r\n", 7);
         bufferSetDataSize(quitBuffer, 6);
 
         writeArray = makeBufferArray(quitBuffer, NULL);
