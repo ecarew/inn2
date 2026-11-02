@@ -1083,9 +1083,10 @@ ok sh -c "'$bin/storage/tdx-util' -o -n test.crosspost.long.name.g40 2>/dev/null
 # Only on an INN_KEYWORDS build.  An article without a Keywords header field
 # gets one in overview from its body's words: most frequent first, then
 # longest, without the noise words.  Bodies under 100 bytes are skipped.
-# Only the first three are checked: words seen once tie on length (qsort is
-# not stable), and the noise words are not removed where the C library's
-# basic regex lacks the GNU \| alternation the noise pattern uses (macOS).
+# Ties on frequency and length go alphabetically.  For the first body only
+# the first three are checked: the noise words are not removed where the C
+# library's basic regex lacks the GNU \| alternation the noise pattern uses
+# (macOS).  kw-ties has no noise words, so its whole value is checked.
 
 # send_body ID BODY [HEADER...]: like send_art, with the given body.
 send_body() {
@@ -1106,10 +1107,15 @@ The animals were there, about after also because, and before being here.'
     send_body kw-generated "$words"
     send_body kw-own "$words" 'Keywords: own, words'
     send_body kw-short 'Zebra zebra zebra quokka.'
+    # 37 six-letter words seen once: more than std::sort's insertion-sort
+    # cutoff, so an unbroken tie would show.
+    send_body kw-ties 'Zebra zebra zebra quokka quokka narwhal narwhal axolotl walrus alpaca turtle badger python beaver salmon bobcat rabbit condor possum cougar pigeon coyote parrot donkey oyster falcon osprey ferret ocelot gerbil monkey gibbon marmot gopher magpie iguana lizard impala kitten jackal jaguar toucan turkey weasel wombat otter lemur.'
     ctl flush ''
     sleep 1
     label="keywords: generated from the body for overview"
     ok sh -c "$(declare -f ovline); bin='$bin'; ovline kw-generated | grep -q '	Keywords: zebra,quokka,narwhal,'"
+    label="keywords: ties by frequency, length, then name"
+    ok sh -c "$(declare -f ovline); bin='$bin'; ovline kw-ties | grep -q '	Keywords: zebra,narwhal,quokka,axolotl,alpaca,badger,beaver,bobcat,condor,cougar,coyote,donkey,falcon,ferret,gerbil,gibbon,gopher,iguana,impala,jackal,jaguar,kitten,lizard,magpie,marmot,monkey,ocelot,osprey,oyster,parrot,pigeon,possum,python,rabbit,salmon,toucan,turkey,turtle,walrus,weasel,wombat,lemur,otter	'"
     label="keywords: an article's own Keywords field is kept"
     ok sh -c "$(declare -f ovline); bin='$bin'; ovline kw-own | grep -q '	Keywords: own, words	'"
     label="keywords: none generated for a short body"
