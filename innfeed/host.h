@@ -16,6 +16,8 @@
 #include "misc.h"
 #include <stdio.h>
 
+BEGIN_DECLS
+
 /* Variables to export. */
 extern bool genHtml;
 extern unsigned int hostHighwater;
@@ -188,5 +190,7 @@ void hostSetStatusFile(const char *filename);
 int hostConfigLoadCbk(void *data);
 
 void hostChkCxns(TimeoutId tid, void *data);
+
+END_DECLS
 
 #endif /* HOST_H */
