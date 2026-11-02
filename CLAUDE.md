@@ -140,21 +140,12 @@ Items 1 (native configuration), 2 (generated sources) and 9 (CTest:
     `support/docker-root-checks.sh` (2026-10-30).
 
 **Still C**
-- innfeed/ is C++ (2026-11-01).  Open: after a duplicate reply from
-  tinyleaf innfeed sleeps the connection and spools the rest; replaying a
-  backlog with `-x` offers nothing.  Move the parser to bison lalr1.cc /
+- innfeed/ is C++ (2026-11-01).  Move the parser to bison lalr1.cc /
   flex C++ scanner classes (needs bison 3; macOS has 2.3, so ask before
-  adding Homebrew bison).  configfile.y uses sprintf (7 warnings).
-- imapfeed (innfeed/imap_connection.cc) needs a close review of its memory
-  handling before or during conversion.  live-innd.sh now feeds a dovecot
-  (support/dovecot-imapfeed.sh; macOS needs it started with sudo).  Found
-  and fixed: in-place NUL writes into the read-only article map (addrcpt,
-  addto); a 5-byte minimum read that hung on Dovecot's 4-byte "+ "
-  continuation; a double free (QueueForgetAbout left current_control
-  dangling, disconnect freed it again); GetLine's overlapping memcpy.
-  Still open: gethostbyname in init_net (UBSan misaligned load on macOS;
-  use getaddrinfo, which also gives IPv6); fixed-size strbuf/in[4096]
-  buffers; ports fixed at 143/2003.
+  adding Homebrew bison).
+- imapfeed (innfeed/imap_connection.cc): ports fixed at 143 (IMAP) and
+  2003 (LMTP); configurable ports would need new innfeed.conf keys, so ask
+  the user first.
 - frontends/feedone.c, sys2nf.c: not built by CMake (OPTIONAL in Make).
 - Code compiled out in this build (`innd/perl.cc`, `innd/python.cc`,
   `lib/perl.cc`): run the `-fsyntax-only` check with the
@@ -195,9 +186,8 @@ from `cmake-build`; record method and raw numbers so rounds compare.
   once the last use of one is converted, remove what remains of it from
   the source tree: leftover comparators and helpers, INN's own
   replacement implementations, their CMake checks and config.h symbols.
-  qsort has no uses left (2026-11-01; INN has no qsort replacement or
-  check to remove); bsearch has three
-  (expire/fastrm.cc, lib/dispatch.cc, nnrpd/commands.cc).
+  qsort and bsearch have no uses left (2026-11-02; INN has no
+  replacement or check to remove for either).
 - Research moving innfeed's configuration parser (configfile.y/.l, bison
   and flex) to Boost.Parser (in Boost since 1.87, header-only, C++17):
   what the grammar, the include handling in the lexer and the scope/value
