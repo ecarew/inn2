@@ -14,6 +14,8 @@
 #include "inn/timer.h"
 #include "portable/stdbool.h"
 
+BEGIN_DECLS
+
 /**********************************************************************/
 /*                     Application specific defines                   */
 /**********************************************************************/
@@ -216,5 +218,7 @@ extern bool useMMap;
 /* Functions to export. */
 extern void (*gPrintInfo)(void);
 extern void mainLogStatus(FILE *fp);
+
+END_DECLS
 
 #endif /* INNFEED_H */
