@@ -78,20 +78,6 @@ static bool sm_initialized = false;
 
 
 /*
-**  Sorting predicate for qsort and bsearch.
-*/
-static int
-file_compare(const void *a, const void *b)
-{
-    const char *f1, *f2;
-
-    f1 = *((const char *const *) a);
-    f2 = *((const char *const *) b);
-    return strcmp(f1, f2);
-}
-
-
-/*
 **  Create a new filelist.
 */
 static filelist *
@@ -136,11 +122,13 @@ filelist_insert(filelist *list, char *name)
 static char *
 filelist_lookup(filelist *list, const char *name)
 {
-    char **p;
+    char **end = list->files + list->count;
+    char **p = std::lower_bound(list->files, end, name,
+                                [](const char *f, const char *n) {
+                                    return strcmp(f, n) < 0;
+                                });
 
-    p = static_cast<char **>(bsearch(&name, list->files, list->count,
-                                     sizeof(char *), file_compare));
-    return (p == nullptr ? nullptr : *p);
+    return (p == end || strcmp(*p, name) != 0 ? nullptr : *p);
 }
 
 
