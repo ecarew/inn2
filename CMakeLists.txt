@@ -164,6 +164,8 @@ add_subdirectory(expire)
 add_subdirectory(frontends)
 add_subdirectory(innfeed)
 add_subdirectory(nnrpd)
+add_subdirectory(perl)
+add_subdirectory(scripts)
 
 # INN's tests, run with ctest (tests/CMakeLists.txt).
 option(INN_TESTS "Build INN's tests for CTest" ON)
