@@ -910,7 +910,11 @@ storage/buffindexed/buffindexed.cc, storage/expire.cc,
 storage/tradindexed/tdx-util.cc; innd/keywords.cc (7) with its
 noise-regex fix (ask first); innfeed/endpoint.c with innfeed's conversion.
 
-**Done 2026-11-01** except innfeed/endpoint.c.  frontends/ovdb_stat.cc
+**Done 2026-11-01**, innfeed/endpoint.cc last (`b86440bdc`): its
+comparator returned -1 for the main endpoint against itself, which qsort
+never asks but std::sort may; the predicate returns false for an endpoint
+against itself.  No qsort call is left outside the tests.
+frontends/ovdb_stat.cc
 (`d482496ab`) is compiled only with Berkeley DB, so it was checked only by
 a `-fsyntax-only` compile with `-DHAVE_BDB` against Homebrew's db.h 18.1.
 The converted keys are unique except in innd/keywords.cc: words with the
@@ -1315,6 +1319,16 @@ are added here.
 
 Open items from CLAUDE.md, moved here when done, newest first.
 
+- 2026-11-01: innfeed and imapfeed converted to C++ (`aa89edbef`..
+  `0c4213668`): C linkage in the 10 headers, one source per commit, the
+  configuration parser generated as .cc (`%option noyywrap` replaced a
+  yywrap that returned 1; flex names `input` `yyinput` in C++).  Coverage
+  before conversion, lines: article 47.0%, buffer 47.2%, connection 41.5%,
+  endpoint 66.7%, host 56.7%, innlistener 44.8%, main 38.4%, misc 38.1%,
+  tape 37.7%, imap_connection 46.4% (with dovecot; 0.4% without).
+  imap_connection.cc was committed with dovecot running, so its checks ran.
+  endpoint.cc's std::sort is above; VALIDATE_HASH_TABLE resolved itself.
+
 - 2026-11-01: qsort to std::sort in 8 files (`e3de2b343`, `e18602a26`
   through `e98aca97b`); actsync's design finding and the subtraction
   comparators are under "qsort to std::sort".  actsync got its first output
@@ -1506,7 +1520,7 @@ Behavior of upstream INN found while testing, kept as is unless noted.
   fixing gencancel; support/live-innd.sh works around it.
 - Upstream bug, innfeed/article.c:37: `#define VALIDATE_HASH_TABLE() (void(0))`
   is C++ syntax and does not compile as C when NDEBUG is defined.  Latent,
-  since NDEBUG is no longer defined; fix when innfeed is converted.
+  since NDEBUG is no longer defined.  Gone with article.cc (`254b51d72`).
 - Kerberos (auth_krb5) is found through `krb5-config`, which on this Mac is
   Anaconda's (`/opt/anaconda3`), matching what configure picked.
 
