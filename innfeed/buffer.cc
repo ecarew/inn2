@@ -371,8 +371,8 @@ bufferArrayLen(Buffer *array)
 bool
 copyBuffer(Buffer dest, Buffer src)
 {
-    char *baseDest = bufferBase(dest);
-    char *baseSrc = bufferBase(src);
+    char *baseDest = static_cast<char *>(bufferBase(dest));
+    char *baseSrc = static_cast<char *>(bufferBase(src));
     unsigned int amt = bufferDataSize(src);
 
     if (amt > bufferSize(dest))
@@ -396,7 +396,7 @@ bufferRefCount(Buffer buff)
 void
 bufferAddNullByte(Buffer buff)
 {
-    char *p = bufferBase(buff);
+    char *p = static_cast<char *>(bufferBase(buff));
 
     p[buff->dataSize] = '\0';
 }
