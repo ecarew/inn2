@@ -34,6 +34,8 @@
 #endif
 #include <time.h>
 
+#include <algorithm>
+
 #include "inn/innconf.h"
 #include "inn/libinn.h"
 #include "inn/messages.h"
@@ -109,7 +111,7 @@ static IoStatus doWrite(EndPoint endp);
 static IoStatus doExcept(EndPoint endp);
 static void pipeHandler(int s);
 static void signalHandler(int s);
-static int hitCompare(const void *v1, const void *v2);
+static bool hitLess(const struct endpoint_s *e1, const struct endpoint_s *e2);
 static void reorderPriorityList(void);
 static TimerElem newTimerElem(TimeoutId i, time_t w, EndpTCB f, void *d);
 static TimeoutId timerElemAdd(time_t when, EndpTCB func, void *data);
@@ -1031,26 +1033,20 @@ pipeHandler(int s)
 }
 
 
-/* compare the hit ratio of two endpoint for qsort. We're sorting the
-   endpoints on their relative activity */
-static int
-hitCompare(const void *v1, const void *v2)
+/* std::sort predicate on the hit ratio of two endpoints: the main endpoint
+   first, then the rest by decreasing activity.  An endpoint is never before
+   itself, so the order is a strict weak one (qsort's comparator returned -1
+   for the main endpoint against itself, which std::sort does not allow). */
+static bool
+hitLess(const struct endpoint_s *e1, const struct endpoint_s *e2)
 {
-    const struct endpoint_s *e1 = *((const struct endpoint_s *const *) v1);
-    const struct endpoint_s *e2 = *((const struct endpoint_s *const *) v2);
-    double e1Hit = e1->selectHits;
-    double e2Hit = e2->selectHits;
-
+    if (e1 == e2)
+        return false;
     if (e1 == mainEndPoint)
-        return -1;
-    else if (e2 == mainEndPoint)
-        return 1;
-    else if (e1Hit < e2Hit)
-        return 1;
-    else if (e1Hit > e2Hit)
-        return -1;
-
-    return 0;
+        return true;
+    if (e2 == mainEndPoint)
+        return false;
+    return e1->selectHits > e2->selectHits;
 }
 
 
@@ -1081,7 +1077,7 @@ reorderPriorityList(void)
 
     priorityCount = j;
 
-    qsort(priorityList, (size_t) priorityCount, sizeof(EndPoint), &hitCompare);
+    std::sort(priorityList, priorityList + priorityCount, hitLess);
 }
 
 
