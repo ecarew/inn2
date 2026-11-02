@@ -193,6 +193,9 @@ headers on the include path; the commits give the exact commands.
   only the CORE directory was used (`-idirafter`): the full
   `perl -MExtUtils::Embed -e ccopts` adds MacPorts' `/opt/local/include`,
   whose headers clash with the system ones INN was configured against.
+- innd's `perl.cc`, `python.cc` and lib's `perl.cc` (2026-11-02,
+  `2460146b6`): only a duplicate `extern` on PyInit_INN (PyMODINIT_FUNC
+  already has extern "C" in C++).
 - frontends' ovdb tools, against Homebrew's Berkeley DB 18 (installed
   2026-10-29): seven `void *` conversions in ovdb_server.cc and
   ovdb_stat.cc (`57e431e0b`, `74499a1fa`).  The Berkeley DB headers must
@@ -1319,6 +1322,12 @@ are added here.
 
 Open items from CLAUDE.md, moved here when done, newest first.
 
+- 2026-11-02: the "Still C" list is done.  feedone and sys2nf converted
+  (`8addf6ecc`, `724beb8ea`) and built by the INN_OPTIONAL_PROGRAMS
+  option, off by default like Make's "make optional" (`b6e2b7d0b`).
+  The compiled-out innd/perl.cc, innd/python.cc and lib/perl.cc pass the
+  syntax-only check with DO_PERL / DO_PYTHON; it found one duplicate
+  extern on PyInit_INN (`2460146b6`).
 - 2026-11-02: innfeed duplicates and `-x` (tinyleaf fix `f62e279c7`, live
   checks `2fd038926`); bsearch replaced with std::lower_bound in
   lib/dispatch.cc, expire/fastrm.cc, nnrpd/commands.cc; configfile.y
