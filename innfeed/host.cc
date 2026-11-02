@@ -3427,11 +3427,11 @@ hostPrintStatus(Host host, FILE *fp)
 
     {
         time_t sec = (time_t) (now - host->connectTime);
-        double or, ar, rr, jr;
+        double offr, ar, rr, jr;
         double ars, jrs;
         char *tars, *tjrs;
         if (sec != 0) {
-            or = (double) host->artsOffered / (double) sec;
+            offr = (double) host->artsOffered / (double) sec;
             ar = (double) host->artsAccepted / (double) sec;
             rr = (double) host->artsNotWanted / (double) sec;
             jr = (double) host->artsRejected / (double) sec;
@@ -3440,7 +3440,7 @@ hostPrintStatus(Host host, FILE *fp)
             fprintf(
                 fp,
                 "   offered: %5.2f art/s   accepted: %5.2f art/s, %.3g %s/s\n",
-                or, ar, ars, tars);
+                offr, ar, ars, tars);
             fprintf(
                 fp,
                 "   refused: %5.2f art/s   rejected: %5.2f art/s, %.3g %s/s\n",
@@ -3454,10 +3454,10 @@ hostPrintStatus(Host host, FILE *fp)
     {
         time_t now2 = time(NULL);
         time_t sec2 = (long) (now2 - host->connectTime);
-        double or, ar, rr, jr;
+        double offr, ar, rr, jr;
 
         if (sec2 != 0) {
-            or = (double) host->artsOffered / (double) sec2;
+            offr = (double) host->artsOffered / (double) sec2;
             ar = (double) host->artsAccepted / (double) sec2;
             rr = (double) host->artsNotWanted / (double) sec2;
             jr = (double) host->artsRejected / (double) sec2;
@@ -3717,7 +3717,7 @@ validateInteger(FILE *fp, const char *name, long low, long high, int required,
     int rval = VALUE_OK;
     value *v;
     scope *s;
-    char *p = strrchr(name, ':');
+    const char *p = strrchr(name, ':');
 
     v = findValue(sc, name, inh);
     if (v == NULL && required != NOTREQNOADD) {
@@ -3762,7 +3762,7 @@ validateReal(FILE *fp, const char *name, double low, double high, int required,
     int rval = VALUE_OK;
     value *v;
     scope *s;
-    char *p = strrchr(name, ':');
+    const char *p = strrchr(name, ':');
 
     v = findValue(sc, name, inh);
     if (v == NULL && required != NOTREQNOADD) {
@@ -3804,7 +3804,7 @@ validateBool(FILE *fp, const char *name, int required, bool setval, scope *sc,
     int rval = VALUE_OK;
     value *v;
     scope *s;
-    char *p = strrchr(name, ':');
+    const char *p = strrchr(name, ':');
 
     v = findValue(sc, name, inh);
     if (v == NULL && required != NOTREQNOADD) {
