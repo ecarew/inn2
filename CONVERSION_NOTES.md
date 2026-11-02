@@ -910,11 +910,18 @@ storage/buffindexed/buffindexed.cc, storage/expire.cc,
 storage/tradindexed/tdx-util.cc; innd/keywords.cc (7) with its
 noise-regex fix (ask first); innfeed/endpoint.c with innfeed's conversion.
 
-**Done 2026-11-01** except frontends/ovdb_stat.cc (compiled only with
-Berkeley DB; see "Retiring ovdb and Berkeley DB") and innfeed/endpoint.c.
-Every converted key is unique or its ties are invisible, so `std::sort`
-throughout.  keywords.cc's noise-regex fix is still separate and still
-needs asking.  Not benchmarked: these sort a few dozen to a few thousand
+**Done 2026-11-01** except innfeed/endpoint.c.  frontends/ovdb_stat.cc
+(`d482496ab`) is compiled only with Berkeley DB, so it was checked only by
+a `-fsyntax-only` compile with `-DHAVE_BDB` against Homebrew's db.h 18.1.
+The converted keys are unique except in innd/keywords.cc: words with the
+same frequency and length tie, and their order shows in generated
+Keywords.  It was unspecified under qsort too (it differs between glibc
+and macOS, so live-innd.sh checks only the first three words), and
+`std::sort` leaves it so.  Open, proposed: break the tie on each entry's
+alphabetical position (`word_vec[].index`, from the first sort), giving
+one total order (frequency, length, name) on every platform and replacing
+the per-frequency sub-sort loop; then check the whole Keywords value.
+keywords.cc's noise-regex fix is still separate and still needs asking.  Not benchmarked: these sort a few dozen to a few thousand
 elements, and `std::sort` inlines its comparison where `qsort` calls it
 through a pointer.  Three comparators (innd/ng.cc, storage/expire.cc,
 buffindexed.cc) subtracted unsigned article numbers and truncated the
