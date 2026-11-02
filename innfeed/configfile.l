@@ -179,7 +179,7 @@ ID	[a-zA-Z][-a-zA-Z0-9._/]+
         if (i < (size_t) yyleng)
             current = yytext[i];
         else
-            current = input();
+            current = yyinput();
 
         if (current != EOF) {
             switch (current) {

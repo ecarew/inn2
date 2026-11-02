@@ -7,10 +7,10 @@ find_package(BISON REQUIRED)
 find_package(FLEX REQUIRED)
 
 # Same output names as the Make build ("yacc -d", then renamed).
-bison_target(innfeed_config configfile.y ${CMAKE_CURRENT_BINARY_DIR}/config_y.c
+bison_target(innfeed_config configfile.y ${CMAKE_CURRENT_BINARY_DIR}/config_y.cc
              DEFINES_FILE ${CMAKE_CURRENT_BINARY_DIR}/config_y.h
              COMPILE_FLAGS "-y")
-flex_target(innfeed_lexer configfile.l ${CMAKE_CURRENT_BINARY_DIR}/config_l.c)
+flex_target(innfeed_lexer configfile.l ${CMAKE_CURRENT_BINARY_DIR}/config_l.cc)
 add_flex_bison_dependency(innfeed_lexer innfeed_config)
 
 set(INNFEED_COMMON
