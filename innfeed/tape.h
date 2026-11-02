@@ -19,6 +19,8 @@
 #include "misc.h"
 #include <stdio.h>
 
+BEGIN_DECLS
+
 /* Variable to export. */
 extern bool debugShrinking;
 
@@ -64,5 +66,7 @@ int tapeConfigLoadCbk(void *data);
 
 void tapeLogGlobalStatus(FILE *fp);
 void tapeLogStatus(Tape tape, FILE *fp);
+
+END_DECLS
 
 #endif /* TAPE_H */
