@@ -17,6 +17,8 @@
 
 #include "misc.h"
 
+BEGIN_DECLS
+
 
 #define clearTimer(timerId)         \
     do {                            \
@@ -161,5 +163,7 @@ int getMainEndPointFd(void);
 void freeTimeoutQueue(void);
 
 int endpointConfigLoadCbk(void *data);
+
+END_DECLS
 
 #endif /* ENDPOINT_H */
