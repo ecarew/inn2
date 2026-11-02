@@ -12,6 +12,8 @@
 #include <stdarg.h>
 #include <sys/types.h>
 
+BEGIN_DECLS
+
 /* These typedefs are all here because C is too stupid to let me multiply
    define typedefs to the same things (as C++ will). Hence I can't redeclare
    the typedefs to get around recursive header file includes (like host.h and
@@ -148,5 +150,7 @@ long pathMax(const char *pathname);
 #if !defined(MIN)
 #    define MIN(A, B) ((A) < (B) ? (A) : (B))
 #endif
+
+END_DECLS
 
 #endif /* MISC_H */
