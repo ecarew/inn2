@@ -25,6 +25,8 @@
 #include <stdio.h>
 #include <time.h>
 
+BEGIN_DECLS
+
 
 /* Variables to export. */
 extern unsigned int init_reconnect_period;
@@ -107,5 +109,7 @@ int cxnConfigLoadCbk(void *data);
 
 /* Check connection state is in cxnFeedingS, cxnIdleS or cxnConnectingS. */
 bool cxnCheckstate(Connection cxn);
+
+END_DECLS
 
 #endif /* CONNECTION_H */
