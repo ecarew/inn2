@@ -140,13 +140,12 @@ Items 1 (native configuration), 2 (generated sources) and 9 (CTest:
     `support/docker-root-checks.sh` (2026-10-30).
 
 **Still C**
-- innfeed/ (10 files; deferred).  Open: after a duplicate reply from
+- innfeed/ is C++ (2026-11-01).  Open: after a duplicate reply from
   tinyleaf innfeed sleeps the connection and spools the rest; replaying a
-  backlog with `-x` offers nothing.  Coverage not measured.  Convert its
-  parser to bison lalr1.cc / flex C++ output at the same time.  Fix
-  `VALIDATE_HASH_TABLE()` in article.c:37 (C++ syntax, breaks C builds
-  with NDEBUG).
-- imapfeed (innfeed/imap_connection.c) needs a close review of its memory
+  backlog with `-x` offers nothing.  Move the parser to bison lalr1.cc /
+  flex C++ scanner classes (needs bison 3; macOS has 2.3, so ask before
+  adding Homebrew bison).  configfile.y uses sprintf (7 warnings).
+- imapfeed (innfeed/imap_connection.cc) needs a close review of its memory
   handling before or during conversion.  live-innd.sh now feeds a dovecot
   (support/dovecot-imapfeed.sh; macOS needs it started with sudo).  Found
   and fixed: in-place NUL writes into the read-only article map (addrcpt,
@@ -196,7 +195,8 @@ from `cmake-build`; record method and raw numbers so rounds compare.
   once the last use of one is converted, remove what remains of it from
   the source tree: leftover comparators and helpers, INN's own
   replacement implementations, their CMake checks and config.h symbols.
-  qsort's last use is innfeed/endpoint.c; bsearch has three
+  qsort has no uses left (2026-11-01; INN has no qsort replacement or
+  check to remove); bsearch has three
   (expire/fastrm.cc, lib/dispatch.cc, nnrpd/commands.cc).
 - 49 struct/enum typedefs with bodies → `struct X { ... };` during class
   work (not clang-tidy's fix).
