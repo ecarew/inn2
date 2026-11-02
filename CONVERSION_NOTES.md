@@ -917,10 +917,15 @@ The converted keys are unique except in innd/keywords.cc: words with the
 same frequency and length tie, and their order shows in generated
 Keywords.  It was unspecified under qsort too (it differs between glibc
 and macOS, so live-innd.sh checks only the first three words), and
-`std::sort` leaves it so.  Open, proposed: break the tie on each entry's
+`std::sort` left it so.  Fixed 2026-11-01: the tie breaks on each entry's
 alphabetical position (`word_vec[].index`, from the first sort), giving
-one total order (frequency, length, name) on every platform and replacing
-the per-frequency sub-sort loop; then check the whole Keywords value.
+one total order (frequency, length, name) on every platform, in one sort
+that replaces the per-frequency sub-sort loop.  live-innd.sh checks a
+whole generated Keywords value with 37 tied words; it needs that many
+because below about 30 elements both libc++ and libstdc++ `std::sort` use
+insertion sort, which keeps the alphabetical input order, so a small
+tie group passes even without the fix (checked: 11 words passed on the
+old code, 37 fail on it).
 keywords.cc's noise-regex fix is still separate and still needs asking.  Not benchmarked: these sort a few dozen to a few thousand
 elements, and `std::sort` inlines its comparison where `qsort` calls it
 through a pointer.  Three comparators (innd/ng.cc, storage/expire.cc,
