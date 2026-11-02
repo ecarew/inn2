@@ -1,6 +1,6 @@
 # backends/ programs — converted from backends/Makefile.  The shell and Perl
-# scripts (actsyncd, mod-active, news2mail, nntpsend, send-*, ...) are
-# generated from .in files and are not built here yet.
+# scripts are generated from their .in files (inn_scripts,
+# cmake/InnPaths.cmake).
 
 inn_program(actsync    SOURCES actsync.cc    INNONLY)
 inn_program(archive    SOURCES archive.cc)
@@ -16,3 +16,7 @@ inn_program(nntpget    SOURCES nntpget.cc)
 inn_program(overchan   SOURCES overchan.cc)
 inn_program(shlock     SOURCES shlock.cc     INNONLY)
 inn_program(shrinkfile SOURCES shrinkfile.cc INNONLY)
+
+inn_scripts(actmerge actsyncd mod-active news2mail nntpsend send-ihave
+            send-uucp sendinpaths sendxbatches)
+inn_scripts(delayer NOLIB)
