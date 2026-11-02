@@ -58,18 +58,18 @@ struct word_entry {
 
 /*
 **  std::sort predicates for word_entry: decreasing frequency, then
-**  decreasing word length; and for strings.
+**  decreasing word length, then alphabetical (index is the word's place in
+**  the sorted word list, unique per distinct word, so the order is total);
+**  and for strings.
 */
 static bool
-wvec_freq_cmp(const struct word_entry &a, const struct word_entry &b)
+wvec_cmp(const struct word_entry &a, const struct word_entry &b)
 {
-    return a.count > b.count;
-}
-
-static bool
-wvec_length_cmp(const struct word_entry &a, const struct word_entry &b)
-{
-    return a.length > b.length;
+    if (a.count != b.count)
+        return a.count > b.count;
+    if (a.length != b.length)
+        return a.length > b.length;
+    return a.index < b.index;
 }
 
 static bool
@@ -90,7 +90,6 @@ KEYgenerate(std::string &keywords, /* Generated body, replaced. */
 {
 
     unsigned long word_count, word_index, word_length, distinct_words;
-    int last;
     char *text, *text_end, *this_word, *chase, *punc;
     static struct word_entry *word_vec;
     static char **word;
@@ -221,23 +220,9 @@ KEYgenerate(std::string &keywords, /* Generated body, replaced. */
         }
     }
 
-    /* Sort the counts. */
+    /* Sort by frequency, then length, then name. */
     distinct_words++; /* We were off-by-1 until this. */
-    std::sort(word_vec, word_vec + distinct_words, wvec_freq_cmp);
-
-    /* Sub-sort same-frequency words on word length. */
-    for (last = 0, word_index = 1; /* Again, (N-1)th and Nth entries. */
-         word_index < distinct_words; word_index++) {
-        if (word_vec[last].count != word_vec[word_index].count) {
-            if ((word_index - last) != 1) /* 2+ entries to sub-sort. */
-                std::sort(&word_vec[last], &word_vec[word_index],
-                          wvec_length_cmp);
-            last = word_index;
-        }
-    }
-    /* Do it one last time for the only-one-appearance words. */
-    if ((word_index - last) != 1)
-        std::sort(&word_vec[last], &word_vec[word_index], wvec_length_cmp);
+    std::sort(word_vec, word_vec + distinct_words, wvec_cmp);
 
     /* Write the Keywords header field body, at most keylimit bytes. */
     for (word_index = 0; word_index < distinct_words; word_index++) {
