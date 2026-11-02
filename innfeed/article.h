@@ -20,6 +20,8 @@
 #include "misc.h"
 #include <stdio.h>
 
+BEGIN_DECLS
+
 
 /* Create a new Article object. FILENAME is the path of the file the */
 /* article is in. MSGID is the news message id of the article */
@@ -74,5 +76,7 @@ void artBitFiddleContents(bool val);
 /* set the limit on the number of bytes in all articles (this is not a hard
    limit). Can only be called one time before any articles are created. */
 void artSetMaxBytesInUse(unsigned int val);
+
+END_DECLS
 
 #endif /* ARTICLE_H */
