@@ -8,22 +8,10 @@
 
 #include "portable/system.h"
 
+#include <algorithm>
+
 #include "inn/dispatch.h"
 #include "inn/vector.h"
-
-
-/*
-**  Comparison function for bsearch on the table of dispatch instructions.
-*/
-static int
-compare_dispatch(const void *key, const void *element)
-{
-    const char *command = static_cast<const char *>(key);
-    const struct dispatch *rule =
-        static_cast<const struct dispatch *>(element);
-
-    return strcasecmp(command, rule->command);
-}
 
 
 /*
@@ -38,17 +26,19 @@ void
 dispatch(struct cvector *command, const struct dispatch *table, size_t count,
          dispatch_func unknown, dispatch_func syntax, void *cookie)
 {
-    struct dispatch *rule;
+    const struct dispatch *rule, *end = table + count;
     int argc = command->count - 1;
 
     if (argc < 0) {
         (*unknown)(command, cookie);
         return;
     }
-    rule = static_cast<struct dispatch *>(
-        bsearch(command->strings[0], table, count, sizeof(struct dispatch),
-                compare_dispatch));
-    if (rule == nullptr)
+    /* The table is sorted by command name, ignoring case. */
+    rule = std::lower_bound(table, end, command->strings[0],
+                            [](const struct dispatch &r, const char *name) {
+                                return strcasecmp(r.command, name) < 0;
+                            });
+    if (rule == end || strcasecmp(rule->command, command->strings[0]) != 0)
         (*unknown)(command, cookie);
     else if (argc < rule->min_args || argc > rule->max_args)
         (*syntax)(command, cookie);
