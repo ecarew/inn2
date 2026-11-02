@@ -1,7 +1,7 @@
 # innfeed and imapfeed — converted from innfeed/Makefile.  The configuration
 # parser is generated from configfile.y and configfile.l with the system's
 # yacc and lex, as the Make build does.  procbatch is a script generated from
-# procbatch.in and is not built here yet.
+# procbatch.in (inn_scripts, cmake/InnPaths.cmake).
 
 find_package(BISON REQUIRED)
 find_package(FLEX REQUIRED)
@@ -26,3 +26,5 @@ inn_program(innfeed  SOURCES ${INNFEED_COMMON} connection.cc)
 inn_program(imapfeed SOURCES ${INNFEED_COMMON} imap_connection.cc LIBS ${_sasl})
 target_include_directories(innfeed  PRIVATE ${CMAKE_CURRENT_BINARY_DIR})
 target_include_directories(imapfeed PRIVATE ${CMAKE_CURRENT_BINARY_DIR})
+
+inn_scripts(procbatch)
