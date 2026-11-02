@@ -5,9 +5,5 @@ Subject: t
 body
 .
 IHAVE <test1@example>
-Subject: t
-
-body
-.
 BOGUS
 QUIT

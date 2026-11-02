@@ -103,6 +103,19 @@ command_ihave(struct cvector *command, void *cookie)
     int fd, oerrno;
 
     msgid = xstrdup(command->strings[1]);
+    md5_hash((unsigned char *) msgid, strlen(msgid), hash);
+    inn_encode_hex(hash, sizeof(hash), filename, sizeof(filename));
+
+    /* Refuse a duplicate before the article is sent: 435 is only valid as
+       the first reply to IHAVE (RFC 3977, 6.3.2).  A file that appears
+       while the article is being sent gets 437 below. */
+    if (access(filename, F_OK) == 0) {
+        if (!nntp_respond(state->nntp, NNTP_FAIL_IHAVE_REFUSE, "Duplicate"))
+            sysdie("cannot flush output");
+        state->duplicates++;
+        free(msgid);
+        return;
+    }
     if (!nntp_respond(state->nntp, NNTP_CONT_IHAVE, "Send article"))
         sysdie("cannot flush output");
     status = nntp_read_multiline(state->nntp, &article, &length);
@@ -122,12 +135,10 @@ command_ihave(struct cvector *command, void *cookie)
     default:
         sysdie("internal: unknown NNTP library status");
     }
-    md5_hash((unsigned char *) msgid, strlen(msgid), hash);
-    inn_encode_hex(hash, sizeof(hash), filename, sizeof(filename));
     fd = open(filename, O_WRONLY | O_CREAT | O_EXCL, 0666);
     if (fd < 0) {
         if (errno == EEXIST) {
-            if (!nntp_respond(state->nntp, NNTP_FAIL_IHAVE_REFUSE,
+            if (!nntp_respond(state->nntp, NNTP_FAIL_IHAVE_REJECT,
                               "Duplicate"))
                 sysdie("cannot flush output");
             state->duplicates++;
