@@ -834,7 +834,7 @@ doRead(EndPoint endp)
 
         vp = xcalloc(bCount, sizeof(struct iovec));
 
-        bbase = bufferBase(buffers[currIdx]);
+        bbase = static_cast<char *>(bufferBase(buffers[currIdx]));
         bds = bufferDataSize(buffers[currIdx]);
         bs = bufferSize(buffers[currIdx]);
 
@@ -844,7 +844,7 @@ doRead(EndPoint endp)
         vp[0].iov_len = bs - bds - endp->inIndex;
 
         for (idx = currIdx + 1; idx < bCount; idx++) {
-            bbase = bufferBase(buffers[idx]);
+            bbase = static_cast<char *>(bufferBase(buffers[idx]));
             bds = bufferDataSize(buffers[idx]);
             bs = bufferSize(buffers[idx]);
 
@@ -875,7 +875,8 @@ doRead(EndPoint endp)
                 ASSERT(idx < bCount);
 
                 bs = bufferSize(buffers[currIdx + idx]);
-                bbase = bufferBase(buffers[currIdx + idx]);
+                bbase =
+                    static_cast<char *>(bufferBase(buffers[currIdx + idx]));
                 bds = bufferDataSize(buffers[currIdx + idx]);
 
                 if (readAmt >= (bs - bds)) {
