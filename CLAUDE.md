@@ -198,6 +198,12 @@ from `cmake-build`; record method and raw numbers so rounds compare.
   qsort has no uses left (2026-11-01; INN has no qsort replacement or
   check to remove); bsearch has three
   (expire/fastrm.cc, lib/dispatch.cc, nnrpd/commands.cc).
+- Research moving innfeed's configuration parser (configfile.y/.l, bison
+  and flex) to Boost.Parser (in Boost since 1.87, header-only, C++17):
+  what the grammar, the include handling in the lexer and the scope/value
+  tree would take, error messages and line numbers, and whether it drops
+  the bison/flex build dependency.  An alternative to the lalr1.cc move
+  (innfeed, under Still C); decide between them before doing either.
 - 49 struct/enum typedefs with bodies → `struct X { ... };` during class
   work (not clang-tidy's fix).
 - Upstream bugs to fix or report: CONVERSION_NOTES.md, "Upstream bugs and
