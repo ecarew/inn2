@@ -52,7 +52,6 @@ static scope *newScope(const char *type);
 int yylex(void);
 
 int yyerror(const char *s);
-int yywrap(void);
 
 int
 getBool(scope *s, const char *name, int *rval, int inherit)
@@ -761,12 +760,6 @@ yyerror(const char *s)
     sprintf(errbuff, FMT, lineCount, s);
 
     return 0;
-}
-
-int
-yywrap(void)
-{
-    return 1;
 }
 
 extern FILE *yyin;

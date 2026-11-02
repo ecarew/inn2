@@ -80,6 +80,7 @@ static int include_stack_ptr = 0;
 
 %}
 
+%option noyywrap
 %x incl
 
 ID	[a-zA-Z][-a-zA-Z0-9._/]+
