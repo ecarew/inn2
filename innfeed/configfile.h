@@ -7,6 +7,10 @@
 #ifndef CONFIGFILE_H
 #define CONFIGFILE_H
 
+#include "portable/macros.h"
+
+BEGIN_DECLS
+
 /* pointer to function taking void-star param and returning int. */
 typedef int (*PFIVP)(void *);
 
@@ -93,5 +97,7 @@ void configCleanup(void);
 
 #define INHERIT    1
 #define NO_INHERIT 0
+
+END_DECLS
 
 #endif /* CONFIGFILE_H */
