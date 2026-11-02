@@ -1319,6 +1319,13 @@ are added here.
 
 Open items from CLAUDE.md, moved here when done, newest first.
 
+- 2026-11-02: innfeed duplicates and `-x` (tinyleaf fix `f62e279c7`, live
+  checks `2fd038926`); bsearch replaced with std::lower_bound in
+  lib/dispatch.cc, expire/fastrm.cc, nnrpd/commands.cc; configfile.y
+  sprintf to xasprintf (`179b02947`); actsync same-host duplicates
+  (`f212c6f45`); imapfeed review: getaddrinfo and IPv6 (`1ec0907f6`),
+  growing response buffers (`636a63d56`), SASL decode buffer
+  (`3fd29316e`).  Left open: imapfeed's fixed ports.
 - 2026-11-01: innfeed and imapfeed converted to C++ (`aa89edbef`..
   `0c4213668`): C linkage in the 10 headers, one source per commit, the
   configuration parser generated as .cc (`%option noyywrap` replaced a
@@ -1476,7 +1483,15 @@ Open items from CLAUDE.md, moved here when done, newest first.
 
 Behavior of upstream INN found while testing, kept as is unless noted.
 
-- Upstream bug (found 2026-11-01, kept): actsync misses a group listed
+- Upstream bug (found and fixed 2026-11-02, `f62e279c7`): tinyleaf
+  replied 435 to a duplicate after reading the article; RFC 3977 allows
+  435 only before it.  innfeed took it as a protocol error, slept the
+  connection and backlogged the rest (so `-x` stalled on the duplicates).
+  It now refuses before 335, and answers 437 if the file appears later.
+- Upstream bugs (found and fixed 2026-11-02, `636a63d56`, `3fd29316e`):
+  imapfeed overflowed a 4096-byte heap buffer on long server responses
+  (strcat), and a 4096-byte stack buffer on a SASL challenge over 4 KB.
+- Upstream bug (found 2026-11-01, fixed 2026-11-02 `f212c6f45`): actsync misses a group listed
   twice by host2 when host1 also has it.  `merge_grps` looks for duplicates
   only forward from the current group, and after sorting by (name, hostid,
   linenum) host1's entry sits between host2's two copies, so the second
@@ -1485,8 +1500,8 @@ Behavior of upstream INN found while testing, kept as is unless noted.
   The intended warning ("lines 1 and 10 ... refer to the same group") and
   ERROR_DUP only happen when host1 lacks the group.  Fix: look for
   duplicates per (name, hostid) before the cross-host walk.
-  tests/data/actsync/expected.txt records the current output; update it
-  with the fix.
+  Fixed that way; tests/data/actsync/expected.txt now has the warning and
+  no extra newgroup.
 
 - Upstream bug (found 2026-10-31, kept): innd/keywords.cc's noise-word
   pattern is a POSIX basic regex using `\|` alternation, a GNU extension.
