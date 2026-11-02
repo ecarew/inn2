@@ -2305,7 +2305,8 @@ lmtp_getauthline(char *str, char **line, int *linelen)
         return STAT_NO;
     }
 
-    str += 4; /* jump past the "334 " */
+    /* jump past the "334 "; a bare "334" carries no challenge */
+    str += (str[3] == '\0' ? 3 : 4);
 
     *line = xmalloc(strlen(str) + 30);
     if ((*line) == NULL) {
@@ -2512,24 +2513,25 @@ imap_sendAuthStep(connection_t *cxn, char *str)
 {
     conn_ret result;
     int saslresult;
-    char in[4096];
     unsigned int inlen;
     const char *out;
     unsigned int outlen;
     char *inbase64;
     unsigned int inbase64len;
 
-    /* base64 decode it */
+    /* base64 decode it; the result is shorter than its encoding */
+    std::string in(strlen(str) + 1, '\0');
 
-    saslresult = sasl_decode64(str, strlen(str), in, strlen(str) + 1, &inlen);
+    saslresult =
+        sasl_decode64(str, strlen(str), in.data(), in.size(), &inlen);
     if (saslresult != SASL_OK) {
         d_printf(0, "%s:%u:IMAP base64 decoding error\n",
                  hostPeerName(cxn->myHost), cxn->ident);
         return RET_FAIL;
     }
 
-    saslresult =
-        sasl_client_step(cxn->imap_saslconn, in, inlen, NULL, &out, &outlen);
+    saslresult = sasl_client_step(cxn->imap_saslconn, in.data(), inlen, NULL,
+                                  &out, &outlen);
 
     /* check if sasl succeeded */
     if (saslresult != SASL_OK && saslresult != SASL_CONTINUE) {
