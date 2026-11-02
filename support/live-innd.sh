@@ -795,8 +795,14 @@ got=$(leafcount)
 label="innfeed delivers to an IHAVE-only peer ($got/$sent)"
 ok sh -c "[ '$sent' -gt 0 ] && [ '$got' = '$sent' ]"
 
-# Not checked yet (see CLAUDE.md, innfeed): offering tinyleaf the same
-# articles again, and replaying a backlog with innfeed -x.
+# The same articles again: tinyleaf refuses each with 435 before it is sent,
+# and innfeed goes on to the next.  (tinyleaf used to answer 435 after the
+# article, which innfeed treats as a protocol error: it put the connection
+# to sleep and backlogged the rest.)
+feed leaf 999
+got=$(leafcount)
+label="innfeed offers duplicates without backlogging them"
+ok sh -c "[ '$got' = '$sent' ] && [ ! -s '$tmp/spool/innfeed/leaf' ] && [ ! -s '$tmp/spool/innfeed/leaf.output' ]"
 
 # Streaming to innd, which already has every article.
 feed self 999
@@ -815,6 +821,21 @@ rm -f "$tmp/leaf"/*
 feed leaf 999
 label="innfeed backlogs articles while the peer is down"
 ok sh -c "[ -s '$tmp/spool/innfeed/leaf' ] || [ -s '$tmp/spool/innfeed/leaf.output' ]"
+
+# Peer back: innfeed -x (no channel input) sends the backlog and exits once
+# it is empty.
+leaf_up
+inf -x </dev/null >>"$tmp/innfeed.out" 2>&1 &
+xpid=$!
+for _ in $(seq 1 50); do
+    [ "$(leafcount)" -ge "$sent" ] && break
+    sleep 0.2
+done
+got=$(leafcount)
+kill "$xpid" 2>/dev/null; wait "$xpid" 2>/dev/null
+leaf_down
+label="innfeed -x sends the backlog ($got/$sent)"
+ok sh -c "[ '$got' = '$sent' ]"
 
 # --- imapfeed -----------------------------------------------------------------
 
