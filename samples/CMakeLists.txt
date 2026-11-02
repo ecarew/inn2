@@ -1,24 +1,11 @@
 # Sample configuration files (CMake-only goal item 3), written into the build
-# tree.  So far only inn.conf, which the tests and harnesses need
-# (lib/innconf, support/live-innd.sh, support/root-checks.sh); the other
-# samples still come from fixconfig in the Make build.
+# tree: the ones support/fixconfig and support/fixscript make in the Make
+# build (samples/Makefile).  The other samples need no changes and are used
+# as they are.
 #
-# The values are the ones support/fixconfig substitutes, with configure's
-# defaults: the INN directories under INN_PREFIX (include/CMakeLists.txt,
-# m4/paths.m4), the host name, sendmail and whether a PGP verifier exists.
-
-set(prefix ${INN_PREFIX})
-set(bindir ${prefix}/bin)
-set(sysconfdir ${INN_PATH_CONFIG})
-set(tmpdir ${INN_PATH_TMP})
-set(CONTROLDIR ${bindir}/control)
-set(DBDIR ${prefix}/db)
-set(FILTERDIR ${bindir}/filter)
-set(HISTORYDIR ${prefix}/db)
-set(HTTPDIR ${prefix}/http)
-set(LOGDIR ${prefix}/log)
-set(RUNDIR ${prefix}/run)
-set(SPOOLDIR ${prefix}/spool)
+# The directories, Perl and inn_fixscript come from cmake/InnPaths.cmake.
+# fixconfig also substitutes the host name, sendmail and whether a PGP
+# verifier exists, with configure's defaults.
 
 # configure uses `hostname`, which is gethostname().
 cmake_host_system_information(RESULT HOSTNAME QUERY HOSTNAME)
@@ -42,4 +29,10 @@ else()
     set(DO_PGPVERIFY false)
 endif()
 
-configure_file(inn.conf.in ${CMAKE_CURRENT_BINARY_DIR}/inn.conf @ONLY)
+foreach(sample buffindexed.conf inn.conf innreport.conf newsfeeds)
+    configure_file(${sample}.in ${CMAKE_CURRENT_BINARY_DIR}/${sample} @ONLY)
+endforeach()
+foreach(script nnrpd_auth.pl nnrpd_access.pl)
+    inn_fixscript(${CMAKE_CURRENT_SOURCE_DIR}/${script}.in
+                  ${CMAKE_CURRENT_BINARY_DIR}/${script})
+endforeach()
