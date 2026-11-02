@@ -140,17 +140,14 @@ Items 1 (native configuration), 2 (generated sources) and 9 (CTest:
     `support/docker-root-checks.sh` (2026-10-30).
 
 **Still C**
+All INN source is C++ (2026-11-02) except the 7 contrib/ programs (with
+CMake item 7) and the CMake feature checks.  Left from the conversion:
 - innfeed/ is C++ (2026-11-01).  Move the parser to bison lalr1.cc /
   flex C++ scanner classes (needs bison 3; macOS has 2.3, so ask before
   adding Homebrew bison).
 - imapfeed (innfeed/imap_connection.cc): ports fixed at 143 (IMAP) and
   2003 (LMTP); configurable ports would need new innfeed.conf keys, so ask
   the user first.
-- frontends/feedone.c, sys2nf.c: not built by CMake (OPTIONAL in Make).
-- Code compiled out in this build (`innd/perl.cc`, `innd/python.cc`,
-  `lib/perl.cc`): run the `-fsyntax-only` check with the
-  feature on, as was done for nnrpd's (CONVERSION_NOTES.md, "Code compiled
-  out in this build").
 
 **Process improvements (proposed 2026-10-30)**
 - `lib/network/client` flake: the connect-timeout test got its own port
