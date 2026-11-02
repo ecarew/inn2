@@ -658,14 +658,14 @@ fillContents(Article article)
             syswarn("ME mmap failure %s (%s)", article->fname,
                     strerror(errno));
         } else {
-            article->contents =
-                newBufferByCharP(mMapping, articlesize, articlesize);
+            article->contents = newBufferByCharP(
+                static_cast<const char *>(mMapping), articlesize, articlesize);
             article->mapInfo = getMapInfo(arthandle, mMapping, articlesize);
             article->mapInfo->refCount++; /* one more for the buffer */
             bufferSetDeletedCbk(article->contents, delMapInfo,
                                 article->mapInfo);
 
-            buffer = bufferBase(article->contents);
+            buffer = static_cast<char *>(bufferBase(article->contents));
             if ((p = strchr(buffer, '\n')) == NULL) {
                 article->articleOk = false;
                 delBuffer(article->contents);
@@ -710,7 +710,7 @@ fillContents(Article article)
         if ((article->contents = newBuffer(newBufferSize)) == NULL)
             amtToRead = 0;
         else {
-            buffer = bufferBase(article->contents);
+            buffer = static_cast<char *>(bufferBase(article->contents));
             bytesInUse += articlesize;
             byteTotal += articlesize;
         }
@@ -841,7 +841,7 @@ prepareArticleForNNTP(Article article)
        is a real speed loss at the moment, so by default it's disabled (by
        calling artBitFiddleContents(true) in main(). */
     if (article->inWireFormat == false) {
-        end = bufferBase(contents);
+        end = static_cast<char *>(bufferBase(contents));
         do {
             start = end;
 
@@ -862,9 +862,9 @@ prepareArticleForNNTP(Article article)
     } else {
         /* we already fixed the contents up when we read in the article */
         nntpBuffs = xmalloc(sizeof(Buffer) * 3);
-        nntpBuffs[0] =
-            newBufferByCharP(bufferBase(contents), bufferDataSize(contents),
-                             bufferDataSize(contents));
+        nntpBuffs[0] = newBufferByCharP(
+            static_cast<const char *>(bufferBase(contents)),
+            bufferDataSize(contents), bufferDataSize(contents));
         if (article->mapInfo) {
             article->mapInfo->refCount++;
             bufferSetDeletedCbk(nntpBuffs[0], delMapInfo, article->mapInfo);
