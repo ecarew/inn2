@@ -19,6 +19,8 @@
 #include <stdio.h>
 #include <sys/types.h>
 
+BEGIN_DECLS
+
 
 /*
  * Create a new Buffer object and initialize it.
@@ -112,5 +114,7 @@ bool expandBuffer(Buffer buff, size_t amt);
    line feed. Adjusts the data size. The base address may change
    afterwards. */
 bool nntpPrepareBuffer(Buffer buffer);
+
+END_DECLS
 
 #endif /* BUFFER_H */
