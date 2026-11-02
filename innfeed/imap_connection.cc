@@ -1426,11 +1426,11 @@ static conn_ret
 SetSASLProperties(sasl_conn_t *conn, int sock, int minssf, int maxssf)
 {
     sasl_security_properties_t *secprops = NULL;
-    socklen_t addrsize = sizeof(struct sockaddr_in);
+    socklen_t addrsize = sizeof(struct sockaddr_storage);
     char localip[NI_MAXHOST + NI_MAXSERV + 1];
     char remoteip[NI_MAXHOST + NI_MAXSERV + 1];
-    struct sockaddr_in saddr_l;
-    struct sockaddr_in saddr_r;
+    struct sockaddr_storage saddr_l;
+    struct sockaddr_storage saddr_r;
 
     /* create a security structure and give it to sasl */
     secprops = make_secprops(minssf, maxssf);
@@ -1442,19 +1442,19 @@ SetSASLProperties(sasl_conn_t *conn, int sock, int minssf, int maxssf)
     if (getpeername(sock, (struct sockaddr *) &saddr_r, &addrsize) != 0)
         return RET_FAIL;
 
-    if (iptostring((struct sockaddr *) &saddr_r, sizeof(struct sockaddr_in),
-                   remoteip, sizeof(remoteip)))
+    if (iptostring((struct sockaddr *) &saddr_r, addrsize, remoteip,
+                   sizeof(remoteip)))
         return RET_FAIL;
 
     if (sasl_setprop(conn, SASL_IPREMOTEPORT, remoteip) != SASL_OK)
         return RET_FAIL;
 
-    addrsize = sizeof(struct sockaddr_in);
+    addrsize = sizeof(struct sockaddr_storage);
     if (getsockname(sock, (struct sockaddr *) &saddr_l, &addrsize) != 0)
         return RET_FAIL;
 
-    if (iptostring((struct sockaddr *) &saddr_l, sizeof(struct sockaddr_in),
-                   localip, sizeof(localip)))
+    if (iptostring((struct sockaddr *) &saddr_l, addrsize, localip,
+                   sizeof(localip)))
         return RET_FAIL;
 
     if (sasl_setprop(conn, SASL_IPLOCALPORT, localip) != SASL_OK)
@@ -1575,37 +1575,41 @@ Initialize(connection_t *cxn, int respTimeout)
 }
 
 
-/* initialize the network */
+/* initialize the network: connect to the first address of serverFQDN,
+   IPv4 or IPv6, that accepts a connection on port */
 static conn_ret
 init_net(char *serverFQDN, int port, int *sock)
 {
-    struct sockaddr_in addr;
-    struct hostent *hp;
+    struct addrinfo hints, *ai, *res;
+    char service[16];
+    int status;
 
     *sock = -1;
-    if ((hp = gethostbyname(serverFQDN)) == NULL) {
-        d_printf(0, "gethostbyname(): %s\n", strerror(errno));
+    memset(&hints, 0, sizeof(hints));
+    hints.ai_family = AF_UNSPEC;
+    hints.ai_socktype = SOCK_STREAM;
+    snprintf(service, sizeof(service), "%d", port);
+    status = getaddrinfo(serverFQDN, service, &hints, &res);
+    if (status != 0) {
+        d_printf(0, "getaddrinfo(%s): %s\n", serverFQDN, gai_strerror(status));
         return RET_FAIL;
     }
 
-    if (((*sock) = socket(AF_INET, SOCK_STREAM, 0)) < 0) {
-        d_printf(0, "socket(): %s\n", strerror(errno));
-        return RET_FAIL;
-    }
-
-    memset(&addr, 0, sizeof addr);
-    addr.sin_family = AF_INET;
-    memcpy(&addr.sin_addr, hp->h_addr, hp->h_length);
-    addr.sin_port = htons(port);
-
-    if (connect((*sock), (struct sockaddr *) &addr, sizeof(addr)) < 0) {
+    for (ai = res; ai != NULL; ai = ai->ai_next) {
+        *sock = socket(ai->ai_family, ai->ai_socktype, ai->ai_protocol);
+        if (*sock < 0) {
+            d_printf(0, "socket(): %s\n", strerror(errno));
+            continue;
+        }
+        if (connect(*sock, ai->ai_addr, ai->ai_addrlen) == 0)
+            break;
         d_printf(0, "connect(): %s\n", strerror(errno));
         close(*sock);
         *sock = -1;
-        return RET_FAIL;
     }
+    freeaddrinfo(res);
 
-    return RET_OK;
+    return (*sock < 0 ? RET_FAIL : RET_OK);
 }
 
 
