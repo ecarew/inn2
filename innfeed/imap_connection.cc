@@ -864,7 +864,7 @@ FindHeader(Buffer *bufs, const char *header, char **start, char **end)
 
     b = bufs[0];
     size = bufferSize(b);
-    str_base = bufferBase(b);
+    str_base = static_cast<char *>(bufferBase(b));
     str = str_base;
 
     while ((str - str_base) < size - headerlen) {
@@ -2909,7 +2909,7 @@ imap_readCB(EndPoint e, IoStatus i, Buffer *b, void *d)
     conn_ret ret;
     char *p;
 
-    p = bufferBase(b[0]);
+    p = static_cast<char *>(bufferBase(b[0]));
 
     /* Add what we got to our internal read buffer */
     bufferAddNullByte(b[0]);
@@ -3309,7 +3309,7 @@ lmtp_readCB(EndPoint e, IoStatus i, Buffer *b, void *d)
     sasl_interact_t *client_interact = NULL;
 #endif /* HAVE_SASL */
 
-    char *p = bufferBase(b[0]);
+    char *p = static_cast<char *>(bufferBase(b[0]));
 
     bufferAddNullByte(b[0]);
 

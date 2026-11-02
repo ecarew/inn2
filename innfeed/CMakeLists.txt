@@ -23,6 +23,6 @@ if(HAVE_SASL)
 endif()
 
 inn_program(innfeed  SOURCES ${INNFEED_COMMON} connection.cc)
-inn_program(imapfeed SOURCES ${INNFEED_COMMON} imap_connection.c LIBS ${_sasl})
+inn_program(imapfeed SOURCES ${INNFEED_COMMON} imap_connection.cc LIBS ${_sasl})
 target_include_directories(innfeed  PRIVATE ${CMAKE_CURRENT_BINARY_DIR})
 target_include_directories(imapfeed PRIVATE ${CMAKE_CURRENT_BINARY_DIR})
