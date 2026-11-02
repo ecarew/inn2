@@ -477,16 +477,6 @@ CMDmode(int ac UNUSED, char *av[])
 }
 
 
-static int
-GroupCompare(const void *a1, const void *b1)
-{
-    const GROUPDATA *a = static_cast<const GROUPDATA *>(a1);
-    const GROUPDATA *b = static_cast<const GROUPDATA *>(b1);
-
-    return strcmp(a->name, b->name);
-}
-
-
 /*
 **  Display new newsgroups since a given date and time.
 */
@@ -500,7 +490,6 @@ CMDnewgroups(int ac, char *av[])
     char *grplist[2];
     int hi, lo, count, flag;
     GROUPDATA *grouplist = nullptr;
-    GROUPDATA key;
     GROUPDATA *gd;
     int listsize = 0;
     int numgroups = 0;
@@ -581,7 +570,7 @@ CMDnewgroups(int ac, char *av[])
 
         return;
     }
-    /* By name, for the bsearch below; names are unique, so no ties.  An
+    /* By name, for the lookup below; names are unique, so no ties.  An
        empty range is fine (qsort was called with a null list when no group
        was new, undefined behavior). */
     std::sort(grouplist, grouplist + numgroups,
@@ -605,10 +594,11 @@ CMDnewgroups(int ac, char *av[])
         if ((q = strchr(q, ' ')) == nullptr)
             continue;
         q++;
-        key.name = p;
-        if ((gd = static_cast<GROUPDATA *>(bsearch(
-                 &key, grouplist, numgroups, sizeof(GROUPDATA), GroupCompare)))
-            == nullptr)
+        gd = std::lower_bound(grouplist, grouplist + numgroups, p,
+                              [](const GROUPDATA &g, const char *name) {
+                                  return strcmp(g.name, name) < 0;
+                              });
+        if (gd == grouplist + numgroups || strcmp(gd->name, p) != 0)
             continue;
         Printf("%s %lu %lu %s\r\n", p, gd->high, gd->low, q);
         numfound--;
