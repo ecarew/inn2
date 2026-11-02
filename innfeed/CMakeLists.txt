@@ -14,7 +14,7 @@ flex_target(innfeed_lexer configfile.l ${CMAKE_CURRENT_BINARY_DIR}/config_l.c)
 add_flex_bison_dependency(innfeed_lexer innfeed_config)
 
 set(INNFEED_COMMON
-    article.c buffer.cc endpoint.c host.c innlistener.c main.c misc.cc tape.cc
+    article.c buffer.cc endpoint.c host.c innlistener.cc main.c misc.cc tape.cc
     ${BISON_innfeed_config_OUTPUTS} ${FLEX_innfeed_lexer_OUTPUTS})
 
 set(_sasl)

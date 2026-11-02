@@ -362,7 +362,7 @@ newArticleCommand(EndPoint ep, IoStatus i, Buffer *buffs, void *data)
     char *fileName, *fileNameEnd;
     char *peer, *peerEnd;
     char *cmd, *endc;
-    char *bbase = bufferBase(buffs[0]);
+    char *bbase = static_cast<char *>(bufferBase(buffs[0]));
     size_t blen = bufferDataSize(buffs[0]);
     Buffer *readArray;
     static int checkPointCounter;
