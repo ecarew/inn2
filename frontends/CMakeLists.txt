@@ -1,5 +1,5 @@
-# frontends/ programs — converted from frontends/Makefile.  Scripts generated
-# from .in files (cnfsstat, mailpost, pullnews, ...) are not built here yet.
+# frontends/ programs — converted from frontends/Makefile.  The scripts are
+# generated from their .in files (inn_scripts, cmake/InnPaths.cmake).
 # The ovdb_* programs build as stubs while Berkeley DB support is off.
 
 inn_program(ctlinnd      SOURCES ctlinnd.cc    INNONLY)
@@ -21,3 +21,5 @@ if(INN_OPTIONAL_PROGRAMS)
     inn_program(feedone SOURCES feedone.cc INNONLY)
     inn_program(sys2nf  SOURCES sys2nf.cc  INNONLY)
 endif()
+
+inn_scripts(cnfsheadconf cnfsstat mailpost pullnews scanspool)
