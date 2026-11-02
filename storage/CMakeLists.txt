@@ -48,7 +48,8 @@ target_link_libraries(storage_deps INTERFACE ZLIB::ZLIB SQLite3::SQLite3)
 add_library(INN::storage_deps ALIAS storage_deps)
 
 # Storage tools (storage/Make.methods).  ovsqlite-util is a script generated
-# from ovsqlite-util.in and is not built here yet.
+# from ovsqlite-util.in.
+inn_scripts(ovsqlite/ovsqlite-util)
 inn_program(tdx-util SOURCES tradindexed/tdx-util.cc)
 inn_program(ovsqlite-server
     SOURCES ovsqlite/ovsqlite-server.cc ${ovsqlite_server_sources}
