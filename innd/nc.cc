@@ -9,6 +9,7 @@
 #include "inn/qio.h"
 #include "inn/version.h"
 #include "innd.h"
+#include "article.h"
 
 #define BAD_COMMAND_COUNT 10
 
@@ -1437,15 +1438,13 @@ NCproc(CHANNEL *cp)
             if (*cp->Error != '\0') {
                 if (innconf->remembertrash && (Mode == OMrunning)
                     && HDR_FOUND(HDR__MESSAGE_ID)) {
-                    HDR_LASTCHAR_SAVE(HDR__MESSAGE_ID);
-                    HDR_PARSE_START(HDR__MESSAGE_ID);
+                    HeaderCut cut(hc, HDR__MESSAGE_ID);
                     /* The article posting time has not been parsed.  We cannot
                      * give it to InndHisRemember. */
                     if (!HIScheck(History, HDR(HDR__MESSAGE_ID))
                         && !InndHisRemember(HDR(HDR__MESSAGE_ID), 0))
                         syslog(L_ERROR, "%s cant write history %s %m", LogName,
                                HDR(HDR__MESSAGE_ID));
-                    HDR_PARSE_END(HDR__MESSAGE_ID);
                 }
                 ARTreject(REJECT_OTHER, cp);
                 cp->State = CSgetcmd;
