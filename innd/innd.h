@@ -122,7 +122,8 @@ typedef struct _HDRCONTENT {
     int Length;    /* Length of Value (tailing CRLF is not
                       included).  -1 if duplicated. */
     char LastChar; /* Saved char when the last one is cut during parsing.
-                      Usually '\r' but it may be another char. */
+                      Usually '\r' but it may be another char.  See
+                      hdr_cut in article.h. */
 } HDRCONTENT;
 
 
@@ -130,12 +131,9 @@ typedef struct _HDRCONTENT {
 **  A way to index into the header table.
 */
 #define HDR_FOUND(_x)         (hc[(_x)].Length > 0)
-#define HDR_LASTCHAR_SAVE(_x) hc[(_x)].LastChar = hc[(_x)].Value[hc[_x].Length]
-#define HDR_PARSE_START(_x)   hc[(_x)].Value[hc[_x].Length] = '\0'
 #define HDR(_x)               (hc[(_x)].Value)
 /* HDR_LEN does not includes trailing "\r\n" */
 #define HDR_LEN(_x)           (hc[(_x)].Length)
-#define HDR_PARSE_END(_x)     hc[(_x)].Value[hc[_x].Length] = hc[(_x)].LastChar
 
 
 #define HDR__APPROVED         0
