@@ -16,7 +16,7 @@ specified host.  It is generally used to prepare UUCP feeds, but the
 resulting batches can be used by any application that uses rnews(1) to
 inject the articles.  It is normally invoked by a script run out of cron
 that uses B<shlock> to lock the host, followed by B<ctlinnd> to flush the
-batch file.  See send-uucp(8) for a front-end for B<batcher>.
+batch file.
 
 B<batcher> reads the file I<input>, or standard input if no file is given.
 If I<input> is a relative file name, it is assumed to be in
@@ -154,6 +154,6 @@ Russ Allbery <eagle@eyrie.org> in POD.
 
 =head1 SEE ALSO
 
-ctlinnd(8), inn.conf(5), newsfeeds(5), rnews(1), send-uucp(8), shlock(8).
+ctlinnd(8), inn.conf(5), newsfeeds(5), rnews(1), shlock(8).
 
 =cut
