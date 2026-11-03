@@ -3,7 +3,7 @@ include ../Makefile.global
 top           = ..
 CFLAGS        = $(GCFLAGS)
 
-ALL	      = bunbatch c7unbatch cnfsheadconf cnfsstat ctlinnd decode encode \
+ALL	      = bunbatch cnfsheadconf cnfsstat ctlinnd \
 		getlist gunbatch inews innconfval mailpost pullnews \
 		ovdb_init ovdb_monitor ovdb_server ovdb_stat rnews \
 		scanspool sm
@@ -12,7 +12,7 @@ OPTIONAL      = feedone sys2nf
 
 MAN	      = ../doc/man/mailpost.8
 
-SOURCES	      = ctlinnd.c decode.c encode.c getlist.c inews.c innconfval.c \
+SOURCES	      = ctlinnd.c getlist.c inews.c innconfval.c \
 		ovdb_init.c ovdb_monitor.c ovdb_server.c ovdb_stat.c rnews.c \
 		sm.c
 
@@ -42,9 +42,6 @@ install: all
 	    $(LI_XPUB) $$F $D$(PATHBIN)/$$F ; \
 	done
 	$(CP_XPUB) bunbatch $D$(PATHBIN)/rnews.libexec/bunbatch
-	$(CP_XPUB) c7unbatch $D$(PATHBIN)/rnews.libexec/c7unbatch
-	$(LI_XPUB) decode $D$(PATHBIN)/rnews.libexec/decode
-	$(LI_XPUB) encode $D$(PATHBIN)/rnews.libexec/encode
 	$(CP_XPUB) gunbatch $D$(PATHBIN)/rnews.libexec/gunbatch
 
 bootstrap: $(MAN)
@@ -78,8 +75,6 @@ STORELIBS	= $(BOTH) $(STORAGE_LIBS) $(LIBS)
 FIX		= $(SHELL) $(FIXSCRIPT)
 
 ctlinnd:	ctlinnd.o      $(LIBINN) ; $(LINK) ctlinnd.o      $(INNLIBS)
-decode:		decode.o       $(LIBINN) ; $(LINK) decode.o       $(INNLIBS)
-encode:		encode.o                 ; $(LINK) encode.o
 getlist:	getlist.o      $(LIBINN) ; $(LINK) getlist.o      $(INNLIBS)
 inews:		inews.o        $(LIBINN) ; $(LINK) inews.o        $(INNLIBS)
 innconfval:	innconfval.o   $(LIBINN) ; $(LINK) innconfval.o   $(INNLIBS)
@@ -117,10 +112,6 @@ bunbatch: Makefile ../Makefile.global
 	( echo '#! $(SHELL)' ; echo 'exec $(BZIP2) -d -c' ) > $@
 	chmod 755 bunbatch
 
-c7unbatch: Makefile ../Makefile.global
-	( echo '#! $(SHELL)' ; echo 'decode | $(UNCOMPRESS)' ) > $@
-	chmod 755 c7unbatch
-
 gunbatch: Makefile ../Makefile.global
 	( echo '#! $(SHELL)' ; echo 'exec $(GZIP) -d -c' ) > $@
 	chmod 755 gunbatch
@@ -153,16 +144,6 @@ ctlinnd.o: ctlinnd.c ../include/portable/system.h ../include/config.h \
   ../include/inn/inndcomm.h ../include/inn/system.h \
   ../include/inn/libinn.h ../include/inn/concat.h ../include/inn/xmalloc.h \
   ../include/inn/xwrite.h ../include/inn/messages.h ../include/inn/paths.h
-decode.o: decode.c ../include/portable/system.h ../include/config.h \
-  ../include/inn/macros.h ../include/inn/portable-macros.h \
-  ../include/inn/options.h ../include/inn/system.h \
-  ../include/portable/stdbool.h ../include/portable/macros.h \
-  ../include/portable/stdbool.h ../include/inn/messages.h
-encode.o: encode.c ../include/portable/system.h ../include/config.h \
-  ../include/inn/macros.h ../include/inn/portable-macros.h \
-  ../include/inn/options.h ../include/inn/system.h \
-  ../include/portable/stdbool.h ../include/portable/macros.h \
-  ../include/portable/stdbool.h
 getlist.o: getlist.c ../include/portable/system.h ../include/config.h \
   ../include/inn/macros.h ../include/inn/portable-macros.h \
   ../include/inn/options.h ../include/inn/system.h \
