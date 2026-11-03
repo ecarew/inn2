@@ -113,7 +113,6 @@ backends/nntpget
 backends/nntpsend
 backends/overchan
 backends/send-ihave
-backends/send-uucp
 backends/sendinpaths
 backends/sendxbatches
 backends/shlock
@@ -160,12 +159,9 @@ expire/makedbz
 expire/makehistory
 expire/prunehistory
 frontends/bunbatch
-frontends/c7unbatch
 frontends/cnfsheadconf
 frontends/cnfsstat
 frontends/ctlinnd
-frontends/decode
-frontends/encode
 frontends/feedone
 frontends/getlist
 frontends/gunbatch
@@ -269,7 +265,6 @@ site/ovdb.conf
 site/ovsqlite.conf
 site/passwd.nntp
 site/readers.conf
-site/send-uucp.cf
 site/startup_innd.pl
 site/storage.conf
 site/subscriptions
