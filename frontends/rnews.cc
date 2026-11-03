@@ -884,7 +884,6 @@ main(int ac, char *av[])
 
     if (!innconf_read(nullptr))
         exit(1);
-    UUCPHost = getenv(INN_ENV_UUCPHOST);
     PathBadNews = concatpath(innconf->pathincoming, INN_PATH_BADNEWS);
     port = innconf->nnrpdpostport;
 
