@@ -1,22 +1,49 @@
-# Welcome to the InterNetNews project!
+# INN++
 
-## INN 2.8
+INN++ is the InterNetNews news server converted from C to C++.  It starts
+from [INN](https://github.com/InterNetNews/inn) 2.8.0, the development
+version on the InterNetNews `main` branch (commit `6843efceb`), and
+modernizes it in two ways: the source compiles with any C++20 (or later)
+compiler, and the GNU Autoconf and Make build is replaced by CMake.
 
-Our `main` branch is for the current development of the next INN 2.8
-major release.  Head to the `2.7` branch for the maintenance of the
-most recently released stable version.
+INN++ is an independent project, not a release of the InterNetNews project
+(see [Who's Responsible](#whos-responsible--who-to-thank)).  It is under
+active development and may or may not be stable at any given time; build
+from a tagged release (see [Download](#download)).  Contributions and bug
+reports are welcome and encouraged.
 
-This code is under active development and may or may not be
-stable at any given time.  Contributions and bug reports are welcome
-and encouraged.
+## Conversion goals
 
-This work is sponsored by Internet Systems Consortium.
+- **Same server.**  INN++ behaves as INN does: the same programs, the same
+  NNTP protocol support, and the same configuration and data files, so an
+  INN installation can move to INN++ without changes.  Upstream bugs found
+  along the way are fixed or recorded, not silently changed.
+- **C++20.**  Every program and library is compiled as C++20.  The standard
+  library comes first, then Boost (header-only), then INN's own code;
+  legacy C functions with standard C++ replacements are removed once
+  nothing uses them.
+- **CMake only.**  CMake 4.3 or later builds, tests and installs INN++, and
+  generates everything `configure` used to.  Autoconf and Make are removed
+  once CMake covers all of it.
+- **Portable by feature tests.**  macOS and Linux both build and pass the
+  tests; platform differences are chosen by feature tests, never by
+  platform name.  A BSD is next.
+- **Tested before it changes.**  A directory is converted only once its
+  programs are run by tests and it reaches a minimum line coverage, and
+  every commit is checked against the test suite and a live news server
+  test.  The tests stay in C.
+- **Secure by default.**  No INN++ program runs as root in production
+  except for a brief start-up before dropping privileges; innbind is the
+  only setuid-root file.  Memory errors found during the conversion
+  (buffer overflows, double frees) are fixed.
+- **Hooks unchanged.**  INN's Perl and Python filters and authentication
+  hooks, and the Perl and shell scripts, keep working as they are; they are
+  not converted.
+- **Then refactor.**  Once the conversion is complete, the code moves
+  towards classes and modern C++ in separate, tested steps.
 
-The official homepage of the project is
-<https://www.isc.org/othersoftware/>.
-
-You'll also find very useful information about INN on [Russ Allbery's
-web site](https://www.eyrie.org/~eagle/software/inn/).
+You'll also find very useful information about the original INN on [Russ
+Allbery's web site](https://www.eyrie.org/~eagle/software/inn/).
 
 Please see:
 
@@ -99,25 +126,26 @@ volunteers around the world.  See
 
 # Prerequisites
 
-Compiling INN requires an ANSI C compiler (**gcc** is recommended).  INN was
-originally written in K&R C, but supporting pre-ANSI compilers has become
-enough of a headache that a lot of the newer parts of INN will no longer
-compile with a non-ANSI compiler.  **gcc** itself will compile with most
-vendor non-ANSI compilers, however, so if you're stuck with one,
-installing **gcc** is highly recommended.  Not only will it let you build INN,
-it will make installing lots of other software much easier.  You may also
-need GNU **make** (particularly if your system **make** is BSD-derived), although
-most SysV **make** programs should work fine.  Compiling INN also currently
-requires a **yacc** implementation (**bison** will do fine).
+Compiling INN++ requires a C++20 compiler.  It is built and tested with
+**clang** (Apple clang 21 on macOS) and **gcc** (GCC 14 on Debian trixie);
+any compiler with good C++20 support should work.  The Boost libraries,
+1.92 or later, are also required, but only their headers: INN++ links
+against no Boost library.  Compiling INN++ also requires **bison** and
+**flex** for the **innfeed** configuration parser.
 
-INN uses GNU **autoconf** to probe the capabilities of your
-system, and therefore should compile on nearly any Unix
-system.  It does, however, make extensive use of mmap(),
-which can cause problems on some older operating systems.  See
-[INSTALL](https://www.eyrie.org/~eagle/software/inn/docs/install.html)
-for a list of systems it is known to work on.  If you encounter problems
-compiling or running INN, or if you successfully run INN on a platform
-that isn't listed in `INSTALL`, please let us know (see
+INN++ is built with **CMake** 4.3 or later, which probes the capabilities
+of your system in place of the GNU **autoconf** `configure` script of the
+original INN.  A typical build is:
+
+    cmake -S . -B build
+    cmake --build build
+    ctest --test-dir build
+
+**CMake** can drive **make**, **ninja** or another build tool of your choice
+(`cmake -G Ninja`).  INN++ makes extensive use of mmap(), which can cause
+problems on some older operating systems.  If you encounter problems
+compiling or running INN++, or if you successfully run it on a platform
+other than macOS and Linux, please let us know (see
 [Reporting Bugs](#reporting-bugs) below).
 
 Perl 5.8.0 or later is required to build INN, run several subsystems,
@@ -156,14 +184,22 @@ things that are unclear, please send them to the INN maintainers (see
 
 ## Download
 
-Source code tarballs of the official releases can be downloaded from
-<https://downloads.isc.org/isc/inn/>.  The InterNetNews project does
-not distribute releases in binary form.  Yet, precompiled versions may
-exist on your operating system.
+INN++ is developed on GitHub at <https://github.com/ecarew/inn2>.  Releases
+are published as tags there; source archives of each one are on the
+[releases page](https://github.com/ecarew/inn2/releases) and the
+[tags page](https://github.com/ecarew/inn2/tags).  Please build from a
+tagged release rather than from a branch: the branches are under active
+development and may not be stable at any given time.  To check out a
+release with Git:
 
-When installing a new INN server, you may wish to download the latest
-snapshot of the stable branch rather than the last official release,
-so as to pick up possible bug fixes.
+    git clone https://github.com/ecarew/inn2.git
+    cd inn2
+    git checkout <tag>
+
+INN++ is not distributed in binary form.
+
+The original INN, written in C and built with **autoconf**, is released
+by the InterNetNews project at <https://downloads.isc.org/isc/inn/>.
 
 ## Build and Install
 
@@ -191,59 +227,58 @@ documentation)
 # Reporting Bugs
 
 We're interested in all bug reports.  Not just on the programs, but on the
-documentation too.  Please use the GitHub issue tracker to send such
-non-security bug reports, or alternatively send them to
+documentation too.  Please report non-security bugs on the project's
+GitHub issue tracker:
 
-    inn-workers@lists.isc.org
+    https://github.com/ecarew/inn2/issues
 
 (patches are certainly welcome, see below).  Even if you post to Usenet,
-please CC the above address.
+please open an issue there as well.
 
-Security issues must be reported through a
-dedicated private form on the [GitHub Security
-Advisories](https://github.com/InterNetNews/inn/security/advisories/) of the
-project as they should not be made public until a fix is deployed.
+INN++ is independent of the original INN (see
+[Who's Responsible](#whos-responsible--who-to-thank)): please don't send
+INN++ bug reports to the InterNetNews project or its maintainers.
+
+Security issues must be reported through the private form on the project's
+[GitHub Security
+Advisories](https://github.com/ecarew/inn2/security/advisories/) page, as
+they should not be made public until a fix is deployed.
 
 If you have general "how do I do this" questions or problems configuring
-your server that you don't believe are due to a bug in INN, you should
-post them to news.software.nntp.  A lot of experienced INN users,
-including several of the INN maintainers, read that newsgroup regularly.
-Please don't send general questions to the above addresses; those
-addresses are specifically for INN, and the INN maintainers usually won't
-have time to answer general questions.
+your server that you don't believe are due to a bug in INN++, you can post
+them to news.software.nntp, where many experienced INN users read.  Please
+say that you are running INN++, not the original INN.
 
 # Testing and Development
 
 ## Source Code
 
-INN is maintained using the Git version control system.
-The official InterNetNews Git repository is located at
-<https://github.com/InterNetNews/inn>.  A local copy of the current
-development source can be obtained by cloning it using a Git client:
+INN++ is maintained using the Git version control system.  Its repository
+is located at <https://github.com/ecarew/inn2>.  A local copy of the
+current development source can be obtained by cloning it using a Git
+client:
 
-    git clone https://github.com/InterNetNews/inn.git
+    git clone https://github.com/ecarew/inn2.git
 
-You can also download [daily
-snapshots](https://archives.eyrie.org/software/inn/snapshots/) produced
-only if the current code compiles and passes the test suite, so they
-have undergone at least some basic validation, although they've not
-been tested by a human.
+For the history of the original INN, from which INN++ was converted, see
+the InterNetNews Git repository at <https://github.com/InterNetNews/inn>.
+Its [daily snapshots](https://archives.eyrie.org/software/inn/snapshots/)
+are of the original INN, not INN++.
 
 ## Contributing Code
 
 If you have a non-security patch or a utility that you'd like to be considered
-for inclusion into INN, please make a GitHub pull request, or alternatively
-mail it to
+for inclusion into INN++, please open a pull request on the project's GitHub
+repository:
 
-    inn-workers@lists.isc.org
+    https://github.com/ecarew/inn2/pulls
 
-in the body of the message (not as an attachment because the mailing-list
-might strip it), or put it on a webpage and send a link.  Patches included
-with a bug report as described above should follow the same procedure.
+Patches included with a bug report as described above should follow the
+same procedure.
 
 Patches related to security issues must not be made
 public.  A dedicated private form on the [GitHub Security
-Advisories](https://github.com/InterNetNews/inn/security/advisories/) of the
+Advisories](https://github.com/ecarew/inn2/security/advisories/) of the
 project must be used instead.
 
 Please submit all patches against the current main branch, not against a
@@ -256,65 +291,21 @@ for information about development and coding style.
 
 Have fun!
 
-# Mailing Lists
-
-There are various INN-related mailing lists you can join or send messages
-to if you like.  Some of them you must be a member of before you can send
-mail to them (thank the spammers for that policy), and one of them is
-read-only (no postings allowed).
-
-- **inn-announce@lists.isc.org**
-
-  Where announcements about INN are sent (only maintainers may post).
-
-  URL: <https://lists.isc.org/mailman/listinfo/inn-announce>
-
-- **inn-workers@lists.isc.org**
-
-  Discussion of INN development.  If you prefer not to use GitHub to create
-  an issue or a pull request, it is also where to send bug reports and
-  patches for consideration for inclusion into INN (postings by members
-  only).  If you're an INN expert and have the time to help out other
-  users, we encourage you to join this mailing list to answer questions.
-  (You may also want to read the newsgroup news.software.nntp, which gets
-  a lot of INN-related questions.)
-
-  URL: <https://lists.isc.org/mailman/listinfo/inn-workers>
-
-- **inn-committers@lists.isc.org**
-
-  Git commit messages for INN are sent to this list (only the automated
-  messages are sent here, no regular posting).
-
-  URL: <https://lists.isc.org/mailman/listinfo/inn-committers>
-
-- **inn-bugs@lists.isc.org**
-
-  This list used to receive Trac issues for INN, before the migration to GitHub
-  (only the automated messages were sent here, no regular posting).  Bug reports
-  should be sent to the inn-workers mailing list, or a GitHub issue created.
-
-  URL: <https://lists.isc.org/mailman/listinfo/inn-bugs>
-
-To join these lists, send a subscription request to the `-request`
-address.  The addresses for the above lists are:
-
-    inn-announce-request@lists.isc.org
-    inn-workers-request@lists.isc.org
-    inn-committers-request@lists.isc.org
-    inn-bugs-request@lists.isc.org
-
-You can alternatively join them from the subscription form in their
-public web pages.
-
 # Who's Responsible / Who to Thank
 
-See
+INN++ is maintained by Evan Carew on GitHub at
+<https://github.com/ecarew/inn2>; see its
+[contributors page](https://github.com/ecarew/inn2/graphs/contributors) for
+everyone who has worked on it.
+
+INN++ is built on the original INN, but it is an independent project: the
+InterNetNews maintainers and Internet Systems Consortium do not develop or
+support it and have no obligation to do so.  Please report INN++ problems
+here, not to them.  See
 [CONTRIBUTORS](https://www.eyrie.org/~eagle/software/inn/docs/contributors.html)
-for a long list of past contributors as well as people from the
-inn-workers mailing list who have dedicated a lot of time and effort to
-getting this new version together.  They deserve a big round of applause.
-They've certainly got our thanks.
+for a long list of INN's past contributors as well as people from the
+inn-workers mailing list who dedicated a lot of time and effort to it.
+They deserve a big round of applause.  They've certainly got our thanks.
 
 This product includes software developed by UUNET Technologies, Inc. and
 by the University of California, Berkeley and its contributors.
