@@ -100,8 +100,6 @@ $pgp = '@PGP@';
 $sort = '@SORT@';
 $getftp = "@PATH_GETFTP@";
 $gethttp = "@PATH_GETHTTP@";
-$uustat = '@UUSTAT@';
-$uux = '@UUX@';
 
 $bzip2 = '@BZIP2@';
 $compress = '@COMPRESS@';
