@@ -52,7 +52,8 @@ A distribution's own package works once it is 1.92 or later.
 **Optional:** `ccache` (used automatically when installed), PAM, Cyrus SASL
 and Kerberos development files (found if present: `libpam0g-dev`,
 `libsasl2-dev`, `libkrb5-dev` on Debian).  Perl and Python filters, TLS,
-Berkeley DB (ovdb), libcanlock and systemd are not yet wired into CMake.
+Berkeley DB (ovdb) and systemd are not yet wired into CMake.  libcanlock
+(Cancel-Lock) is used when it is installed.
 
 ## Build
 
@@ -65,7 +66,19 @@ cmake --build build
 
 That builds INN's programs (49, or 48 without Kerberos: auth_krb5) and its
 three libraries.  CMake runs its own platform checks and generates
-`config.h` and the other generated files into `build/`.
+`config.h`, the sample configuration files, the scripts, innshellvars and
+INN::Config into `build/`.
+
+Build options (`-D<option>=<value>` on the first `cmake` command):
+
+- `INN_PREFIX` (default `/usr/local/news`): where INN lives; the other
+  directories follow it.
+- `INN_LOG_COMPRESS` (default `gzip`): how old logs are compressed:
+  `gzip`, `bzip2`, `compress` or `cat`.
+- `INN_CONTRIB` (default `OFF`): build the programs in `contrib/`.
+- `INN_OPTIONAL_PROGRAMS` (default `OFF`): build feedone and sys2nf.
+- `INN_KEYWORDS` (default `OFF`): generate Keywords for overview.
+- `INN_TESTS` (default `ON`): build the tests.
 
 ## Test
 
