@@ -433,16 +433,6 @@ overrides the automatic detection.  Be sure to specify a facility not used
 by anything else on your system (one of LOG_LOCAL0 through LOG_LOCAL7, for
 example).
 
-=item B<--enable-uucp-rnews>
-
-If this option is given to C<configure>, B<rnews> will be installed setuid
-C<news>, owned by group C<uucp>, and mode C<4550>.  This will allow the
-UUCP subsystem to run B<rnews> to process UUCP batches of news articles.
-Prior to S<INN 2.3>, installing B<rnews> setuid C<news> was standard; since
-most sites no longer use UUCP, it is no longer the default as of S<INN 2.3>
-and must be requested at configure time.  You probably don't want to use
-this option unless your server accepts UUCP news batches.
-
 =item B<--enable-setgid-inews>
 
 If this option is given to C<configure>, B<inews> will be installed setgid
