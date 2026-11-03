@@ -15,6 +15,7 @@
 /NEWS
 /README
 /README.*
+!/README.md
 /snapshot.log
 /authprogs/auth_krb5
 /authprogs/ckpasswd
