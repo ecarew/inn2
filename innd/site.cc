@@ -16,6 +16,14 @@ static int SITEhead = NOSITE;
 static int SITEtail = NOSITE;
 static char SITEshell[] = "/bin/sh";
 
+/* Append a value given as pointer and length (a header field value, or a
+   field of the article's ArticleState). */
+static void
+buffer_append(struct buffer *bp, std::string_view s)
+{
+    buffer_append(bp, s.data(), s.size());
+}
+
 
 /*
 **  Called when input is ready to read.  Shouldn't happen.
@@ -363,8 +371,7 @@ SITEwritefromflags(SITE *sp, ARTDATA *Data)
         case FEED_BYTESIZE:
             if (Dirty)
                 buffer_append(bp, ITEMSEP, strlen(ITEMSEP));
-            buffer_append(bp, Data->State->bytes_value().data(),
-                          Data->State->bytes_value().size());
+            buffer_append(bp, Data->State->bytes_value());
             break;
         case FEED_FULLNAME:
         case FEED_NAME:
@@ -382,25 +389,22 @@ SITEwritefromflags(SITE *sp, ARTDATA *Data)
         case FEED_HDR_DISTRIB:
             if (Dirty)
                 buffer_append(bp, ITEMSEP, strlen(ITEMSEP));
-            buffer_append(bp, HDR(HDR__DISTRIBUTION),
-                          HDR_LEN(HDR__DISTRIBUTION));
+            buffer_append(bp, hdr_view(hc, HDR__DISTRIBUTION));
             break;
         case FEED_HDR_NEWSGROUP:
             if (Dirty)
                 buffer_append(bp, ITEMSEP, strlen(ITEMSEP));
-            buffer_append(bp, HDR(HDR__NEWSGROUPS), HDR_LEN(HDR__NEWSGROUPS));
+            buffer_append(bp, hdr_view(hc, HDR__NEWSGROUPS));
             break;
         case FEED_HEADERS:
             if (Dirty)
                 buffer_append(bp, NL, strlen(NL));
-            buffer_append(bp, Data->State->headers.data(),
-                          Data->State->headers.size());
+            buffer_append(bp, Data->State->headers);
             break;
         case FEED_OVERVIEW:
             if (Dirty)
                 buffer_append(bp, ITEMSEP, strlen(ITEMSEP));
-            buffer_append(bp, Data->State->overview.data(),
-                          Data->State->overview.size());
+            buffer_append(bp, Data->State->overview);
             break;
         case FEED_PATH:
             if (Dirty)
@@ -412,17 +416,18 @@ SITEwritefromflags(SITE *sp, ARTDATA *Data)
                 if (Data->AddAlias)
                     buffer_append(bp, Pathalias.data, Pathalias.used);
             }
-            if (Data->Hassamecluster)
-                buffer_append(bp, HDR(HDR__PATH) + Pathcluster.used,
-                              HDR_LEN(HDR__PATH) - Pathcluster.used);
-            else
-                buffer_append(bp, HDR(HDR__PATH), HDR_LEN(HDR__PATH));
+            {
+                std::string_view path = hdr_view(hc, HDR__PATH);
+                /* The Path starts with the cluster's name, sent above. */
+                if (Data->Hassamecluster)
+                    path.remove_prefix(Pathcluster.used);
+                buffer_append(bp, path);
+            }
             break;
         case FEED_REPLIC:
             if (Dirty)
                 buffer_append(bp, ITEMSEP, strlen(ITEMSEP));
-            buffer_append(bp, Data->State->replic.data(),
-                          Data->State->replic.size());
+            buffer_append(bp, Data->State->replic);
             break;
         case FEED_STOREDGROUP:
             if (Dirty)
@@ -454,7 +459,7 @@ SITEwritefromflags(SITE *sp, ARTDATA *Data)
         case FEED_MESSAGEID:
             if (Dirty)
                 buffer_append(bp, ITEMSEP, strlen(ITEMSEP));
-            buffer_append(bp, HDR(HDR__MESSAGE_ID), HDR_LEN(HDR__MESSAGE_ID));
+            buffer_append(bp, hdr_view(hc, HDR__MESSAGE_ID));
             break;
         case FEED_FNLNAMES:
             if (sp->FNLnames.left != 0) {
