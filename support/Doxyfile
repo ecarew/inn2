@@ -6,7 +6,10 @@ PROJECT_NAME           = "INN++"
 PROJECT_BRIEF          = "INN converted to C++ and CMake"
 OUTPUT_DIRECTORY       = build-doxygen
 
-INPUT                  = innd lib history storage include
+# All of INN's sources; not tests/ (C test programs), cmake/ (feature
+# checks) or support/.
+INPUT                  = include lib history storage innd nnrpd innfeed \
+                         frontends backends expire control authprogs contrib
 FILE_PATTERNS          = *.cc *.c *.h
 RECURSIVE              = YES
 EXCLUDE_PATTERNS       = */build*/*
