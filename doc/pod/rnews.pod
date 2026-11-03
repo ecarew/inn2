@@ -58,18 +58,13 @@ given, B<rnews> will try to execute a program with that name, looking
 for it in the directory I<pathbin>/rnews.libexec.  The rest of the
 batch will be fed to that program's standard input, and the standard
 output from the program will be treated as if it were the original
-input to B<rnews>.  INN comes with three such standard batch processors:
+input to B<rnews>.  INN comes with two such standard batch processors:
 
 =over 2
 
 =item B<bunbatch>
 
 It invokes B<bzip2> and should be used for batches compressed with B<bzip2>.
-
-=item B<c7unbatch>
-
-It undoes an ASCII encoding to recover the original binary compressed stream
-and then decompresses it as explained above.
 
 =item B<gunbatch>
 
@@ -104,12 +99,9 @@ Path header field body of each article rejected as a duplicate by the server.
 =item B<-h> I<host>
 
 If B<-h> is given, B<rnews> will log the message ID and I<host> via syslog
-for each article that it offers to the server.  This is used in
-conjunction with a UUCP feed to get a log of the messages received via
-that feed.  This will also be done if the environment variable UU_MACHINE
-is set, but will only be done if I<host> is not an empty string.  (You can
-therefore turn off logging even if UU_MACHINE will be set by passing the
-flag C<-h ''> to B<rnews>.)
+for each article that it offers to the server.  This gives a log
+of the messages received from that host.  Nothing is logged if I<host> is
+an empty string.
 
 =item B<-N>
 
