@@ -810,6 +810,31 @@ the per-article loop):
      `string_view` accessors for consumers that take pointer and length
      (site.cc, python.cc, ARTstore's iovecs).  No copies; benchmark only to
      confirm no slowdown.
+     Done 2026-11-03.  Tests first (live-innd.sh): an article over
+     maxartsize is refused and remembered; remembertrash answers 435 to a
+     refused article offered again; the news log names a refused article
+     by its Message-ID; with `logipaddr: false` ARTlogreject logs under the
+     first Path host.  Then article.h's `hdr_cut`/`hdr_restore` (and
+     `_all`), `HeaderCut` (one field for a scope) and `HeadersRestored`
+     (every field put back for a scope, cut again at its end) replace the
+     three macros, which are gone from innd.h.  ARTclean still cuts every
+     field for the rest of the article; ARTpost wraps its ARTstore call in
+     `HeadersRestored` instead of ARTstore restoring partway through and
+     ARTpost cutting again (ARTstore only takes pointers and lengths before
+     SMstore, so this is the same; its unreachable early return used to
+     leave the fields cut, so the re-cut saved a NUL as LastChar).
+     site.cc appends feed fields through `hdr_view` and a `string_view`
+     `buffer_append`.  Not done: python.cc (Python filters are not built
+     by CMake yet, so a change could not be compiled or tested) and
+     ARTstore, whose header pointers are positions for splicing the
+     article, not values.  Found on the way: a duplicated field's Length
+     is -1, which would be a huge `size_t` to `buffer_append`, but only
+     required fields get -1 and ARTclean refuses those articles first.
+     Same stored articles and feed files before and after (masking
+     arrival times and generated Message-IDs).  Benchmark: 20,000 articles
+     streamed with TAKETHIS, five alternating runs, median 3.19 s before
+     and 3.10 s after (noise).  ctest 86/86, live test also under
+     ASan/UBSan, Linux checks pass.
    The full move to views waits until the C-string consumers take
    pointer and length.
 
