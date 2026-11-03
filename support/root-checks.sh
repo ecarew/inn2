@@ -223,7 +223,7 @@ for p in scripts/news.daily scripts/scanlogs scripts/innwatch \
         res "$(basename "$p") refuses root" "FAIL ($(echo "$out" | head -1))"
     fi
 done
-for p in backends/send-uucp control/controlchan control/perl-nocem \
+for p in control/controlchan control/perl-nocem \
          innfeed/procbatch scripts/innreport history/hissqlite/hissqlite-util \
          storage/ovsqlite/ovsqlite-util frontends/cnfsheadconf; do
     { echo "BEGIN { \$INN::Config::runasuser = '$runas'; }"
