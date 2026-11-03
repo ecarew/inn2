@@ -1109,12 +1109,9 @@ sub checkperm {
               if $fix;
         }
         if ($group ne $g) {
-            # rnews may be setuid news and owned by group uucp.
-            if ($f !~ /\/rnews$/ or $group ne 'uucp') {
-                eprint "$pfx$f:0: in group $group, should be $g\n";
-                print "chgrp $g $f\n"
-                  if $fix;
-            }
+            eprint "$pfx$f:0: in group $group, should be $g\n";
+            print "chgrp $g $f\n"
+              if $fix;
         }
         if ((($mode & @$m[0]) ne @$m[0]) or (($mode | @$m[1]) ne @$m[1])) {
             eprint sprintf "$pfx$f:0: mode %o, should be between %o and %o\n",
@@ -1161,13 +1158,13 @@ my @directories = qw(
     archive badnews batchdir ctlprogs most_logs newsbin newsetc newslib
     oldlogs rnewsprogs spooltemp spool spoolnews
 );
-my @rnews_programs = qw(bunbatch c7unbatch decode encode gunbatch);
+my @rnews_programs = qw(bunbatch gunbatch);
 my @newsbin_public = qw(
     actmerge actsync actsyncd archive batcher buffchan cnfsstat controlbatch
     controlchan convdate cvtbatch delayer docheckgroups fastrm getlist
     grephistory innconfval inndf innmail innreport innxbatch innxmit mailpost
     news2mail ninpaths nntpget nntpsend perl-nocem pgpverify pullnews
-    scanspool send-ihave sendinpaths send-uucp sendxbatches shlock shrinkfile
+    scanspool send-ihave sendinpaths sendxbatches shlock shrinkfile
     simpleftp sm tinyleaf
 );
 my @newsbin_private = qw(
