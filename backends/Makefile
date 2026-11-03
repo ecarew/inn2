@@ -6,10 +6,10 @@ CFLAGS        = $(GCFLAGS)
 ALL           = actmerge actsync actsyncd archive batcher buffchan \
 		cvtbatch delayer innbind inndf innxmit innxbatch mod-active \
 		news2mail ninpaths nntpget nntpsend overchan send-ihave \
-		send-uucp sendinpaths sendxbatches shlock \
+		sendinpaths sendxbatches shlock \
 		shrinkfile
 
-MAN	      = ../doc/man/delayer.8 ../doc/man/send-uucp.8
+MAN	      = ../doc/man/delayer.8
 
 SOURCES       = actsync.c archive.c batcher.c buffchan.c cvtbatch.c \
 		innbind.c inndf.c innxbatch.c innxmit.c \
@@ -22,7 +22,7 @@ warnings:
 
 install: all
 	for F in actmerge actsyncd delayer news2mail nntpsend send-ihave \
-	         send-uucp sendinpaths sendxbatches ; do \
+	         sendinpaths sendxbatches ; do \
 	    $(CP_XPUB) $$F $D$(PATHBIN)/$$F ; \
 	done
 	$(CP_XPRI) mod-active $D$(PATHBIN)/mod-active
@@ -102,7 +102,6 @@ mod-active:	mod-active.in    $(FIXSCRIPT)	; $(FIX) mod-active.in
 news2mail:	news2mail.in     $(FIXSCRIPT)	; $(FIX) news2mail.in
 nntpsend:	nntpsend.in      $(FIXSCRIPT)	; $(FIX) nntpsend.in
 send-ihave:	send-ihave.in    $(FIXSCRIPT)	; $(FIX) send-ihave.in
-send-uucp:	send-uucp.in     $(FIXSCRIPT)	; $(FIX) send-uucp.in
 sendinpaths:	sendinpaths.in   $(FIXSCRIPT)	; $(FIX) sendinpaths.in
 sendxbatches:	sendxbatches.in  $(FIXSCRIPT)	; $(FIX) sendxbatches.in
 
@@ -113,8 +112,6 @@ $(LIBHIST):	; (cd ../history ; $(MAKE))
 ../doc/man/delayer.8: delayer.in
 	$(POD2MAN) -s 8 -n "DELAYER" $? > $@
 
-../doc/man/send-uucp.8: send-uucp.in
-	$(POD2MAN) -s 8 -n "SEND-UUCP" $? > $@
 
 
 ##  Dependencies.  Default list, below, is probably good enough.

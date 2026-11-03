@@ -18,5 +18,5 @@ inn_program(shlock     SOURCES shlock.cc     INNONLY)
 inn_program(shrinkfile SOURCES shrinkfile.cc INNONLY)
 
 inn_scripts(actmerge actsyncd mod-active news2mail nntpsend send-ihave
-            send-uucp sendinpaths sendxbatches)
+            sendinpaths sendxbatches)
 inn_scripts(delayer NOLIB)
