@@ -1183,6 +1183,23 @@ ihave_nul() {
 }
 ihave_nul bad-nulhdr@live.test ihave-nulhdr.out 'Subject: nul\0here\r\n\r\nBody.\r\n'
 ihave_nul bad-nulbody@live.test ihave-nulbody.out 'Subject: nul body\r\n\r\nBo\0dy.\r\n'
+# An article over maxartsize (the sample's 1000000): refused while it is
+# read, and its Message-ID remembered so it is not offered again.
+{ printf 'IHAVE <bad-huge@live.test>\r\n'
+  printf '%s\r\n' 'Path: live.test!not-for-mail' 'From: tester@live.test' \
+      'Newsgroups: test.live' 'Subject: huge' 'Message-ID: <bad-huge@live.test>' \
+      "Date: $now" ''
+  yes "$(printf '%075d' 0)" | head -n 15000 | sed 's/$/\r/'
+  printf '.\r\nQUIT\r\n'; } | nc -w 10 127.0.0.1 "$port" >"$tmp/ihave-huge.out" 2>&1
+# reoffer ID FILE: offer <ID> again; innd's reply goes to $tmp/FILE.
+reoffer() {
+    printf 'IHAVE <%s>\r\nQUIT\r\n' "$1" \
+        | nc -w 10 127.0.0.1 "$port" >"$tmp/$2" 2>&1
+}
+# remembertrash (the sample's true): a refused article's Message-ID is
+# remembered too.
+reoffer bad-nulhdr@live.test reoffer-nul.out
+reoffer bad-huge@live.test reoffer-huge.out
 send_raw "$std
 Subject: bad lines
 Message-ID: <bad-lines@live.test>
@@ -1240,6 +1257,12 @@ label="innd rejects a NUL in a header field or the body"
 ok sh -c "grep -q '^437 Nul character in header' '$tmp/ihave-nulhdr.out' && grep -q '^437 Nul character in body' '$tmp/ihave-nulbody.out'"
 label="an article with a NUL is not stored"
 ok sh -c "for id in bad-nulhdr bad-nulbody; do ! '$bin/frontends/sm' \"\$('$bin/expire/grephistory' \"<\$id@live.test>\" 2>/dev/null)\" >/dev/null 2>&1 || exit 1; done"
+label="innd rejects an article over maxartsize"
+ok grep -q '^437 Article of [0-9]* bytes exceeds local limit of 1000000 bytes' "$tmp/ihave-huge.out"
+label="the news log names a refused article by its Message-ID"
+ok sh -c "grep -q ' - [^ ]* <bad-huge@live.test> 437 Article of ' '$tmp/log/news' && grep -q ' - [^ ]* <bad-nulhdr@live.test> 437 Nul character in header' '$tmp/log/news'"
+label="innd remembers a refused article (remembertrash)"
+ok sh -c "grep -q '^435 ' '$tmp/reoffer-nul.out' && grep -q '^435 ' '$tmp/reoffer-huge.out'"
 label="innd rejects a wrong Lines count (linecountfuzz)"
 ok rejected 'bad-lines@live.test.* Linecount 9 != 1 +- 1'
 label="innd rejects a bad Date and a bad Injection-Date"
@@ -1271,7 +1294,10 @@ fi
 # A slave server files each article under the numbers in its Xref header
 # field (ARTxrefslave) instead of assigning its own.  Restart innd so.
 
-sed -i.bak 's|^xrefslave:.*|xrefslave: true|' "$INNCONF" && rm -f "$INNCONF.bak"
+# logipaddr false too: the news log then names the sender of a refused
+# article by the first host in its Path (ARTlogreject).
+sed -i.bak -e 's|^xrefslave:.*|xrefslave: true|' \
+    -e 's|^logipaddr:.*|logipaddr: false|' "$INNCONF" && rm -f "$INNCONF.bak"
 "$bin/innd/innd" -f >>"$tmp/innd.out" 2>&1 &
 innd_pid=$!
 up=false
@@ -1293,6 +1319,8 @@ send_art slave-501 test.live 'Xref: master.test test.live:501 bad-entry'
 send_art slave-noxref test.live
 send_art slave-nogroup test.live 'Xref: master.test no.such.group:7'
 send_art slave-noentries test.live 'Xref: master.test'
+# Refused while it is parsed, so logged by ARTlogreject.
+ihave_nul slave-nul@live.test ihave-slavenul.out 'Subject: nul\0here\r\n\r\nBody.\r\n'
 ctl flush ''
 sleep 1
 ov=$("$bin/storage/tdx-util" -o -n test.live 2>/dev/null)
@@ -1302,6 +1330,8 @@ label="xrefslave skips a malformed Xref entry, files the rest"
 ok sh -c "printf '%s\n' \"\$1\" | grep -q '^501	.*slave-501'" _ "$ov"
 label="xrefslave rejects an article without Xref"
 ok grep -q 'Xref header field required in xrefslave mode' "$tmp/log/news"
+label="without logipaddr, a refusal is logged under the first Path host"
+ok grep -q ' - live.test <slave-nul@live.test> 437 Nul character in header' "$tmp/log/news"
 label="xrefslave rejects an Xref with no known group or no entries"
 ok sh -c "[ \$(grep -c 'Xref header field \"master.test[^\"]*\" invalid in xrefslave mode' '$tmp/log/news') -ge 2 ]"
 
