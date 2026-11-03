@@ -43,7 +43,6 @@
 /backends/overchan
 /backends/send-ihave
 /backends/send-nntp
-/backends/send-uucp
 /backends/sendinpaths
 /backends/sendxbatches
 /backends/shlock
@@ -101,12 +100,9 @@
 /expire/makehistory
 /expire/prunehistory
 /frontends/bunbatch
-/frontends/c7unbatch
 /frontends/cnfsheadconf
 /frontends/cnfsstat
 /frontends/ctlinnd
-/frontends/decode
-/frontends/encode
 /frontends/feedone
 /frontends/getlist
 /frontends/gunbatch
