@@ -17,7 +17,12 @@ reports are welcome and encouraged.
 - **Same server.**  INN++ behaves as INN does: the same programs, the same
   NNTP protocol support, and the same configuration and data files, so an
   INN installation can move to INN++ without changes.  Upstream bugs found
-  along the way are fixed or recorded, not silently changed.
+  along the way are fixed or recorded, not silently changed.  The one
+  deliberate exception is UUCP, now a historical footnote: the UUCP-only
+  parts (send-uucp, the 7-bit encode/decode batch tools and c7unbatch,
+  setuid rnews for the uucp group, and the uux/uustat settings) are taken
+  out.  What current processing still needs stays, notably **rnews** and
+  the `#! rnews` batch format with gzip and bzip2 batches.
 - **C++20.**  Every program and library is compiled as C++20.  The standard
   library comes first, then Boost (header-only), then INN's own code;
   legacy C functions with standard C++ replacements are removed once
@@ -100,13 +105,13 @@ that a newsreader uses to talk to a news server and that a news server
 uses to talk to another news server over TCP/IP is called NNTP (Network
 News Transport Protocol).
 
-INN supports accepting articles via either NNTP connections or via UUCP.
-**innd**, the heart of INN, handles NNTP feeding connections directly;
-UUCP newsfeeds use **rnews** (included in INN) to hand articles off to
-**innd**.  Other parts of INN handle feeding articles out to other news
+INN accepts articles over NNTP connections.  **innd**, the heart of INN,
+handles NNTP feeding connections directly; batches of articles from other
+sources are handed to **innd** by **rnews** (included in INN).  Other parts of INN handle feeding articles out to other news
 servers, most commonly **innfeed** (for real-time outgoing feeds) or
 **nntpsend** and **innxmit** (used to send batches of news created by **innd**
-to a remote site via TCP/IP).  INN can also handle outgoing UUCP feeds.
+to a remote site via TCP/IP).  (The original INN also carried news over
+UUCP; INN++ does not.)
 
 The part of INN that handles connections from newsreaders is **nnrpd**.
 
