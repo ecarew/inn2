@@ -136,7 +136,5 @@
 /* Path to the temporary directory. */
 #define INN_ENV_TMPDIR             "TMPDIR"
 
-/* UUCP host, for rnews. */
-#define INN_ENV_UUCPHOST           "UU_MACHINE"
 
 #endif /* INN_PATHS_H */
