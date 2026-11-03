@@ -108,8 +108,8 @@ controlchan!\
 #    :*,!junk,!control,!control.*/!foo\
 #    :Tf,Wnm:
 
-# A UUCP feed, where we try to keep the "batching" between 4 KB and 1 KB.
-# You can use send-uucp(8) to process these batch files.
+# A batched feed, where we try to keep the "batching" between 4 KB and 1 KB.
+# You can use batcher(8) to process these batch files.
 #ihnp4\
 #    :*,!junk,!control,!control.*/!foo\
 #    :Tf,Wnb,B4096/1024:
