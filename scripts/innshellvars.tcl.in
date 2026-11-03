@@ -93,8 +93,6 @@ set inn_pgp "@PGP@"
 set inn_sort "@SORT@"
 set inn_getftp "@PATH_GETFTP@"
 set inn_gethttp "@PATH_GETHTTP@"
-set inn_uustat "@UUSTAT@"
-set inn_uux "@UUX@"
 
 set inn_bzip2 "@BZIP2@"
 set inn_compress "@COMPRESS@"
