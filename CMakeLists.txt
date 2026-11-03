@@ -159,8 +159,9 @@ add_subdirectory(storage)
 add_subdirectory(innd)
 add_subdirectory(authprogs)
 add_subdirectory(backends)
-# contrib/ is unsupported and built only on request, as in Make (contrib/README).
-option(INN_CONTRIB "Build the programs and scripts in contrib/" OFF)
+# contrib/ is unsupported (contrib/README), so it is built, and its tests are
+# registered (tests/CMakeLists.txt), only on request: -DINN_CONTRIB=ON.
+option(INN_CONTRIB "Build and test the programs and scripts in contrib/" OFF)
 if(INN_CONTRIB)
     add_subdirectory(contrib)
 endif()

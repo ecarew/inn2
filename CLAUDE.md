@@ -131,7 +131,8 @@ Items 1 (native configuration), 2 (generated sources) and 9 (CTest:
    audit them (innbind must stay the only setuid-root file).
 6. Man pages from `doc/pod`.
 7. Perl module `perl/INN/` (INN::Config, ovsqlite_client).  `contrib/` done
-   (2026-11-03, `-DINN_CONTRIB=ON`).
+   (2026-11-03): converted, improved, tested, built with `-DINN_CONTRIB=ON`
+   (off by default).
 8. Optional features as CMake options: Perl and Python hooks, Berkeley DB
    (ovdb), OpenSSL/TLS, systemd, blocklist (libcanlock done 2026-11-01:
    found when present).  Before ovdb can be

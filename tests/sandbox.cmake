@@ -7,7 +7,7 @@
 file(REMOVE_RECURSE ${SANDBOX}/tests/data)
 file(MAKE_DIRECTORY ${SANDBOX}/tests)
 file(COPY ${SOURCE}/tests/data DESTINATION ${SANDBOX}/tests)
-foreach(d authprogs backends control expire frontends history innfeed nnrpd
+foreach(d authprogs backends contrib control expire frontends history innfeed nnrpd
           samples storage include)
     if(EXISTS ${BUILD}/${d} AND NOT EXISTS ${SANDBOX}/${d})
         file(CREATE_LINK ${BUILD}/${d} ${SANDBOX}/${d} SYMBOLIC)

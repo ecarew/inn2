@@ -17,12 +17,12 @@
  *
  * Exit statuses:
  *    0    Successfully authenticated.
- *    1    getpeername() failed, returned a bad address family, or
- *         gethostbyaddr() failed.
+ *    1    getpeername() failed, or returned a bad address family.
  *    2    Entry not found in password file.
- *    3    No permission to read passwords, or password field is '*'.
+ *    3    No permission to read passwords, or the password field is not a
+ *         password hash ('*', 'x', empty, or locked with '!').
  *    4    Bad password match.
- *    5    Cannot read username or password.
+ *    5    Cannot read the username or password, or one is too long.
  *
  * Environment:
  *    Run by nnrpd with stdin/stdout connected to the reader and stderr
@@ -33,7 +33,7 @@
  * Written 1996 July 6 by Douglas Wade Needham (dneedham@oucsace.cs.ohiou.edu).
  *
  * Various bug fixes, code and documentation improvements since then
- * in 1997, 2002, 2003, 2007, 2011, 2014, 2021, 2024.
+ * in 1997, 2002, 2003, 2007, 2011, 2014, 2021, 2024, 2026.
  */
 
 #include "portable/system.h"
@@ -47,38 +47,54 @@
 #    include <crypt.h>
 #endif
 
+#include <string>
+
+/* Longest username or password accepted (not counting the line ending).  A
+   longer one is refused, never cut short: cutting a name short could log in
+   a different user. */
+static const size_t MAX_FIELD = 255;
+
+/* Read a line from stdin, without the line ending.  Returns false on end of
+   file, error, or a line that does not fit. */
+static bool
+read_field(std::string &out)
+{
+    char buf[MAX_FIELD + 2];
+
+    if (fgets(buf, sizeof(buf), stdin) == NULL)
+        return false;
+    out = buf;
+    if (out.empty() || out.back() != '\n')
+        return false; /* too long, or the input ended mid-line */
+    return true;
+}
+
+/* Remove carriage returns and newlines from the end. */
+static void
+strip_line_end(std::string &s)
+{
+    while (!s.empty() && (s.back() == '\r' || s.back() == '\n'))
+        s.pop_back();
+}
+
+/* Equal, taking the same time wherever the strings differ. */
+static bool
+same_string(const char *a, const char *b)
+{
+    size_t la = strlen(a);
+    size_t lb = strlen(b);
+    unsigned char diff = la != lb;
+
+    for (size_t i = 0; i < la; i++)
+        diff |= static_cast<unsigned char>(a[i] ^ b[i % (lb ? lb : 1)]);
+    return diff == 0;
+}
 
 int
 main(int argc, char **argv)
-/*+
- * Abstract:
- *    Main routine of the program, implementing all prompting, validation,
- *    and status returns.
- *
- * Arguments:
- *    argc        Argument count.
- *    argv        Null terminated argument vector.
- *
- * Returns:
- *      Exits according to program status values.
- *
- * Variables:
- *    hp        Pointer to host entry.
- *    length    General integer variable.
- *    password  Password given by user.
- *    peername  Hostname of the peer.
- *    pwd       Pointer to entry from passwd file.
- *    sin       Socket address structure.
- *    username  User's login name.
- */
 {
-    struct hostent *hp;
-    socklen_t length;
-    char password[256];
-    char peername[1024];
-    struct passwd *pwd;
-    struct sockaddr_in sin;
-    char username[32];
+    std::string username;
+    std::string password;
 
     /*
      * Get the user name and password if needed.
@@ -86,97 +102,102 @@ main(int argc, char **argv)
     if (argc < 2) {
         fprintf(stdout, "Username: ");
         fflush(stdout);
-        if (fgets(username, sizeof(username), stdin) == NULL) {
-            fprintf(stderr, "cannot read username: %s", strerror(errno));
+        if (!read_field(username)) {
+            fprintf(stderr, "cannot read username\n");
             exit(5);
         }
     } else {
-        strlcpy(username, argv[1], sizeof(username));
+        username = argv[1];
     }
     if (argc < 3) {
         fprintf(stdout, "Password: ");
         fflush(stdout);
-        if (fgets(password, sizeof(password), stdin) == NULL) {
-            fprintf(stderr, "cannot read username: %s", strerror(errno));
+        if (!read_field(password)) {
+            fprintf(stderr, "cannot read password\n");
             exit(5);
         }
     } else {
-        strlcpy(password, argv[2], sizeof(password));
+        password = argv[2];
     }
-
-    /*
-     *  Strip CR's and NL's from the end.
-     */
-    length = strlen(username) - 1;
-    while (username[length] == '\r' || username[length] == '\n') {
-        username[length--] = '\0';
-    }
-    length = strlen(password) - 1;
-    while (password[length] == '\r' || password[length] == '\n') {
-        password[length--] = '\0';
+    strip_line_end(username);
+    strip_line_end(password);
+    if (username.size() > MAX_FIELD || password.size() > MAX_FIELD) {
+        fprintf(stderr, "username or password too long\n");
+        exit(5);
     }
 
     /*
      *  Get the hostname of the peer.
      */
-    length = sizeof(sin);
-    if (getpeername(0, (struct sockaddr *) &sin, &length) < 0) {
+    std::string peername;
+    struct sockaddr_storage ss;
+    socklen_t length = sizeof(ss);
+    if (getpeername(0, reinterpret_cast<struct sockaddr *>(&ss), &length)
+        < 0) {
         if (!isatty(0)) {
-            fprintf(stderr, "cant getpeername()::%s:+:!*\n", username);
+            fprintf(stderr, "cant getpeername()::%s:+:!*\n", username.c_str());
             exit(1);
         }
-        strlcpy(peername, "localhost", sizeof(peername));
-    } else if (sin.sin_family != AF_INET) {
+        peername = "localhost";
+    } else if (ss.ss_family != AF_INET && ss.ss_family != AF_INET6) {
         fprintf(stderr, "Bad address family %ld::%s:+:!*\n",
-                (long) sin.sin_family, username);
+                (long) ss.ss_family, username.c_str());
         exit(1);
-    } else if ((hp = gethostbyaddr((char *) &sin.sin_addr,
-                                   sizeof(sin.sin_addr), AF_INET))
-               == NULL) {
-        strlcpy(peername, inet_ntoa(sin.sin_addr), sizeof(peername));
     } else {
-        strlcpy(peername, hp->h_name, sizeof(peername));
+        char host[NI_MAXHOST];
+
+        /* The name if it can be found, else the address. */
+        if (getnameinfo(reinterpret_cast<struct sockaddr *>(&ss), length, host,
+                        sizeof(host), NULL, 0, NI_NAMEREQD)
+                != 0
+            && getnameinfo(reinterpret_cast<struct sockaddr *>(&ss), length,
+                           host, sizeof(host), NULL, 0, NI_NUMERICHOST)
+                   != 0)
+            strlcpy(host, "unknown", sizeof(host));
+        peername = host;
     }
 
     /*
      *  Get the user name in the passwd file.
      */
-    if ((pwd = getpwnam(username)) == NULL) {
+    struct passwd *pwd = getpwnam(username.c_str());
+    if (pwd == NULL) {
 
         /*
          *  No entry in the passwd file.
          */
-        fprintf(stderr, "%s::%s:+:!*\n", peername, username);
+        fprintf(stderr, "%s::%s:+:!*\n", peername.c_str(), username.c_str());
         exit(2);
     }
 
     /*
-     *  Make sure we managed to read in the password.
+     *  Make sure we managed to read in a password hash.  "*" means no
+     *  permission to read passwords; "x" says the hash is in a shadow file;
+     *  empty or "!..." is an account without a usable password.
      */
-    if (strcmp(pwd->pw_passwd, "*") == 0) {
-
-        /*
-         *  No permission to read passwords.
-         */
-        fprintf(stderr, "%s::%s:+:!*\n", peername, username);
+    const char *hash = pwd->pw_passwd;
+    if (hash == NULL || hash[0] == '\0' || hash[0] == '*' || hash[0] == '!'
+        || strcmp(hash, "x") == 0) {
+        fprintf(stderr, "%s::%s:+:!*\n", peername.c_str(), username.c_str());
         exit(3);
     }
 
     /*
      *  Verify the password.
      */
-    if (strcmp(pwd->pw_passwd, crypt(password, pwd->pw_passwd)) != 0) {
+    const char *crypted = crypt(password.c_str(), hash);
+    if (crypted == NULL || !same_string(hash, crypted)) {
 
         /*
          * Password was invalid.
          */
-        fprintf(stderr, "%s::%s:+:!*\n", peername, username);
+        fprintf(stderr, "%s::%s:+:!*\n", peername.c_str(), username.c_str());
         exit(4);
     }
 
     /*
      *  We managed to authenticate the user.
      */
-    fprintf(stderr, "%s:RP:%s:+:*\n", peername, username);
+    fprintf(stderr, "%s:RP:%s:+:*\n", peername.c_str(), username.c_str());
     exit(0);
 }

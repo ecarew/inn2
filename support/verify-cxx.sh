@@ -341,6 +341,12 @@ tests=(
     storage/caf storage/cancel-tombstone storage/methods
     storage/makehistory.t storage/sm.t storage/archive.t
 )
+# contrib/ tests run only when contrib/ was built (-DINN_CONTRIB=ON).
+if [ -d "$build/contrib" ]; then
+    tests+=(contrib/auth_pass.t contrib/expirectl.t contrib/mlockfile.t
+            contrib/newsresp.t contrib/pullart.t contrib/reset-cnfs.t
+            contrib/respool.t)
+fi
 # buffindexed creates a System V shared memory segment and never removes it
 # (same in the original C), and macOS allows only 32.  Remove unattached
 # segments a test created; leave any that existed before it ran.
@@ -359,7 +365,7 @@ shm_cleanup() {
 # and authprogs pointing at the CMake-built programs.
 sb=$tmp/sandbox
 mkdir -p "$sb/tests" && cp -R tests/data "$sb/tests/data"
-for d in authprogs backends control expire frontends innfeed nnrpd samples storage; do
+for d in authprogs backends contrib control expire frontends innfeed nnrpd samples storage; do
     [ -d "$build/$d" ] && ln -s "$build/$d" "$sb/$d"
 done
 
@@ -380,6 +386,17 @@ for h in write read; do
            "${covlink[@]}" -o "$sb/tests/overview/ovsqlite-$h.t" \
            2>>"$tmp/ovsqlite-helpers.log"
 done
+
+# contrib/ is built only with -DINN_CONTRIB=ON.  contrib/auth_pass's test
+# runs the program with a TCP connection as its standard input, through
+# tcp-stdin; newsresp's test needs the fake-nntp server.
+if [ -d "$build/contrib" ]; then
+    mkdir -p "$sb/tests/contrib"
+    for h in tcp-stdin fake-nntp; do
+        c++ -std=c++20 "tests/contrib/$h.cc" -o "$sb/tests/contrib/$h" \
+            2>>"$tmp/ovsqlite-helpers.log"
+    done
+fi
 
 base_cflags=("${cflags[@]}")
 for spec in "${tests[@]}"; do

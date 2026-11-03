@@ -2,7 +2,7 @@
 
 /*
  * Various bug fixes, code and documentation improvements
- * in 2000-2003, 2014, 2017, 2021, 2024.
+ * in 2000-2003, 2014, 2017, 2021, 2024, 2026.
  *
  * From: Koen De Vleeschauwer <koen@eu.net>
  * Subject: Re: innfeed-users: innfeed: measuring server response time
@@ -35,7 +35,7 @@
  * somewhere; forget. Please note one has to interpret the output;
  * eg. whether one is measuring rtt or history lookup time.
  *
- * Basic usage is:
+ * Basic usage is (-p gives another port than 119):
  * news 1 % newsresp -n 5 news.eu.net
  * ---------------------------------
  * news.eu.net is 134.222.90.2 port 119
@@ -72,85 +72,40 @@
 #include "portable/socket.h"
 
 #include <errno.h>
+#include <netdb.h>
 #ifdef HAVE_SYS_TIME_H
 #    include <sys/time.h>
 #endif
 #include <time.h>
 
-#define NNTPPORT 119
+#include <string>
 
-void error(const char *);
-void fatal(const char *);
-void ierror(const char *, const char *);
-void ifatal(const char *, const char *);
-unsigned long do_time(unsigned long);
-void ptime(void);
-void massagebuff(int, char *);
-bool punt(int);
+#define NNTPPORT "119"
 
-static struct sockaddr_in sock_in;
-static int sock;
-static char buf[1024];
+/* When the connection started, and the elapsed and last-step times in
+   milliseconds. */
+static unsigned long start, elapsed, diff;
 
-int
-main(int argc, char *argv[])
+static unsigned long
+now_ms(void)
 {
-    int errflg = 0, c;
-    bool status = true;
-    struct hostent *host;
-    unsigned long temp;
-    unsigned numart = 1;
-    struct protoent *tcp_proto;
-    char **whoP;
+    struct timeval now;
 
-    while ((c = getopt(argc, argv, "n:")) != -1)
-        switch (c) {
-        case 'n':
-            sscanf(optarg, "%u", &numart);
-            break;
-        default:
-            errflg++;
-        }
-    if (numart == 0 || optind == argc)
-        errflg++;
-    if (errflg) {
-        fprintf(stderr, "Usage: %s [-n articles] host ...\n", argv[0]);
-        exit(1);
-    }
-
-    if ((tcp_proto = getprotobyname("tcp")) == 0)
-        fatal("getprotobyname");
-    for (whoP = argv + optind; *whoP != 0; whoP++) {
-        if ((sock = socket(PF_INET, SOCK_STREAM, tcp_proto->p_proto)) < 0)
-            fatal("socket");
-        temp = inet_addr(*whoP);
-        if (temp != (unsigned long) -1) {
-            sock_in.sin_addr.s_addr = temp;
-            sock_in.sin_family = AF_INET;
-        } else {
-            host = gethostbyname(*whoP);
-            if (host) {
-                sock_in.sin_family = host->h_addrtype;
-                memcpy(&sock_in.sin_addr, host->h_addr, host->h_length);
-            } else {
-                fprintf(stderr, "gethostbyname can't find %s\n", *whoP);
-                exit(1);
-            }
-        }
-        sock_in.sin_port = htons(NNTPPORT);
-        printf("---------------------------------\n%s is %s port %d\n", *whoP,
-               inet_ntoa(sock_in.sin_addr), ntohs(sock_in.sin_port));
-        status = punt(numart);
-        close(sock);
-    }
-    if (status) {
-        exit(0);
-    } else {
-        exit(1);
-    }
+    gettimeofday(&now, NULL);
+    return now.tv_sec * 1000UL + now.tv_usec / 1000;
 }
 
-void
+static void
+ptime(void)
+{
+    diff = elapsed;
+    elapsed = now_ms() - start;
+    diff = elapsed - diff;
+    printf("%5.1f %5.1f  ", ((double) elapsed) / 1000.0,
+           ((double) diff) / 1000.0);
+}
+
+static void
 error(const char *what)
 {
     ptime();
@@ -158,134 +113,91 @@ error(const char *what)
     perror(what);
 }
 
-__attribute__((__noreturn__)) void
-fatal(const char *what)
-{
-    error(what);
-    exit(2);
-}
-
-void
+static void
 ierror(const char *how, const char *what)
 {
     printf("Expected %s, received %s; bailing out.\n", how, what);
 }
 
-__attribute__((__noreturn__)) void
-ifatal(const char *how, const char *what)
-{
-    ierror(how, what);
-    exit(1);
-}
-
-unsigned long
-do_time(unsigned long start)
-{
-    struct timeval now;
-
-    gettimeofday(&now, (struct timezone *) 0);
-    return (now.tv_sec * 1000 + now.tv_usec / 1000 - start);
-}
-
-static unsigned long start, elapsed, diff;
-
-void
-ptime(void)
-{
-    diff = elapsed;
-    elapsed = do_time(start);
-    diff = elapsed - diff;
-    printf("%5.1f %5.1f  ", ((double) elapsed) / 1000.0,
-           ((double) diff) / 1000.0);
-}
-
-void
+/* Shorten a server response to one line of at most 55 characters, with
+   carriage returns made into spaces.  bread is how many bytes buffer holds;
+   there is room for its terminating null. */
+static void
 massagebuff(int bread, char *buffer)
 {
-    char *p;
-
     if (bread > 55)
         strcpy(buffer + 55, " [...]\n");
     else
         buffer[bread] = '\0';
-    for (p = buffer; *p != '\0';)
-        if (*p != '\r') /* We like to do it RISC style. */
-            p++;
-        else {
+    for (char *p = buffer; *p != '\0'; p++)
+        if (*p == '\r')
             *p = ' ';
-            p++;
-        }
 }
 
-bool
-punt(int numart)
+/* Read the server's reply into buf, shortened for display, and show it.
+   Returns false on a read error. */
+static bool
+get_reply(int sock, char *buf, size_t size)
 {
-    static char ihave[32], dot[] = ".\r\n", quit[] = "quit\r\n";
-    struct timeval start_tv;
-    int bread;
+    ssize_t bread = read(sock, buf, size - 1);
 
-    printf(" elap  diff\n");
-    diff = elapsed = 0;
-    gettimeofday(&start_tv, (struct timezone *) 0);
-    start = start_tv.tv_sec * 1000 + start_tv.tv_usec / 1000;
-
-    ptime();
-    printf("Connecting ...\n");
-    if (connect(sock, (struct sockaddr *) &sock_in, sizeof(sock_in)) < 0) {
-        error("connect");
-        return false;
-    }
-    ptime();
-    printf("OK, waiting for prompt\n");
-
-    if ((bread = read(sock, buf, sizeof(buf))) < 0) {
+    if (bread < 0) {
         error("read socket");
         return false;
     }
     massagebuff(bread, buf);
     ptime();
     printf("<<< %s", buf);
+    return true;
+}
+
+static bool
+send_line(int sock, const char *line)
+{
+    size_t len = strlen(line);
+
+    ptime();
+    printf(">>> %s", line);
+    if (write(sock, line, len) != static_cast<ssize_t>(len)) {
+        error("write socket");
+        return false;
+    }
+    return true;
+}
+
+static bool
+punt(int sock, unsigned numart)
+{
+    char buf[1024];
+    char ihave[64];
+
+    printf(" elap  diff\n");
+    diff = elapsed = 0;
+    start = now_ms();
+
+    ptime();
+    printf("OK, waiting for prompt\n");
+    if (!get_reply(sock, buf, sizeof(buf)))
+        return false;
     if (strncmp(buf, "200", 3) != 0 && strncmp(buf, "201", 3) != 0) {
         ierror("200 or 201", buf);
         return false;
     }
 
     do {
-        snprintf(ihave, sizeof(ihave), "ihave <%lu@a>\r\n", start + numart);
-        ptime();
-        printf(">>> %s", ihave);
-        if (write(sock, ihave, strlen(ihave)) != (int) strlen(ihave)) {
-            error("write socket");
+        snprintf(ihave, sizeof(ihave), "ihave <%lu@a>\r\n",
+                 start + numart);
+        if (!send_line(sock, ihave) || !get_reply(sock, buf, sizeof(buf)))
             return false;
-        }
-
-        if ((bread = read(sock, buf, sizeof(buf))) < 0) {
-            error("read socket");
-            return false;
-        }
-        massagebuff(bread, buf);
-        ptime();
-        printf("<<< %s", buf);
         if (strncmp(buf, "335", 3) != 0 && strncmp(buf, "435", 3) != 0) {
             ierror("335 or 435", buf);
             return false;
         }
 
         if (strncmp(buf, "335", 3) == 0) {
-            ptime();
-            printf(">>> %s", dot);
-            if (write(sock, dot, sizeof(dot) - 1) != sizeof(dot) - 1) {
-                error("write socket");
+            if (!send_line(sock, ".\r\n")
+                || !get_reply(sock, buf, sizeof(buf)))
                 return false;
-            }
-
-            if ((bread = read(sock, buf, sizeof(buf))) < 0) {
-                error("read socket");
-                return false;
-            }
-            massagebuff(bread, buf);
-            ptime();
-            printf("<<< %s", buf);
             if (strncmp(buf, "437", 3) != 0 && strncmp(buf, "235", 3) != 0) {
                 ierror("437 or 235", buf);
                 return false;
@@ -293,23 +205,101 @@ punt(int numart)
         }
     } while (--numart != 0);
 
-    ptime();
-    printf(">>> %s", quit);
-    if (write(sock, quit, sizeof(quit) - 1) != sizeof(quit) - 1) {
-        error("write socket");
+    if (!send_line(sock, "quit\r\n") || !get_reply(sock, buf, sizeof(buf)))
         return false;
-    }
-
-    if ((bread = read(sock, buf, sizeof(buf))) < 0) {
-        error("read socket");
-        return false;
-    }
-    massagebuff(bread, buf);
-    ptime();
-    printf("<<< %s", buf);
     if (strncmp(buf, "205", 3) != 0) {
         ierror("205", buf);
         return false;
     }
     return true;
+}
+
+/* Connect to host, trying each address it has.  Returns the socket, or -1
+   with the error shown; the address connected to is printed. */
+static int
+open_connection(const char *host, const char *port)
+{
+    struct addrinfo hints, *res, *ai;
+    int sock = -1;
+
+    memset(&hints, 0, sizeof(hints));
+    hints.ai_family = AF_UNSPEC;
+    hints.ai_socktype = SOCK_STREAM;
+    int rc = getaddrinfo(host, port, &hints, &res);
+    if (rc != 0) {
+        fprintf(stderr, "can't find %s: %s\n", host, gai_strerror(rc));
+        return -1;
+    }
+
+    for (ai = res; ai != NULL; ai = ai->ai_next) {
+        char addr[NI_MAXHOST];
+
+        if (getnameinfo(ai->ai_addr, ai->ai_addrlen, addr, sizeof(addr), NULL,
+                        0, NI_NUMERICHOST)
+            != 0)
+            strlcpy(addr, "?", sizeof(addr));
+        printf("---------------------------------\n%s is %s port %s\n", host,
+               addr, port);
+        printf(" elap  diff\n");
+        start = now_ms();
+        elapsed = diff = 0;
+        ptime();
+        printf("Connecting ...\n");
+
+        sock = socket(ai->ai_family, ai->ai_socktype, ai->ai_protocol);
+        if (sock >= 0 && connect(sock, ai->ai_addr, ai->ai_addrlen) == 0)
+            break;
+        error(sock < 0 ? "socket" : "connect");
+        if (sock >= 0)
+            close(sock);
+        sock = -1;
+    }
+    freeaddrinfo(res);
+    return sock;
+}
+
+int
+main(int argc, char *argv[])
+{
+    int errflg = 0, c;
+    bool status = true;
+    unsigned numart = 1;
+    std::string port = NNTPPORT;
+
+    while ((c = getopt(argc, argv, "n:p:")) != -1)
+        switch (c) {
+        case 'n': {
+            char *end;
+            unsigned long n = strtoul(optarg, &end, 10);
+            if (*optarg == '\0' || *end != '\0' || n == 0 || n > 1000000)
+                errflg++;
+            else
+                numart = static_cast<unsigned>(n);
+            break;
+        }
+        case 'p':
+            port = optarg;
+            break;
+        default:
+            errflg++;
+        }
+    if (optind == argc)
+        errflg++;
+    if (errflg) {
+        fprintf(stderr, "Usage: %s [-n articles] [-p port] host ...\n",
+                argv[0]);
+        exit(1);
+    }
+
+    for (char **whoP = argv + optind; *whoP != NULL; whoP++) {
+        int sock = open_connection(*whoP, port.c_str());
+        if (sock < 0) {
+            status = false;
+            continue;
+        }
+        if (!punt(sock, numart))
+            status = false;
+        close(sock);
+    }
+    exit(status ? 0 : 1);
 }

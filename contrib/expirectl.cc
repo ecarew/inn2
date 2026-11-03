@@ -7,7 +7,7 @@
  * file for an example of such a file.
  *
  * Various bug fixes, code and documentation improvements
- * in 2001, 2011, 2014, 2015, 2021, 2024.
+ * in 2001, 2011, 2014, 2015, 2021, 2024, 2026.
  */
 
 /*
@@ -38,6 +38,8 @@
 
 #include <errno.h>
 #include <time.h>
+
+#include <string>
 
 /* Following portability code lifted from inndf.c */
 #if HAVE_STATVFS
@@ -81,85 +83,201 @@ typedef unsigned long long long_int_type;
 typedef unsigned long long_int_type;
 #endif
 
+/* The directory expirectl works in, unless -d gives another one. */
 #define EXPIRE_CTL_DIR "/home/news"
 
-#define EXPIRE_DAYS    EXPIRE_CTL_DIR "/expire.days"
-#define EXPIRE_CTL     EXPIRE_CTL_DIR "/expire.ctl"
-#define EXPIRE_CTL_CTL EXPIRE_CTL_DIR "/expire.ctl.ctl"
+/* Parse a number with an optional k or m suffix (kilo- or mega-).  Returns
+   false if there is anything else after the number. */
+static bool
+parse_size(const char *text, long *result)
+{
+    char *end;
+
+    errno = 0;
+    long value = strtol(text, &end, 0);
+    if (end == text || errno != 0)
+        return false;
+    if (*end == 'k') {
+        value *= 1024;
+        end++;
+    } else if (*end == 'm') {
+        value *= 1024 * 1024;
+        end++;
+    }
+    if (*end != '\0')
+        return false;
+    *result = value;
+    return true;
+}
+
+/* Replace each [N] or [N/minimum] in a line of the template with N times the
+   number of days (at least minimum, and at least 1). */
+static std::string
+expand_line(const std::string &line, long expireDays)
+{
+    std::string out;
+    size_t pos = 0;
+
+    for (;;) {
+        size_t open = line.find('[', pos);
+        if (open == std::string::npos)
+            break;
+        out.append(line, pos, open - pos);
+
+        const char *start = line.c_str() + open + 1;
+        char *end;
+        double d = strtod(start, &end);
+        long m = 0;
+        if (*end == '/')
+            m = strtol(end + 1, &end, 0);
+        if (*end == ']') {
+            long v = (long) ((double) expireDays * d + 0.5);
+            if (v < 1)
+                v = 1;
+            if (v < m)
+                v = m;
+            out += std::to_string(v);
+            ++end;
+        }
+        /* If it was not a valid [N] the text after the bracket is kept. */
+        pos = end - line.c_str();
+    }
+    out.append(line, pos, std::string::npos);
+    return out;
+}
+
+/* Write the control file from its template.  Returns false if the template
+   could not be used. */
+static bool
+write_expire_ctl(const std::string &dir, long expireDays)
+{
+    std::string ctl = dir + "/expire.ctl";
+    std::string tmp = ctl + ".tmp";
+    std::string tmpl = ctl + ".ctl";
+
+    FILE *fi = fopen(tmpl.c_str(), "r");
+    if (fi == NULL) {
+        fprintf(stderr, "expirectl: unable to open %s: %s\n", tmpl.c_str(),
+                strerror(errno));
+        return false;
+    }
+    FILE *fo = fopen(tmp.c_str(), "w");
+    if (fo == NULL) {
+        fprintf(stderr, "expirectl: unable to create %s: %s\n", tmp.c_str(),
+                strerror(errno));
+        fclose(fi);
+        return false;
+    }
+
+    /* Lines of any length, unlike a fixed buffer. */
+    std::string line;
+    char chunk[512];
+    bool ok = true;
+    while (fgets(chunk, sizeof(chunk), fi) != NULL) {
+        line += chunk;
+        if (line.back() != '\n' && !feof(fi))
+            continue;
+        std::string expanded = expand_line(line, expireDays);
+        if (fputs(expanded.c_str(), fo) == EOF)
+            ok = false;
+        line.clear();
+    }
+    if (fclose(fo) != 0)
+        ok = false;
+    fclose(fi);
+
+    if (!ok) {
+        fprintf(stderr, "expirectl: error writing %s\n", tmp.c_str());
+        unlink(tmp.c_str());
+        return false;
+    }
+    if (rename(tmp.c_str(), ctl.c_str()) != 0) {
+        fprintf(stderr, "rename(%s,%s): %s\n", tmp.c_str(), ctl.c_str(),
+                strerror(errno));
+        return false;
+    }
+    return true;
+}
 
 int
 main(int ac, char **av)
 {
     df_declare(sfs);
     long minFree = 100 * 1024 * 1024;
-    long_int_type minIFree = 20 * 1024;
+    long minIFreeSigned = 20 * 1024;
     long expireDays = 2;
     time_t expireIncTime = time(NULL) - 24 * 60 * 60;
     int modified = 0;
     int verbose = 0;
+    std::string dir = EXPIRE_CTL_DIR;
 
     /*
      * options
      */
 
-    {
-        int i;
+    for (int i = 1; i < ac; ++i) {
+        char *ptr = av[i];
 
-        for (i = 1; i < ac; ++i) {
-            char *ptr = av[i];
-
-            if (*ptr == '-') {
-                ptr += 2;
-                switch (ptr[-1]) {
-                case 'v':
-                    verbose = 1;
-                    break;
-                case 'f':
-                    modified = 1;
-                    break;
-                case 'n':
-                    modified = -1;
-                    break;
-                case 'b':
-                    minFree = strtol(((*ptr) ? ptr : av[++i]), &ptr, 0);
-                    if (*ptr == 'k')
-                        minFree *= 1024;
-                    if (*ptr == 'm')
-                        minFree *= 1024 * 1024;
-                    break;
-                case 'i':
-                    minIFree = strtol(((*ptr) ? ptr : av[++i]), NULL, 0);
-                    if (*ptr == 'k')
-                        minIFree *= 1024;
-                    if (*ptr == 'm')
-                        minIFree *= 1024 * 1024;
-                    break;
-                default:
-                    fprintf(stderr, "bad option: %s\n", ptr - 2);
+        if (*ptr != '-' || ptr[1] == '\0') {
+            fprintf(stderr, "bad option: %s\n", ptr);
+            exit(1);
+        }
+        char opt = ptr[1];
+        ptr += 2;
+        switch (opt) {
+        case 'v':
+            verbose = 1;
+            break;
+        case 'f':
+            modified = 1;
+            break;
+        case 'n':
+            modified = -1;
+            break;
+        case 'b':
+        case 'i':
+        case 'd': {
+            /* The argument is attached (-b100) or the next word. */
+            if (*ptr == '\0') {
+                if (++i >= ac) {
+                    fprintf(stderr, "option -%c needs an argument\n", opt);
                     exit(1);
                 }
-            } else {
-                fprintf(stderr, "bad option: %s\n", ptr);
+                ptr = av[i];
+            }
+            if (opt == 'd') {
+                dir = ptr;
+            } else if (!parse_size(ptr, opt == 'b' ? &minFree
+                                                    : &minIFreeSigned)) {
+                fprintf(stderr, "bad value for -%c: %s\n", opt, ptr);
                 exit(1);
             }
+            break;
+        }
+        default:
+            fprintf(stderr, "bad option: %s\n", av[i]);
+            exit(1);
         }
     }
+    long_int_type minIFree = minIFreeSigned < 0 ? 0 : minIFreeSigned;
 
-    if (!df_stat("/home/news/spool/news/.", &sfs)) {
-        fprintf(stderr,
-                "expirectl: couldn't fsstat /home/news/spool/news/.\n");
+    std::string spool = dir + "/spool/news/.";
+    std::string daysFile = dir + "/expire.days";
+
+    if (!df_stat(spool.c_str(), &sfs)) {
+        fprintf(stderr, "expirectl: couldn't fsstat %s\n", spool.c_str());
         exit(1);
     }
 
     /*
-     * Load /home/news/expire.days
+     * Load expire.days
      */
 
     {
-        FILE *fi;
         char buf[256];
 
-        if ((fi = fopen(EXPIRE_DAYS, "r")) != NULL) {
+        FILE *fi = fopen(daysFile.c_str(), "r");
+        if (fi != NULL) {
             while (fgets(buf, sizeof(buf), fi) != NULL) {
                 if (strncmp(buf, "time", 4) == 0) {
                     expireIncTime = strtoul(buf + 4, NULL, 0);
@@ -171,7 +289,7 @@ main(int ac, char **av)
         } else {
             if (modified >= 0)
                 modified = 1;
-            printf("creating %s\n", EXPIRE_DAYS);
+            printf("creating %s\n", daysFile.c_str());
         }
     }
 
@@ -197,11 +315,8 @@ main(int ac, char **av)
      */
 
     {
-        double bytes;
-        long_int_type inodes;
-
-        bytes = (double) df_scale(sfs) * (double) df_avail(sfs);
-        inodes = df_favail(sfs);
+        double bytes = (double) df_scale(sfs) * (double) df_avail(sfs);
+        long_int_type inodes = df_favail(sfs);
 
         if (bytes < (double) minFree || inodes < minIFree) {
             if (--expireDays <= 0) {
@@ -229,74 +344,28 @@ main(int ac, char **av)
     }
 
     /*
-     * Write EXPIRE_CTL file from EXPIRE_CTL_CTL template
+     * Write expire.ctl from the expire.ctl.ctl template, then expire.days.
+     * If the template cannot be used the days file is left alone, so the
+     * next run starts from the same state.
      */
 
+    int status = 0;
     if (modified > 0) {
-        FILE *fi;
-        FILE *fo;
-
-        if ((fi = fopen(EXPIRE_CTL_CTL, "r")) != NULL) {
-            if ((fo = fopen(EXPIRE_CTL ".tmp", "w")) != NULL) {
-                char sbuf[2048];
-                char dbuf[4096];
-
-                while (fgets(sbuf, sizeof(sbuf), fi) != NULL) {
-                    char *base = sbuf;
-                    char *sptr;
-                    char *dptr = dbuf;
-
-                    while ((sptr = strchr(base, '[')) != NULL) {
-                        double d;
-                        int m = 0;
-
-                        bcopy(base, dptr, sptr - base);
-                        dptr += sptr - base;
-
-                        d = strtod(sptr + 1, &sptr);
-                        if (*sptr == '/')
-                            m = strtol(sptr + 1, &sptr, 0);
-                        if (*sptr == ']') {
-                            long v = (long) ((double) expireDays * d + 0.5);
-                            if (v < 1)
-                                v = 1;
-                            if (v < m)
-                                v = m;
-                            sprintf(dptr, "%ld", v);
-                            dptr += strlen(dptr);
-                            ++sptr;
-                        }
-                        base = sptr;
-                    }
-                    strcpy(dptr, base);
-                    fputs(dbuf, fo);
-                }
-                fclose(fo);
-                if (rename(EXPIRE_CTL ".tmp", EXPIRE_CTL) != 0) {
-                    fprintf(stderr, "rename(%s,%s): %s\n", EXPIRE_CTL ".tmp",
-                            EXPIRE_CTL, strerror(errno));
-                }
-            }
-            fclose(fi);
-        }
-    }
-
-    /*
-     * Write EXPIRE_DAYS file
-     */
-
-    if (modified > 0) {
-        FILE *fo;
-
-        if ((fo = fopen(EXPIRE_DAYS, "w")) != NULL) {
-            fprintf(fo, "time 0x%08lx\n", (unsigned long) expireIncTime);
-            fprintf(fo, "days %ld\n", expireDays);
-            fclose(fo);
+        if (!write_expire_ctl(dir, expireDays)) {
+            status = 1;
         } else {
-            fprintf(stderr, "unable to create %s\n", EXPIRE_DAYS);
+            FILE *fo = fopen(daysFile.c_str(), "w");
+            if (fo != NULL) {
+                fprintf(fo, "time 0x%08lx\n", (unsigned long) expireIncTime);
+                fprintf(fo, "days %ld\n", expireDays);
+                fclose(fo);
+            } else {
+                fprintf(stderr, "unable to create %s\n", daysFile.c_str());
+                status = 1;
+            }
         }
     }
-    exit(0);
+    exit(status);
 }
 
 

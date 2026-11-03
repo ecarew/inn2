@@ -138,6 +138,22 @@ inn_shell_test(authprogs/auth_krb5)
 inn_shell_test(authprogs/ckpasswd)
 inn_shell_test(authprogs/domain)
 
+# contrib/ programs (INN_CONTRIB).  auth_pass is run with a TCP connection as
+# its standard input, by the tcp-stdin helper, and newsresp talks to the
+# fake-nntp server; the tests expect both in contrib/ in the sandbox.
+if(INN_CONTRIB)
+    foreach(h tcp-stdin fake-nntp)
+        string(REPLACE "-" "_" target ${h})
+        add_executable(${target} contrib/${h}.cc)
+        set_target_properties(${target} PROPERTIES OUTPUT_NAME ${h}
+                              RUNTIME_OUTPUT_DIRECTORY
+                              ${sandbox}/tests/contrib)
+    endforeach()
+    foreach(t auth_pass expirectl mlockfile newsresp pullart reset-cnfs respool)
+        inn_shell_test(contrib/${t})
+    endforeach()
+endif()
+
 inn_tap_test(nnrpd/auth-ext EXTRA nnrpd/auth-ext)
 
 # innd tests link innd_core with tests/innd/fakeinnd.c in place of innd.cc,
