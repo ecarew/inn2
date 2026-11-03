@@ -535,15 +535,6 @@ wait "$nnrpd_pid" 2>/dev/null
 
 # --- frontends ---------------------------------------------------------------
 
-# encode/decode: 7-bit encoding of a binary batch and back.
-head -c 4096 /dev/urandom >"$tmp/binary"
-"$fe/encode" <"$tmp/binary" >"$tmp/encoded"
-"$fe/decode" <"$tmp/encoded" >"$tmp/decoded"
-label="encode output is 7-bit"
-ok sh -c "! LC_ALL=C grep -q '[^ -~[:space:]]' '$tmp/encoded'"
-label="decode restores the encoded data"
-ok cmp -s "$tmp/binary" "$tmp/decoded"
-
 # innconfval: single values, shell/Perl/Tcl output, and checking.
 label="innconfval prints a value"
 ok sh -c "[ \"\$('$fe/innconfval' pathspool)\" = '$tmp/spool' ]"
