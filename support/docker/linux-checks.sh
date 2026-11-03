@@ -15,7 +15,7 @@ set -e
 step() { echo "=== $*"; }
 
 step "CMake build (build)"
-cmake -S . -B build -G Ninja >/tmp/cmake.log 2>&1 \
+cmake -S . -B build -G Ninja -DINN_CONTRIB=ON >/tmp/cmake.log 2>&1 \
     || { tail -30 /tmp/cmake.log; exit 1; }
 cmake --build build >/tmp/build.log 2>&1 \
     || { grep -B12 -m3 -E 'error' /tmp/build.log | head -60; exit 1; }
