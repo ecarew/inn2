@@ -5,7 +5,7 @@
 
 include ../../Makefile.global
 
-TEXT	= ../../HACKING ../../INSTALL ../../NEWS ../../README ../hook-perl \
+TEXT	= ../../HACKING ../../INSTALL ../../NEWS ../hook-perl \
 	../hook-python ../external-auth ../checklist
 
 MAN1	= ../man/convdate.1 ../man/fastrm.1 ../man/gencancel.1 \
@@ -72,7 +72,6 @@ maintclean: distclean
 ../../HACKING:		hacking.pod		; $(POD2TEXT) $? > $@
 ../../INSTALL:		install.pod		; $(POD2TEXT) $? > $@
 ../../NEWS:		news.pod		; $(POD2TEXT) $? > $@
-../../README:		../../readme.pod	; $(POD2TEXT) $? > $@
 ../checklist:		checklist.pod		; $(POD2TEXT) $? > $@
 ../external-auth:	external-auth.pod	; $(POD2TEXT) $? > $@
 ../hook-perl:		hook-perl.pod		; $(POD2TEXT) $? > $@
