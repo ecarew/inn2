@@ -17,7 +17,7 @@ MANIFEST                              This shipping list
 Makefile                              Top-level makefile
 Makefile.global.in                    Make variables for all Makefiles
 NEWS                                  Changes since last version
-README                                Introduction to the INN package
+README.md                             Introduction to the INN package
 SECURITY.md                           The security policy of the INN package
 TODO                                  The list of pending INN projects
 authprogs                             The authentication programs (Directory)
@@ -708,7 +708,6 @@ perl/INN/Utils                        INN::Utils Perl modules (Directory)
 perl/INN/Utils/Shlock.pm.in           INN::Utils::Shlock module
 perl/INN/ovsqlite_client.pm           INN::ovsqlite_client module
 perl/Makefile                         Makefile for perl libraries
-readme.pod                            Master file for README
 samples                               Prototype INN config files (Directory)
 samples/INN.py                        Stub Python functions
 samples/Makefile                      Makefile for samples
