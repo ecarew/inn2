@@ -130,7 +130,8 @@ Items 1 (native configuration), 2 (generated sources) and 9 (CTest:
 5. Installation: install rules with INN's ownership, setuid and modes; then
    audit them (innbind must stay the only setuid-root file).
 6. Man pages from `doc/pod`.
-7. Perl module `perl/INN/` (INN::Config, ovsqlite_client) and `contrib/`.
+7. Perl module `perl/INN/` (INN::Config, ovsqlite_client).  `contrib/` done
+   (2026-11-03, `-DINN_CONTRIB=ON`).
 8. Optional features as CMake options: Perl and Python hooks, Berkeley DB
    (ovdb), OpenSSL/TLS, systemd, blocklist (libcanlock done 2026-11-01:
    found when present).  Before ovdb can be
@@ -140,8 +141,8 @@ Items 1 (native configuration), 2 (generated sources) and 9 (CTest:
     `support/docker-root-checks.sh` (2026-10-30).
 
 **Still C**
-All INN source is C++ (2026-11-02) except the 7 contrib/ programs (with
-CMake item 7) and the CMake feature checks.  Left from the conversion:
+All INN source is C++ (2026-11-03).  C left on purpose: the tests (they
+check the C/C++ boundary) and the CMake feature checks (cmake/checks/).  Left from the conversion:
 - innfeed/ is C++ (2026-11-01).  Move the parser to bison lalr1.cc /
   flex C++ scanner classes (needs bison 3; macOS has 2.3, so ask before
   adding Homebrew bison).
