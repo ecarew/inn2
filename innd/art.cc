@@ -367,10 +367,7 @@ ARTlogreject(CHANNEL *cp, const char *text)
     char **hops;
 
     /* We may still haven't received the message-ID of the rejected article. */
-    if (HDR_FOUND(HDR__MESSAGE_ID)) {
-        HDR_LASTCHAR_SAVE(HDR__MESSAGE_ID);
-        HDR_PARSE_START(HDR__MESSAGE_ID);
-    }
+    HeaderCut msgid(hc, HDR__MESSAGE_ID);
 
     /* Set up the header fields that we want to use.  We only need to parse the
        path on rejections if logipaddr is false or we can't find a good host.
@@ -383,11 +380,11 @@ ARTlogreject(CHANNEL *cp, const char *text)
         }
     } else {
         if (HDR_FOUND(HDR__PATH)) {
-            HDR_LASTCHAR_SAVE(HDR__PATH);
-            HDR_PARSE_START(HDR__PATH);
-            hopcount =
-                ARTparsepath(HDR(HDR__PATH), HDR_LEN(HDR__PATH), data->State->path);
-            HDR_PARSE_END(HDR__PATH);
+            {
+                HeaderCut path(hc, HDR__PATH);
+                hopcount = ARTparsepath(HDR(HDR__PATH), HDR_LEN(HDR__PATH),
+                                        data->State->path);
+            }
             hops = data->State->path.list();
             if (hopcount > 0 && hops != nullptr && hops[0] != nullptr) {
                 data->Feedsite = hops[0];
@@ -406,9 +403,6 @@ ARTlogreject(CHANNEL *cp, const char *text)
     data->FeedsiteLength = strlen(data->Feedsite);
 
     ARTlog(data, ART_REJECT, text != nullptr ? text : cp->Error);
-
-    if (HDR_FOUND(HDR__MESSAGE_ID))
-        HDR_PARSE_END(HDR__MESSAGE_ID);
 }
 
 /* Write an article using the storage api.  Put it together in memory and
@@ -525,12 +519,6 @@ ARTstore(CHANNEL *cp, bool filtered)
     iov[iovcnt].iov_base = (char *) p;
     iov[iovcnt++].iov_len = Article->data + cp->Next - p;
     arth.len += Article->data + cp->Next - p;
-
-    /* revert trailing '\0\n' to '\r\n' of all system header fields */
-    for (i = 0; i < MAX_ARTHEADER; i++) {
-        if (HDR_FOUND(i))
-            HDR_PARSE_END(i);
-    }
 
     arth.iov = iov;
     arth.iovcnt = iovcnt;
@@ -771,14 +759,12 @@ ARTchecksize(CHANNEL *cp)
 
         /* Write a local cancel entry so nobody else gives it to us. */
         if (HDR_FOUND(HDR__MESSAGE_ID)) {
-            HDR_LASTCHAR_SAVE(HDR__MESSAGE_ID);
-            HDR_PARSE_START(HDR__MESSAGE_ID);
+            HeaderCut cut(hc, HDR__MESSAGE_ID);
             msgid = HDR(HDR__MESSAGE_ID);
             /* The article posting time has not been parsed.  We cannot
              * give it to InndHisRemember. */
             if (!HIScheck(History, msgid) && !InndHisRemember(msgid, 0))
                 warn("SERVER cant write %s", msgid);
-            HDR_PARSE_END(HDR__MESSAGE_ID);
         }
     }
 }
@@ -966,13 +952,9 @@ ARTclean(ARTDATA *data, char *buff, bool ihave)
     data->Posted = 0;
 
     /* replace trailing '\r\n' with '\0\n' of all system header fields to be
-       handled easily by str*() functions */
-    for (i = 0; i < MAX_ARTHEADER; i++) {
-        if (HDR_FOUND(i)) {
-            HDR_LASTCHAR_SAVE(i);
-            HDR_PARSE_START(i);
-        }
-    }
+       handled easily by str*() functions; ARTpost puts them back only while
+       it stores the article */
+    hdr_cut_all(hc);
 
     /* Make sure all the header fields we need are there */
     for (i = 0; i < MAX_ARTHEADER; i++) {
@@ -2506,13 +2488,10 @@ ARTpost(CHANNEL *cp)
     for (i = 0; (ngp = GroupPointers[i]) != nullptr; i++)
         ngp->PostCount = 0;
 
-    token = ARTstore(cp, Filtered);
-    /* Change trailing '\r\n' to '\0\n' of all system header fields. */
-    for (i = 0; i < MAX_ARTHEADER; i++) {
-        if (HDR_FOUND(i)) {
-            HDR_LASTCHAR_SAVE(i);
-            HDR_PARSE_START(i);
-        }
+    {
+        /* Stored as received, with each header field's CRLF. */
+        HeadersRestored restored(hc);
+        token = ARTstore(cp, Filtered);
     }
     if (token.type == TOKEN_EMPTY) {
         syslog(L_ERROR, "%s cant store article: %s", LogName, SMerrorstr);
