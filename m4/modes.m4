@@ -46,17 +46,9 @@ AC_DEFUN([INN_ARG_MODES],
         [INEWSMODE=02555])])
  AC_SUBST([INEWSMODE])
 
- dnl rnews used to be installed setuid root so that it could be run by the uucp
- dnl user for incoming batches, but this isn't necessary unless you're using
- dnl UUCP (which most people aren't) and setuid news is all that's needed.
- dnl Only do even that if it's explicitly requested at configure time.
+ dnl rnews is not setuid: INN++ removed UUCP support, and with it
+ dnl --enable-uucp-rnews, which installed rnews setuid news, group uucp.
  RNEWSGRP=$RUNASGROUP
  RNEWSMODE=0500
- AC_ARG_ENABLE([uucp-rnews],
-    [AS_HELP_STRING([--enable-uucp-rnews],
-        [Install rnews setuid, group uucp])],
-    [AS_IF([test "x$enableval" = xyes],
-        [RNEWSGRP=uucp
-         RNEWSMODE=04550])])
  AC_SUBST([RNEWSGRP])
  AC_SUBST([RNEWSMODE])])
