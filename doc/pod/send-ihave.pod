@@ -71,7 +71,6 @@ or C<to> if I<mergetogroups> is set to true.
 You now have to propagate them with any method you want to the remote server.
 You probably already had one set up, in which case you only have to add
 the C<to.news.server.com> newsgroup in the list of groups to feed it.
-(See how send-uucp(8) works to set up a UUCP feed.)
 
 Besides sending ihave control messages, your news server needs to process the
 sendme control messages it receives from remote peers.  You have to add a
@@ -81,7 +80,7 @@ will then generate a batch file named F<pathname.work> in I<pathoutgoing>,
 containing a list of storage tokens (I<pathname> is taken from the Path header
 field body or the IP address of the remote peer, depending on the value
 of I<logipaddr> in F<inn.conf>).  Finally, you'll have to set up batcher(8)
-or send-uucp(8) to send the news batches to your remote peers.
+to send the news batches to your remote peers.
 
 Similarly, your news server needs to process the ihave control messages it
 receives from remote peers.  This step is the easiest to do.  Just add an
@@ -115,7 +114,6 @@ Rewritten into POD by Julien Elie.
 
 =head1 SEE ALSO
 
-batcher(8), controlchan(8), control.ctl(5), inews(1), newsfeeds(5),
-send-uucp(8).
+batcher(8), controlchan(8), control.ctl(5), inews(1), newsfeeds(5).
 
 =cut
