@@ -127,8 +127,7 @@ our $watchpid = "${innddir}/innwatch.pid";
 
 ##  Paths of external used programs.
 my @EXTPROGVAR = qw(
-    $awk $egrep $gpgv $gpg $perl $pgp $sed $sort $getftp $gethttp $uustat
-    $uux
+    $awk $egrep $gpgv $gpg $perl $pgp $sed $sort $getftp $gethttp
 );
 our $awk = '@AWK@';
 our $egrep = '@EGREP@';
@@ -140,8 +139,6 @@ our $sed = '@SED@';
 our $sort = '@SORT@';
 our $getftp = "@PATH_GETFTP@";
 our $gethttp = "@PATH_GETHTTP@";
-our $uustat = '@UUSTAT@';
-our $uux = '@UUX@';
 
 ##  Paths of external used compressors.
 my @EXTCOMPVAR = qw($bzip2 $compress $gzip $uncompress $log_compress $z);
