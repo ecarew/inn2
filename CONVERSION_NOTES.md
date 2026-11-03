@@ -1322,6 +1322,30 @@ are added here.
 
 Open items from CLAUDE.md, moved here when done, newest first.
 
+- 2026-11-03: UUCP removed as a historical footnote (decided with the
+  user; README.md, Conversion goals).  Gone: send-uucp and send-uucp.cf,
+  encode/decode and c7unbatch (7-bit batches for 8-bit-unsafe links),
+  `--enable-uucp-rnews` (setuid rnews, group uucp), rnews's UU_MACHINE host,
+  and uux/uustat in innshellvars, INN::Config and InnPaths.cmake
+  (`8c98b1d3b`..`7419cd9cb`).  Kept: rnews, the `#! rnews` batch format,
+  bunbatch/gunbatch, batcher, sendxbatches (NNTP XBATCH) and `rnews -h`.
+- 2026-11-02: CMake-only items 3 and 4.  cmake/InnPaths.cmake
+  (`ebfb8b981`, `6ea793188`) holds the install directories, the values
+  configure substituted (awk, grep -E, compressors, gpg, log compression
+  as INN_LOG_COMPRESS, modes, version) and inn_fixscript/inn_scripts.
+  Samples (`5d4fdc75e`): all six that samples/Makefile made; identical to
+  fixconfig/fixscript output except inn.conf's pathhistory, which the
+  stale checked-out support/fixconfig left as @HISTORYDIR@.  Scripts
+  (`fb56d6204`..`e519003eb`): all 37 fixscript scripts, byte-identical to
+  support/fixscript's output, plus innshellvars(.pl,.tcl) and INN::Config,
+  which differ from configure's copies only in expanded paths and awk's
+  full path.
+- 2026-11-02: the "Still C" list.  feedone and sys2nf converted
+  (`8addf6ecc`, `724beb8ea`), built by INN_OPTIONAL_PROGRAMS (off by
+  default, like Make's "make optional", `b6e2b7d0b`).  The compiled-out
+  innd/perl.cc, innd/python.cc and lib/perl.cc pass the syntax-only check
+  with DO_PERL / DO_PYTHON; it found one duplicate extern on PyInit_INN
+  (`2460146b6`).
 - 2026-11-03: contrib/ converted, improved, tested and built by CMake
   (`-DINN_CONTRIB=ON`, off by default: contrib is unsupported and built on
   request in Make too).  The 7 programs are .cc and the 18 scripts are
