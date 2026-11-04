@@ -11,3 +11,10 @@ inn_program(makehistory  SOURCES makehistory.cc)
 inn_program(prunehistory SOURCES prunehistory.cc)
 
 inn_scripts(expirerm)
+
+# expire/Makefile's install target.
+inn_install(TARGETS convdate fastrm grephistory DESTINATION ${bindir}
+            MODE XPUB)
+inn_install(TARGETS expire expireover makedbz makehistory prunehistory
+            DESTINATION ${bindir} MODE XPRI)
+inn_install(FILES expirerm DESTINATION ${bindir} MODE XPRI)
