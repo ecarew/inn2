@@ -10,3 +10,12 @@ endforeach()
 inn_scripts(inncheck innmail innreport innstat innwatch news.daily rc.news
             scanlogs tally.control writelog)
 inn_scripts(innupgrade simpleftp NOLIB)
+
+# scripts/Makefile's install target.
+inn_install(FILES innmail innreport simpleftp DESTINATION ${bindir} MODE XPUB)
+inn_install(FILES inncheck innstat innupgrade innwatch news.daily rc.news
+                  scanlogs tally.control writelog
+            DESTINATION ${bindir} MODE XPRI)
+inn_install(FILES innreport-display.conf innreport_inn.pm innshellvars
+                  innshellvars.pl innshellvars.tcl
+            DESTINATION ${libdir} MODE RPUB)
