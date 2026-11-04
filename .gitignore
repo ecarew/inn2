@@ -1,5 +1,9 @@
 # Ignore list for Git.  -*- conf -*-
 
+# CMake build trees and generated docs and graphs (build, build-live,
+# build-doxygen, build-graphviz, ...).
+/build*/
+
 /config.cache
 /config.log
 /config.status
