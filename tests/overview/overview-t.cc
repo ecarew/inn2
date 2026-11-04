@@ -61,7 +61,7 @@ group_key(const void *entry)
 static bool
 group_eq(const void *key, const void *entry)
 {
-    const char *first = key;
+    const char *first = static_cast<const char *>(key);
     const char *second;
 
     second = ((const struct group *) entry)->group;
@@ -82,7 +82,7 @@ group_del(void *entry)
 static void
 fake_innconf(void)
 {
-    if (innconf != NULL) {
+    if (innconf != nullptr) {
         free(innconf->ovmethod);
         free(innconf->pathdb);
         free(innconf->pathetc);
@@ -98,7 +98,7 @@ fake_innconf(void)
     innconf->nfsreader = false;
     innconf->overcachesize = 20;
     innconf->ovflushcount = 50;
-    innconf->ovgrouppat = NULL;
+    innconf->ovgrouppat = nullptr;
     innconf->ovmethod = xstrdup(STRING(OVTYPE));
     innconf->pathdb = xstrdup("ov-tmp");
     innconf->pathetc = xstrdup("etc");
@@ -152,11 +152,11 @@ overview_data_parse(char *data, unsigned long *artnum)
         die("Line too long in input data");
 
     start = strchr(data, ':');
-    if (start == NULL)
+    if (start == nullptr)
         die("No colon found in input data");
     *start = '\0';
     start++;
-    *artnum = strtoul(start, NULL, 10);
+    *artnum = strtoul(start, nullptr, 10);
     if (*artnum == 0)
         die("Cannot parse article number in input data");
     return start;
@@ -181,19 +181,19 @@ overview_load(const char *data)
        stored information about that group, which we'll use for verification
        later.  We store that in a local hash table. */
     groups = hash_create(32, hash_string, group_key, group_eq, group_del);
-    if (groups == NULL)
+    if (groups == nullptr)
         die("Cannot create a hash table");
     overview = fopen(data, "r");
-    if (overview == NULL)
+    if (overview == nullptr)
         sysdie("Cannot open %s for reading", data);
-    while (fgets(buffer, sizeof(buffer), overview) != NULL) {
+    while (fgets(buffer, sizeof(buffer), overview) != nullptr) {
         start = overview_data_parse(buffer, &artnum);
 
         /* See if we've already seen this group.  If not, create it in the
            overview and the hash table; otherwise, update our local hash table
            entry. */
-        group = hash_lookup(groups, buffer);
-        if (group == NULL) {
+        group = static_cast<struct group *>(hash_lookup(groups, buffer));
+        if (group == nullptr) {
             group = xmalloc(sizeof(struct group));
             group->group = xstrdup(buffer);
             group->count = 1;
@@ -305,9 +305,9 @@ overview_verify_data(const char *data)
     time_t arrived;
 
     overdata = fopen(data, "r");
-    if (overdata == NULL)
+    if (overdata == nullptr)
         sysdie("Cannot open %s for reading", data);
-    while (fgets(buffer, sizeof(buffer), overdata) != NULL) {
+    while (fgets(buffer, sizeof(buffer), overdata) != nullptr) {
         start = overview_data_parse(buffer, &artnum);
 
         /* Now check that the overview data is correct for that group. */
@@ -323,7 +323,7 @@ overview_verify_data(const char *data)
 
         /* Do the same thing, except use search. */
         search = OVopensearch(buffer, artnum, artnum);
-        if (search == NULL) {
+        if (search == nullptr) {
             warn("Unable to open search for %s:%lu", buffer, artnum);
             status = false;
             continue;
@@ -379,16 +379,16 @@ overview_verify_search(const char *data)
     bool status = true;
 
     overview = fopen(data, "r");
-    if (overview == NULL)
+    if (overview == nullptr)
         sysdie("Cannot open %s for reading", data);
     expected = vector_new();
-    if (fgets(buffer, sizeof(buffer), overview) == NULL) {
+    if (fgets(buffer, sizeof(buffer), overview) == nullptr) {
         fclose(overview);
         die("Unexpected end of file in %s", data);
     }
     overview_data_parse(buffer, &artnum);
     group = xstrdup(buffer);
-    while (fgets(buffer, sizeof(buffer), overview) != NULL) {
+    while (fgets(buffer, sizeof(buffer), overview) != nullptr) {
         line = overview_data_parse(buffer, &artnum);
         if (strcmp(group, buffer) != 0)
             continue;
@@ -399,7 +399,7 @@ overview_verify_search(const char *data)
         last = artnum;
     }
     search = OVopensearch(group, start, end);
-    if (search == NULL) {
+    if (search == nullptr) {
         warn("Unable to open search for %s:%lu", buffer, start);
         free(group);
         vector_free(expected);
@@ -445,7 +445,7 @@ overview_verify_full_search(const char *data)
     unsigned long end = 0;
     struct vector *expected;
     char *line;
-    char *group = NULL;
+    char *group = nullptr;
     FILE *overview;
     char buffer[4096];
     int length;
@@ -455,18 +455,18 @@ overview_verify_full_search(const char *data)
     bool status = true;
 
     overview = fopen(data, "r");
-    if (overview == NULL)
+    if (overview == nullptr)
         sysdie("Cannot open %s for reading", data);
     expected = vector_new();
-    while (fgets(buffer, sizeof(buffer), overview) != NULL) {
+    while (fgets(buffer, sizeof(buffer), overview) != nullptr) {
         line = overview_data_parse(buffer, &artnum);
-        if (group == NULL)
+        if (group == nullptr)
             group = xstrdup(buffer);
         vector_add(expected, line);
         end = artnum;
     }
     search = OVopensearch(group, 1, end + 1);
-    if (search == NULL) {
+    if (search == nullptr) {
         warn("Unable to open full search for %s", group);
         free(group);
         vector_free(expected);
