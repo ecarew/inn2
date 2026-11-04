@@ -32,10 +32,10 @@ initialize(void)
     if (!innconf_read("../data/etc/inn.conf"))
         exit(1);
     Log = fopen("/dev/null", "w");
-    if (Log == NULL)
+    if (Log == nullptr)
         sysdie("cannot open /dev/null");
     CHANsetup(32);
-    gettimeofday(&Now, NULL);
+    gettimeofday(&Now, nullptr);
 }
 
 /* This just gets things started.  Then we call CHANreadloop, which should
@@ -95,10 +95,10 @@ writedone(CHANNEL *cp)
     if (!isvalidfd(fd))
         sysdie("file descriptor %d too high (see rlimitnofile in inn.conf)",
                fd);
-    newcp = CHANcreate(fd, CTany, CSgetbody, reader, NULL);
+    newcp = CHANcreate(fd, CTany, CSgetbody, reader, nullptr);
     RCHANadd(newcp);
     ok(7, !CHANsleeping(newcp));
-    now = time(NULL);
+    now = time(nullptr);
     SCHANadd(cp, now + 60, &Now, wakeup, xstrdup("some random text"));
     ok(8, CHANsleeping(cp));
 }
@@ -123,7 +123,7 @@ __attribute__((__noreturn__)) static void
 wakeup(CHANNEL *cp)
 {
     ok(13, true);
-    ok_string(14, "some random text", cp->Argument);
+    ok_string(14, "some random text", static_cast<const char *>(cp->Argument));
     CHANclose(cp, CHANname(cp));
     ok_int(15, CTfree, cp->Type);
     CHANshutdown();
