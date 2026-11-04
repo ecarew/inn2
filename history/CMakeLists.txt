@@ -38,3 +38,7 @@ add_library(INN::hist ALIAS innhist)
 # from hissqlite-util.in.
 inn_scripts(hissqlite/hissqlite-util)
 inn_program(hissqlite-convert SOURCES hissqlite/hissqlite-convert.cc)
+
+# history/Makefile's install target: its programs (LI_XPRI).
+inn_install(TARGETS hissqlite-convert DESTINATION ${bindir} MODE XPRI)
+inn_install(FILES hissqlite/hissqlite-util DESTINATION ${bindir} MODE XPRI)
