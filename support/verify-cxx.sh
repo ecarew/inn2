@@ -303,8 +303,20 @@ extra_obj() {
     esac
 }
 
+# Compile a test program's own source: tests that reach a program's
+# internals are C++ (X-t.cc), the rest C (X-t.c).
+test_obj() {
+    local src=$1 out=$2
+    shift 2
+    if [ -f "$src.cc" ]; then
+        c++ -std=c++20 "${cflags[@]}" "$@" -c "$src.cc" -o "$out"
+    else
+        cc "${cflags[@]}" "$@" -c "$src.c" -o "$out"
+    fi
+}
+
 # Each entry (a name ending in .t is a shell test, run as is):
-# test-name[:source-without--t.c[:extra-cflag[:extra-sources]]]
+# test-name[:source-without--t.c-or--t.cc[:extra-cflag[:extra-sources]]]
 # with extra-sources separated by commas.  An extra source starting with "@" is an
 # object already built in the build directory.  innd tests link innd_core
 # with tests/innd/fakeinnd.c in place of innd.cc, as tests/Makefile does.
@@ -439,8 +451,7 @@ for spec in "${tests[@]}"; do
               sh "$root/tests/$t.t" 2>&1)
         rc=$?
     elif ! $built \
-       || ! cc "${cflags[@]}" ${extra:+"$extra"} -c "tests/$src-t.c" \
-            -o "$tmp/$n-t.o" \
+       || ! test_obj "tests/$src-t" "$tmp/$n-t.o" ${extra:+"$extra"} \
             2>>"$tmp/$n.log" \
        || ! c++ "$tmp/$n-t.o" "${objs[@]}" "${tap[@]}" "${libs[@]}" -lm "${sanflags[@]}" "${covlink[@]}" \
                 -o "$tmp/$n.t" 2>>"$tmp/$n.log"; then
