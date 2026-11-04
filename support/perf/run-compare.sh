@@ -15,6 +15,11 @@
 #
 #  PERF_TOOLS names the directory with genarticles, feeder and readers.
 #  PERF_KEEP=1 keeps the last scratch installation.
+#  PERF_STORAGE=cnfs stores articles in CNFS (one 1 GB buffer, the
+#    PERF_CNFS_KB size) instead of tradspool.
+#  PERF_PROFILE=dir samples innd's stacks during W1 with sample(1), into
+#    dir/<build>-<rep>.sample (macOS only).
+#  Runs on macOS and Linux; on Linux the rusage lines come from GNU time.
 #  PERF_LEAKS=1 is the leak pass (section 5.4): programs run with malloc
 #    stack logging, the servers are checked with leaks(1) before they stop
 #    and the short programs with leaks --atExit; "<prog>_leaks" and
@@ -63,13 +68,25 @@ failed() { out "$1" FAILED "$2"; }
 now() { perl -MTime::HiRes=time -e 'printf "%.3f\n", time'; }
 elapsed() { awk -v a="$1" -v b="$2" 'BEGIN { printf "%.3f", b - a }'; }
 
-# cpu_s <pid>: user+system CPU seconds so far, from ps ("M:SS.ss").
+# cpu_s <pid>: user+system CPU seconds so far: from /proc on Linux (ps
+# shows whole seconds there), else from ps ("M:SS.ss").
 cpu_s() {
+    if [ -r "/proc/$1/stat" ]; then
+        awk -v hz="$(getconf CLK_TCK)" \
+            '{ sub(/^.*\) /, ""); printf "%.2f\n", ($12 + $13) / hz }' "/proc/$1/stat"
+        return
+    fi
     ps -o time= -p "$1" | awk -F: '{ s = 0; for (i = 1; i <= NF; i++) s = s * 60 + $i; print s }'
 }
 
-# rusage <prog> <scenario> <file>: the /usr/bin/time -l lines (none in
-# the leak pass).
+# BSD time(1) reports with -l, GNU time with -v.
+case $(uname -s) in
+Darwin) time_flag=-l ;;
+*) time_flag=-v ;;
+esac
+
+# rusage <prog> <scenario> <file>: the /usr/bin/time lines (none in the
+# leak pass).  GNU time reports the maximum RSS in KB and no footprint.
 rusage() {
     [ -s "$3" ] || return 0
     awk -v b="$build" -v r="$rep" -v s="$2" -v p="$1" '
@@ -79,6 +96,12 @@ rusage() {
                    printf "%s %s %s %s_peak_rss_bytes %s\n", b, r, s, p, $1 }
         /peak memory footprint/ {
                    printf "%s %s %s %s_peak_footprint_bytes %s\n", b, r, s, p, $1 }
+        /User time \(seconds\)/ {
+                   printf "%s %s %s %s_user_s %s\n", b, r, s, p, $NF }
+        /System time \(seconds\)/ {
+                   printf "%s %s %s %s_sys_s %s\n", b, r, s, p, $NF }
+        /Maximum resident set size \(kbytes\)/ {
+                   printf "%s %s %s %s_peak_rss_bytes %d\n", b, r, s, p, $NF * 1024 }
     ' "$3"
 }
 
@@ -90,7 +113,7 @@ measured() {
     if [ -n "$leaks_mode" ]; then
         measured_cmd=(env MallocStackLogging=1 leaks --atExit --)
     else
-        measured_cmd=(/usr/bin/time -l -o "$1")
+        measured_cmd=(/usr/bin/time "$time_flag" -o "$1")
     fi
 }
 # leakcount <prog> <scenario> <file>: the leaks(1) summary line, as
@@ -143,8 +166,18 @@ peer localhost {
     hostname: "127.0.0.1, localhost"
 }
 EOF
-    printf 'method tradspool {\n    newsgroups: *\n    class: 0\n}\n' \
-        >"$d/etc/storage.conf"
+    if [ "${PERF_STORAGE:-tradspool}" = cnfs ]; then
+        # A sparse buffer; CNFS initializes its header on first use.
+        local kb=${PERF_CNFS_KB:-1048576}
+        dd if=/dev/null of="$d/spool/cycbuff" bs=1024 seek="$kb" 2>/dev/null
+        printf 'cycbuff:ONE:%s:%s\nmetacycbuff:POOL:ONE\n' \
+            "$d/spool/cycbuff" "$kb" >"$d/etc/cycbuff.conf"
+        printf 'method cnfs {\n    newsgroups: *\n    class: 0\n    options: POOL\n}\n' \
+            >"$d/etc/storage.conf"
+    else
+        printf 'method tradspool {\n    newsgroups: *\n    class: 0\n}\n' \
+            >"$d/etc/storage.conf"
+    fi
     cat >"$d/etc/readers.conf" <<'EOF'
 auth "localhost" { hosts: "127.0.0.1" default: "<local>" }
 access "localhost" { users: "<local>" newsgroups: "*" }
@@ -164,7 +197,7 @@ start_innd() {
     local bin=$1 d=$2
     if [ -n "${3:-}" ]; then
         env INNCONF=$d/etc/inn.conf ${leaks_mode:+MallocStackLogging=1} \
-            /usr/bin/time -l -o "$3" "$bin/innd/innd" -f >"$d/innd.out" 2>&1 &
+            /usr/bin/time "$time_flag" -o "$3" "$bin/innd/innd" -f >"$d/innd.out" 2>&1 &
     else
         INNCONF=$d/etc/inn.conf "$bin/innd/innd" -f >"$d/innd.out" 2>&1 &
     fi
@@ -203,6 +236,12 @@ spool_files() { find "$1/spool/articles" -type f | wc -l | tr -d ' '; }
 w1() {
     local f=$main/w1.out c0
     c0=$(cpu_s "$innd")
+    # PERF_PROFILE=dir: sample innd's stacks during the intake.
+    if [ -n "${PERF_PROFILE:-}" ] && [ "$(uname -s)" = Darwin ]; then
+        mkdir -p "$PERF_PROFILE"
+        sample "$innd" "${PERF_PROFILE_S:-11}" 1 -mayDie \
+            -file "$PERF_PROFILE/$build-$rep.sample" >/dev/null 2>&1 &
+    fi
     if ! timeout "$limit" "$tools/feeder" takethis 127.0.0.1 "$mport" "$feed" >"$f" 2>&1; then
         failed W1 "feeder: $(tail -1 "$f")"; return 1
     fi
@@ -294,7 +333,7 @@ EOF
 w4() {
     local rport=$((mport + 2)) npid f=$main/w4.out
     env INNCONF=$main/etc/inn.conf ${leaks_mode:+MallocStackLogging=1} \
-        /usr/bin/time -l -o "$main/nnrpd.time" \
+        /usr/bin/time "$time_flag" -o "$main/nnrpd.time" \
         "$bin/nnrpd/nnrpd" -D -f -p "$rport" >"$main/nnrpd.out" 2>&1 &
     npid=$!
     local up=false
