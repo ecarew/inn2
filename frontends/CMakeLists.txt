@@ -21,3 +21,20 @@ if(INN_OPTIONAL_PROGRAMS)
 endif()
 
 inn_scripts(cnfsheadconf cnfsstat mailpost pullnews scanspool)
+
+# bunbatch and gunbatch, the decompressors rnews runs from rnews.libexec for
+# "#! bunbatch" and "#! gunbatch" batches (frontends/Makefile writes them).
+file(WRITE ${CMAKE_CURRENT_BINARY_DIR}/bunbatch "#! ${SHELL}\nexec ${BZIP2} -d -c\n")
+file(WRITE ${CMAKE_CURRENT_BINARY_DIR}/gunbatch "#! ${SHELL}\nexec ${GZIP} -d -c\n")
+
+# frontends/Makefile's install target.  inews and rnews have their own
+# modes (INEWSMODE, RNEWSMODE); feedone and sys2nf are not installed.
+inn_install(TARGETS inews DESTINATION ${bindir} MODE INEWS)
+inn_install(TARGETS rnews DESTINATION ${bindir} MODE RNEWS)
+inn_install(FILES cnfsheadconf DESTINATION ${bindir} MODE XPRI)
+inn_install(FILES cnfsstat mailpost pullnews scanspool DESTINATION ${bindir}
+            MODE XPUB)
+inn_install(TARGETS ctlinnd ovdb_init ovdb_monitor ovdb_server ovdb_stat
+            DESTINATION ${bindir} MODE XPRI)
+inn_install(TARGETS getlist innconfval sm DESTINATION ${bindir} MODE XPUB)
+inn_install(FILES bunbatch gunbatch DESTINATION ${PATHRNEWS} MODE XPUB)
