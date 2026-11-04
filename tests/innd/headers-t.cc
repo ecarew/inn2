@@ -65,7 +65,7 @@ main(void)
                 sysdie("Cannot cd to innd");
     fake_innconf();
     Log = fopen("/dev/null", "w");
-    if (Log == NULL)
+    if (Log == nullptr)
         sysdie("Cannot open /dev/null");
 
     plan(MAX_ARTHEADER * 4 + ARRAY_SIZE(unknown));
@@ -82,7 +82,7 @@ main(void)
         }
     }
     for (i = 0; i < ARRAY_SIZE(unknown); i++)
-        ok(ARTfindheader(unknown[i]) == NULL, "not found: \"%s\"",
+        ok(ARTfindheader(unknown[i]) == nullptr, "not found: \"%s\"",
            unknown[i]);
 
     ARTclose();
