@@ -203,6 +203,10 @@ from `cmake-build`; record method and raw numbers so rounds compare.
   with no Berkeley DB dependency (CONVERSION_NOTES.md, "Retiring ovdb").
 - lib fallbacks vs the C++ standard library and Boost; pread/pwrite in
   CONVERSION_NOTES.md, "Positioned file I/O".  Cite libc++/cppreference.
+- uwildmat hardening (CONVERSION_NOTES.md, "uwildmat hardening",
+  2026-11-04): keep the RFC 3977 syntax (not std::regex); make the
+  matcher iterative, cap client pattern length, fuzz against the current
+  matcher, measure innd's feed matching.
 - Legacy C functions with standard C++ replacements (qsort, bsearch, ...):
   once the last use of one is converted, remove what remains of it from
   the source tree: leftover comparators and helpers, INN's own
