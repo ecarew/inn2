@@ -693,14 +693,9 @@ void
 ARTprepare(CHANNEL *cp)
 {
     ARTDATA *data = &cp->Data;
-    HDRCONTENT *hc = data->HdrContent;
-    int i;
 
-    for (i = 0; i < MAX_ARTHEADER; i++, hc++) {
-        hc->Value = nullptr;
-        hc->Length = 0;
-        hc->LastChar = '\r';
-    }
+    for (HDRCONTENT &h : data->HdrContent)
+        h.clear();
     data->Lines = data->HeaderLines = data->CRwithoutLF = data->LFwithoutCR =
         0;
     data->DotStuffedLines = 0;
