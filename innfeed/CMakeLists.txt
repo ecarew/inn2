@@ -28,3 +28,8 @@ target_include_directories(innfeed  PRIVATE ${CMAKE_CURRENT_BINARY_DIR})
 target_include_directories(imapfeed PRIVATE ${CMAKE_CURRENT_BINARY_DIR})
 
 inn_scripts(procbatch)
+
+# innfeed/Makefile's install target: innfeed and imapfeed (LI_XPRI),
+# procbatch (CP_XPRI).
+inn_install(TARGETS innfeed imapfeed DESTINATION ${bindir} MODE XPRI)
+inn_install(FILES procbatch DESTINATION ${bindir} MODE XPRI)
