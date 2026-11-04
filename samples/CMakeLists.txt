@@ -36,3 +36,31 @@ foreach(script nnrpd_auth.pl nnrpd_access.pl)
     inn_fixscript(${CMAKE_CURRENT_SOURCE_DIR}/${script}.in
                   ${CMAKE_CURRENT_BINARY_DIR}/${script})
 endforeach()
+
+# site/Makefile's configuration files, each installed only if absent
+# (cmake/InnInstall.cmake).  The first-install data (active, newsgroups,
+# active.times, history) is made by the last install step.
+inn_install_config(incoming.conf inn-radius.conf passwd.nntp innfeed.conf
+                   inn-secrets.conf
+                   DESTINATION ${sysconfdir} MODE RPRI)
+inn_install_config(newsfeeds readers.conf nnrpd.track control.ctl
+                   control.ctl.local innwatch.ctl expire.ctl inn.conf
+                   moderators distrib.pats distributions nntpsend.ctl
+                   news2mail.cf innreport.conf localgroups storage.conf
+                   cycbuff.conf buffindexed.conf ovdb.conf ovsqlite.conf
+                   nocem.ctl actsync.cfg actsync.ign subscriptions
+                   DESTINATION ${sysconfdir} MODE RPUB)
+# site/Makefile installs these two under .sample names.
+inn_install_config(motd.innd DESTINATION ${sysconfdir} MODE RPUB
+                   RENAME motd.innd.sample)
+inn_install_config(motd.nnrpd DESTINATION ${sysconfdir} MODE RPUB
+                   RENAME motd.nnrpd.sample)
+inn_install_config(innshellvars.local innshellvars.pl.local
+                   innshellvars.tcl.local
+                   DESTINATION ${sysconfdir} MODE WXPUB)
+inn_install_config(innreport.css DESTINATION ${HTTPDIR} MODE RPUB)
+inn_install_config(startup_innd.pl filter_innd.pl filter_nnrpd.pl
+                   filter_innd.py INN.py nnrpd.py nnrpd_auth.pl
+                   nnrpd_access.pl nnrpd_auth.py nnrpd_access.py
+                   nnrpd_dynamic.py
+                   DESTINATION ${FILTERDIR} MODE RPUB)
