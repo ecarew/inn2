@@ -17,3 +17,6 @@ set_source_files_properties(perl.cc PROPERTIES
     COMPILE_OPTIONS "${INN_PERL_CPPFLAGS}")
 set_source_files_properties(python.cc PROPERTIES
     COMPILE_OPTIONS "${INN_PYTHON_CPPFLAGS}")
+
+# nnrpd/Makefile's install target (LI_XPUB).
+inn_install(TARGETS nnrpd DESTINATION ${bindir} MODE XPUB)
