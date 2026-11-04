@@ -208,15 +208,18 @@ by the InterNetNews project at <https://downloads.isc.org/isc/inn/>.
 
 ## Build and Install
 
-See
+[BUILDING.md](BUILDING.md) covers building, testing and
+`cmake --install`; see
 [INSTALL](https://www.eyrie.org/~eagle/software/inn/docs/install.html)
 for step-by-step instructions for setting up and configuring a news
 server.
 
-If you want to create a Docker image, you can find examples of standard
-local Docker containers or GitHub Actions services in projects like
-[apt-get-inn2-docker](https://github.com/cclauss/apt-get-inn2-docker) or
-[inn-docker](https://github.com/greenbender/inn-docker).
+**Docker** is a supported target.  INN++ is built, tested and installed as
+root in a Debian container (`support/docker/Dockerfile.linux`), and
+`support/docker-install-checks.sh` checks that the installed server starts
+as news and serves port 119 inside the container.  A ready-made image is
+planned; until then, the same Dockerfile and `cmake --install` are the way
+to build one.
 
 ## Documentation
 
