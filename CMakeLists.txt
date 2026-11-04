@@ -109,6 +109,31 @@ configure_file(include/config.h.cmake.in ${CMAKE_BINARY_DIR}/include/config.h)
 add_subdirectory(include)
 # Installation directories and inn_fixscript, for generated files.
 include(cmake/InnPaths.cmake)
+# Install rules (cmake/InnInstall.cmake).  This first install step, before
+# any directory installs a file, loads the install-time steps, refuses test
+# builds and creates INN's directories; the last one, at the end of this
+# file, sets ownership and creates the first-install data.
+include(cmake/InnInstall.cmake)
+set(_inn_test_build FALSE)
+if(INN_RUNAS_USER OR INN_RUNAS_GROUP)
+    set(_inn_test_build TRUE)
+endif()
+install(CODE "
+set(INN_I_TEST_BUILD ${_inn_test_build})
+set(INN_I_USER \"${INN_NEWS_USER}\")
+set(INN_I_GROUP \"${INN_NEWS_GROUP}\")
+set(INN_I_BINDIR \"${bindir}\")
+set(INN_I_DBDIR \"${DBDIR}\")
+set(INN_I_HISTORYDIR \"${HISTORYDIR}\")
+set(INN_I_RUNDIR \"${RUNDIR}\")
+set(INN_I_DIRS \"${prefix};${bindir};${PATHAUTH};${PATHAUTHRESOLV};${PATHAUTHPASSWD};${CONTROLDIR};${FILTERDIR};${PATHRNEWS};${DBDIR};${docdir};${sysconfdir};${HTTPDIR};${libdir};${LIBPERLDIR};${LIBPERLDIR}/INN;${LIBPERLDIR}/INN/Utils;${datarootdir};${SPOOLDIR};${tmpdir};${SPOOLDIR}/archive;${SPOOLDIR}/articles;${SPOOLDIR}/incoming;${SPOOLDIR}/incoming/bad;${SPOOLDIR}/innfeed;${SPOOLDIR}/overview;${SPOOLDIR}/outgoing;${LOGDIR};${LOGDIR}/OLD;${includedir};${includedir}/inn\")
+set(INN_I_DATA_MODE \"${INN_MODE_DATA}\")
+set(INN_I_SETGID_INEWS ${INN_SETGID_INEWS})
+set(INN_I_ACTIVE_MINIMAL \"${CMAKE_SOURCE_DIR}/samples/active.minimal\")
+set(INN_I_NEWSGROUPS_MINIMAL \"${CMAKE_SOURCE_DIR}/samples/newsgroups.minimal\")
+include(\"${INN_INSTALL_STEPS}\")
+inn_install_begin()
+")
 add_subdirectory(samples)
 include_directories(BEFORE ${CMAKE_BINARY_DIR}/include)
 include_directories(${CMAKE_SOURCE_DIR}/include)
@@ -179,3 +204,23 @@ if(INN_TESTS)
     enable_testing()
     add_subdirectory(tests)
 endif()
+
+# INN's libraries and headers, for programs built against INN (lib/,
+# storage/, history/ and include/'s install targets).  The libraries are
+# static, so they are readable files, not executables.
+install(TARGETS inn innstorage innhist ARCHIVE DESTINATION ${libdir}
+        PERMISSIONS ${INN_MODE_RPUB})
+file(GLOB _inn_headers ${CMAKE_SOURCE_DIR}/include/inn/*.h)
+install(FILES ${_inn_headers}
+        ${CMAKE_BINARY_DIR}/include/inn/paths.h
+        ${CMAKE_BINARY_DIR}/include/inn/portable-getaddrinfo.h
+        ${CMAKE_BINARY_DIR}/include/inn/portable-getnameinfo.h
+        ${CMAKE_BINARY_DIR}/include/inn/portable-macros.h
+        ${CMAKE_BINARY_DIR}/include/inn/portable-socket.h
+        ${CMAKE_BINARY_DIR}/include/inn/portable-stdbool.h
+        ${CMAKE_BINARY_DIR}/include/inn/system.h
+        ${CMAKE_BINARY_DIR}/include/inn/version.h
+        DESTINATION ${includedir}/inn PERMISSIONS ${INN_MODE_RPUB})
+
+# The last install step (cmake/InnInstallSteps.cmake).
+install(CODE "inn_install_end()")
