@@ -52,7 +52,7 @@ write_test_file(const char *path, const CAFHEADER *head,
         sysbail("cannot create %s", path);
     if (xwrite(fd, head, sizeof(*head)) != (ssize_t) sizeof(*head))
         sysbail("cannot write CAF header");
-    if (entry != NULL) {
+    if (entry != nullptr) {
         if (lseek(fd, sizeof(*head) + head->FreeZoneTabSize, SEEK_SET) < 0)
             sysbail("cannot seek to CAF TOC");
         if (xwrite(fd, entry, sizeof(*entry)) != (ssize_t) sizeof(*entry))
@@ -116,7 +116,7 @@ main(void)
     is_int(CAF_ERR_BADFILE, error, "invalid cancel metadata is a bad file");
 
     head = test_header();
-    write_test_file(path, &head, NULL, sizeof(CAFHEADER));
+    write_test_file(path, &head, nullptr, sizeof(CAFHEADER));
     fd = CAFOpenReadTOC(path, &read_head, &toc);
     error = caf_error;
     is_int(-1, fd, "reject a TOC truncated by end of file");
