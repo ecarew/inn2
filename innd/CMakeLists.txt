@@ -74,18 +74,7 @@ target_link_libraries(tinyleaf PRIVATE
 
 # ── install ───────────────────────────────────────────────────────────────────
 
-install(TARGETS innd
-    RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR}
-    PERMISSIONS
-        OWNER_READ OWNER_EXECUTE
-        GROUP_READ GROUP_EXECUTE
-        SETUID   # corresponds to LI_XPRI (-m 0550 with news owner)
-)
-
-install(TARGETS tinyleaf
-    RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR}
-    PERMISSIONS
-        OWNER_READ OWNER_EXECUTE
-        GROUP_READ GROUP_EXECUTE
-        WORLD_READ WORLD_EXECUTE  # corresponds to LI_XPUB (-m 0555)
-)
+# innd/Makefile's install target: innd 0550 (LI_XPRI), tinyleaf 0555
+# (LI_XPUB), owned by news (cmake/InnInstall.cmake).
+inn_install(TARGETS innd     DESTINATION ${bindir} MODE XPRI)
+inn_install(TARGETS tinyleaf DESTINATION ${bindir} MODE XPUB)
