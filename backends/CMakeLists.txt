@@ -20,3 +20,15 @@ inn_program(shrinkfile SOURCES shrinkfile.cc INNONLY)
 inn_scripts(actmerge actsyncd mod-active news2mail nntpsend send-ihave
             sendinpaths sendxbatches)
 inn_scripts(delayer NOLIB)
+
+# backends/Makefile's install target.  innbind is installed 0550 like the
+# other private programs; the last install step makes it setuid root when
+# run as root (cmake/InnInstallSteps.cmake), as make install did.
+inn_install(FILES actmerge actsyncd delayer news2mail nntpsend send-ihave
+                  sendinpaths sendxbatches
+            DESTINATION ${bindir} MODE XPUB)
+inn_install(FILES mod-active DESTINATION ${bindir} MODE XPRI)
+inn_install(TARGETS overchan innbind DESTINATION ${bindir} MODE XPRI)
+inn_install(TARGETS actsync archive batcher buffchan cvtbatch inndf innxbatch
+                    innxmit ninpaths nntpget shlock shrinkfile
+            DESTINATION ${bindir} MODE XPUB)
