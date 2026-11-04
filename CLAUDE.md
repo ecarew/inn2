@@ -53,7 +53,11 @@ than wrapping its `#include`.
 - `void *` from `xmalloc`, `xcalloc`, `xrealloc` and `xreallocarray` needs no
   cast: they return `inn_void_ptr` (include/inn/xmalloc.h).
 - Not converted: INN's Perl and Python, and the test programs in `tests/`,
-  which stay C (new tests are written in C too).
+  which stay C (new tests are written in C too).  The exception is a test
+  that includes a program's internal headers (innd/innd.h, nnrpd/nnrpd.h,
+  the tradindexed, buffindexed and timecaf private headers): it is C++, so
+  those headers can use C++ types (architect, 2026-11-04;
+  CONVERSION_NOTES, "Internal tests in C++").
 
 ## Testing before commit
 
@@ -149,7 +153,12 @@ and support/fixscript are Make-only now.
 
 **Still C**
 All INN source is C++ (2026-11-03).  C left on purpose: the tests (they
-check the C/C++ boundary) and the CMake feature checks (cmake/checks/).  Left from the conversion:
+check the C/C++ boundary) and the CMake feature checks (cmake/checks/).
+In progress (architect, 2026-11-04): the seven tests that include a
+program's internal headers become C++, so those headers can use C++ types
+(CONVERSION_NOTES.md, "Internal tests in C++").  Next: `HDRCONTENT` in
+C++, then a profile of innd's feed intake (93% of its CPU is system time).
+Left from the conversion:
 - innfeed/ is C++ (2026-11-01).  Move the parser to bison lalr1.cc /
   flex C++ scanner classes (needs bison 3; macOS has 2.3, so ask before
   adding Homebrew bison).
@@ -166,6 +175,9 @@ check the C/C++ boundary) and the CMake feature checks (cmake/checks/).  Left fr
 - Add a live-harness configuration where the news user is not the tester.
 
 **Comparative analysis, original C vs C++ (asked 2026-10-29)**
+Round 1 done 2026-11-04: doc/perf/2026-11-04-alpha3.md (spec
+doc/spec/performance-comparison.md, tools in support/perf/).  Next round
+after the refactoring, as a new column.
 Two rounds: when the conversion is complete, and after the refactoring.
 Same machine, compiler and flags; original from `main` (Autoconf/Make), C++
 from `cmake-build`; record method and raw numbers so rounds compare.
@@ -176,6 +188,10 @@ from `cmake-build`; record method and raw numbers so rounds compare.
   repeated, with the spread.
 
 **Refactoring candidates (after the conversion)**
+- Leaks inherited from 2.8.0 (CONVERSION_NOTES.md, "Upstream bugs and
+  quirks found", 2026-11-04).  Medium priority: innfeed's
+  `mainOptionsProcess` double copy and `delHost` not freeing
+  `host_param_s`.  Low: makehistory, expireover and the nnrpd session.
 - `ARTHANDLE::groups` (include/inn/storage.h) is `char *` though the storage
   methods only read it; make it `const char *` and drop art.cc's
   `const_cast` for `replic`.
