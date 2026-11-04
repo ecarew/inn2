@@ -35,3 +35,10 @@ if(HAVE_KRB5)
                 LIBS innauth ${INN_KRB5_LIBS})
     target_compile_options(auth_krb5 PRIVATE ${INN_KRB5_CFLAGS})
 endif()
+
+# authprogs/Makefile's install target (LI_XPUB).
+inn_install(TARGETS ckpasswd radius DESTINATION ${PATHAUTHPASSWD} MODE XPUB)
+if(HAVE_KRB5)
+    inn_install(TARGETS auth_krb5 DESTINATION ${PATHAUTHPASSWD} MODE XPUB)
+endif()
+inn_install(TARGETS domain ident DESTINATION ${PATHAUTHRESOLV} MODE XPUB)
