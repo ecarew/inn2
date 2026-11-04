@@ -56,7 +56,7 @@ static const struct {
 static void
 fake_innconf(void)
 {
-    if (innconf != NULL) {
+    if (innconf != nullptr) {
         free(innconf->pathetc);
         free(innconf);
     }
@@ -75,7 +75,7 @@ static CHANNEL *
 fake_channel(void)
 {
     CHANNEL *cp;
-    static const CHANNEL CHANnull;
+    static const CHANNEL CHANnull{};
 
     cp = xmalloc(sizeof(CHANNEL));
     *cp = CHANnull;
@@ -95,7 +95,7 @@ initialize(void)
                 sysdie("Cannot cd to innd");
     fake_innconf();
     Log = fopen("/dev/null", "w");
-    if (Log == NULL)
+    if (Log == nullptr)
         sysdie("Cannot open /dev/null");
     fdreserve(4);
     /* ARTsetup needs to have a proper Path. */
@@ -120,11 +120,11 @@ ok_article(int n, const char *path, const char *error, bool slow, bool shift)
     enum channel_state expected;
 
     article = ReadInFile(path, &st);
-    if (article == NULL)
+    if (article == nullptr)
         sysbail("cannot read %s", path);
     len = st.st_size;
     wire = wire_from_native(article, len, &wirelen);
-    if (wire == NULL)
+    if (wire == nullptr)
         sysbail("cannot convert %s to wire format", path);
     cp = fake_channel();
     offset = shift ? random() % 50 : 0;
@@ -165,7 +165,7 @@ ok_article(int n, const char *path, const char *error, bool slow, bool shift)
     ok_int(n++, expected, cp->State);
     ok_int(n++, wirelen, cp->Next - cp->Start);
     body = wire_findbody(wire, wirelen);
-    if (body != NULL)
+    if (body != nullptr)
         ok_int(n++, body - wire, cp->Data.Body - offset);
     else
         ok_int(n++, cp->Start, cp->Data.Body);
