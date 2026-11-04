@@ -3,8 +3,9 @@
 INN++ is INN 2.8.0 converted to C++20 with a CMake-only build (branch
 `cmake-build`).  This file is for someone who wants to build it and check the
 conversion.  Why things are the way they are: [CONVERSION_NOTES.md](CONVERSION_NOTES.md).
-How to install INN for real use is not covered yet: the CMake build has no
-install rules so far.
+Installing is under [Install](#install); configuring a news server is
+covered by INN's own
+[INSTALL](https://www.eyrie.org/~eagle/software/inn/docs/install.html).
 
 ## Requirements
 
@@ -79,6 +80,42 @@ Build options (`-D<option>=<value>` on the first `cmake` command):
 - `INN_OPTIONAL_PROGRAMS` (default `OFF`): build feedone and sys2nf.
 - `INN_KEYWORDS` (default `OFF`): generate Keywords for overview.
 - `INN_TESTS` (default `ON`): build the tests.
+- `INN_SETGID_INEWS` (default `OFF`): install inews setgid news (mode
+  2555) so local users can post without nnrpd authentication
+  (configure's `--enable-setgid-inews`).
+
+## Install
+
+```sh
+sudo cmake --install build
+```
+
+installs into `INN_PREFIX` what `make install` does, with the same owners
+and modes: everything owned by `news:news`, and `innbind`, the only setuid
+program, owned by root with mode 4550.  The `news` user and group must
+exist first.  On a first install it also creates the data directories, a
+minimal `active` and `newsgroups`, and an empty history database.
+
+- The prefix is chosen when configuring (`-DINN_PREFIX=...`);
+  `cmake --install --prefix` has no effect.
+- A configuration file is installed only if none is there, so a reinstall
+  keeps your configuration and data (there are no `.OLD` copies).
+- Staging for a package: `DESTDIR=/tmp/stage cmake --install build`, as
+  your own user; the owners and innbind's setuid bit are then left to the
+  package (the install says what to set).
+- A build configured with `INN_RUNAS_USER`/`INN_RUNAS_GROUP` refuses to
+  install.
+- Man pages, the documentation and the Perl/Python filter samples are not
+  installed yet.
+
+Then set `domain` in `etc/inn.conf` if the host name has no domain part,
+configure INN following its INSTALL, and start the server as news:
+
+```sh
+sudo -u news /usr/local/news/bin/rc.news
+```
+
+innd binds port 119 through innbind; it never runs as root.
 
 ## Test
 
@@ -125,6 +162,15 @@ programs that write INN's data must refuse root):
 ```sh
 sudo support/root-checks.sh          # macOS or Linux, uses build-live
 support/docker-root-checks.sh        # Linux, as root in a Docker container
+```
+
+**Install checks** (Linux, as root in a Docker container): installs with
+`cmake --install`, checks the owners and modes, that innbind is the only
+setuid file, that rc.news starts innd as news on port 119, and that a
+reinstall keeps the configuration:
+
+```sh
+support/docker-install-checks.sh
 ```
 
 **On Linux without a Linux machine** (Docker, Debian trixie, as an ordinary
