@@ -43,17 +43,20 @@ macro(inn_install_begin)
 endmacro()
 
 # inn_install_if_absent(<src> <dest> <permissions>): install a
-# configuration file unless one is already there.
-function(inn_install_if_absent src dest perms)
+# configuration file unless one is already there.  A macro, not a function,
+# so that file(INSTALL) adds the file to CMAKE_INSTALL_MANIFEST_FILES,
+# which inn_install_end chowns (and no return(), which in a macro would end
+# the install script).
+macro(inn_install_if_absent src dest perms)
     if(EXISTS "$ENV{DESTDIR}${dest}")
         message(STATUS "Keeping: $ENV{DESTDIR}${dest}")
-        return()
+    else()
+        get_filename_component(_inn_dir "${dest}" DIRECTORY)
+        get_filename_component(_inn_name "${dest}" NAME)
+        file(INSTALL DESTINATION "${_inn_dir}" TYPE FILE FILES "${src}"
+             RENAME "${_inn_name}" PERMISSIONS ${perms})
     endif()
-    get_filename_component(dir "${dest}" DIRECTORY)
-    get_filename_component(name "${dest}" NAME)
-    file(INSTALL DESTINATION "${dir}" TYPE FILE FILES "${src}"
-         RENAME "${name}" PERMISSIONS ${perms})
-endfunction()
+endmacro()
 
 # _inn_chown(<owner:group> <path>...)
 function(_inn_chown who)
