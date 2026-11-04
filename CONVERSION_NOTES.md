@@ -1354,6 +1354,37 @@ I/O.
 3. Switch to a standard facility if one is adopted.
 Option 1 is the cheapest first step and does not rule out 2 or 3.
 
+### dbzsync flushes only what changed (noted 2026-11-04, refactoring phase)
+
+**Found by** the innd W1 profile (`doc/perf/2026-11-04-w1-profile.md`):
+about 20% of innd's intake time on macOS is `msync` in `putcore`
+(`lib/dbz.cc`).
+
+**What it does now.**  `hisv6_writeline` calls `hisv6_sync` every
+`icdsynccount` history writes (10 in the sample `inn.conf`), which calls
+`dbzsync` and then `putcore`.  With the table mapped (`INCORE_MMAP`),
+`putcore` calls `msync(tab->core, conf.tsize * tab->reclen, MS_ASYNC)`:
+the whole hash table.  `MS_ASYNC` does not wait for the disk, but the
+kernel still walks every page of the mapping, so each call costs time in
+proportion to the table's size, not to the few entries written since the
+last one.
+
+**The work:**
+- Track the lowest and highest offsets `dbzstore` writes since the last
+  `putcore`, per table (`idxtab` and `etab`, or `pagtab` with tagged
+  hash), and `msync` only the pages
+  that span them (rounded out to the page size).  Reset after each sync.
+- Keep the whole-table flush on `dbzclose` and wherever the table is
+  rebuilt, so nothing written is ever left out.
+- `INCORE_MEM` (no mmap) writes the whole table with `xpwrite`; the same
+  range tracking applies, and is a separate step.
+- Crash safety stays what `icdsynccount` gives today: the same entries
+  are flushed at the same moments.
+- Measure W1 before and after, on macOS and on Linux.
+- Not instead: raising `icdsynccount` is a configuration change with no
+  code, but loses more history in a crash.  Document it as the
+  administrator's trade-off, not a default change.
+
 ### uwildmat hardening (noted 2026-11-04, refactoring phase)
 
 **Proposal looked at: replace wildmat with `std::regex`.**  Not taken:
