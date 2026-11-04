@@ -60,3 +60,8 @@ target_include_directories(ovsqlite-server PRIVATE
 inn_program(buffindexed_d SOURCES buffindexed/buffindexed.cc)
 target_compile_definitions(buffindexed_d PRIVATE BUFF_DEBUG)
 target_compile_features(buffindexed_d PRIVATE cxx_std_20)
+
+# storage/Makefile's install target: its programs (LI_XPRI).
+inn_install(TARGETS buffindexed_d ovsqlite-server tdx-util
+            DESTINATION ${bindir} MODE XPRI)
+inn_install(FILES ovsqlite/ovsqlite-util DESTINATION ${bindir} MODE XPRI)
