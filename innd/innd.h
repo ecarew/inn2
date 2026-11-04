@@ -51,6 +51,7 @@
 #include "inn/storage.h"
 #include "inn/timer.h"
 #include "inn/vector.h"
+#include <string_view>
 
 BEGIN_DECLS
 
@@ -117,14 +118,55 @@ typedef struct _ARTHEADER {
 /*
 **  Header body.
 */
-typedef struct _HDRCONTENT {
-    char *Value;   /* Don't copy, shows where it begins. */
-    int Length;    /* Length of Value (tailing CRLF is not
-                      included).  -1 if duplicated. */
-    char LastChar; /* Saved char when the last one is cut during parsing.
-                      Usually '\r' but it may be another char.  See
-                      hdr_cut in article.h. */
-} HDRCONTENT;
+struct HDRCONTENT {
+    char *Value = nullptr; /* Don't copy, shows where it begins. */
+    int Length = 0;        /* Length of Value (tailing CRLF is not
+                              included).  -1 if duplicated. */
+    char LastChar = '\r';  /* Saved char when the last one is cut during
+                              parsing.  Usually '\r' but it may be another
+                              char.  See cut(). */
+
+    /* Whether the article has this header field (once, with a value). */
+    bool found() const
+    {
+        return Length > 0;
+    }
+
+    /* The value as pointer and length (no CRLF); empty if not found. */
+    std::string_view view() const
+    {
+        if (!found())
+            return {};
+        return {Value, static_cast<size_t>(Length)};
+    }
+
+    /* The value is used as a C string in place in the channel's buffer:
+       cut() saves the byte after it and puts a '\0' there, restore() puts
+       the byte back.  article.h has scope guards for these. */
+    void cut()
+    {
+        LastChar = Value[Length];
+        Value[Length] = '\0';
+    }
+    void restore()
+    {
+        Value[Length] = LastChar;
+    }
+
+    /* Point at a value not in the channel's buffer (a control message's
+       Message-ID); it is never cut. */
+    void set(char *value, size_t length)
+    {
+        Value = value;
+        Length = static_cast<int>(length);
+    }
+
+    /* Back to "not found", before each article. */
+    void clear()
+    {
+        *this = HDRCONTENT{};
+    }
+};
 
 
 /*
