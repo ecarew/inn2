@@ -1354,6 +1354,40 @@ I/O.
 3. Switch to a standard facility if one is adopted.
 Option 1 is the cheapest first step and does not rule out 2 or 3.
 
+### uwildmat hardening (noted 2026-11-04, refactoring phase)
+
+**Proposal looked at: replace wildmat with `std::regex`.**  Not taken:
+- wildmat is the NNTP pattern syntax (RFC 3977 §4).  Clients send it on
+  the wire (`LIST ACTIVE`, `NEWNEWS` and others), and INN's configuration
+  is written in it (`newsfeeds`, `readers.conf`, `incoming.conf`,
+  `storage.conf`).  Changing the syntax breaks clients and every existing
+  configuration.  Only the code that matches it, `lib/uwildmat.cc`, can
+  change.
+- `std::regex` would be less safe:
+  - wildmat is a glob, so each pattern would have to be translated to a
+    regex, which is a new place to get escaping wrong.
+  - Its backtracking can take exponential time and, in libstdc++,
+    overflow the stack on long input.
+  - It is slow, and innd matches every article's newsgroups against every
+    feed's patterns.
+
+**What uwildmat already does.**  `match_pattern` recurses at `*`, but its
+ABORT return (1991) means only one star loop is ever active, so the worst
+case is proportional to text length × pattern length, not exponential.
+Recursion depth is at most the number of `*` in the pattern.
+
+**The work:**
+- Keep the syntax, and `uwildmat`, `uwildmat_simple` and `uwildmat_poison`
+  as they are.
+- Make `match_pattern` iterative (the single-active-star-loop property
+  makes this a saved restart point, as the file's own comment says).  This
+  removes the recursion depth a client controls.
+- Cap the length of patterns that come from clients (nnrpd's commands).
+- Fuzz the new matcher against the current one for identical results,
+  UTF-8 and character classes included.  `tests/lib/uwildmat-t` has the
+  existing cases; the file notes it had 100% coverage.
+- Measure innd's newsfeeds matching before and after.
+
 ### Lesson from the audit regression (2026-10-30)
 
 `ensure_news_user_grp()` is not a "drop root if root" call: when the
