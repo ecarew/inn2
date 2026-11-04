@@ -1347,6 +1347,21 @@ are added here.
 
 Open items from CLAUDE.md, moved here when done, newest first.
 
+- 2026-11-04: CMake-only item 5, install rules.  cmake/InnInstall.cmake
+  (inn_install, inn_install_config) and cmake/InnInstallSteps.cmake
+  (directories, ownership, innbind root:news 4550, inews 2555 with
+  INN_SETGID_INEWS, first-install active/newsgroups/history) reproduce the
+  Makefile install targets' files and modes: a DESTDIR install gave the
+  same 196 files and modes.  Differences: configuration files only if
+  absent (no .OLD), no man pages/docs/filter samples yet, INN_RUNAS builds
+  refuse to install, `--prefix` has no effect.  Audit: the first CMake
+  commit's innd rule was setuid and installed to /usr/local/bin
+  (`af607e2ee` fixed it; the alpha.1 and alpha.2 pre-releases have it);
+  support/docker-install-checks.sh (`017d98ea5`, `34e221aea`) checks as
+  root that innbind is the only setuid file, nothing else is setgid, the
+  owners and modes, that rc.news starts innd as news on port 119, and that
+  a reinstall keeps the configuration: 17/17 pass.
+
 - 2026-11-03: UUCP removed as a historical footnote (decided with the
   user; README.md, Conversion goals).  Gone: send-uucp and send-uucp.cf,
   encode/decode and c7unbatch (7-bit batches for 8-bit-unsafe links),
