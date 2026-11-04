@@ -203,6 +203,10 @@ from `cmake-build`; record method and raw numbers so rounds compare.
   with no Berkeley DB dependency (CONVERSION_NOTES.md, "Retiring ovdb").
 - lib fallbacks vs the C++ standard library and Boost; pread/pwrite in
   CONVERSION_NOTES.md, "Positioned file I/O".  Cite libc++/cppreference.
+- dbzsync flushes only what changed (CONVERSION_NOTES.md, same title,
+  2026-11-04): `putcore` msyncs the whole dbz table every
+  `icdsynccount` writes, about 20% of innd's W1 intake on macOS
+  (doc/perf/2026-11-04-w1-profile.md).  Track the changed range instead.
 - uwildmat hardening (CONVERSION_NOTES.md, "uwildmat hardening",
   2026-11-04): keep the RFC 3977 syntax (not std::regex); make the
   matcher iterative, cap client pattern length, fuzz against the current
