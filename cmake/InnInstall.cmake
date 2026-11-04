@@ -120,14 +120,20 @@ function(inn_install kind)
     endif()
 endfunction()
 
-# inn_install_config(<file>... DESTINATION <dir> MODE <mode>)
+# inn_install_config(<file>... DESTINATION <dir> MODE <mode>
+#                    [RENAME <name>])
 # Install configuration files only if they are not there yet.  A file is
 # taken from the current build directory if generated there (inn.conf,
-# newsfeeds, ...), else from the current source directory.
+# newsfeeds, ...), else from the current source directory.  RENAME (one
+# file only) installs it under another name.
 function(inn_install_config)
-    cmake_parse_arguments(I "" "DESTINATION;MODE" "" ${ARGN})
+    cmake_parse_arguments(I "" "DESTINATION;MODE;RENAME" "" ${ARGN})
     if(NOT INN_MODE_${I_MODE})
         message(FATAL_ERROR "inn_install_config: unknown mode ${I_MODE}")
+    endif()
+    list(LENGTH I_UNPARSED_ARGUMENTS n)
+    if(I_RENAME AND NOT n EQUAL 1)
+        message(FATAL_ERROR "inn_install_config: RENAME needs one file")
     endif()
     foreach(f ${I_UNPARSED_ARGUMENTS})
         if(EXISTS ${CMAKE_CURRENT_BINARY_DIR}/${f})
@@ -135,7 +141,13 @@ function(inn_install_config)
         else()
             set(src ${CMAKE_CURRENT_SOURCE_DIR}/${f})
         endif()
+        if(NOT EXISTS ${src})
+            message(FATAL_ERROR "inn_install_config: no ${f}")
+        endif()
         get_filename_component(name ${f} NAME)
+        if(I_RENAME)
+            set(name ${I_RENAME})
+        endif()
         install(CODE "inn_install_if_absent(\"${src}\" \"${I_DESTINATION}/${name}\" \"${INN_MODE_${I_MODE}}\")")
     endforeach()
 endfunction()
