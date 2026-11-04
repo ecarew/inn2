@@ -59,8 +59,8 @@ validate_input(bool auth)
         wanted = concat(info, userinfo, ".\r\n", (char *) 0);
     else
         wanted = concat(info, ".\r\n", (char *) 0);
-    seen = ReadInFile("input", NULL);
-    if (seen == NULL) {
+    seen = ReadInFile("input", nullptr);
+    if (seen == nullptr) {
         syswarn("unable to read input");
         ok(false, "no input");
     } else {
@@ -85,20 +85,20 @@ test_external(struct client *client, const char *arg, const char *user,
     diag("mode %s", arg);
 
     auth_test_path = test_file_path("nnrpd/auth-test");
-    if (auth_test_path == NULL)
+    if (auth_test_path == nullptr)
         bail("cannot find nnrpd/auth-test helper");
 
     basprintf(&command, "%s %s", auth_test_path, arg);
     errors_capture();
-    result = auth_external(client, command, ".", NULL, NULL);
+    result = auth_external(client, command, ".", nullptr, nullptr);
     errors_uncapture();
     validate_input(false);
     is_string(user, result, "user");
     is_string(error, errors, "errors");
-    if (errors && (error == NULL || strcmp(error, errors) != 0))
+    if (errors && (error == nullptr || strcmp(error, errors) != 0))
         warn("%s", errors);
     free(errors);
-    errors = NULL;
+    errors = nullptr;
 
     errors_capture();
     result = auth_external(client, command, ".", "tester", "s0pers3cret");
@@ -106,10 +106,10 @@ test_external(struct client *client, const char *arg, const char *user,
     validate_input(true);
     is_string(user, result, "user with username and password");
     is_string(error, errors, "errors with username and password");
-    if (errors && (error == NULL || strcmp(error, errors) != 0))
+    if (errors && (error == nullptr || strcmp(error, errors) != 0))
         warn("%s", errors);
     free(errors);
-    errors = NULL;
+    errors = nullptr;
 
     test_file_path_free(auth_test_path);
 }
@@ -124,33 +124,33 @@ main(void)
 
     client = client_new();
 
-    test_external(client, "okay", "tester", NULL);
-    test_external(client, "garbage", "tester", NULL);
-    test_external(client, "error", NULL,
+    test_external(client, "okay", "tester", nullptr);
+    test_external(client, "garbage", "tester", nullptr);
+    test_external(client, "error", nullptr,
                   "example.com auth: program error: This is an error\n");
     test_external(client, "interspersed", "tester",
                   "example.com auth: program error: This is an error\n");
-    test_external(client, "empty", NULL, NULL);
-    test_external(client, "empty-error", NULL,
+    test_external(client, "empty", nullptr, nullptr);
+    test_external(client, "empty-error", nullptr,
                   "example.com auth: program exited with status 1\n");
-    test_external(client, "okay-error", NULL,
+    test_external(client, "okay-error", nullptr,
                   "example.com auth: program exited with status 1\n");
-    test_external(client, "signal", NULL,
+    test_external(client, "signal", nullptr,
                   "example.com auth: program caught signal 1\n");
-    test_external(client, "newline", "tester", NULL);
-    test_external(client, "partial", "tester", NULL);
-    test_external(client, "partial-close", "tester", NULL);
-    test_external(client, "partial-error", NULL,
+    test_external(client, "newline", "tester", nullptr);
+    test_external(client, "partial", "tester", nullptr);
+    test_external(client, "partial-close", "tester", nullptr);
+    test_external(client, "partial-error", nullptr,
                   "example.com auth: program error: This is an error\n");
 
     errors_capture();
-    result = auth_external(client, "", ".", NULL, NULL);
+    result = auth_external(client, "", ".", nullptr, nullptr);
     errors_uncapture();
-    is_string(NULL, result, "empty external command returns no user");
+    is_string(nullptr, result, "empty external command returns no user");
     is_string("example.com auth: empty external command\n", errors,
               "empty external command is reported");
     free(errors);
-    errors = NULL;
+    errors = nullptr;
 
     free(client);
     return 0;
