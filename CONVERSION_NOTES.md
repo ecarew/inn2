@@ -123,6 +123,34 @@ list) are in [CLAUDE.md](CLAUDE.md).  This file is the rationale.
   modernization).  `inn_void_ptr` is temporary and should go when allocation
   moves to RAII.
 
+### Internal tests in C++ (decided 2026-11-04)
+
+The tests stay C, except the seven that include a program's internal
+headers.  Those become C++ (architect, 2026-11-04: option 1 of three,
+"across the board"):
+- tests/innd/artparse-t, chan-t and headers-t, and fakeinnd
+- tests/nnrpd/auth-ext-t
+- tests/overview/tdx-group-t and overview-t
+- tests/storage/caf-t
+
+**Why:** keeping innd.h, nnrpd.h and the tradindexed, buffindexed and
+timecaf private headers valid C blocks C++ types in them.  The first of
+these is `HDRCONTENT`, constraint 1 of "innd's in-memory article".  Article
+and header handling is where the refactoring gains are expected.
+
+**Considered:**
+- An `extern "C"` test facade for each program.  It means more code to
+  keep, and the internals stay half C.
+- C++-only declarations behind `#ifdef __cplusplus`, as nnrpd.h already
+  does for `ARTpost`.  This works one declaration at a time, and the
+  headers get messier.
+
+The other tests use only the public `include/inn` API, and it stays
+C-callable.  After the conversion, the internal headers can drop
+`BEGIN_DECLS`/`END_DECLS`.  innd still exports its functions with C
+linkage, which verify-cxx.sh checks, so that change waits for its own
+decision.
+
 ### Names that are C++ keywords
 
 - **Struct fields in headers that C still uses** (`TOKEN.class`,
@@ -1587,6 +1615,34 @@ Open items from CLAUDE.md, moved here when done, newest first.
 
 Behavior of upstream INN found while testing, kept as is unless noted.
 
+- Upstream bugs (found 2026-11-04 by the performance comparison's leak
+  pass; open, priorities set by the architect):
+  - **Medium.**  innfeed `mainOptionsProcess` (innfeed/main.cc:860, 892,
+    907) passes `xstrdup(opt)` to `addString()`, which copies the value
+    again (configfile.y:230).  So the status-file, pid-file and log-file
+    strings leak on each configuration read.
+  - **Medium.**  innfeed `delHost()` (host.cc:2730) frees a host's
+    `peerName` and `ipName` but not its `host_param_s` (192 bytes).  The
+    leak grows by one each time a host is deleted, including when a reload
+    drops a peer.
+  - **Low.**  makehistory: `HistoryPath`'s default (makehistory.cc:916) is
+    overwritten by `-f`.  tradspool_next's `curdirname`
+    (tradspool.cc:1186) is not freed on some moves to the next group
+    directory: 3 leaks for 50 groups.
+  - **Low.**  expireover: `OVfindheaderindex` drops its pointer to the
+    active file buffer (expire.cc:698), which `BuildGroups` still points
+    into.  It is kept alive by design, once per run.
+  - **Low.**  nnrpd: each reader session leaks 46 blocks, about 7.5 KB, in
+    its own process.  15 of the blocks are macOS XPC objects.  The rest
+    have no stacks, because macOS will not inspect nnrpd once it has
+    changed its user and group IDs.
+  - All of these are identical in INN 2.8.0.  doc/perf/2026-11-04-alpha3.md
+    has the counts.
+- Upstream bug (found 2026-11-04, building the benchmark baseline):
+  innfeed/article.c:37 defines `VALIDATE_HASH_TABLE() (void(0))`, which is
+  not valid C, so 2.8.0's innfeed does not compile with `-DNDEBUG`.  The
+  baseline was built without NDEBUG for this reason.  INN++ is not
+  affected, because the conversion to C++ made the definition valid.
 - Upstream bug (found and fixed 2026-11-02, `f62e279c7`): tinyleaf
   replied 435 to a duplicate after reading the article; RFC 3977 allows
   435 only before it.  innfeed took it as a protocol error, slept the
