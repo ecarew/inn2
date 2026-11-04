@@ -22,7 +22,8 @@
 
 #include "../../innd/innd.h"
 
-/* Global variables defined in innd.c. */
+/* Global variables defined in innd.cc.  ThrottledbyIOError, Log and Errlog
+   are defined by innd.h (DEFINE_DATA), zero-initialized, as for innd.cc. */
 bool Debug = false;
 bool NNRPTracing = false;
 bool StreamingOff = false;
@@ -33,10 +34,7 @@ OPERATINGMODE Mode = OMrunning;
 int RemoteLimit = REMOTELIMIT;
 time_t RemoteTimer = REMOTETIMER;
 int RemoteTotal = REMOTETOTAL;
-bool ThrottledbyIOError = false;
 bool BufferedLogs = true;
-FILE *Log = NULL;
-FILE *Errlog = NULL;
 bool laxmid = false;
 
 /* We have to copy this here.  Bleh.  We only need to care about headers up to
