@@ -1,6 +1,7 @@
 # INN's tests for CTest (CMake-only goal item 9): `ctest --test-dir build`.
-# The test programs stay C and are built as support/verify-cxx.sh builds
-# them, which also checks symbols and builds that CTest does not.
+# The test programs stay C, except those that reach a program's internals,
+# which are C++.  They are built as support/verify-cxx.sh builds them, which
+# also checks symbols and builds that CTest does not.
 #
 # Tests run where support/verify-cxx.sh runs them.  Most run in tests/ in
 # the source tree, which holds their helpers and data (CNFS also rejects the
@@ -34,7 +35,13 @@ function(inn_tap_test name)
         set(T_SOURCE ${name})
     endif()
     string(REPLACE "/" "_" target test_${name})
-    set(srcs ${T_SOURCE}-t.c)
+    # Tests that reach a program's internals are C++ (CONVERSION_NOTES,
+    # "Internal tests in C++"); the rest stay C.
+    if(EXISTS ${CMAKE_CURRENT_SOURCE_DIR}/${T_SOURCE}-t.cc)
+        set(srcs ${T_SOURCE}-t.cc)
+    else()
+        set(srcs ${T_SOURCE}-t.c)
+    endif()
     foreach(e ${T_EXTRA})
         if(EXISTS ${CMAKE_SOURCE_DIR}/${e}.cc)
             set(f ${CMAKE_SOURCE_DIR}/${e}.cc)
