@@ -88,24 +88,11 @@ END_DECLS
 
 /*
 **  innd uses header field values as C strings in place in the channel's
-**  input buffer: the byte after a value (usually the '\r' of its CRLF) is
-**  saved in HDRCONTENT::LastChar and replaced with '\0' while the value is
-**  in use, then put back.  These replace the HDR_LASTCHAR_SAVE,
-**  HDR_PARSE_START and HDR_PARSE_END macros, so a byte cut is put back on
-**  every way out of a scope.  Needs innd.h (HDRCONTENT, MAX_ARTHEADER).
+**  input buffer (HDRCONTENT::cut and restore in innd.h).  These replace the
+**  HDR_LASTCHAR_SAVE, HDR_PARSE_START and HDR_PARSE_END macros, so a byte
+**  cut is put back on every way out of a scope.  Needs innd.h (HDRCONTENT,
+**  MAX_ARTHEADER).
 */
-inline void
-hdr_cut(HDRCONTENT &h)
-{
-    h.LastChar = h.Value[h.Length];
-    h.Value[h.Length] = '\0';
-}
-
-inline void
-hdr_restore(HDRCONTENT &h)
-{
-    h.Value[h.Length] = h.LastChar;
-}
 
 /* Cut, or put back, every header field the article has.  ARTclean cuts
    them all for the rest of the article's processing. */
@@ -113,31 +100,31 @@ inline void
 hdr_cut_all(HDRCONTENT *hc)
 {
     for (int i = 0; i < MAX_ARTHEADER; i++)
-        if (hc[i].Length > 0)
-            hdr_cut(hc[i]);
+        if (hc[i].found())
+            hc[i].cut();
 }
 
 inline void
 hdr_restore_all(HDRCONTENT *hc)
 {
     for (int i = 0; i < MAX_ARTHEADER; i++)
-        if (hc[i].Length > 0)
-            hdr_restore(hc[i]);
+        if (hc[i].found())
+            hc[i].restore();
 }
 
 /* One header field cut for this scope, if the article has it. */
 class HeaderCut {
 public:
     HeaderCut(HDRCONTENT *hc, int field)
-        : h_(hc[field].Length > 0 ? &hc[field] : nullptr)
+        : h_(hc[field].found() ? &hc[field] : nullptr)
     {
         if (h_ != nullptr)
-            hdr_cut(*h_);
+            h_->cut();
     }
     ~HeaderCut()
     {
         if (h_ != nullptr)
-            hdr_restore(*h_);
+            h_->restore();
     }
     HeaderCut(const HeaderCut &) = delete;
     HeaderCut &operator=(const HeaderCut &) = delete;
@@ -170,9 +157,7 @@ private:
 inline std::string_view
 hdr_view(const HDRCONTENT *hc, int field)
 {
-    if (hc[field].Length <= 0)
-        return {};
-    return {hc[field].Value, static_cast<size_t>(hc[field].Length)};
+    return hc[field].view();
 }
 
 struct ArticleState {
