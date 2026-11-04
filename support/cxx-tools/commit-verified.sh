@@ -10,6 +10,8 @@
 #  was before the run whenever it does not commit), runs support/verify-cxx.sh
 #  on build/ and, if configured, build-asan/, plus support/live-innd.sh on
 #  build-live/ if configured, and commits with a Tested: section for each.
+#  A documentation-only commit (*.md, doc/ but not doc/pod or doc/man,
+#  ChangeLog) skips the checks and says "Tested: none (documentation only)".
 #  Uses your normal git identity; set COMMIT_TRAILER to add a trailer line
 #  such as a Co-Authored-By.
 
@@ -18,7 +20,7 @@ root=$(cd "$tools/../.." && pwd)
 cd "$root" || exit 1
 subject=$1 body=$2
 shift 2 2>/dev/null
-[ -n "$subject" ] && [ -f "$body" ] || { sed -n '4,14p' "$0"; exit 2; }
+[ -n "$subject" ] && [ -f "$body" ] || { sed -n '4,16p' "$0"; exit 2; }
 
 # If this run does not commit, put the index back as it was before it staged
 # anything, so a refused run leaves nothing staged for the next one.  What was
@@ -45,6 +47,28 @@ if git status --porcelain --untracked-files=no | grep -qv '^[MADR] '; then
     echo "unstaged changes remain; not committing"
     git status --short --untracked-files=no
     exit 1
+fi
+
+# Documentation only (decided 2026-11-04): nothing the build reads, so the
+# checks cannot fail; commit with no verification.  doc/pod and doc/man
+# generate man pages, and doc's build files are built, so those verify.
+docs_only=true
+while IFS= read -r f; do
+    case $f in
+    doc/pod/* | doc/man/* | doc/Makefile | doc/CMakeLists.txt) docs_only=false ;;
+    *.md | doc/* | ChangeLog) ;;
+    *) docs_only=false ;;
+    esac
+done < <(git diff --cached --name-only)
+if $docs_only; then
+    {
+        echo "$subject"; echo; cat "$body"; echo
+        echo "Tested: none (documentation only)"; echo
+        [ -n "$COMMIT_TRAILER" ] && echo "$COMMIT_TRAILER"
+    } | git commit -q -F - || exit 1
+    committed=true
+    git log -1 --format='%h %s'
+    exit 0
 fi
 
 tmp=$(mktemp -d "${TMPDIR:-/tmp}/commit-verified.XXXXXX")
