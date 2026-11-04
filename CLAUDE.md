@@ -121,12 +121,13 @@ design approach".  In order:
 
 **CMake-only goal: no Autoconf/Make left (decided 2026-10-28)**
 Items 1 (native configuration), 2 (generated sources), 3 (samples), 4
-(scripts) and 9 (CTest: `ctest --test-dir build`, tests/CMakeLists.txt) are
+(scripts), 5 (install rules, 2026-11-04) and 9 (CTest: `ctest --test-dir build`, tests/CMakeLists.txt) are
 done.  Generated files come from cmake/InnPaths.cmake (directories,
 configure's substitutions, inn_fixscript/inn_scripts); support/fixconfig
 and support/fixscript are Make-only now.
-5. Installation: install rules with INN's ownership, setuid and modes; then
-   audit them (innbind must stay the only setuid-root file).
+5. Install: done.  Left: man pages, docs and filter samples (with item 6
+   and 8); support/docker-install-checks.sh must keep passing (innbind the
+   only setuid file).
 6. Man pages from `doc/pod`.
 7. Perl module `perl/INN/` (INN::Config, ovsqlite_client).  `contrib/` done
    (2026-11-03): converted, improved, tested, built with `-DINN_CONTRIB=ON`
@@ -138,6 +139,13 @@ and support/fixscript are Make-only now.
 10. Portability: a BSD.  Linux runs everything (verify-cxx.sh,
     live-innd.sh, root checks) via `support/docker-linux-checks.sh` and
     `support/docker-root-checks.sh` (2026-10-30).
+11. Install checks on local VMs (decided 2026-11-04 with the user: local,
+    not AWS): Lima for Linux (systemd unit, cron news.daily, restart after
+    reboot), QEMU with the FreeBSD arm64 cloud image for item 10.  Needs
+    `brew install lima qemu` (the user runs it).  Docker stays a target.
+12. Docker Hub image, after a round or two of refactoring (user,
+    2026-11-04): a production image (innd as news, not a test build);
+    publishing needs the user's approval.
 
 **Still C**
 All INN source is C++ (2026-11-03).  C left on purpose: the tests (they
