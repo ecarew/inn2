@@ -1356,6 +1356,12 @@ Option 1 is the cheapest first step and does not rule out 2 or 3.
 
 ### ARTparsebody body scan (noted 2026-11-04, refactoring phase)
 
+**Done 2026-11-04** (7d07f923c): the scan jumps between `\r`, `\n` and
+`\0` with `memchr`.  W1 under CNFS: innd user CPU −17% and wall time −10%
+on Linux, user CPU −22% on macOS (doc/perf/2026-11-04-w1-profile.md,
+"ARTparsebody result").  `ARTparseheader` has the same byte-by-byte shape;
+it needs tests first (86% line, 76% branch coverage).
+
 **Found by** the W1 profiles (`doc/perf/2026-11-04-w1-profile.md`, "CNFS
 and timecaf"): with CNFS or timecaf storage, parsing is innd's largest
 user-code cost, about 37% of its user time under CNFS, and about
