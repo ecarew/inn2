@@ -218,6 +218,11 @@ from `cmake-build`; record method and raw numbers so rounds compare.
   nnrpd's filters and auth hooks are never built or tested.  Options,
   ExtUtils::Embed / FindPython3, sample-script tests in verify-cxx.sh,
   Linux image packages.
+- ChaiScript filter hooks as a successor to Perl filters
+  (CONVERSION_NOTES.md, same title, proposed 2026-11-05): per-article
+  speed, build cost and sandboxing measured against Perl, Python, Luau
+  and AngelScript first; last release v6.1.0 (2018), so pin a commit.
+  Phasing out Perl filters revises "Perl and Python stay" for filters.
 - uwildmat hardening (CONVERSION_NOTES.md, "uwildmat hardening",
   2026-11-04): keep the RFC 3977 syntax (not std::regex); make the
   matcher iterative, cap client pattern length, fuzz against the current
