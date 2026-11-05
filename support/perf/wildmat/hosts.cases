@@ -1,0 +1,21 @@
+# wildbench cases: host names, addresses, user names.  Columns: tier func expect text pattern note.
+# readers.conf hosts: and users: (uwildmat on host name, then on address).
+easy	m	1	news.example.com	*.example.com
+easy	m	0	example.com	*.example.com
+easy	m	1	shell1.example.com	*.example.com,!dialup*
+easy	m	0	dialup7.example.com	*.example.com,!dialup*
+easy	m	1	192.0.2.17	192.0.2.*
+easy	m	0	192.0.20.17	192.0.2.*
+easy	m	1	2001:db8::1	2001:db8:*
+easy	m	1	alice	alice,bob
+easy	m	0	mallory	alice,bob
+complex	m	1	10.1.2.3	10.*,!10.9.*
+complex	m	0	10.9.2.3	10.*,!10.9.*
+complex	m	1	192.0.2.17	192.0.2.1[0-9]
+complex	m	0	192.0.2.170	192.0.2.1[0-9]	patterns are anchored at both ends
+complex	m	1	host-42.pool.example.net	host-??.pool.*
+obscure	m	0	NEWS.EXAMPLE.COM	*.example.com	host names reach uwildmat as given
+obscure	m	1	news.example.com.	*.example.com*
+obscure	m	1	[2001:db8::1]	\\[2001:db8::1]
+hostile	m	0	$(120:a.)example.com	$(120:*.)x	DNS names stop at 253 octets
+hostile	m	0	$(120:a.)example.com	$(20000:*.example.org,)
