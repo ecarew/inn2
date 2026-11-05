@@ -19,6 +19,10 @@
 
 #include "../../innd/innd.h"
 
+#include <cstdint>
+#include <string>
+#include <vector>
+
 /* A table of paths to articles and corresponding error messages. */
 static const struct {
     const char *path;
@@ -175,13 +179,312 @@ ok_article(int n, const char *path, const char *error, bool slow, bool shift)
     free(cp);
 }
 
+/*
+**  The body scan (ARTparsebody): its counters, the NUL check and resuming
+**  across reads.  The articles above come from native files through
+**  wire_from_native, which cannot make a bare CR or LF, and the checks
+**  above do not look at the counters, so these cases are built as wire
+**  data here.  They pin down the current behaviour, quirks included, so a
+**  faster scan must give exactly the same results.
+*/
+
+/* Every article below has this header, which adds nothing to the
+   counters; the body starts right after it. */
+static const char body_header[] = "Subject: x\r\n\r\n";
+
+/* What a parse of one article left in the channel. */
+struct scan_result {
+    int state;
+    size_t next;   /* cp->Next - cp->Start */
+    size_t body;   /* cp->Data.Body - cp->Start */
+    int lines;
+    int lfwithoutcr;
+    int crwithoutlf;
+    int dotstuffed;
+    std::string error;
+
+    bool operator==(const scan_result &) const = default;
+};
+
+/* Parse wire, given in pieces that end at each offset in cuts (the last
+   piece ends at the end), calling ARTparse after each piece as innd does
+   after each read. */
+static scan_result
+scan(const std::string &wire, const std::vector<size_t> &cuts)
+{
+    CHANNEL *cp = fake_channel();
+    scan_result r;
+    size_t done = 0;
+
+    buffer_resize(&cp->In, wire.size());
+    cp->In.used = 0;
+    ARTprepare(cp);
+    std::vector<size_t> ends(cuts);
+    ends.push_back(wire.size());
+    for (size_t end : ends) {
+        if (end <= done)
+            continue;
+        memcpy(cp->In.data + done, wire.data() + done, end - done);
+        cp->In.used = end;
+        done = end;
+        message_handlers_warn(0);
+        ARTparse(cp);
+        message_handlers_warn(1, message_log_stderr);
+    }
+    r.state = cp->State;
+    r.next = cp->Next - cp->Start;
+    r.body = cp->Data.Body - cp->Start;
+    r.lines = cp->Data.Lines;
+    r.lfwithoutcr = cp->Data.LFwithoutCR;
+    r.crwithoutlf = cp->Data.CRwithoutLF;
+    r.dotstuffed = cp->Data.DotStuffedLines;
+    r.error = cp->Error;
+    free(cp->In.data);
+    free(cp);
+    return r;
+}
+
+static scan_result
+scan_whole(const std::string &wire)
+{
+    return scan(wire, {});
+}
+
+static scan_result
+scan_bytewise(const std::string &wire)
+{
+    std::vector<size_t> cuts;
+    for (size_t i = 1; i < wire.size(); i++)
+        cuts.push_back(i);
+    return scan(wire, cuts);
+}
+
+/* Whether splitting wire in two at every offset gives the whole parse. */
+static bool
+scan_splits_agree(const std::string &wire, const scan_result &whole)
+{
+    for (size_t i = 1; i < wire.size(); i++)
+        if (!(scan(wire, {i}) == whole)) {
+            diag("split at %lu differs", (unsigned long) i);
+            return false;
+        }
+    return true;
+}
+
+/* A plain restatement of the current body scan, for the random bodies:
+   the counters a complete article gives, and where the scan stops.  The
+   first body line is never counted as dot-stuffed: the header scan counts
+   dots only after the header lines' CRLFs, and the body scan only after
+   body CRLFs (CONVERSION_NOTES.md, "Upstream bugs and quirks found"). */
+static scan_result
+reference_scan(const std::string &wire)
+{
+    scan_result r{};
+    const size_t body = sizeof(body_header) - 1;
+    const char *d = wire.data();
+    size_t i;
+
+    r.state = CSgotarticle;
+    r.body = body;
+    for (i = body; i < wire.size(); i++) {
+        if (d[i] == '\0')
+            r.error = "437 Nul character in body";
+        if (d[i] == '\n')
+            r.lfwithoutcr++;
+        if (d[i] != '\r')
+            continue;
+        if (i == body + 1 && wire.compare(i - 1, 3, ".\r\n") == 0) {
+            r.next = i + 2;
+            return r;
+        }
+        if (wire.compare(i, 5, "\r\n.\r\n") == 0) {
+            r.lines++;
+            r.next = i + 5;
+            return r;
+        }
+        if (i + 1 < wire.size() && d[i + 1] == '\n') {
+            i++;
+            r.lines++;
+            if (i + 1 < wire.size() && d[i + 1] == '.')
+                r.dotstuffed++;
+        } else {
+            r.crwithoutlf++;
+        }
+    }
+    r.next = i;
+    return r;
+}
+
+/* Named body cases: the body, ending in CRLF (the terminating ".\r\n" is
+   added), and the counters it must give.  Lines counts the CRLFs in the
+   body. */
+static const struct {
+    const char *name;
+    std::string body;
+    int lines, lfwithoutcr, crwithoutlf, dotstuffed;
+    const char *error;
+} body_cases[] = {
+    {"one line",             "a\r\n",            1, 0, 0, 0, ""},
+    {"two lines",            "a\r\nb\r\n",       2, 0, 0, 0, ""},
+    {"empty lines",          "\r\n\r\n",         2, 0, 0, 0, ""},
+    {"dot-stuffed line",     "a\r\n..b\r\n",     2, 0, 0, 1, ""},
+    {"dot-stuffed first",    "..a\r\n",          1, 0, 0, 0, ""},
+    {"dot then text",        "a\r\n.x\r\n",      2, 0, 0, 1, ""},
+    {"bare LF",              "a\nb\r\n",         1, 1, 0, 0, ""},
+    {"bare LF before end",   "a\n\r\n",          1, 1, 0, 0, ""},
+    {"bare CR",              "a\rb\r\n",         1, 0, 1, 0, ""},
+    {"CR CR LF",             "a\r\r\n",          1, 0, 1, 0, ""},
+    {"NUL",                  std::string("a\0b\r\n", 5),
+                                                 1, 0, 0, 0,
+     "437 Nul character in body"},
+};
+
+/* Seven checks for one way of feeding a named case. */
+static int
+ok_scan(int n, const scan_result &got, const scan_result &want,
+        const char *name, const char *how)
+{
+    ok(n++, got.state == want.state);
+    ok(n++, got.next == want.next);
+    ok_int(n++, want.lines, got.lines);
+    ok_int(n++, want.lfwithoutcr, got.lfwithoutcr);
+    ok_int(n++, want.crwithoutlf, got.crwithoutlf);
+    ok_int(n++, want.dotstuffed, got.dotstuffed);
+    ok_string(n++, want.error.c_str(), got.error.c_str());
+    if (!(got == want))
+        diag("body case \"%s\", %s", name, how);
+    return n;
+}
+
+/* A small fixed-seed generator, so failures repeat. */
+static uint32_t
+next_random(uint32_t &state)
+{
+    state = state * 1103515245u + 12345u;
+    return state >> 8;
+}
+
+/* A random body over the bytes the scan cares about, as a complete
+   article whose only terminator is the one at its end. */
+static std::string
+random_article(uint32_t &state)
+{
+    static const char alphabet[] = {'a', 'b', '.', '.', '\r', '\r', '\n',
+                                    '\n', ' ', '\0'};
+    for (;;) {
+        std::string wire(body_header);
+        size_t len = next_random(state) % 200;
+        for (size_t i = 0; i < len; i++)
+            wire += alphabet[next_random(state) % sizeof(alphabet)];
+        wire += "\r\n.\r\n";
+        if (reference_scan(wire).next == wire.size())
+            return wire;
+    }
+}
+
+/* Articles over maxartsize (8192 here) end in CSgotlargearticle with the
+   size error, however they are split.  Their counters are not compared:
+   once the channel is eating an article (CSeatarticle), the body scan runs
+   from wherever the limit was crossed, even inside the header, so they
+   depend on the split, and nothing uses them for a rejected article.
+   Three checks. */
+static int
+ok_large(int n, const std::string &wire, const char *name)
+{
+    char error[128];
+    bool agree = true;
+
+    snprintf(error, sizeof(error),
+             "437 Article of %lu bytes exceeds local limit of %lu bytes",
+             (unsigned long) wire.size(), innconf->maxartsize);
+    scan_result whole = scan_whole(wire);
+    ok(n++, whole.state == CSgotlargearticle && whole.next == wire.size());
+    ok_string(n++, error, whole.error.c_str());
+    scan_result r = scan_bytewise(wire);
+    if (r.state != whole.state || r.next != whole.next || r.error != whole.error)
+        agree = false;
+    for (size_t i = 1; agree && i < wire.size(); i++) {
+        r = scan(wire, {i});
+        if (r.state != whole.state || r.next != whole.next
+            || r.error != whole.error) {
+            diag("split at %lu differs", (unsigned long) i);
+            agree = false;
+        }
+    }
+    ok(n++, agree);
+    if (!agree)
+        diag("large article \"%s\"", name);
+    return n;
+}
+
+enum { BODY_RANDOM = 300 };
+
+static int
+test_body_scan(int n)
+{
+    for (const auto &c : body_cases) {
+        std::string wire = std::string(body_header) + c.body + ".\r\n";
+        scan_result want{};
+        want.state = CSgotarticle;
+        want.next = wire.size();
+        want.body = sizeof(body_header) - 1;
+        want.lines = c.lines;
+        want.lfwithoutcr = c.lfwithoutcr;
+        want.crwithoutlf = c.crwithoutlf;
+        want.dotstuffed = c.dotstuffed;
+        want.error = c.error;
+        scan_result whole = scan_whole(wire);
+        n = ok_scan(n, whole, want, c.name, "whole");
+        n = ok_scan(n, scan_bytewise(wire), want, c.name, "byte by byte");
+        ok(n++, scan_splits_agree(wire, whole));
+    }
+
+    /* The terminator at the very start of the body. */
+    {
+        std::string wire = std::string(body_header) + ".\r\n";
+        scan_result want{};
+        want.state = CSgotarticle;
+        want.next = wire.size();
+        want.body = sizeof(body_header) - 1;
+        n = ok_scan(n, scan_whole(wire), want, "empty body", "whole");
+        n = ok_scan(n, scan_bytewise(wire), want, "empty body", "byte by byte");
+    }
+
+    /* Over the limit in the body: the rest is scanned while eating.  Over
+       it in the header, then an empty body: split after the blank line,
+       the body starts with the terminator while eating. */
+    {
+        std::string body;
+        for (int i = 0; i < 3000; i++)
+            body += "ab\r\n";
+        n = ok_large(n, std::string(body_header) + body + ".\r\n",
+                     "large body");
+        n = ok_large(n, "Subject: " + std::string(9000, 'x') + "\r\n\r\n.\r\n",
+                     "large header, empty body");
+    }
+
+    uint32_t state = 0x1e57;
+    for (int i = 0; i < BODY_RANDOM; i++) {
+        std::string wire = random_article(state);
+        scan_result want = reference_scan(wire);
+        scan_result whole = scan_whole(wire);
+        ok(n++, whole == want);
+        ok(n++, scan_bytewise(wire) == want);
+        ok(n++, scan_splits_agree(wire, want));
+        if (!(whole == want))
+            diag("random body %d differs from the reference", i);
+    }
+    return n;
+}
+
 int
 main(void)
 {
     size_t i;
     int n = 1;
 
-    test_init(ARRAY_SIZE(articles) * 5 * 4);
+    test_init(ARRAY_SIZE(articles) * 5 * 4 + ARRAY_SIZE(body_cases) * 15
+              + 14 + 6 + BODY_RANDOM * 3);
     initialize();
     message_handlers_notice(0);
 
@@ -195,5 +498,6 @@ main(void)
         ok_article(n, articles[i].path, articles[i].error, true, true);
         n += 5;
     }
+    test_body_scan(n);
     return 0;
 }
