@@ -1386,6 +1386,47 @@ Found when removing the `HDR` macros (2026-11-05): `innd/perl.cc` and
 - Not part of this item: TLS, Berkeley DB (ovdb) and systemd, the other
   features BUILDING.md lists as not wired in.
 
+### ChaiScript filter hooks as a successor to Perl filters (proposed 2026-11-05)
+
+**Proposed by** the architect: add ChaiScript as a language for filter
+scripts, as Perl is used today, so that Perl filters can be phased out
+(Perl is now little used).  ChaiScript is an embeddable scripting
+language written in C++17, header-only.
+
+**State of ChaiScript** (checked 2026-11-05 on GitHub,
+github.com/ChaiScript/ChaiScript): the last tagged release is v6.1.0,
+published 2018-05-29; the `develop` branch still takes fixes (latest
+commits 2026-05-02).  INN++ would pin a commit, not a release.
+
+**What the work must answer:**
+- **Speed per article.**  innd runs its filter on every article.
+  ChaiScript is a tree-walking interpreter with dynamic dispatch; its
+  README makes no performance claims.  Port `samples/filter_innd.pl` and
+  measure W1 with each filter language (`ARTparsebody`'s 10% shows how
+  visible a few percent of innd's time is).
+- **Build cost.**  Its heavy templates are known for long compile times
+  and large binaries.  Keep it in one translation unit behind an option
+  (`INN_CHAISCRIPT_FILTERS`), and measure build time and innd's size.
+- **Sandboxing.**  Filters are site code run inside innd and nnrpd.
+  Establish what a script can reach, and how to limit its running time
+  and memory so a bad filter cannot stall innd.
+- **Comparators.**  Measure Luau (C++, built for sandboxed scripts) and
+  AngelScript (C++, statically typed) the same way, so the choice is made
+  on numbers.
+
+**The work, if adopted:**
+- One filter interface in innd and nnrpd that each language plugs into,
+  shared with "Perl and Python filters in the CMake build".
+- ChaiScript versions of the sample filters (`filter_innd`,
+  `filter_nnrpd`, the nnrpd auth and access hooks), with tests in
+  `support/verify-cxx.sh`.
+- A migration path for sites: Perl and ChaiScript filters side by side
+  for a deprecation period, then Perl filters removed.
+
+**Decision this would revise:** "Perl and Python stay" (2026-10-28).
+Phasing out Perl *filters* revises it for filters only; INN's Perl
+administration tools and `INN::Config` are a separate question.
+
 ### ARTparsebody body scan (noted 2026-11-04, refactoring phase)
 
 **Done 2026-11-04** (7d07f923c): the scan jumps between `\r`, `\n` and
