@@ -1354,6 +1354,60 @@ I/O.
 3. Switch to a standard facility if one is adopted.
 Option 1 is the cheapest first step and does not rule out 2 or 3.
 
+### ARTparsebody body scan (noted 2026-11-04, refactoring phase)
+
+**Found by** the W1 profiles (`doc/perf/2026-11-04-w1-profile.md`, "CNFS
+and timecaf"): with CNFS or timecaf storage, parsing is innd's largest
+user-code cost, about 37% of its user time under CNFS, and about
+two-thirds of that is `ARTparsebody` (`innd/art.cc`).  On Linux, where
+user time is about half of innd's CPU, this is the largest lever in innd's
+own code.
+
+**What it does now.**  One loop over every byte of the body that tests
+each byte for `'\0'` (an error), `'\n'` (counts a bare LF) and `'\r'`.  Only
+at a `'\r'` does it look further: for the `\r\n.\r\n` terminator, for a
+CRLF (counts a line) and for a dot-stuffed line.  It also stops early,
+keeping its place in `cp->Next`, when fewer than five bytes are left, and
+resumes there on the next read.
+
+**The work:**
+- Jump between the bytes that matter instead of testing every byte: find
+  the next `'\r'` or `'\n'` with `memchr` (or a two-byte search), and do
+  the line accounting there.  The NUL check becomes one `memchr` for
+  `'\0'` over each span.  Both are vectorized in the C library.
+- Keep every result the same: `Lines`, `LFwithoutCR`, `CRwithoutLF`,
+  `DotStuffedLines`, the NUL error, the early stop and resume through
+  `cp->Next`, and the terminator at the very start of the body.
+- Test first (CLAUDE.md, "No refactoring without measured coverage"):
+  extend `tests/innd/artparse-t` with bodies split at every offset across
+  reads, bare LF and CR, dot-stuffing, NUL, and the terminator at each
+  position, and check coverage of `ARTparsebody` before changing it.
+- Measure W1 under CNFS on Linux and macOS before and after.
+
+### tradindexed flushes the group entry per article (noted 2026-11-04, refactoring phase)
+
+**Found by** the W1 profiles (`doc/perf/2026-11-04-w1-profile.md`): on
+macOS, overview is 16–26% of innd's intake under timecaf and CNFS, mostly
+`msync` from `tdx_data_add` (`storage/tradindexed/tdx-group.cc`).
+
+**What it does now.**  `tdx_data_add` flushes the group's index entry with
+`inn_msync_page(entry, sizeof(*entry), MS_ASYNC)` up to three times per
+article: when it repacks or extends the group, and always after storing
+the overview data.  Each call flushes the page holding the entry.
+
+**The work:**
+- Find what the flushes protect: readers (nnrpd) share the index through
+  their own mappings, which see the change without `msync` on a unified
+  buffer cache.  So the flush is for crash safety only.  Confirm this
+  against tradindexed's design notes (`storage/tradindexed/tdx-*.cc`
+  headers) and the platforms INN supports.
+- If so, flush dirty entries in batches (every N articles or on a timer,
+  like `icdsynccount` for history) instead of on each article, and keep
+  the flush on close.
+- As with `dbzsync`, the gain is mainly on macOS and the BSDs: on Linux,
+  `MS_ASYNC` is a no-op (msync(2)).
+- Measure W1 under CNFS before and after.
+
 ### dbzsync flushes only what changed (noted 2026-11-04, refactoring phase)
 
 **Found by** the innd W1 profile (`doc/perf/2026-11-04-w1-profile.md`):
@@ -1381,6 +1435,10 @@ last one.
 - Crash safety stays what `icdsynccount` gives today: the same entries
   are flushed at the same moments.
 - Measure W1 before and after, on macOS and on Linux.
+- Expect the gain mainly on macOS and the BSDs: on Linux, `MS_ASYNC` is a
+  no-op ("Since Linux 2.6.19, MS_ASYNC is in fact a no-op", msync(2)),
+  and the Linux W1 run shows little system time left to save
+  (doc/perf/2026-11-04-w1-profile.md, "Linux").
 - Not instead: raising `icdsynccount` is a configuration change with no
   code, but loses more history in a crash.  Document it as the
   administrator's trade-off, not a default change.
