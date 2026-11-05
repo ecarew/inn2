@@ -1378,10 +1378,11 @@ resumes there on the next read.
 - Keep every result the same: `Lines`, `LFwithoutCR`, `CRwithoutLF`,
   `DotStuffedLines`, the NUL error, the early stop and resume through
   `cp->Next`, and the terminator at the very start of the body.
-- Test first (CLAUDE.md, "No refactoring without measured coverage"):
-  extend `tests/innd/artparse-t` with bodies split at every offset across
-  reads, bare LF and CR, dot-stuffing, NUL, and the terminator at each
-  position, and check coverage of `ARTparsebody` before changing it.
+- Test first (CLAUDE.md, "No refactoring without measured coverage").
+  Done 2026-11-04: `tests/innd/artparse-t` checks the counters, the NUL
+  error, the state and the stop position for named, oversized and 300
+  random bodies, fed whole, byte by byte and split at every offset;
+  `ARTparsebody` has 100% region, line and branch coverage.
 - Measure W1 under CNFS on Linux and macOS before and after.
 
 ### tradindexed flushes the group entry per article (noted 2026-11-04, refactoring phase)
@@ -1737,6 +1738,20 @@ Open items from CLAUDE.md, moved here when done, newest first.
 ### Upstream bugs and quirks found
 
 Behavior of upstream INN found while testing, kept as is unless noted.
+
+- Upstream bug (found 2026-11-04 by the ARTparsebody tests; open, low):
+  a dot-stuffed **first** body line is not counted in `DotStuffedLines`.
+  `ARTparseheader` counts a dot only at the start of a line after a
+  header line's CRLF, and `ARTparsebody` only after a body CRLF, so the
+  line right after the blank line is checked by neither.  `ARTstore`
+  subtracts `DotStuffedLines` from the stored size to get the byte count
+  RFC 3977 wants (dot-stuffing undone), so for such an article innd's
+  byte count, which goes into the overview's `:bytes` and the `Bytes`
+  header field it gives feeds, is one too high.  The counter is checked
+  by `tests/innd/artparse-t` ("dot-stuffed first"); the effect on the
+  byte count is from reading `ARTstore`.  Kept for the faster body scan,
+  so that change stays behaviour-preserving; fix it separately, with a
+  test of the byte count.
 
 - Upstream bugs (found 2026-11-04 by the performance comparison's leak
   pass; open, priorities set by the architect):
