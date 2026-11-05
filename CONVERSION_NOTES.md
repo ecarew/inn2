@@ -1354,6 +1354,38 @@ I/O.
 3. Switch to a standard facility if one is adopted.
 Option 1 is the cheapest first step and does not rule out 2 or 3.
 
+### Perl and Python filters in the CMake build (noted 2026-11-05)
+
+**The gap.**  `cmake/InnConfigure.cmake` sets `DO_PERL` and `DO_PYTHON`
+to false unconditionally, so no INN++ build compiles the embedded Perl or
+Python filters or nnrpd's authentication hooks (BUILDING.md lists them
+as not yet wired into CMake).  Sites using `filter_innd.pl`,
+`filter_innd.py`, `filter_nnrpd.pl` or the nnrpd Perl/Python auth hooks
+cannot build INN++.  The decision of 2026-10-28 ("Perl and Python stay")
+keeps these hooks as INN's extension interface, so they must be built.
+Found when removing the `HDR` macros (2026-11-05): `innd/perl.cc` and
+`innd/python.cc` could only be syntax-checked by hand.
+
+**The work:**
+- Options `INN_PERL_FILTERS` and `INN_PYTHON_FILTERS`, setting `DO_PERL`
+  and `DO_PYTHON`.  Perl's flags from `perl -MExtUtils::Embed -e ccopts`
+  and `ldopts`, as configure takes them; Python 3 from CMake's
+  `FindPython3` (Development.Embed).
+- Build `innd/perl.cc`, `innd/python.cc`, `nnrpd/perl.cc`,
+  `nnrpd/python.cc` and `lib/perl.cc` with them, and install the sample
+  scripts (`samples/filter_innd.pl`, `filter_innd.py`,
+  `nnrpd_auth.pl.in`, `nnrpd_auth.py`, and the others the Make build
+  installs).
+- Tests: an article through a sample `filter_innd.pl` and
+  `filter_innd.py` (one accepted, one rejected with the filter's reason),
+  and an nnrpd authentication hook accepting and refusing a user.  Run
+  them in `support/verify-cxx.sh`, so these files stop depending on hand
+  syntax checks.
+- The Linux image (`support/docker/Dockerfile.linux`) gets the Perl and
+  Python development packages, so the Linux checks build them too.
+- Not part of this item: TLS, Berkeley DB (ovdb) and systemd, the other
+  features BUILDING.md lists as not wired in.
+
 ### ARTparsebody body scan (noted 2026-11-04, refactoring phase)
 
 **Done 2026-11-04** (7d07f923c): the scan jumps between `\r`, `\n` and
