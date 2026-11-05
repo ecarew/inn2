@@ -58,20 +58,33 @@ extern bool nativemat(const char *text, const char *pat);
 extern bool nativemat_simple(const char *text, const char *pat);
 extern enum nativemat nativemat_poison(const char *text, const char *pat);
 
+extern bool is_valid_utf8(const char *start);
+
 /*
-**  The previous wildmat interface, kept for programs outside INN.  New code
-**  uses nativemat.
+**  The previous wildmat interface, kept for programs outside INN and
+**  deprecated: each function calls its nativemat counterpart.
 */
+#if defined(__GNUC__) || defined(__clang__)
+#    define INN_UWILDMAT_DEPRECATED \
+        __attribute__((__deprecated__("use nativemat (libinn_nativemat(3))")))
+#else
+#    define INN_UWILDMAT_DEPRECATED
+#endif
+
 enum uwildmat {
     UWILDMAT_FAIL = 0,
     UWILDMAT_MATCH = 1,
     UWILDMAT_POISON
 };
 
-extern bool is_valid_utf8(const char *start);
-extern bool uwildmat(const char *text, const char *pat);
-extern bool uwildmat_simple(const char *text, const char *pat);
-extern enum uwildmat uwildmat_poison(const char *text, const char *pat);
+extern bool uwildmat(const char *text, const char *pat)
+    INN_UWILDMAT_DEPRECATED;
+extern bool uwildmat_simple(const char *text, const char *pat)
+    INN_UWILDMAT_DEPRECATED;
+extern enum uwildmat uwildmat_poison(const char *text, const char *pat)
+    INN_UWILDMAT_DEPRECATED;
+
+#undef INN_UWILDMAT_DEPRECATED
 
 
 /*
