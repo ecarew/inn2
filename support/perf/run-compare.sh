@@ -16,7 +16,10 @@
 #  PERF_TOOLS names the directory with genarticles, feeder and readers.
 #  PERF_KEEP=1 keeps the last scratch installation.
 #  PERF_STORAGE=cnfs stores articles in CNFS (one 1 GB buffer, the
-#    PERF_CNFS_KB size) instead of tradspool.
+#    PERF_CNFS_KB size) instead of tradspool; =timecaf in timecaf.
+#  PERF_LAYOUT=typical gives cnfs or timecaf a storage.conf of 8 entries
+#    split by hierarchy, as a production site has, instead of one; each
+#    article is matched against 5 to 8 of them (first match wins).
 #  PERF_PROFILE=dir samples innd's stacks during W1 with sample(1), into
 #    dir/<build>-<rep>.sample (macOS only).
 #  Runs on macOS and Linux; on Linux the rusage lines come from GNU time.
@@ -166,18 +169,46 @@ peer localhost {
     hostname: "127.0.0.1, localhost"
 }
 EOF
-    if [ "${PERF_STORAGE:-tradspool}" = cnfs ]; then
-        # A sparse buffer; CNFS initializes its header on first use.
-        local kb=${PERF_CNFS_KB:-1048576}
-        dd if=/dev/null of="$d/spool/cycbuff" bs=1024 seek="$kb" 2>/dev/null
-        printf 'cycbuff:ONE:%s:%s\nmetacycbuff:POOL:ONE\n' \
-            "$d/spool/cycbuff" "$kb" >"$d/etc/cycbuff.conf"
-        printf 'method cnfs {\n    newsgroups: *\n    class: 0\n    options: POOL\n}\n' \
-            >"$d/etc/storage.conf"
+    # storage.conf entries: "name pattern"; the typical layout routes by
+    # hierarchy, with two binaries entries the feed never matches.
+    local entries
+    if [ "${PERF_LAYOUT:-}" = typical ]; then
+        entries='CTL control,control.*
+JUNK junk
+ABIN alt.binaries.*
+BIN *.binaries.*
+H1 perf.h1.*
+H23 perf.h2.*,perf.h3.*
+H4 perf.h4.*
+DEF *'
     else
-        printf 'method tradspool {\n    newsgroups: *\n    class: 0\n}\n' \
-            >"$d/etc/storage.conf"
+        entries='DEF *'
     fi
+    local method=${PERF_STORAGE:-tradspool} class=0 name pat metas=
+    : >"$d/etc/storage.conf"
+    [ "$method" = cnfs ] && : >"$d/etc/cycbuff.conf"
+    while read -r name pat; do
+        case $method in
+        cnfs)
+            # A sparse buffer each; CNFS initializes its header on first use.
+            local kb=${PERF_CNFS_KB:-1048576}
+            dd if=/dev/null of="$d/spool/$name" bs=1024 seek="$kb" 2>/dev/null
+            # cycbuff.conf wants every cycbuff line before the metacycbuffs.
+            printf 'cycbuff:%s:%s:%s\n' "$name" "$d/spool/$name" "$kb" \
+                >>"$d/etc/cycbuff.conf"
+            metas+="metacycbuff:P$name:$name"$'\n'
+            printf 'method cnfs {\n    newsgroups: %s\n    class: %d\n    options: P%s\n}\n' \
+                "$pat" "$class" "$name" >>"$d/etc/storage.conf" ;;
+        timecaf)
+            printf 'method timecaf {\n    newsgroups: %s\n    class: %d\n}\n' \
+                "$pat" "$class" >>"$d/etc/storage.conf" ;;
+        *)
+            printf 'method tradspool {\n    newsgroups: %s\n    class: %d\n}\n' \
+                "$pat" "$class" >>"$d/etc/storage.conf" ;;
+        esac
+        class=$((class + 1))
+    done <<<"$entries"
+    [ "$method" = cnfs ] && printf '%s' "$metas" >>"$d/etc/cycbuff.conf"
     cat >"$d/etc/readers.conf" <<'EOF'
 auth "localhost" { hosts: "127.0.0.1" default: "<local>" }
 access "localhost" { users: "<local>" newsgroups: "*" }
