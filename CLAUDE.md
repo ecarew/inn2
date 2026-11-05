@@ -203,11 +203,9 @@ from `cmake-build`; record method and raw numbers so rounds compare.
   with no Berkeley DB dependency (CONVERSION_NOTES.md, "Retiring ovdb").
 - lib fallbacks vs the C++ standard library and Boost; pread/pwrite in
   CONVERSION_NOTES.md, "Positioned file I/O".  Cite libc++/cppreference.
-- ARTparsebody body scan (CONVERSION_NOTES.md, same title, 2026-11-04):
-  innd's largest user-code cost with CNFS/timecaf (about two-thirds of
-  parsing); jump between CR/LF with memchr instead of testing every byte.
-  Tests first.  First in the order for CNFS/timecaf sites on Linux
-  (doc/perf/2026-11-04-w1-profile.md, "What to work on").
+- ~~ARTparsebody body scan~~ done 2026-11-04 (7d07f923c): W1 CNFS user
+  CPU −17%, wall −10% on Linux.  Next of that kind: ARTparseheader, same
+  memchr technique, after tests (86% line, 76% branch coverage now).
 - tradindexed flushes the group entry per article (CONVERSION_NOTES.md,
   same title, 2026-11-04): `tdx_data_add` msyncs up to 3 times per
   article; batch it.  Mainly macOS/BSD (MS_ASYNC is a no-op on Linux).
