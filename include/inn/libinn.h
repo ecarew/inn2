@@ -44,7 +44,23 @@ extern time_t parsedate_rfc5322_lax(const char *);
 
 
 /*
-**  Wildmat matching.
+**  Wildmat matching (lib/nativemat.cc): nativemat matches a comma list with
+**  ! negation, nativemat_poison also allows @ poison, and nativemat_simple
+**  matches a single pattern in which , and ! are ordinary characters.
+*/
+enum nativemat {
+    NATIVEMAT_FAIL = 0,
+    NATIVEMAT_MATCH = 1,
+    NATIVEMAT_POISON
+};
+
+extern bool nativemat(const char *text, const char *pat);
+extern bool nativemat_simple(const char *text, const char *pat);
+extern enum nativemat nativemat_poison(const char *text, const char *pat);
+
+/*
+**  The previous wildmat interface, kept for programs outside INN.  New code
+**  uses nativemat.
 */
 enum uwildmat {
     UWILDMAT_FAIL = 0,
