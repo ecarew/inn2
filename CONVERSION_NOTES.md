@@ -1557,6 +1557,82 @@ Recursion depth is at most the number of `*` in the pattern.
   existing cases; the file notes it had 100% coverage.
 - Measure innd's newsfeeds matching before and after.
 
+**Why factor it out.**  The goal is modern, safer code with fewer
+dependencies, not speed.  The comparison below is recorded so the choice
+is made on measured numbers, including the ones that went against the idea.
+
+**Measured 2026-11-05: three replacement engines against uwildmat.**
+Each engine got the same field matchers: group names (readers.conf
+`read:`/`post:` through PERMmatch, LIST ACTIVE), hosts, users, newsfeeds
+with `@` poison, and XPAT/HDR header text with `uwildmat_simple` rules.
+The regex engines used a wildmat-to-ECMAScript translation that copies
+uwildmat's rules:
+- `?` and `*` step over whole UTF-8 characters.
+- Classes follow `match_class()`.
+- A malformed pattern matches nothing.
+
+The native engine is an iterative matcher on `std::string_view`.  It
+retries only the most recent `*`, which is the property uwildmat's ABORT
+gives it, so its work is bounded by text length × pattern length.  It has
+constant stack depth, no allocation, no exceptions, and no dependencies
+beyond `<string_view>` and `<bit>`.  It is about 150 lines.
+
+Inputs:
+- The case files in `support/perf/wildmat/` (117 cases, tiered easy,
+  complex, obscure and hostile, per field).
+- 1,000,000 random field-shaped cases compared with uwildmat.
+- ISC's active file (`ftp.isc.org/pub/usenet/CONFIG/active`, 45,002
+  groups, fetched 2026-11-05).
+- The six `read:` lists in `support/perf/wildmat/lists`.
+
+Hardware was macOS on Apple silicon, built with clang -O2, and each figure
+is the best of 3 runs.  The baseline is `support/perf/wildbench`.  The
+harness for the other engines was a one-off and is not kept; these
+numbers are its record.
+
+PERMmatch decision, ns per group (lower is better):
+
+| `read:` list | Patterns | uwildmat | native | Boost.Regex | std::regex |
+|---|---|---|---|---|---|
+| all (`*`) | 1 | 2.5 | 6.8 | 1,161 | 18,020 |
+| public | 5 | 62 | 33 | 1,395 | 17,960 |
+| nobin | 5 | 114 | 107 | 2,431 | 35,585 |
+| big8 | 9 | 117 | 52 | 1,599 | 18,352 |
+| mixed15 | 15 | 382 | 292 | 5,430 | 70,528 |
+| site40 | 40 | 952 | 589 | 10,514 | 127,752 |
+
+Relative to uwildmat on the 40-pattern list: native 0.62×, Boost.Regex
+11×, std::regex 134×.  Every engine gave identical decisions on every list
+(same decision hash over all 45,002 groups).  Native wins by scanning the
+list from the end and stopping at the first match.  uwildmat wins on a
+bare `*` only because it special-cases it, which native can copy.
+
+Correctness and safety:
+
+| Test | uwildmat | native | Boost.Regex | std::regex |
+|---|---|---|---|---|
+| Case files (117) | 117 | 117 | 108 (9 over 5 s) | 110 (5 exceptions, 2 over 5 s) |
+| Slowest hostile case | 22 ms | 16 ms | over 5 s | over 5 s |
+| Fuzz: cases it cannot represent | — | 0 | 3,551 | 3,551 |
+| Fuzz: disagreements with uwildmat | — | 3 | 3 | 3 |
+
+The hostile failures come from backtracking, not from the translation:
+neither regex library bounds a match the way uwildmat does.  Boost would
+also add a dependency.  Conclusion: neither regex library meets the goal.
+An iterative native matcher does, and is faster on real access lists.
+
+**Upstream bug found by the fuzzing.**  All 3 disagreements are one
+uwildmat bug, and all three new engines give the correct answer.  In list
+mode (`uwildmat`, `uwildmat_poison`), the comma splitter in
+`match_expression()` treats an escaped `\[` as the start of a character
+class.  With no `]` after it, the rest of the expression, commas included,
+becomes part of that one pattern.  Examples:
+- `uwildmat("[", "\[")` is 0, though `uwildmat_simple` gives 1.
+- `uwildmat("x", "\[,x")` is 0: the `,x` entry is lost.
+
+It is unlikely in real configuration.  A replacement should fix it
+deliberately, with a test, rather than copy it.
+
 ### Lesson from the audit regression (2026-10-30)
 
 `ensure_news_user_grp()` is not a "drop root if root" call: when the
