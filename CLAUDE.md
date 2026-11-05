@@ -213,6 +213,11 @@ from `cmake-build`; record method and raw numbers so rounds compare.
   2026-11-04): `putcore` msyncs the whole dbz table every
   `icdsynccount` writes, about 20% of innd's W1 intake on macOS
   (doc/perf/2026-11-04-w1-profile.md).  Track the changed range instead.
+- Perl and Python filters in the CMake build (CONVERSION_NOTES.md, same
+  title, 2026-11-05): DO_PERL/DO_PYTHON are hard-wired off, so innd's and
+  nnrpd's filters and auth hooks are never built or tested.  Options,
+  ExtUtils::Embed / FindPython3, sample-script tests in verify-cxx.sh,
+  Linux image packages.
 - uwildmat hardening (CONVERSION_NOTES.md, "uwildmat hardening",
   2026-11-04): keep the RFC 3977 syntax (not std::regex); make the
   matcher iterative, cap client pattern length, fuzz against the current
