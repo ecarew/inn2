@@ -84,7 +84,7 @@ PLartfilter(const ARTDATA *data, char *artBody, long artLen, int lines)
         if (hc[i].found()) {
             hp = &ARTheaders[i];
             (void) hv_store(hdr, (char *) hp->Name, hp->Size,
-                            newSVpv(hc[i].Value, 0), 0);
+                            newSVpv(hc[i].c_str(), 0), 0);
         }
     }
 
@@ -124,7 +124,7 @@ PLartfilter(const ARTDATA *data, char *artBody, long artLen, int lines)
     if (SvTRUE(errsv)) {
         failure = true;
         syslog(L_ERROR, "Perl function filter_art died on article %s: %s",
-               hc[HDR__MESSAGE_ID].found() ? hc[HDR__MESSAGE_ID].Value : "?",
+               hc[HDR__MESSAGE_ID].found() ? hc[HDR__MESSAGE_ID].c_str() : "?",
                SvPV_nolen(errsv));
         (void) POPs;
     } else {
