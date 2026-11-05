@@ -25,16 +25,68 @@
 **  in a list, an escaped \[ no longer starts a character class that
 **  swallows the rest of the list.
 **
+**  is_valid_utf8, which moved here with the matcher, is unchanged.
+**
 **  For more information on UTF-8, see RFC 3629.
 */
 
 #include "portable/system.h"
 
 #include <bit>
+#include <cctype>
 #include <cstdint>
 #include <string_view>
 
 #include "inn/libinn.h"
+
+/*
+**  Check whether a string contains only valid UTF-8 characters, without
+**  any ASCII control characters except for \r, \n and \t.
+*/
+bool
+is_valid_utf8(const char *text)
+{
+    unsigned char mask;
+    const unsigned char *p;
+    int length;
+    int left;
+
+    for (p = (const unsigned char *) text; *p != '\0';) {
+        mask = 0x80;
+        length = 0;
+
+        /* Find out the expected length of the character. */
+        for (; mask > 0 && (*p & mask) == mask; mask >>= 1)
+            length++;
+
+        p++;
+
+        /* Valid printable ASCII character or CR, LF or HTAB. */
+        if (length == 0) {
+            if (isprint((unsigned char) p[-1]) || p[-1] == '\r'
+                || p[-1] == '\n' || p[-1] == '\t') {
+                continue;
+            } else {
+                return false;
+            }
+        }
+
+        /* Invalid length. */
+        if (length < 2 || length > 6)
+            return false;
+
+        /* Check that each byte looks like 10xxxxxx, except for the first. */
+        left = length - 1;
+        for (; left > 0 && (*p & 0xc0) == 0x80; p++)
+            left--;
+
+        if (left > 0)
+            return false;
+    }
+
+    return true;
+}
+
 
 namespace {
 
