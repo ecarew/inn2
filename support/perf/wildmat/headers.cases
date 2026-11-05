@@ -1,0 +1,17 @@
+# wildbench cases: header field bodies (XPAT, HDR).  Columns: tier func expect text pattern note.
+# XPAT/HDR: uwildmat_simple against header field bodies.  No , or ! lists.
+easy	s	1	Re: help with uwildmat	*uwildmat*
+easy	s	0	Re: help with uwildmat	*wildcat*
+easy	s	1	<abc123@example.com>	<*@example.com>
+easy	s	1	Alice <alice@example.com>	*alice@*
+complex	s	1	a, b, c	a, b, c	commas are literal here
+complex	s	1	!important	!*	so is a leading !
+complex	s	1	Re: [PATCH] fix	*\\[PATCH]*
+complex	s	1	Caf\xc3\xa9 talk	Caf? talk
+complex	s	1	1234	[0-9][0-9][0-9][0-9]
+obscure	s	1	tab\there	tab?here
+obscure	s	1		*
+hostile	s	0	$(998:a)	$(400:*a)b	one 998-octet line, the RFC 5322 limit
+hostile	s	0	$(100000:ab)	$(200:*a*b)c	folded headers can be much longer
+hostile	s	0	$(100000:a)	*$(100000:a)b
+hostile	s	0	x	$(100000:\\)
