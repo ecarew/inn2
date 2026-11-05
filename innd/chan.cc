@@ -773,10 +773,8 @@ CHANresize(CHANNEL *cp, size_t size)
             || cp->State == CSeatarticle) {
             if (cp->Data.BytesHeader != nullptr)
                 cp->Data.BytesHeader -= offset;
-            for (i = 0; i < MAX_ARTHEADER; i++, hc++) {
-                if (hc->Value != nullptr)
-                    hc->Value -= offset;
-            }
+            for (i = 0; i < MAX_ARTHEADER; i++, hc++)
+                hc->rebase(offset);
         }
     }
     TMRstop(TMR_DATAMOVE);
