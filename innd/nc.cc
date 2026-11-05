@@ -1441,10 +1441,10 @@ NCproc(CHANNEL *cp)
                     HeaderCut cut(hc, HDR__MESSAGE_ID);
                     /* The article posting time has not been parsed.  We cannot
                      * give it to InndHisRemember. */
-                    if (!HIScheck(History, hc[HDR__MESSAGE_ID].Value)
-                        && !InndHisRemember(hc[HDR__MESSAGE_ID].Value, 0))
+                    if (!HIScheck(History, hc[HDR__MESSAGE_ID].c_str())
+                        && !InndHisRemember(hc[HDR__MESSAGE_ID].c_str(), 0))
                         syslog(L_ERROR, "%s cant write history %s %m", LogName,
-                               hc[HDR__MESSAGE_ID].Value);
+                               hc[HDR__MESSAGE_ID].c_str());
                 }
                 ARTreject(REJECT_OTHER, cp);
                 cp->State = CSgetcmd;
@@ -1669,10 +1669,8 @@ NCproc(CHANNEL *cp)
                 data->Body -= cp->Start;
                 if (data->BytesHeader != nullptr)
                     data->BytesHeader -= cp->Start;
-                for (i = 0; i < MAX_ARTHEADER; i++, hc++) {
-                    if (hc->Value != nullptr)
-                        hc->Value -= cp->Start;
-                }
+                for (i = 0; i < MAX_ARTHEADER; i++, hc++)
+                    hc->rebase(cp->Start);
             }
             cp->Start = 0;
             TMRstop(TMR_DATAMOVE);
