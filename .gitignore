@@ -237,6 +237,7 @@
 /tests/lib/messageid.t
 /tests/lib/messages.t
 /tests/lib/mkstemp.t
+/tests/lib/nativemat.t
 /tests/lib/pread.t
 /tests/lib/pwrite.t
 /tests/lib/qio.t
