@@ -1437,14 +1437,14 @@ NCproc(CHANNEL *cp)
              */
             if (*cp->Error != '\0') {
                 if (innconf->remembertrash && (Mode == OMrunning)
-                    && HDR_FOUND(HDR__MESSAGE_ID)) {
+                    && hc[HDR__MESSAGE_ID].found()) {
                     HeaderCut cut(hc, HDR__MESSAGE_ID);
                     /* The article posting time has not been parsed.  We cannot
                      * give it to InndHisRemember. */
-                    if (!HIScheck(History, HDR(HDR__MESSAGE_ID))
-                        && !InndHisRemember(HDR(HDR__MESSAGE_ID), 0))
+                    if (!HIScheck(History, hc[HDR__MESSAGE_ID].Value)
+                        && !InndHisRemember(hc[HDR__MESSAGE_ID].Value, 0))
                         syslog(L_ERROR, "%s cant write history %s %m", LogName,
-                               HDR(HDR__MESSAGE_ID));
+                               hc[HDR__MESSAGE_ID].Value);
                 }
                 ARTreject(REJECT_OTHER, cp);
                 cp->State = CSgetcmd;
