@@ -130,8 +130,8 @@ PYartfilter(const ARTDATA *data, char *artBody, long artLen, int lines)
     /* Add headers to the dictionary... */
     hdrnum = 0;
     for (i = 0; i < MAX_ARTHEADER; i++) {
-        if (HDR_FOUND(i)) {
-            PYheaditem[hdrnum] = PYBUFF_FROMMEMORY(HDR(i), HDR_LEN(i));
+        if (hc[i].found()) {
+            PYheaditem[hdrnum] = PYBUFF_FROMMEMORY(hc[i].Value, hc[i].Length);
         } else
             PYheaditem[hdrnum] = Py_None;
         PyDict_SetItem(PYheaders, PYheadkey[hdrnum], PYheaditem[hdrnum]);
