@@ -203,6 +203,14 @@ from `cmake-build`; record method and raw numbers so rounds compare.
   with no Berkeley DB dependency (CONVERSION_NOTES.md, "Retiring ovdb").
 - lib fallbacks vs the C++ standard library and Boost; pread/pwrite in
   CONVERSION_NOTES.md, "Positioned file I/O".  Cite libc++/cppreference.
+- ARTparsebody body scan (CONVERSION_NOTES.md, same title, 2026-11-04):
+  innd's largest user-code cost with CNFS/timecaf (about two-thirds of
+  parsing); jump between CR/LF with memchr instead of testing every byte.
+  Tests first.  First in the order for CNFS/timecaf sites on Linux
+  (doc/perf/2026-11-04-w1-profile.md, "What to work on").
+- tradindexed flushes the group entry per article (CONVERSION_NOTES.md,
+  same title, 2026-11-04): `tdx_data_add` msyncs up to 3 times per
+  article; batch it.  Mainly macOS/BSD (MS_ASYNC is a no-op on Linux).
 - dbzsync flushes only what changed (CONVERSION_NOTES.md, same title,
   2026-11-04): `putcore` msyncs the whole dbz table every
   `icdsynccount` writes, about 20% of innd's W1 intake on macOS
