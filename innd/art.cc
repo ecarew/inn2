@@ -307,14 +307,14 @@ ARTlog(const ARTDATA *data, char code, const char *text)
         i = fprintf(Log, "%.15s.%03d %c %s %s %s%s", ctime(&t) + 4,
                     (int) (Now.tv_usec / 1000), code,
                     data->Feedsite != nullptr ? data->Feedsite : "(null)",
-                    hc[HDR__MESSAGE_ID].found() ? hc[HDR__MESSAGE_ID].Value
+                    hc[HDR__MESSAGE_ID].found() ? hc[HDR__MESSAGE_ID].c_str()
                                                : "(null)",
                     text, Done ? "" : "\n");
     else
         i = fprintf(Log, "%.15s.%03d %c %s %s%s", ctime(&t) + 4,
                     (int) (Now.tv_usec / 1000), code,
                     data->Feedsite != nullptr ? data->Feedsite : "(null)",
-                    hc[HDR__MESSAGE_ID].found() ? hc[HDR__MESSAGE_ID].Value
+                    hc[HDR__MESSAGE_ID].found() ? hc[HDR__MESSAGE_ID].c_str()
                                                : "(null)",
                     Done ? "" : "\n");
     if (i == EOF || (Done && !BufferedLogs && fflush(Log)) || ferror(Log)) {
@@ -382,7 +382,7 @@ ARTlogreject(CHANNEL *cp, const char *text)
         if (hc[HDR__PATH].found()) {
             {
                 HeaderCut path(hc, HDR__PATH);
-                hopcount = ARTparsepath(hc[HDR__PATH].Value, hc[HDR__PATH].Length,
+                hopcount = ARTparsepath(hc[HDR__PATH].data(), hc[HDR__PATH].size(),
                                         data->State->path);
             }
             hops = data->State->path.list();
@@ -425,14 +425,14 @@ ARTstore(CHANNEL *cp, bool filtered)
     /* find Path, Bytes and Xref to be prepended/dropped/replaced */
     arth.len = i = 0;
     /* assumes Path header field is required header field */
-    hp[i].p = hc[HDR__PATH].Value;
+    hp[i].p = hc[HDR__PATH].data();
     hp[i++].index = HDR__PATH;
     if (hc[HDR__XREF].found()) {
-        hp[i].p = hc[HDR__XREF].Value;
+        hp[i].p = hc[HDR__XREF].data();
         hp[i++].index = HDR__XREF;
     }
     if (hc[HDR__BYTES].found()) {
-        hp[i].p = hc[HDR__BYTES].Value;
+        hp[i].p = hc[HDR__BYTES].data();
         hp[i++].index = HDR__BYTES;
     }
     /* get the order of header fields appearance */
@@ -445,8 +445,8 @@ ARTstore(CHANNEL *cp, bool filtered)
             if (!data->Hassamepath || data->AddAlias || Pathcluster.used) {
                 /* write heading data */
                 iov[iovcnt].iov_base = (char *) p;
-                iov[iovcnt++].iov_len = hc[HDR__PATH].Value - p;
-                arth.len += hc[HDR__PATH].Value - p;
+                iov[iovcnt++].iov_len = hc[HDR__PATH].c_str() - p;
+                arth.len += hc[HDR__PATH].c_str() - p;
                 /* append clusterpath */
                 if (Pathcluster.used) {
                     iov[iovcnt].iov_base = Pathcluster.data;
@@ -463,7 +463,7 @@ ARTstore(CHANNEL *cp, bool filtered)
                     arth.len += Pathalias.used;
                 }
                 /* next to write */
-                p = hc[HDR__PATH].Value;
+                p = hc[HDR__PATH].c_str();
                 if (data->Hassamecluster)
                     p += Pathcluster.used;
             }
@@ -472,8 +472,8 @@ ARTstore(CHANNEL *cp, bool filtered)
             if (!innconf->xrefslave) {
                 /* write heading data */
                 iov[iovcnt].iov_base = (char *) p;
-                iov[iovcnt++].iov_len = hc[HDR__XREF].Value - p;
-                arth.len += hc[HDR__XREF].Value - p;
+                iov[iovcnt++].iov_len = hc[HDR__XREF].c_str() - p;
+                arth.len += hc[HDR__XREF].c_str() - p;
                 /* replace with new one */
                 iov[iovcnt].iov_base = data->State->xref.data();
                 iov[iovcnt++].iov_len = data->State->xref.size() - 2;
@@ -481,7 +481,7 @@ ARTstore(CHANNEL *cp, bool filtered)
                 /* next to write */
                 /* this points where trailing "\r\n" of original Xref header
                  * field exists */
-                p = hc[HDR__XREF].Value + hc[HDR__XREF].Length;
+                p = hc[HDR__XREF].data() + hc[HDR__XREF].size();
             }
             break;
         case HDR__BYTES:
@@ -492,7 +492,7 @@ ARTstore(CHANNEL *cp, bool filtered)
             arth.len += data->BytesHeader - p;
             /* next to write */
             /* need to skip trailing "\r\n" of Bytes header field */
-            p = hc[HDR__BYTES].Value + hc[HDR__BYTES].Length + 2;
+            p = hc[HDR__BYTES].data() + hc[HDR__BYTES].size() + 2;
             break;
         default:
             memset(&result, 0, sizeof(result));
@@ -532,11 +532,11 @@ ARTstore(CHANNEL *cp, bool filtered)
         arth.groups = const_cast<char *>(data->State->replic.data());
         arth.groupslen = data->State->replic.size();
     } else {
-        arth.groups = hc[HDR__NEWSGROUPS].Value;
-        arth.groupslen = hc[HDR__NEWSGROUPS].Length;
+        arth.groups = hc[HDR__NEWSGROUPS].data();
+        arth.groupslen = hc[HDR__NEWSGROUPS].size();
     }
-    arth.path = hc[HDR__PATH].Value;
-    arth.pathlen = hc[HDR__PATH].Length;
+    arth.path = hc[HDR__PATH].data();
+    arth.pathlen = hc[HDR__PATH].size();
 
     SMerrno = SMERR_NOERROR;
     result = SMstore(arth);
@@ -649,13 +649,13 @@ ARTcheckheader(CHANNEL *cp, int size)
     if (i == HDR__BYTES)
         cp->Data.BytesHeader = header;
     hc = &hc[i];
-    if (hc->Length != 0) {
+    if (hc->found() || hc->duplicated()) {
         /* Duplicated required header field.
          * We do not check every header field because they would otherwise
          * disappear from the overview. The content of the first occurrence
          * must be returned by HDR and OVER according to RFC 3977. */
         if (ARTheaders[i].Type == HTreq) {
-            hc->Length = -1;
+            hc->mark_duplicated();
         }
     } else {
         /* We need to remove leading and trailing spaces for
@@ -669,16 +669,19 @@ ARTcheckheader(CHANNEL *cp, int size)
          * to say in xrefslave mode). */
         if (i == HDR__MESSAGE_ID || i == HDR__SUPERSEDES
             || (innconf->xrefslave && i == HDR__XREF)) {
+            char *value;
+
             for (p = colon + 1; (p < header + size - 2) && (ISWHITE(*p)); p++)
                 ;
-            hc->Value = p;
-            for (p = header + size - 3; (p > hc->Value) && (ISWHITE(*p)); p--)
+            value = p;
+            for (p = header + size - 3; (p > value) && (ISWHITE(*p)); p--)
                 ;
-            hc->Length = p - hc->Value + 1;
+            hc->set(value, p - value + 1);
         } else {
-            hc->Value = colon + 2;
-            /* Length does not include the trailing "\r\n". */
-            hc->Length = size - (hc->Value - header) - 2;
+            char *value = colon + 2;
+
+            /* The length does not include the trailing "\r\n". */
+            hc->set(value, size - (value - header) - 2);
         }
     }
     return;
@@ -755,7 +758,7 @@ ARTchecksize(CHANNEL *cp)
         /* Write a local cancel entry so nobody else gives it to us. */
         if (hc[HDR__MESSAGE_ID].found()) {
             HeaderCut cut(hc, HDR__MESSAGE_ID);
-            msgid = hc[HDR__MESSAGE_ID].Value;
+            msgid = hc[HDR__MESSAGE_ID].c_str();
             /* The article posting time has not been parsed.  We cannot
              * give it to InndHisRemember. */
             if (!HIScheck(History, msgid) && !InndHisRemember(msgid, 0))
@@ -979,7 +982,7 @@ ARTclean(ARTDATA *data, char *buff, bool ihave)
         if (hp[i].Type == HTreq) {
             if (hc[i].found())
                 continue;
-            if (hc[i].Length < 0) {
+            if (hc[i].duplicated()) {
                 sprintf(buff, "%d Duplicate \"%s\" header field",
                         ihave ? NNTP_FAIL_IHAVE_REJECT
                               : NNTP_FAIL_TAKETHIS_REJECT,
@@ -996,8 +999,8 @@ ARTclean(ARTDATA *data, char *buff, bool ihave)
     }
 
     /* Assumes the Message-ID header field is a required header field. */
-    if (!IsValidMessageID(hc[HDR__MESSAGE_ID].Value, true, laxmid)) {
-        hc[HDR__MESSAGE_ID].Length = 0;
+    if (!IsValidMessageID(hc[HDR__MESSAGE_ID].c_str(), true, laxmid)) {
+        hc[HDR__MESSAGE_ID].drop();
         sprintf(buff, "%d Bad \"Message-ID\" header field",
                 ihave ? NNTP_FAIL_IHAVE_REJECT : NNTP_FAIL_TAKETHIS_REJECT);
         TMRstop(TMR_ARTCLEAN);
@@ -1005,7 +1008,7 @@ ARTclean(ARTDATA *data, char *buff, bool ihave)
     }
 
     if (innconf->linecountfuzz != 0 && hc[HDR__LINES].found()) {
-        p = hc[HDR__LINES].Value;
+        p = hc[HDR__LINES].data();
         i = data->Lines;
         if ((delta = i - atoi(p)) != 0
             && (unsigned long) abs(delta) > innconf->linecountfuzz) {
@@ -1021,7 +1024,7 @@ ARTclean(ARTDATA *data, char *buff, bool ihave)
     /* Assumes the Date header field is a required header field.
      * Check the presence of the Injection-Date header field, which will
      * override the value of the time the article was posted. */
-    p = hc[HDR__DATE].Value;
+    p = hc[HDR__DATE].data();
     data->Posted = parsedate_rfc5322_lax(p);
 
     if (data->Posted == (time_t) -1) {
@@ -1033,7 +1036,7 @@ ARTclean(ARTDATA *data, char *buff, bool ihave)
     }
 
     if (hc[HDR__INJECTION_DATE].found()) {
-        p = hc[HDR__INJECTION_DATE].Value;
+        p = hc[HDR__INJECTION_DATE].data();
         data->Posted = parsedate_rfc5322_lax(p);
 
         if (data->Posted == (time_t) -1) {
@@ -1064,7 +1067,7 @@ ARTclean(ARTDATA *data, char *buff, bool ihave)
         return false;
     }
     if (hc[HDR__EXPIRES].found()) {
-        p = hc[HDR__EXPIRES].Value;
+        p = hc[HDR__EXPIRES].data();
         data->Expires = parsedate_rfc5322_lax(p);
         if (data->Expires == (time_t) -1)
             data->Expires = 0;
@@ -1073,7 +1076,7 @@ ARTclean(ARTDATA *data, char *buff, bool ihave)
     /* Colon or whitespace in the Newsgroups header field? */
     /* Assumes Newsgroups header field is required header field. */
     if ((data->Groupcount =
-             NGsplit(hc[HDR__NEWSGROUPS].Value, hc[HDR__NEWSGROUPS].Length,
+             NGsplit(hc[HDR__NEWSGROUPS].data(), hc[HDR__NEWSGROUPS].size(),
                      data->State->newsgroups))
         == 0) {
         TMRstop(TMR_ARTCLEAN);
@@ -1202,11 +1205,11 @@ ARTcancel(const ARTDATA *data, const char *MessageID, const bool Trusted)
             } else if (end != nullptr) {
                 r = false;
 #if defined(HAVE_CANLOCK)
-                if (hc[HDR__CANCEL_KEY].Value != NULL) {
+                if (hc[HDR__CANCEL_KEY].seen()) {
                     canlockhdr = xstrndup(start, end - start);
 
                     /* Is the Cancel-Key header field legitimate? */
-                    r = verify_cancel_key(hc[HDR__CANCEL_KEY].Value, canlockhdr);
+                    r = verify_cancel_key(hc[HDR__CANCEL_KEY].c_str(), canlockhdr);
 
                     free(canlockhdr);
                 }
@@ -1472,9 +1475,9 @@ ARTxrefslave(ARTDATA *data)
     if (!hc[HDR__XREF].found())
         return false;
     /* skip server name */
-    if ((p = strpbrk(hc[HDR__XREF].Value, " \t\r\n")) == nullptr)
+    if ((p = strpbrk(hc[HDR__XREF].data(), " \t\r\n")) == nullptr)
         return false;
-    if (p > hc[HDR__XREF].Value + hc[HDR__XREF].Length)
+    if (p > hc[HDR__XREF].data() + hc[HDR__XREF].size())
         return false;
     /* in case Xref is folded */
     while (*++p == ' ' || *p == '\t' || *p == '\r' || *p == '\n')
@@ -1482,8 +1485,8 @@ ARTxrefslave(ARTDATA *data)
     if (*p == '\0')
         return false;
     data->State->replic =
-        std::string_view(p, hc[HDR__XREF].Length - (p - hc[HDR__XREF].Value));
-    for (i = 0; (*p != '\0') && (p < hc[HDR__XREF].Value + hc[HDR__XREF].Length);
+        std::string_view(p, hc[HDR__XREF].size() - (p - hc[HDR__XREF].data()));
+    for (i = 0; (*p != '\0') && (p < hc[HDR__XREF].data() + hc[HDR__XREF].size());
          p = next) {
         /* Mark end of this entry and where next one starts. */
         name = p;
@@ -1671,7 +1674,7 @@ ARTpropagate(ARTDATA *data, const char **hops, int hopcount, char **list,
                 if (!sp->FeedwithoutOriginator)
                     continue;
             } else if (hc[HDR__INJECTION_INFO].found()) {
-                begin = (char *) skip_cfws(hc[HDR__INJECTION_INFO].Value);
+                begin = (char *) skip_cfws(hc[HDR__INJECTION_INFO].c_str());
 
                 if (*begin == '\0')
                     continue;
@@ -1701,18 +1704,18 @@ ARTpropagate(ARTDATA *data, const char **hops, int hopcount, char **list,
                 if (!sendit)
                     continue;
             } else if (hc[HDR__XTRACE].found()) {
-                if ((p = strchr(hc[HDR__XTRACE].Value, ' ')) != nullptr) {
+                if ((p = strchr(hc[HDR__XTRACE].data(), ' ')) != nullptr) {
                     *p = '\0';
                     for (j = 0, sendit = false;
                          (q = sp->Originator[j]) != nullptr; j++) {
                         if (*q == '@') {
-                            if (uwildmat(hc[HDR__XTRACE].Value, &q[1])) {
+                            if (uwildmat(hc[HDR__XTRACE].c_str(), &q[1])) {
                                 *p = ' ';
                                 sendit = false;
                                 break;
                             }
                         } else {
-                            if (uwildmat(hc[HDR__XTRACE].Value, q))
+                            if (uwildmat(hc[HDR__XTRACE].c_str(), q))
                                 sendit = true;
                         }
                     }
@@ -1745,7 +1748,7 @@ ARTpropagate(ARTDATA *data, const char **hops, int hopcount, char **list,
             continue;
 
         if (sp->HashFeedList
-            && !HashFeedMatch(sp->HashFeedList, hc[HDR__MESSAGE_ID].Value))
+            && !HashFeedMatch(sp->HashFeedList, hc[HDR__MESSAGE_ID].data()))
             /* Hashfeed doesn't match. */
             continue;
 
@@ -1844,8 +1847,8 @@ ARTmakeoverview(CHANNEL *cp)
             break;
         case HDR__XREF:
             if (innconf->xrefslave) {
-                p = hc[j].Value;
-                len = hc[j].Length;
+                p = hc[j].data();
+                len = hc[j].size();
             } else {
                 p = data->State->xref.data();
                 len = data->State->xref.size() - 2;
@@ -1860,19 +1863,19 @@ ARTmakeoverview(CHANNEL *cp)
             /* If requested, generate keywords from the body of the article
                when it has no Keywords header field, so that some make it
                into overview. */
-            if (DO_KEYWORDS && innconf->keywords && hc[j].Value == nullptr) {
+            if (DO_KEYWORDS && innconf->keywords && !hc[j].seen()) {
                 KEYgenerate(data->State->keywords, cp->In.data + data->Body,
                             cp->Next - data->Body);
                 p = data->State->keywords.data();
                 len = data->State->keywords.size();
             } else {
-                p = hc[j].Value;
-                len = hc[j].Length;
+                p = hc[j].data();
+                len = hc[j].size();
             }
             break;
         default:
-            p = hc[j].Value;
-            len = hc[j].Length;
+            p = hc[j].data();
+            len = hc[j].size();
             break;
         }
         if (len == 0)
@@ -1964,7 +1967,7 @@ ARTpost(CHANNEL *cp)
         ARTreject(REJECT_OTHER, cp);
         return false;
     }
-    hopcount = ARTparsepath(hc[HDR__PATH].Value, hc[HDR__PATH].Length, data->State->path);
+    hopcount = ARTparsepath(hc[HDR__PATH].data(), hc[HDR__PATH].size(), data->State->path);
     if (hopcount == 0) {
         snprintf(cp->Error, sizeof(cp->Error), "%d Illegal path element",
                  ihave ? NNTP_FAIL_IHAVE_REJECT : NNTP_FAIL_TAKETHIS_REJECT);
@@ -1985,9 +1988,9 @@ ARTpost(CHANNEL *cp)
     }
     data->FeedsiteLength = strlen(data->Feedsite);
 
-    hash = HashMessageID(hc[HDR__MESSAGE_ID].Value);
+    hash = HashMessageID(hc[HDR__MESSAGE_ID].c_str());
     data->Hash = &hash;
-    if (HIScheck(History, hc[HDR__MESSAGE_ID].Value)) {
+    if (HIScheck(History, hc[HDR__MESSAGE_ID].c_str())) {
         snprintf(cp->Error, sizeof(cp->Error), "%d Duplicate",
                  ihave ? NNTP_FAIL_IHAVE_REJECT : NNTP_FAIL_TAKETHIS_REJECT);
         ARTlog(data, ART_REJECT, cp->Error);
@@ -1999,9 +2002,9 @@ ARTpost(CHANNEL *cp)
         /* If the article posting time has not been properly parsed,
          * data->Posted will be negative or zero. */
         if (innconf->remembertrash && (Mode == OMrunning)
-            && !InndHisRemember(hc[HDR__MESSAGE_ID].Value, data->Posted))
+            && !InndHisRemember(hc[HDR__MESSAGE_ID].c_str(), data->Posted))
             syslog(L_ERROR, "%s cant write history %s %m", LogName,
-                   hc[HDR__MESSAGE_ID].Value);
+                   hc[HDR__MESSAGE_ID].c_str());
         ARTreject(REJECT_OTHER, cp);
         return false;
     }
@@ -2032,9 +2035,9 @@ ARTpost(CHANNEL *cp)
                 MaxLength(ME.Exclusions[j], ME.Exclusions[j]));
             ARTlog(data, ART_REJECT, cp->Error);
             if (innconf->remembertrash && (Mode == OMrunning)
-                && !InndHisRemember(hc[HDR__MESSAGE_ID].Value, data->Posted))
+                && !InndHisRemember(hc[HDR__MESSAGE_ID].c_str(), data->Posted))
                 syslog(L_ERROR, "%s cant write history %s %m", LogName,
-                       hc[HDR__MESSAGE_ID].Value);
+                       hc[HDR__MESSAGE_ID].c_str());
             ARTreject(REJECT_SITE, cp);
             return false;
         }
@@ -2050,20 +2053,20 @@ ARTpost(CHANNEL *cp)
             Filtered = true;
             syslog(L_NOTICE,
                    "rejecting[python] %s %d %.200s (with dontrejectfiltered)",
-                   hc[HDR__MESSAGE_ID].Value,
+                   hc[HDR__MESSAGE_ID].c_str(),
                    ihave ? NNTP_OK_IHAVE : NNTP_OK_TAKETHIS, filterrc);
         } else {
             snprintf(cp->Error, sizeof(cp->Error), "%d %.200s",
                      ihave ? NNTP_FAIL_IHAVE_REJECT
                            : NNTP_FAIL_TAKETHIS_REJECT,
                      filterrc);
-            syslog(L_NOTICE, "rejecting[python] %s %s", hc[HDR__MESSAGE_ID].Value,
+            syslog(L_NOTICE, "rejecting[python] %s %s", hc[HDR__MESSAGE_ID].c_str(),
                    cp->Error);
             ARTlog(data, ART_REJECT, cp->Error);
             if (innconf->remembertrash && (Mode == OMrunning)
-                && !InndHisRemember(hc[HDR__MESSAGE_ID].Value, data->Posted))
+                && !InndHisRemember(hc[HDR__MESSAGE_ID].c_str(), data->Posted))
                 syslog(L_ERROR, "%s cant write history %s %m", LogName,
-                       hc[HDR__MESSAGE_ID].Value);
+                       hc[HDR__MESSAGE_ID].c_str());
             ARTreject(REJECT_FILTER, cp);
             return false;
         }
@@ -2082,20 +2085,20 @@ ARTpost(CHANNEL *cp)
             Filtered = true;
             syslog(L_NOTICE,
                    "rejecting[perl] %s %d %.200s (with dontrejectfiltered)",
-                   hc[HDR__MESSAGE_ID].Value,
+                   hc[HDR__MESSAGE_ID].c_str(),
                    ihave ? NNTP_OK_IHAVE : NNTP_OK_TAKETHIS, filterrc);
         } else {
             snprintf(cp->Error, sizeof(cp->Error), "%d %.200s",
                      ihave ? NNTP_FAIL_IHAVE_REJECT
                            : NNTP_FAIL_TAKETHIS_REJECT,
                      filterrc);
-            syslog(L_NOTICE, "rejecting[perl] %s %s", hc[HDR__MESSAGE_ID].Value,
+            syslog(L_NOTICE, "rejecting[perl] %s %s", hc[HDR__MESSAGE_ID].c_str(),
                    cp->Error);
             ARTlog(data, ART_REJECT, cp->Error);
             if (innconf->remembertrash && (Mode == OMrunning)
-                && !InndHisRemember(hc[HDR__MESSAGE_ID].Value, data->Posted))
+                && !InndHisRemember(hc[HDR__MESSAGE_ID].c_str(), data->Posted))
                 syslog(L_ERROR, "%s cant write history %s %m", LogName,
-                       hc[HDR__MESSAGE_ID].Value);
+                       hc[HDR__MESSAGE_ID].c_str());
             ARTreject(REJECT_FILTER, cp);
             return false;
         }
@@ -2104,20 +2107,20 @@ ARTpost(CHANNEL *cp)
 
     /* If we limit what distributions we get, see if we want this one. */
     if (hc[HDR__DISTRIBUTION].found()) {
-        if (hc[HDR__DISTRIBUTION].Value[0] == ',') {
+        if (hc[HDR__DISTRIBUTION].c_str()[0] == ',') {
             snprintf(
                 cp->Error, sizeof(cp->Error), "%d Bogus distribution \"%s\"",
                 ihave ? NNTP_FAIL_IHAVE_REJECT : NNTP_FAIL_TAKETHIS_REJECT,
-                MaxLength(hc[HDR__DISTRIBUTION].Value, hc[HDR__DISTRIBUTION].Value));
+                MaxLength(hc[HDR__DISTRIBUTION].c_str(), hc[HDR__DISTRIBUTION].c_str()));
             ARTlog(data, ART_REJECT, cp->Error);
             if (innconf->remembertrash && Mode == OMrunning
-                && !InndHisRemember(hc[HDR__MESSAGE_ID].Value, data->Posted))
+                && !InndHisRemember(hc[HDR__MESSAGE_ID].c_str(), data->Posted))
                 syslog(L_ERROR, "%s cant write history %s %m", LogName,
-                       hc[HDR__MESSAGE_ID].Value);
+                       hc[HDR__MESSAGE_ID].c_str());
             ARTreject(REJECT_DISTRIB, cp);
             return false;
         } else {
-            ARTparsedist(hc[HDR__DISTRIBUTION].Value, hc[HDR__DISTRIBUTION].Length,
+            ARTparsedist(hc[HDR__DISTRIBUTION].data(), hc[HDR__DISTRIBUTION].size(),
                          data->State->distribution);
             if (ME.Distributions && data->State->distribution.list() != nullptr
                 && *data->State->distribution.list() != nullptr
@@ -2130,9 +2133,9 @@ ARTpost(CHANNEL *cp)
                                    data->State->distribution.list()[0]));
                 ARTlog(data, ART_REJECT, cp->Error);
                 if (innconf->remembertrash && (Mode == OMrunning)
-                    && !InndHisRemember(hc[HDR__MESSAGE_ID].Value, data->Posted))
+                    && !InndHisRemember(hc[HDR__MESSAGE_ID].c_str(), data->Posted))
                     syslog(L_ERROR, "%s cant write history %s %m", LogName,
-                           hc[HDR__MESSAGE_ID].Value);
+                           hc[HDR__MESSAGE_ID].c_str());
                 ARTreject(REJECT_DISTRIB, cp);
                 return false;
             }
@@ -2152,7 +2155,7 @@ ARTpost(CHANNEL *cp)
     if (hc[HDR__FOLLOWUPTO].found()) {
         /* Count the number of commas without syntactically parsing the header
          * field body. */
-        for (i = 1, p = hc[HDR__FOLLOWUPTO].Value; (p = strchr(p, ',')) != nullptr;
+        for (i = 1, p = hc[HDR__FOLLOWUPTO].data(); (p = strchr(p, ',')) != nullptr;
              i++, p++)
             ;
 
@@ -2161,7 +2164,7 @@ ARTpost(CHANNEL *cp)
         /* When "poster" is the only value, then it is not a followup. */
         if (i == 1) {
             /* Skip leading whitespaces. */
-            p = (char *) skip_fws(hc[HDR__FOLLOWUPTO].Value);
+            p = (char *) skip_fws(hc[HDR__FOLLOWUPTO].c_str());
 
             /* Check for an empty header field body or "poster". */
             if (*p == '\0'
@@ -2182,7 +2185,7 @@ ARTpost(CHANNEL *cp)
         IsControl = true;
 
         /* Nip off the first word into lowercase. */
-        strlcpy(ControlWord, hc[HDR__CONTROL].Value, sizeof(ControlWord));
+        strlcpy(ControlWord, hc[HDR__CONTROL].c_str(), sizeof(ControlWord));
         for (p = ControlWord; *p && !ISWHITE(*p); p++)
             if (isupper((unsigned char) *p))
                 *p = tolower((unsigned char) *p);
@@ -2268,10 +2271,10 @@ ARTpost(CHANNEL *cp)
                              MaxLength(p, p));
                     ARTlog(data, ART_REJECT, cp->Error);
                     if (innconf->remembertrash && (Mode == OMrunning)
-                        && !InndHisRemember(hc[HDR__MESSAGE_ID].Value,
+                        && !InndHisRemember(hc[HDR__MESSAGE_ID].c_str(),
                                             data->Posted))
                         syslog(L_ERROR, "%s cant write history %s %m", LogName,
-                               hc[HDR__MESSAGE_ID].Value);
+                               hc[HDR__MESSAGE_ID].c_str());
                     ARTreject(REJECT_GROUP, cp);
                     return false;
                 }
@@ -2311,9 +2314,9 @@ ARTpost(CHANNEL *cp)
                      MaxLength(ngp->Name, ngp->Name));
             ARTlog(data, ART_REJECT, cp->Error);
             if (innconf->remembertrash && (Mode == OMrunning)
-                && !InndHisRemember(hc[HDR__MESSAGE_ID].Value, data->Posted))
+                && !InndHisRemember(hc[HDR__MESSAGE_ID].c_str(), data->Posted))
                 syslog(L_ERROR, "%s cant write history %s %m", LogName,
-                       hc[HDR__MESSAGE_ID].Value);
+                       hc[HDR__MESSAGE_ID].c_str());
             ARTreject(REJECT_UNAPP, cp);
             return false;
         }
@@ -2417,9 +2420,9 @@ ARTpost(CHANNEL *cp)
             if (!innconf->wanttrash) {
                 if (innconf->remembertrash && (Mode == OMrunning)
                     && !NoHistoryUpdate
-                    && !InndHisRemember(hc[HDR__MESSAGE_ID].Value, data->Posted))
+                    && !InndHisRemember(hc[HDR__MESSAGE_ID].c_str(), data->Posted))
                     syslog(L_ERROR, "%s cant write history %s %m", LogName,
-                           hc[HDR__MESSAGE_ID].Value);
+                           hc[HDR__MESSAGE_ID].c_str());
                 ARTreject(REJECT_GROUP, cp);
                 return false;
             } else {
@@ -2431,10 +2434,10 @@ ARTpost(CHANNEL *cp)
                 if (!GroupMissing) {
                     if (innconf->remembertrash && (Mode == OMrunning)
                         && !NoHistoryUpdate
-                        && !InndHisRemember(hc[HDR__MESSAGE_ID].Value,
+                        && !InndHisRemember(hc[HDR__MESSAGE_ID].c_str(),
                                             data->Posted))
                         syslog(L_ERROR, "%s cant write history %s %m", LogName,
-                               hc[HDR__MESSAGE_ID].Value);
+                               hc[HDR__MESSAGE_ID].c_str());
                     ARTreject(REJECT_GROUP, cp);
                     return false;
                 }
@@ -2469,7 +2472,7 @@ ARTpost(CHANNEL *cp)
                     cp->Error, sizeof(cp->Error),
                     "%d Xref header field \"%s\" invalid in xrefslave mode",
                     ihave ? NNTP_FAIL_IHAVE_REJECT : NNTP_FAIL_TAKETHIS_REJECT,
-                    MaxLength(hc[HDR__XREF].Value, hc[HDR__XREF].Value));
+                    MaxLength(hc[HDR__XREF].c_str(), hc[HDR__XREF].c_str()));
             } else {
                 snprintf(cp->Error, sizeof(cp->Error),
                          "%d Xref header field required in xrefslave mode",
@@ -2478,9 +2481,9 @@ ARTpost(CHANNEL *cp)
             }
             ARTlog(data, ART_REJECT, cp->Error);
             if (innconf->remembertrash && (Mode == OMrunning)
-                && !InndHisRemember(hc[HDR__MESSAGE_ID].Value, data->Posted))
+                && !InndHisRemember(hc[HDR__MESSAGE_ID].c_str(), data->Posted))
                 syslog(L_ERROR, "%s cant write history %s %m", LogName,
-                       hc[HDR__MESSAGE_ID].Value);
+                       hc[HDR__MESSAGE_ID].c_str());
             ARTreject(REJECT_OTHER, cp);
             return false;
         }
@@ -2553,11 +2556,11 @@ ARTpost(CHANNEL *cp)
 
     /* Update history if we didn't get too many I/O errors above. */
     if ((Mode != OMrunning)
-        || !InndHisWrite(hc[HDR__MESSAGE_ID].Value, data->Arrived, data->Posted,
+        || !InndHisWrite(hc[HDR__MESSAGE_ID].c_str(), data->Arrived, data->Posted,
                          data->Expires, &token)) {
         i = errno;
         syslog(L_ERROR, "%s cant write history %s %m", LogName,
-               hc[HDR__MESSAGE_ID].Value);
+               hc[HDR__MESSAGE_ID].c_str());
         snprintf(cp->Error, sizeof(cp->Error), "%d Can't write history, %s",
                  ihave ? NNTP_FAIL_IHAVE_DEFER : NNTP_FAIL_ACTION,
                  strerror(errno));
@@ -2620,11 +2623,11 @@ ARTpost(CHANNEL *cp)
      * seem to be worth it. */
     if (Accepted) {
         if (IsControl) {
-            ARTcontrol(data, hc[HDR__CONTROL].Value, cp);
+            ARTcontrol(data, hc[HDR__CONTROL].data(), cp);
         }
         if (hc[HDR__SUPERSEDES].found()) {
-            if (IsValidMessageID(hc[HDR__SUPERSEDES].Value, true, laxmid))
-                ARTcancel(data, hc[HDR__SUPERSEDES].Value, false);
+            if (IsValidMessageID(hc[HDR__SUPERSEDES].c_str(), true, laxmid))
+                ARTcancel(data, hc[HDR__SUPERSEDES].c_str(), false);
         }
     }
 
