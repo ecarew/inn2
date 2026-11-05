@@ -858,14 +858,37 @@ ARTparsebody(CHANNEL *cp)
 {
     struct buffer *bp = &cp->In;
     ARTDATA *data = &cp->Data;
+    const char *d = bp->data;
+    const size_t used = bp->used;
     size_t i;
 
-    for (i = cp->Next; i < bp->used; i++) {
-        if (bp->data[i] == '\0')
+    /* Only '\r', '\n' and '\0' matter; everything else is skipped.  Keep
+       the position of the next of each (used if none), found with memchr
+       and searched again only once the scan has passed it, and go straight
+       to the nearest one.  Same results as testing every byte. */
+    auto find = [d, used](char c, size_t from) -> size_t {
+        const void *p = memchr(d + from, c, used - from);
+        return p == nullptr ? used : static_cast<const char *>(p) - d;
+    };
+    size_t next_cr = cp->Next, next_lf = cp->Next, next_nul = cp->Next;
+    bool searched = false;
+
+    for (i = cp->Next; i < used; i++) {
+        if (!searched || next_cr < i)
+            next_cr = find('\r', i);
+        if (!searched || next_lf < i)
+            next_lf = find('\n', i);
+        if (!searched || next_nul < i)
+            next_nul = find('\0', i);
+        searched = true;
+        i = std::min({next_cr, next_lf, next_nul});
+        if (i == used)
+            break;
+        if (d[i] == '\0')
             ARTerror(cp, "Nul character in body");
-        if (bp->data[i] == '\n')
+        if (d[i] == '\n')
             data->LFwithoutCR++;
-        if (bp->data[i] != '\r')
+        if (d[i] != '\r')
             continue;
 
         /* Saw \r.  We're just scanning for the article terminator, so if we
