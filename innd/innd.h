@@ -170,12 +170,8 @@ struct HDRCONTENT {
 
 
 /*
-**  A way to index into the header table.
+**  Indexes into ARTDATA::HdrContent, one per header field innd knows.
 */
-#define HDR_FOUND(_x)         (hc[(_x)].Length > 0)
-#define HDR(_x)               (hc[(_x)].Value)
-/* HDR_LEN does not includes trailing "\r\n" */
-#define HDR_LEN(_x)           (hc[(_x)].Length)
 
 
 #define HDR__APPROVED         0
