@@ -1,0 +1,86 @@
+# wildbench cases: newsgroup names.  Columns: tier func expect text pattern note.
+# Easy: the shapes in readers.conf read:/post:, newsfeeds and storage.conf.
+easy	m	1	comp.lang.c	comp.lang.c
+easy	m	0	comp.lang.c	comp.lang.c++
+easy	m	1	comp.lang.c	comp.*
+easy	m	1	comp.lang.c	*
+easy	m	0	comp	comp.*	the hierarchy name alone is not under comp.*
+easy	m	1	comp	comp*
+easy	m	1	alt.binaries.pictures	alt.binaries.*
+easy	m	0	alt.binaries.pictures	*,!alt.binaries.*
+easy	m	1	alt.sources	*,!alt.binaries.*
+easy	m	1	control.cancel	control,control.*
+easy	m	1	control	control,control.*
+easy	m	0	junk	*,!junk
+easy	m	1	de.comp.lang.c	de.*,fr.*
+easy	m	0	it.comp.lang.c	de.*,fr.*
+easy	m	1	comp.os.linux.misc	comp.os.*.misc
+easy	m	1	rec.arts.sf.written	rec.arts.sf.???????
+easy	m	0	rec.arts.sf.writte	rec.arts.sf.???????
+# Complex: mixed lists where the last match decides, as INN writes them.
+complex	m	1	alt.binaries.pictures	*,!alt.*,alt.binaries.*
+complex	m	0	alt.sex	*,!alt.*,alt.binaries.*
+complex	m	0	alt.binaries.warez	*,!alt.*,alt.binaries.*,!alt.binaries.warez*
+complex	m	1	comp.lang.c	!*,comp.*,!comp.binaries.*
+complex	m	0	comp.binaries.ibm.pc	!*,comp.*,!comp.binaries.*
+complex	m	1	local.test	!*,local.*
+complex	m	1	perf.h2.g7	perf.h1.*,perf.h2.*,perf.h3.*
+complex	m	1	fr.comp.os.linux	*.comp.*
+complex	m	1	a.b.c.d.e.f.g.h	*.*.*.*.*.*.*.*
+complex	m	0	a.b.c.d.e.f.g	*.*.*.*.*.*.*.*
+complex	m	1	comp.lang.c++	comp.lang.c[+][+]
+complex	m	1	comp.lang.c++	comp.lang.c++
+complex	m	1	microsoft.public.win32.programmer.kernel	microsoft.public.*.kernel
+# Non-ASCII group names (UTF-8): ? is one character, not one octet.
+complex	m	1	fr.r\xc3\xa9seaux	fr.r?seaux
+complex	m	0	fr.r\xc3\xa9seaux	fr.r??seaux
+complex	m	1	fr.r\xc3\xa9seaux	fr.r\xc3\xa9*
+complex	m	1	de.etc.b\xc3\xb6rse	de.*
+complex	m	1	\xe6\x97\xa5\xe6\x9c\xac.test	??.test
+# Poison (@) as newsfeeds uses it.
+complex	p	P	alt.binaries.warez	*,@alt.binaries.warez*
+complex	p	M	alt.binaries.pictures	*,@alt.binaries.warez*
+complex	p	F	comp.lang.c	alt.*,@alt.binaries.*
+complex	p	M	alt.binaries.x	@alt.*,alt.binaries.*	a later match overrides poison
+complex	p	F	alt.sex	*,!alt.*
+# Obscure but legal in the configs.
+obscure	m	0	comp.lang.c	
+obscure	m	1		*
+obscure	m	1			an empty pattern matches only empty text
+obscure	m	0	comp.lang.c	,,,
+obscure	m	1	comp.lang.c	,comp.*,
+obscure	m	1	comp.lang.c	comp.*,!	a bare ! matches only empty text
+obscure	m	0	Comp.Lang.C	comp.*	matching is case-sensitive
+obscure	m	1	comp.lang.c	comp.lang.[abc]
+obscure	m	1	comp.lang.c	comp.lang.[a-c]
+obscure	m	0	comp.lang.c	comp.lang.[^a-c]
+obscure	m	1	comp.lang.-	comp.lang.[a-]
+obscure	m	1	comp.lang.]	comp.lang.[]]
+obscure	m	1	a,b	a\\,b	escaped comma is literal
+obscure	m	1	comp.lang.c	comp.lang.\\c
+obscure	m	1	comp.lang.c	**********
+obscure	m	1	comp.lang.c	comp.lang.c*
+obscure	m	1	comp.lang.c	*comp.lang.c
+obscure	m	1	comp.lang.c	!comp.*,comp.lang.*
+obscure	m	0	comp.lang.c	comp.lang.*,!comp.*
+# Hostile: client-supplied wildmats (LIST ACTIVE, NEWNEWS) and bad configs.
+# The answer matters less than finishing quickly.
+hostile	m	0	$(4000:a)	$(60:*a)b	the classic blowup family
+hostile	m	0	$(4000:a.)	$(60:*.)x
+hostile	m	1	$(4000:a)	$(4000:*)
+hostile	m	0	comp.lang.c	$(20000:*)x
+hostile	m	0	comp.lang.c	$(20000:x,)
+hostile	m	1	comp.lang.c	$(20000:x,)comp.*
+hostile	m	0	comp.lang.c	$(20000:!*,)
+hostile	m	0	comp.lang.c	comp.lang.[
+hostile	m	0	comp.lang.c	comp.lang.[a-
+hostile	m	0	comp.lang.c	comp.lang.c\\
+hostile	m	0	comp.lang.c	comp.lang.[z-a]
+hostile	m	0	comp.lang.c	[$(5000:[)
+hostile	m	1	comp.\xff\xfe	comp.??	malformed UTF-8 counts octet by octet
+hostile	m	1	comp.\xff\xfe	comp.*
+hostile	m	1	comp.\xc0\xaf	comp.?	overlong UTF-8 is not rejected: one character
+hostile	m	1	comp.\x80	comp.?	lone continuation byte counts as one
+hostile	m	0	comp.\xe6\x97	comp.?	truncated UTF-8 sequence
+hostile	m	0	$(100000:a)b	$(100000:?)
+hostile	p	F	comp.lang.c	$(20000:@x*,)
