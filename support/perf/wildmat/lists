@@ -1,0 +1,7 @@
+# wildbench access lists: name<TAB>comma list, as readers.conf read: holds.
+all	*
+public	*,!local.*,!control,!control.*,!junk
+nobin	*,!alt.binaries.*,!*.binaries.*,!control*,!junk
+big8	!*,comp.*,humanities.*,misc.*,news.*,rec.*,sci.*,soc.*,talk.*
+mixed15	*,!alt.*,alt.sources,alt.folklore.*,!*.binaries.*,!*.test,!control*,!junk,!to.*,!local.*,de.*,!de.alt.dateien.*,fr.*,!fr.binaires.*,!*.jobs.*
+site40	*,!alt.*,alt.sources,alt.folklore.*,alt.comp.*,alt.tv.*,!*.binaries.*,!*.binaires.*,!*.dateien.*,!*.test,!*.jobs.*,!control*,!junk,!to.*,!local.*,!ba.*,!la.*,!ny.*,!tx.*,!uk.local.*,de.*,!de.alt.dateien.*,fr.*,!fr.binaires.*,it.*,!it.binari.*,nl.*,!nl.binaries.*,pl.*,!pl.test*,se.*,dk.*,no.*,fi.*,!fido.*,!fido7.*,!microsoft.*,!*.d,!*.answers,news.answers
