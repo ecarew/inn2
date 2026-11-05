@@ -190,7 +190,7 @@ GetModeratorAddress(FILE *FromServer, FILE *ToServer, char *group,
 
             /* If it pattern-matches the newsgroup, the second field is a
              * format for mailing, with periods changed to dashes. */
-            if (uwildmat(name, buff)) {
+            if (nativemat(name, buff)) {
                 for (save = p; ISWHITE(*save); save++)
                     continue;
                 for (p = name; *p; p++)

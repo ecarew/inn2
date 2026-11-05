@@ -369,7 +369,7 @@ CMDlist(int ac, char *av[])
 
         /* Check whether the newsgroup matches the wildmat pattern,
          * if given. */
-        if (wildarg && !uwildmat(p, wildarg))
+        if (wildarg && !nativemat(p, wildarg))
             continue;
 
         if (lp == &INFOcounts) {

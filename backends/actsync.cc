@@ -1500,7 +1500,7 @@ ignore_grps(struct grp *grp, int grplen, struct pat *igcl, int iglen)
                     if (!pp->eq_type)
                         continue; /* pattern does not apply */
                     if (pp->epat != nullptr
-                        && !uwildmat(&gp->type[1], pp->epat)) {
+                        && !nativemat(&gp->type[1], pp->epat)) {
                         /* equiv pattern doesn't match, patt does not apply */
                         continue;
                     }
@@ -1509,7 +1509,7 @@ ignore_grps(struct grp *grp, int grplen, struct pat *igcl, int iglen)
             }
 
             /* perform a match on group name */
-            if (uwildmat(gp->name, pp->pat)) {
+            if (nativemat(gp->name, pp->pat)) {
                 /* this pattern fully matches, use the ignore value */
                 ign = pp->ignore;
             }

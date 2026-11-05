@@ -395,7 +395,7 @@ SITEsetlist(char **patlist, char *subbed, char *poison, bool *poisonEntry)
         } else
             for (p = subbed, u = poison, ngp = Groups, i = nGroups; --i >= 0;
                  ngp++, p++, u++)
-                if (uwildmat(ngp->Name, pat)) {
+                if (nativemat(ngp->Name, pat)) {
                     *p = subvalue;
                     *u = poisonvalue;
                 }

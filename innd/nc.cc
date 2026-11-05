@@ -949,7 +949,7 @@ NClist(CHANNEL *cp)
                 }
             }
 
-            if (!uwildmat(p, cp->av[2]))
+            if (!nativemat(p, cp->av[2]))
                 continue;
 
             if (savec != '\0')

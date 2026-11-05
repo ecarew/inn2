@@ -1,5 +1,5 @@
 /*
-**  wildbench: correctness cases and timing for uwildmat, limited to the
+**  wildbench: correctness cases and timing for nativemat, limited to the
 **  fields INN actually matches.
 **
 **  Fields in scope (and where they are matched):
@@ -9,7 +9,7 @@
 **    host names, IPs   readers.conf hosts: (nnrpd/perm.cc)
 **    user names        readers.conf users:
 **    distributions     newsfeeds /dist, nnrpd post checks
-**    header text       XPAT and HDR patterns (uwildmat_simple)
+**    header text       XPAT and HDR patterns (nativemat_simple)
 **
 **  Usage:
 **    wildbench check [-l ms] [-v] FILE...
@@ -23,8 +23,8 @@
 **
 **  Case files: one case per line, tab-separated, '#' starts a comment.
 **    tier  func  expect  text  pattern  [note]
-**  tier is easy, complex, obscure or hostile; func is m (uwildmat), s
-**  (uwildmat_simple) or p (uwildmat_poison); expect is 0 or 1 for m and s,
+**  tier is easy, complex, obscure or hostile; func is m (nativemat), s
+**  (nativemat_simple) or p (nativemat_poison); expect is 0 or 1 for m and s,
 **  and F, M or P (fail, match, poison) for p.  In text and pattern, \t, \\
 **  and \xNN are escapes, and $(N:str) is str repeated N times, for the
 **  long inputs of the hostile tier.
@@ -281,20 +281,20 @@ run_check(int argc, char **argv)
                 start = now();
                 switch (func) {
                 case 'm':
-                    got = uwildmat(text, pat) ? '1' : '0';
+                    got = nativemat(text, pat) ? '1' : '0';
                     break;
                 case 's':
-                    got = uwildmat_simple(text, pat) ? '1' : '0';
+                    got = nativemat_simple(text, pat) ? '1' : '0';
                     break;
                 case 'p':
-                    switch (uwildmat_poison(text, pat)) {
-                    case UWILDMAT_FAIL:
+                    switch (nativemat_poison(text, pat)) {
+                    case NATIVEMAT_FAIL:
                         got = 'F';
                         break;
-                    case UWILDMAT_MATCH:
+                    case NATIVEMAT_MATCH:
                         got = 'M';
                         break;
-                    case UWILDMAT_POISON:
+                    case NATIVEMAT_POISON:
                         got = 'P';
                         break;
                     }
@@ -349,9 +349,9 @@ permmatch_current(char **pats, const char *group)
         return true;
     for (i = 0; pats[i] != NULL; i++) {
         if (pats[i][0] == '!') {
-            if (uwildmat(group, pats[i] + 1))
+            if (nativemat(group, pats[i] + 1))
                 match = false;
-        } else if (uwildmat(group, pats[i]))
+        } else if (nativemat(group, pats[i]))
             match = true;
     }
     return match;

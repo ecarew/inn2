@@ -121,7 +121,7 @@ OVadd(TOKEN token, char *data, int len, time_t arrived, time_t expires)
     int i;
     char *group;
     ARTNUM artnum;
-    enum uwildmat groupmatch;
+    enum nativemat groupmatch;
 
     if (!ov.open) {
         /* Must be opened. */
@@ -209,10 +209,10 @@ OVadd(TOKEN token, char *data, int len, time_t arrived, time_t expires)
                 return OVADDFAILED;
             *nextcheck++ = '\0';
 
-            groupmatch = uwildmat_poison(group, innconf->ovgrouppat);
-            if (groupmatch == UWILDMAT_POISON) {
+            groupmatch = nativemat_poison(group, innconf->ovgrouppat);
+            if (groupmatch == NATIVEMAT_POISON) {
                 return OVADDGROUPNOMATCH;
-            } else if (groupmatch == UWILDMAT_FAIL) {
+            } else if (groupmatch == NATIVEMAT_FAIL) {
                 if (!SMprobe(SELFEXPIRE, &token, nullptr)
                     && innconf->groupbaseexpiry) {
                     /* This article will never be expired, since it does not
@@ -245,7 +245,7 @@ OVadd(TOKEN token, char *data, int len, time_t arrived, time_t expires)
 
         /* Skip overview generation according to ovgrouppat. */
         if (innconf->ovgrouppat != nullptr
-            && uwildmat_poison(group, innconf->ovgrouppat) != UWILDMAT_MATCH) {
+            && nativemat_poison(group, innconf->ovgrouppat) != NATIVEMAT_MATCH) {
             continue;
         }
 

@@ -457,7 +457,7 @@ CheckDistribution(char *p)
         die("cannot parse Distribution header field");
     do {
         for (dp = BadDistribs; *dp; dp++)
-            if (uwildmat(p, *dp))
+            if (nativemat(p, *dp))
                 die("illegal distribution %s", p);
     } while ((p = strtok((char *) nullptr, SEPS)) != nullptr);
 }

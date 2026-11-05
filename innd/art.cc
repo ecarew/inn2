@@ -1690,13 +1690,13 @@ ARTpropagate(ARTDATA *data, const char **hops, int hopcount, char **list,
                 for (j = 0, sendit = false; (q = sp->Originator[j]) != nullptr;
                      j++) {
                     if (*q == '@') {
-                        if (uwildmat(begin, &q[1])) {
+                        if (nativemat(begin, &q[1])) {
                             *p = savec;
                             sendit = false;
                             break;
                         }
                     } else {
-                        if (uwildmat(begin, q))
+                        if (nativemat(begin, q))
                             sendit = true;
                     }
                 }
@@ -1709,13 +1709,13 @@ ARTpropagate(ARTDATA *data, const char **hops, int hopcount, char **list,
                     for (j = 0, sendit = false;
                          (q = sp->Originator[j]) != nullptr; j++) {
                         if (*q == '@') {
-                            if (uwildmat(hc[HDR__XTRACE].c_str(), &q[1])) {
+                            if (nativemat(hc[HDR__XTRACE].c_str(), &q[1])) {
                                 *p = ' ';
                                 sendit = false;
                                 break;
                             }
                         } else {
-                            if (uwildmat(hc[HDR__XTRACE].c_str(), q))
+                            if (nativemat(hc[HDR__XTRACE].c_str(), q))
                                 sendit = true;
                         }
                     }

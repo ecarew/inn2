@@ -29,9 +29,9 @@ PERMmatch(char **Pats, char **list)
     for (; *list; list++) {
         for (i = 0; (p = Pats[i]) != nullptr; i++) {
             if (p[0] == '!') {
-                if (uwildmat(*list, ++p))
+                if (nativemat(*list, ++p))
                     match = false;
-            } else if (uwildmat(*list, p))
+            } else if (nativemat(*list, p))
                 match = true;
         }
         if (match)

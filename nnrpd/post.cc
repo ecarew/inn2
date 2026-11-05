@@ -313,7 +313,7 @@ CheckDistribution(char *p)
         return "Can't parse Distribution header field";
     do {
         for (dp = BadDistribs; *dp; dp++)
-            if (uwildmat(p, *dp)) {
+            if (nativemat(p, *dp)) {
                 snprintf(Error, sizeof(Error), "Illegal distribution \"%s\"",
                          MaxLength(p, p));
                 return Error;

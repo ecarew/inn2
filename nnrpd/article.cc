@@ -1424,7 +1424,7 @@ CMDpat(int ac, char *av[])
                 hdr ? NNTP_OK_HDR : NNTP_OK_HEAD, av[1]);
 
             if ((text = GetHeader(av[1], false)) != nullptr
-                && (!pattern || uwildmat_simple(text, pattern)))
+                && (!pattern || nativemat_simple(text, pattern)))
                 Printf("%s %s\r\n", hdr ? "0" : p, text);
             else if (hdr) {
                 /* We always have to answer something with HDR. */
@@ -1462,7 +1462,7 @@ CMDpat(int ac, char *av[])
                         HasNotReplied = false;
                     }
                     p = GetHeader(header, false);
-                    if (p && (!pattern || uwildmat_simple(p, pattern))) {
+                    if (p && (!pattern || nativemat_simple(p, pattern))) {
                         snprintf(buff, sizeof(buff), "%lu ", i);
                         SendIOb(buff, strlen(buff));
                         SendIOb(p, strlen(p));
@@ -1545,7 +1545,7 @@ CMDpat(int ac, char *av[])
                         continue;
                     }
                 }
-                if (!pattern || uwildmat_simple(p, pattern)) {
+                if (!pattern || nativemat_simple(p, pattern)) {
                     snprintf(buff, sizeof(buff), "%lu ", artnum);
                     SendIOb(buff, strlen(buff));
                     SendIOb(p, strlen(p));

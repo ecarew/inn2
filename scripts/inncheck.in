@@ -1053,14 +1053,14 @@ sub storage_conf {
     my %groups = parse_config(
         {
             'method' => {
-                'newsgroups' => 'string',    # uwildmat_poison
+                'newsgroups' => 'string',    # nativemat_poison
                 'class'      => 'number',
                 'size'       => 'minsize[,maxsize] definition',
                 'expires'    => 'mintime[,maxtime] definition',
                 'options'    => 'string',
                 'exactmatch' => 'boolean',
                 'filtered'   => 'boolean',
-                'path'       => 'string',    # uwildmat_poison
+                'path'       => 'string',    # nativemat_poison
             },
         }
     );

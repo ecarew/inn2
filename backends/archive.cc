@@ -317,7 +317,7 @@ process_article(ARTHANDLE *art, const char *token, struct config *config)
 
         /* Skip newsgroups that don't match our pattern, if provided. */
         if (config->pattern != nullptr) {
-            if (uwildmat_poison(group, config->pattern) != UWILDMAT_MATCH)
+            if (nativemat_poison(group, config->pattern) != NATIVEMAT_MATCH)
                 continue;
         }
 

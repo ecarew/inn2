@@ -1721,7 +1721,7 @@ RCcanpost(CHANNEL *cp, char *group)
             subvalue = (*pat != SUB_NEGATE) && (*pat != SUB_POISON) ? 0 : *pat;
             if (subvalue)
                 pat++;
-            if ((match != subvalue) && uwildmat(group, pat)) {
+            if ((match != subvalue) && nativemat(group, pat)) {
                 if (subvalue == SUB_POISON)
                     return -1;
                 match = subvalue;

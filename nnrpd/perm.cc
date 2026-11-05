@@ -1966,9 +1966,9 @@ MatchHost(char *hostlist, char *host, char *ip)
         /* Handle the exclusion pattern later. */
         if (*pat == '!')
             pat++;
-        match = uwildmat(host, pat);
+        match = nativemat(host, pat);
         if (!match && ip != nullptr && *ip != '\0') {
-            match = uwildmat(ip, pat);
+            match = nativemat(ip, pat);
             if (match)
                 break;
             mask = strchr(pat, '/');

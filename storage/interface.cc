@@ -622,7 +622,7 @@ MatchGroups(const char *g, int len, const char *pattern, bool exactmatch)
 {
     char *group, *groups, *q;
     int i, lastwhite;
-    enum uwildmat matched;
+    enum nativemat matched;
     bool wanted = false;
 
     q = groups = xmalloc(len + 1);
@@ -642,13 +642,13 @@ MatchGroups(const char *g, int len, const char *pattern, bool exactmatch)
         q = strchr(group, ':');
         if (q != nullptr)
             *q = '\0';
-        matched = uwildmat_poison(group, pattern);
-        if (matched == UWILDMAT_POISON
-            || (exactmatch && matched == UWILDMAT_FAIL)) {
+        matched = nativemat_poison(group, pattern);
+        if (matched == NATIVEMAT_POISON
+            || (exactmatch && matched == NATIVEMAT_FAIL)) {
             free(groups);
             return false;
         }
-        if (matched == UWILDMAT_MATCH)
+        if (matched == NATIVEMAT_MATCH)
             wanted = true;
         group = strtok(nullptr, " ,");
     }
@@ -661,7 +661,7 @@ static bool
 MatchPath(const char *p, int len, const char *pattern)
 {
     char *path, *q;
-    enum uwildmat matched;
+    enum nativemat matched;
 
     path = xmalloc(len + 1);
     strncpy(path, p, len);
@@ -672,9 +672,9 @@ MatchPath(const char *p, int len, const char *pattern)
         if (*q == '!')
             *q = '|';
     }
-    matched = uwildmat_poison(path, pattern);
+    matched = nativemat_poison(path, pattern);
     free(path);
-    return (matched == UWILDMAT_MATCH);
+    return (matched == NATIVEMAT_MATCH);
 }
 
 STORAGE_SUB *

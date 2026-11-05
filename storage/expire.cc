@@ -322,7 +322,7 @@ EXPmatch(char *p, NEWSGROUP *v, char mod)
     if (negate)
         p++;
     for (ngp = Groups, i = nGroups; --i >= 0; ngp++)
-        if (negate ? !uwildmat(ngp->Name, p) : uwildmat(ngp->Name, p))
+        if (negate ? !nativemat(ngp->Name, p) : nativemat(ngp->Name, p))
             if (mod == 'a' || (mod == 'm' && ngp->Rest[0] == NF_FLAG_MODERATED)
                 || (mod == 'u' && ngp->Rest[0] != NF_FLAG_MODERATED)) {
                 ngp->Keep = v->Keep;

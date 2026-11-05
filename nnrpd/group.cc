@@ -359,7 +359,7 @@ CMDxgtitle(int ac, char *av[])
             continue;
         save = *q;
         *q = '\0';
-        if (uwildmat(line, p)) {
+        if (nativemat(line, p)) {
             if (PERMspecified) {
                 grplist[0] = line;
                 grplist[1] = nullptr;
