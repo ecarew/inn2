@@ -132,12 +132,66 @@ struct HDRCONTENT {
         return Length > 0;
     }
 
+    /* Whether this is a required header field the article has twice. */
+    bool duplicated() const
+    {
+        return Length < 0;
+    }
+
+    /* Whether the header field's line was seen at all, even with an empty
+       value or later dropped. */
+    bool seen() const
+    {
+        return Value != nullptr;
+    }
+
     /* The value as pointer and length (no CRLF); empty if not found. */
     std::string_view view() const
     {
         if (!found())
             return {};
         return {Value, static_cast<size_t>(Length)};
+    }
+
+    /* The value's length (no CRLF); 0 if not found. */
+    size_t size() const
+    {
+        return view().size();
+    }
+
+    /* The value as a C string.  Only terminated while cut (ARTclean cuts
+       every found field for the rest of the article's processing). */
+    const char *c_str() const
+    {
+        return Value;
+    }
+
+    /* Where the value starts in the channel's buffer, for code that works
+       on the buffer in place (ARTstore's iovecs, NGsplit). */
+    char *data() const
+    {
+        return Value;
+    }
+
+    /* A second occurrence of a required header field. */
+    void mark_duplicated()
+    {
+        Length = -1;
+    }
+
+    /* Treat the field as absent from now on (ARTclean, for a bad
+       Message-ID); where it was is kept, so seen() stays true.  If it was
+       cut, it stays cut: hdr_restore_all only restores found fields. */
+    void drop()
+    {
+        Length = 0;
+    }
+
+    /* The channel's buffer moved down by offset bytes. */
+    void rebase(ptrdiff_t offset)
+    {
+        if (Value != nullptr)
+            Value -= offset;
     }
 
     /* The value is used as a C string in place in the channel's buffer:
@@ -153,8 +207,8 @@ struct HDRCONTENT {
         Value[Length] = LastChar;
     }
 
-    /* Point at a value not in the channel's buffer (a control message's
-       Message-ID); it is never cut. */
+    /* Where the value is: in the channel's buffer (ARTcheckheader), or not
+       (a control message's Message-ID, which is never cut). */
     void set(char *value, size_t length)
     {
         Value = value;
