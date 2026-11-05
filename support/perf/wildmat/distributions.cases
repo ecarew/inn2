@@ -1,0 +1,7 @@
+# wildbench cases: distributions.  Columns: tier func expect text pattern note.
+# newsfeeds /dist and Distribution: values.
+easy	m	1	world	world,local
+easy	m	0	fr	*,!fr
+easy	m	1	usa	*,!fr
+complex	m	1	de	!local,!fr,*
+obscure	m	0		!local
