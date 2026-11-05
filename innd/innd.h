@@ -118,31 +118,25 @@ typedef struct _ARTHEADER {
 /*
 **  Header body.
 */
-struct HDRCONTENT {
-    char *Value = nullptr; /* Don't copy, shows where it begins. */
-    int Length = 0;        /* Length of Value (tailing CRLF is not
-                              included).  -1 if duplicated. */
-    char LastChar = '\r';  /* Saved char when the last one is cut during
-                              parsing.  Usually '\r' but it may be another
-                              char.  See cut(). */
-
+class HDRCONTENT {
+public:
     /* Whether the article has this header field (once, with a value). */
     bool found() const
     {
-        return Length > 0;
+        return length_ > 0;
     }
 
     /* Whether this is a required header field the article has twice. */
     bool duplicated() const
     {
-        return Length < 0;
+        return length_ < 0;
     }
 
     /* Whether the header field's line was seen at all, even with an empty
        value or later dropped. */
     bool seen() const
     {
-        return Value != nullptr;
+        return value_ != nullptr;
     }
 
     /* The value as pointer and length (no CRLF); empty if not found. */
@@ -150,7 +144,7 @@ struct HDRCONTENT {
     {
         if (!found())
             return {};
-        return {Value, static_cast<size_t>(Length)};
+        return {value_, static_cast<size_t>(length_)};
     }
 
     /* The value's length (no CRLF); 0 if not found. */
@@ -163,20 +157,20 @@ struct HDRCONTENT {
        every found field for the rest of the article's processing). */
     const char *c_str() const
     {
-        return Value;
+        return value_;
     }
 
     /* Where the value starts in the channel's buffer, for code that works
        on the buffer in place (ARTstore's iovecs, NGsplit). */
     char *data() const
     {
-        return Value;
+        return value_;
     }
 
     /* A second occurrence of a required header field. */
     void mark_duplicated()
     {
-        Length = -1;
+        length_ = -1;
     }
 
     /* Treat the field as absent from now on (ARTclean, for a bad
@@ -184,14 +178,14 @@ struct HDRCONTENT {
        cut, it stays cut: hdr_restore_all only restores found fields. */
     void drop()
     {
-        Length = 0;
+        length_ = 0;
     }
 
     /* The channel's buffer moved down by offset bytes. */
     void rebase(ptrdiff_t offset)
     {
-        if (Value != nullptr)
-            Value -= offset;
+        if (value_ != nullptr)
+            value_ -= offset;
     }
 
     /* The value is used as a C string in place in the channel's buffer:
@@ -199,20 +193,20 @@ struct HDRCONTENT {
        the byte back.  article.h has scope guards for these. */
     void cut()
     {
-        LastChar = Value[Length];
-        Value[Length] = '\0';
+        last_char_ = value_[length_];
+        value_[length_] = '\0';
     }
     void restore()
     {
-        Value[Length] = LastChar;
+        value_[length_] = last_char_;
     }
 
     /* Where the value is: in the channel's buffer (ARTcheckheader), or not
        (a control message's Message-ID, which is never cut). */
     void set(char *value, size_t length)
     {
-        Value = value;
-        Length = static_cast<int>(length);
+        value_ = value;
+        length_ = static_cast<int>(length);
     }
 
     /* Back to "not found", before each article. */
@@ -220,6 +214,14 @@ struct HDRCONTENT {
     {
         *this = HDRCONTENT{};
     }
+private:
+    /* Where the value begins in the channel's buffer (not a copy). */
+    char *value_ = nullptr;
+    /* Its length, without the trailing CRLF; -1 if duplicated. */
+    int length_ = 0;
+    /* The byte cut() replaced with '\0': usually '\r', but it may be
+       another. */
+    char last_char_ = '\r';
 };
 
 
