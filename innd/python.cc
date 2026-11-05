@@ -131,7 +131,7 @@ PYartfilter(const ARTDATA *data, char *artBody, long artLen, int lines)
     hdrnum = 0;
     for (i = 0; i < MAX_ARTHEADER; i++) {
         if (hc[i].found()) {
-            PYheaditem[hdrnum] = PYBUFF_FROMMEMORY(hc[i].Value, hc[i].Length);
+            PYheaditem[hdrnum] = PYBUFF_FROMMEMORY(hc[i].data(), hc[i].size());
         } else
             PYheaditem[hdrnum] = Py_None;
         PyDict_SetItem(PYheaders, PYheadkey[hdrnum], PYheaditem[hdrnum]);
