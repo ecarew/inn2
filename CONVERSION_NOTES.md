@@ -1546,8 +1546,8 @@ case is proportional to text length × pattern length, not exponential.
 Recursion depth is at most the number of `*` in the pattern.
 
 **The work:**
-- Keep the syntax, and `uwildmat`, `uwildmat_simple` and `uwildmat_poison`
-  as they are.
+- Keep the syntax.  (The plan was also to keep the uwildmat names; the
+  architect chose to rename them, so the change is visible: see Status.)
 - Make `match_pattern` iterative (the single-active-star-loop property
   makes this a saved restart point, as the file's own comment says).  This
   removes the recursion depth a client controls.
@@ -1556,6 +1556,48 @@ Recursion depth is at most the number of `*` in the pattern.
   UTF-8 and character classes included.  `tests/lib/uwildmat-t` has the
   existing cases; the file notes it had 100% coverage.
 - Measure innd's newsfeeds matching before and after.
+
+**Status (2026-11-05): the matcher is replaced.**  The native matcher from
+the comparison below is now `lib/nativemat.cc`, and the public functions
+are renamed, at the architect's request, so the change is not hidden:
+`nativemat`, `nativemat_simple`, `nativemat_poison`, `enum nativemat` and
+`NATIVEMAT_FAIL`/`MATCH`/`POISON`.
+
+| Step | Commit |
+|---|---|
+| Declarations in `inn/libinn.h` | `083970684` |
+| `lib/nativemat.cc`, and building it into libinn | `cb61d24f8`, `d645458d2` |
+| Every caller moved to nativemat (one commit, at the architect's request) | `a81d17e11` |
+| `tests/lib/nativemat-t.c`: the uwildmat suite renamed, plus 6 tests for the `\[` fix; wired into CMake and verify-cxx.sh | `fa72f9bf7`, `6301547fa` |
+| `is_valid_utf8` moved into nativemat.cc; `lib/uwildmat.cc` cut to wrappers | `ed045dc55` |
+| `tests/lib/uwildmat-t.c` reduced to a wrapper check | `adf93b2aa` |
+| `uwildmat*` declared deprecated in `inn/libinn.h` | `240b76e4c` |
+| Man page renamed to `libinn_nativemat(3)`, all references updated | `5eedda023` |
+
+Before the callers moved, nativemat and uwildmat gave the same answer on
+3,000,000 random cases.  The only differences were 22 cases with an
+escaped `\[`, which is the bug fix.
+
+Compatibility: `uwildmat`, `uwildmat_simple` and `uwildmat_poison` stay
+in libinn as exported functions (not inline), so programs already built
+against libinn still link.  Each calls its nativemat counterpart, so the
+`\[` fix applies to them too.  They are marked deprecated (GCC and clang
+warn), and the man page's COMPATIBILITY section says they may be removed
+in a later release.
+
+`nativemat.cc` avoids `std::string_view::substr`, because its
+out-of-range throw would make libinn need the C++ runtime, and C programs
+link libinn.  Its object file references no C++ runtime symbols.
+
+Still open:
+- Cap the length of patterns that come from clients (nnrpd's commands).
+  This is less urgent now that the matcher's stack depth is constant.
+- Measure innd's newsfeeds matching before and after.
+- PERMmatch (`nnrpd/misc.cc`): scan the list from the end and stop at the
+  first match.  This change gave the native engine its speed gain in the
+  comparison below.  nativemat by itself still scans forward, as uwildmat
+  did.
+- Remove the deprecated `uwildmat*` wrappers in a later release.
 
 **Why factor it out.**  The goal is modern, safer code with fewer
 dependencies, not speed.  The comparison below is recorded so the choice
@@ -1632,6 +1674,21 @@ becomes part of that one pattern.  Examples:
 
 It is unlikely in real configuration.  A replacement should fix it
 deliberately, with a test, rather than copy it.
+
+### Flaky test: nnrpd/auth-ext (seen 2026-11-05)
+
+`tests/nnrpd/auth-ext` failed once during verification of `ed045dc55`
+(first attempt).  2 of its 74 checks failed: 45 "errors" and 48 "errors
+with username and password".  In each, the auth program's stderr read
+"example.com auth: program caught signal 1" where nothing was expected.
+Signal 1 is SIGHUP.  On the same tree, it then passed 5 runs out of 5,
+and it passed again in the commit's second verification.  Nothing in the
+test goes through the wildmat code that commit changed, so it looks like
+a timing race between the test and the auth program it starts, possibly
+over when the program sees its input close.  Not investigated yet.  If it
+fails again, record the date and the platform here.  The fix is in the
+test or in nnrpd's handling of the auth program, not a retry in
+verify-cxx.sh.
 
 ### Lesson from the audit regression (2026-10-30)
 
