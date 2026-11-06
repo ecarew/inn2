@@ -1356,6 +1356,29 @@ Option 1 is the cheapest first step and does not rule out 2 or 3.
 
 ### Perl and Python filters in the CMake build (noted 2026-11-05)
 
+**Progress 2026-11-06:**
+- Build: options `INN_PERL_FILTERS` and `INN_PYTHON_FILTERS`, off by
+  default as configure's are (`cmake/InnFilters.cmake`, 95755a487).  On
+  macOS (Perl 5.34, Python 3.12) innd and nnrpd link and load libperl and
+  libpython.
+- innd filters: `support/live-innd.sh` runs innd with a spam filter in each
+  language (`tests/data/filter_innd_spam.pl` and `.py`, the Perl one
+  adapted from an example the architect found online) beside the other
+  language's shipped sample: 23 checks of loading, accepting, each
+  rejection reason in the reply and the news log, and `ctlinnd perl n` /
+  `python n`.  Rule 4 (no From) is not reachable through innd.
+- nnrpd hooks: the same script checks `perl_auth`, `perl_access`,
+  `filter_nnrpd.pl`, `python_auth`, `python_access` and `python_dynamic`
+  with the hooks in `tests/data/nnrpd-hooks` (12 checks).  Writing them
+  found two upstream bugs, both fixed ("Upstream bugs and quirks found"):
+  nnrpd crashed when readers.conf had no access group, and `perl_access`
+  did nothing unless `filter_nnrpd.pl` was installed.
+- These checks run only against a build configured with the options;
+  commit verification uses `build-live`, which has neither.
+- Still to do: run them from `support/verify-cxx.sh` or the commit script,
+  install the sample scripts, update BUILDING.md, and the Linux image's
+  Perl and Python development packages.
+
 **The gap.**  `cmake/InnConfigure.cmake` sets `DO_PERL` and `DO_PYTHON`
 to false unconditionally, so no INN++ build compiles the embedded Perl or
 Python filters or nnrpd's authentication hooks (BUILDING.md lists them
@@ -2070,6 +2093,33 @@ Open items from CLAUDE.md, moved here when done, newest first.
 ### Upstream bugs and quirks found
 
 Behavior of upstream INN found while testing, kept as is unless noted.
+
+- Upstream bug (found 2026-11-06 by the nnrpd hook tests; **fixed**): nnrpd
+  crashed (SIGSEGV in `PERMgetaccess`) on every connection when
+  readers.conf had no access group.  readers.conf(5) allows that: with
+  `perl_access` or `python_access` the hook generates the access group and
+  the file's are ignored.  `access_realms` stayed null and was indexed for
+  the greeting and by the hooks.  It is now an empty list with room for the
+  generated group (`nnrpd/perm.cc`).  `live-innd.sh` checks it on every
+  build ("nnrpd answers with no access group"; it fails without the fix).
+  Identical in INN 2.8.0.
+- Upstream bug (found 2026-11-06 by the nnrpd hook tests; **fixed** at the
+  architect's direction): `perl_access` did nothing unless
+  `filter_nnrpd.pl` was also installed.  `perlAccess` (`nnrpd/perl.cc`)
+  returned early unless `PerlFilterActive`, the posting filter's switch,
+  which is set only once `filter_nnrpd.pl` loads and defines `filter_post`;
+  the client then got no access (502).  The documentation describes no such
+  dependency, and the hooks share only the interpreter.  `perlAuthInit`
+  skipped `auth_init` the same way; `perlAuthenticate` tested the flag but
+  ran `authenticate` anyway, which is why `perl_auth` worked.  Both now test
+  whether the script defines its own function.  The Perl access check runs
+  without `filter_nnrpd.pl` installed.  Identical in INN 2.8.0.
+- Upstream quirk (found 2026-11-06; open, harmless): `PY_dynamic_init`
+  (`nnrpd/python.cc`) logs "pyfilter ... not installed" and gives up when
+  `access(file, R_OK)` **succeeds**: the test is inverted.  It never
+  triggers in practice, because `python_dynamic` takes a module name
+  (`nnrpd_dynamic`), not a path, so the access check fails and the hook
+  is used.
 
 - Upstream bug (found 2026-11-06 by the ARTparseheader tests; **fixed
   2026-11-06**, 21d820310): a NUL as the **first** byte of a header line
