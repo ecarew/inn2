@@ -1463,9 +1463,13 @@ f635b51e) was scratch and is not in the tree.  What it measured:
   ChaiScript, some 35 times as much; the regex engine changes it by 4% at
   most, so the time goes to the interpreter and to boxing the header
   fields.
-- **Size.**  Stripped innd grows by 1.5-1.7 MB (534 KB to 2.03-2.20 MB),
-  linked in and not shared; Perl adds 21 KB to innd plus the shared 3.3 MB
-  libperl.  `chai.cc` alone compiles in about 15 s (object about 26 MB).
+- **Size.**  Counted with its library, Perl costs more than ChaiScript,
+  not less: Perl adds 21 KB to stripped innd plus libperl, 3.3 MB (macOS),
+  about 3.3 MB in all; ChaiScript adds 1.5-1.7 MB to stripped innd (534 KB
+  to 2.03-2.20 MB) and needs no library.  libperl being shared saves disk
+  only where nnrpd or other programs use it too; each process maps it
+  either way.  Size did not decide the question.  `chai.cc` alone compiles
+  in about 15 s (object about 26 MB).
 - **Language gaps.**  No regular expressions and no string split: innd
   has to supply them (`re_match`, `nativemat`).  Pitfalls met: a line may
   not begin with `||`; `[]` fails on a const Map; destroying the
