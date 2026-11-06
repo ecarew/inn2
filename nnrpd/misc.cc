@@ -19,24 +19,28 @@
 bool
 PERMmatch(char **Pats, char **list)
 {
-    int i;
-    char *p;
-    int match = false;
+    size_t count = 0;
 
     if (Pats == nullptr || Pats[0] == nullptr)
         return true;
+    while (Pats[count] != nullptr)
+        count++;
 
+    /* The last pattern that matches a group decides for it, so scan from
+       the end and stop at the first match: the same decision as trying
+       every pattern in order, without matching the ones before it. */
     for (; *list; list++) {
-        for (i = 0; (p = Pats[i]) != nullptr; i++) {
-            if (p[0] == '!') {
-                if (nativemat(*list, ++p))
-                    match = false;
-            } else if (nativemat(*list, p))
-                match = true;
+        for (size_t i = count; i-- > 0;) {
+            const char *p = Pats[i];
+            bool negated = p[0] == '!';
+
+            if (nativemat(*list, negated ? p + 1 : p)) {
+                /* If we can read it in one group, we can read it, period. */
+                if (!negated)
+                    return true;
+                break;
+            }
         }
-        if (match)
-            /* If we can read it in one group, we can read it, period. */
-            return true;
     }
 
     return false;
