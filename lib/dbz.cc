@@ -262,6 +262,14 @@ typedef struct {
 static searcher srch;
 static searcher *prevp; /* &srch or FRESH */
 
+/* Pages of an INCORE_MMAP table written since its last putcore.  Writes
+   land at hashed, so scattered, places: between two syncs (icdsynccount
+   writes, 10 by default) they touch a handful of pages anywhere in the
+   table, so putcore flushes those pages alone instead of the whole table.
+   More distinct pages than this and putcore flushes the whole table, as it
+   always did before. */
+enum { DIRTY_PAGES_MAX = 64 };
+
 /* Structure for hash tables */
 typedef struct {
     int fd;                /* Non-blocking descriptor for writes */
@@ -269,6 +277,9 @@ typedef struct {
     int reclen;            /* Length of records in the table */
     dbz_incore_val incore; /* What we're using core for */
     void *core;            /* Pointer to in-core table */
+    size_t dirty[DIRTY_PAGES_MAX]; /* INCORE_MMAP pages written, unsorted */
+    size_t ndirty;                 /* entries used in dirty */
+    bool dirty_overflow;           /* too many to list: flush everything */
 } hash_table;
 
 /* central data structures */
@@ -289,7 +300,8 @@ static erec empty_rec; /* empty rec to compare against
 
 /* misc. forwards */
 static bool getcore(hash_table *tab);
-static bool putcore(hash_table *tab);
+static bool putcore(hash_table *tab, bool whole);
+static bool sync_tables(bool whole);
 static bool getconf(FILE *df, dbzconfig *cp);
 static int putconf(FILE *f, dbzconfig *cp);
 static void start(searcher *sp, const HASH hash, searcher *osp);
@@ -677,6 +689,8 @@ openhashtable(const char *base, const char *ext, hash_table *tab,
     tab->reclen = reclen;
     fdflag_close_exec(tab->fd, true);
     tab->pos = -1;
+    tab->ndirty = 0;
+    tab->dirty_overflow = false;
 
     /* get first table into core, if it looks desirable and feasible */
     tab->incore = incore;
@@ -823,7 +837,8 @@ dbzclose(void)
         return false;
     }
 
-    if (!dbzsync())
+    /* The whole tables, not only the pages listed as written. */
+    if (!sync_tables(true))
         ret = false;
 
 #ifdef DO_TAGGED_HASH
@@ -856,6 +871,14 @@ dbzclose(void)
 bool
 dbzsync(void)
 {
+    return sync_tables(false);
+}
+
+/* dbzsync's work; whole flushes all of each mapped table rather than only
+   the pages written since the last sync (dbzclose asks for that). */
+static bool
+sync_tables(bool whole)
+{
     bool ret = true;
 
     if (!opendb) {
@@ -867,9 +890,9 @@ dbzsync(void)
         return true;
 
 #ifdef DO_TAGGED_HASH
-    if (!putcore(&pagtab)) {
+    if (!putcore(&pagtab, whole)) {
 #else
-    if (!putcore(&idxtab) || !putcore(&etab)) {
+    if (!putcore(&idxtab, whole) || !putcore(&etab, whole)) {
 #endif
         warn("dbzsync: putcore failed");
         ret = false;
@@ -1319,7 +1342,7 @@ getcore(hash_table *tab)
  * Returns true on success, false on failure
  */
 static bool
-putcore(hash_table *tab)
+putcore(hash_table *tab, bool whole)
 {
     size_t size;
     ssize_t result;
@@ -1338,11 +1361,52 @@ putcore(hash_table *tab)
     }
 #ifdef HAVE_MMAP
     if (tab->incore == INCORE_MMAP) {
-        msync(tab->core, conf.tsize * tab->reclen, MS_ASYNC);
+        if (whole || tab->dirty_overflow) {
+            msync(tab->core, conf.tsize * tab->reclen, MS_ASYNC);
+        } else {
+            const size_t pagesize = (size_t) getpagesize();
+
+            for (size_t i = 0; i < tab->ndirty; i++)
+                msync((char *) tab->core + tab->dirty[i] * pagesize, pagesize,
+                      MS_ASYNC);
+        }
+        tab->ndirty = 0;
+        tab->dirty_overflow = false;
     }
 #endif
     return true;
 }
+
+#ifdef HAVE_MMAP
+/*
+ * mark_dirty - note the pages of an INCORE_MMAP table that a write of
+ * length octets at where touched, for the next putcore.  The table is
+ * mapped from its start, so its pages are numbered from tab->core.
+ */
+static void
+mark_dirty(hash_table *tab, const void *where, size_t length)
+{
+    const size_t pagesize = (size_t) getpagesize();
+    const size_t offset = (size_t) ((const char *) where - (char *) tab->core);
+    const size_t last = (offset + length - 1) / pagesize;
+
+    for (size_t page = offset / pagesize; page <= last; page++) {
+        size_t i;
+
+        if (tab->dirty_overflow)
+            return;
+        for (i = 0; i < tab->ndirty; i++)
+            if (tab->dirty[i] == page)
+                break;
+        if (i < tab->ndirty)
+            continue;
+        if (tab->ndirty == DIRTY_PAGES_MAX)
+            tab->dirty_overflow = true;
+        else
+            tab->dirty[tab->ndirty++] = page;
+    }
+}
+#endif
 
 #ifdef DO_TAGGED_HASH
 /*
@@ -1561,6 +1625,9 @@ set(searcher *sp, hash_table *tab, void *value)
         memcpy(where, value, tab->reclen);
         debug("set: incore");
         if (tab->incore == INCORE_MMAP) {
+#ifdef HAVE_MMAP
+            mark_dirty(tab, where, tab->reclen);
+#endif
             if (innconf != nullptr && innconf->nfswriter) {
                 inn_msync_page(where, tab->reclen, MS_ASYNC);
             }
