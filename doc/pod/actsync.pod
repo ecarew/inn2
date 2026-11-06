@@ -286,7 +286,7 @@ one of two forms:
 If the rule begins with a C<c>, the rule requests certain newsgroups to be
 checked.  If the rule begins with an C<i>, the rule requests certain
 newsgroups to be ignored.  The <newsgroup> field may be a specific
-newsgroup, or a I<uwildmat> pattern.
+newsgroup, or a I<wildmat> pattern.
 
 If one or more <type>s are specified, then the rule applies to the
 newsgroup only if it is of the specified type.  Types refer to the 4th field
@@ -300,7 +300,7 @@ of the F<active> file; that is, a type may be one of:
     =group.name
 
 Unlike F<active> files, the C<group.name> in an alias type may be a newsgroup
-name or a I<uwildmat> pattern.  Also, C<=> is equivalent to C<=*>.
+name or a I<wildmat> pattern.  Also, C<=> is equivalent to C<=*>.
 
 On each rule line, no pattern type may be repeated.  For example, one
 may not have more than one type that begins with C<=>, per line.  However,
@@ -826,7 +826,7 @@ remains.  Use at your own risk.  No warranty is implied.
 
 =head1 SEE ALSO
 
-active(5), ctlinnd(8), getlist(1), inn.conf(5), libinn_uwildmat(3),
+active(5), ctlinnd(8), getlist(1), inn.conf(5), libinn_nativemat(3),
 mod-active(8), passwd.nntp(5), simpleftp(1).
 
 =cut

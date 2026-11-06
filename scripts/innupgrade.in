@@ -98,6 +98,7 @@ $0 =~ s@.*/@@;
     'qio.3'         => '',
     'tst.3'         => '',
     'uwildmat.3'    => '',
+    'libinn_uwildmat.3' => '',                # Renamed in INN++.
     'defines.h'     => 'defines.h.OLD',       # Removed in INN 2.7.0.
     'filechan'      => 'filechan.OLD',
     'filechan.8'    => '',

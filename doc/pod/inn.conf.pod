@@ -826,7 +826,7 @@ This setting is ignored unless I<ovmethod> is set to C<tradindexed>.
 =item I<ovgrouppat>
 
 If set, restricts the overview data stored by INN to only the newsgroups
-matching this comma-separated list of I<uwildmat> expressions.  Newsgroups not
+matching this comma-separated list of I<wildmat> expressions.  Newsgroups not
 matching this setting may not be readable, and if I<groupbaseexpiry> is
 set to true and the storage method for these newsgroups does not have
 self-expire functionality, storing overview data will fail.
@@ -2045,7 +2045,7 @@ modified, updated, and reorganized by innumerable other people.
 
 =head1 SEE ALSO
 
-inews(1), innd(8), innwatch(8), libinn_dbz(3), libinn_uwildmat(3),
+inews(1), innd(8), innwatch(8), libinn_dbz(3), libinn_nativemat(3),
 makehistory(8), nnrpd(8), rnews(1).
 
 Nearly every program in INN uses this file to one degree or another.  The

@@ -63,7 +63,7 @@ The meanings of the keys in each storage method entry are as follows:
 =item I<newsgroups>: <wildmat>
 
 What newsgroups are stored using this storage method.  <wildmat> is a
-I<uwildmat> pattern which is matched against the newsgroups an article
+I<wildmat> pattern which is matched against the newsgroups an article
 is posted to.  If I<storeonxref> in F<inn.conf> is true, this pattern
 will be matched against the newsgroup names in the Xref header field
 body; otherwise, it will be matched against the newsgroup names in the
@@ -167,7 +167,7 @@ accepted articles are no longer stored mixed together in any storage class.
 =item I<path>: <wildmat>
 
 What articles by their Path header field are stored using this storage method.
-<wildmat> is a I<uwildmat> pattern which is matched against the Path header
+<wildmat> is a I<wildmat> pattern which is matched against the Path header
 field body of articles, which corresponds to where articles have passed,
 or were posted at.  Poison wildmat expressions (expressions starting with
 C<@>) are allowed and can be used to exclude certain path patterns (in lieu
@@ -413,6 +413,6 @@ into POD by Julien Elie.
 =head1 SEE ALSO
 
 cycbuff.conf(5), expire.ctl(5), expireover(8), inn.conf(5), innd(8),
-libinn_uwildmat(3), scanspool(8).
+libinn_nativemat(3), scanspool(8).
 
 =cut
