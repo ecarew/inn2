@@ -869,6 +869,13 @@ ARTparseheader(CHANNEL *cp)
                 ARTparsebody(cp);
                 return;
             }
+            /* Not the end of the headers, so i is the first octet of the
+               next header line.  Step back so that the loop looks at it:
+               a NUL or a bare LF there must be seen like one anywhere
+               else.  (Upstream skipped it, so a NUL first on a header line
+               went unreported.)  Only reached after i += 2 above: with no
+               headers, i is at a CRLF and the headers end there. */
+            i--;
         } else {
             data->CRwithoutLF++;
         }

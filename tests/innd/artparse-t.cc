@@ -514,13 +514,11 @@ test_body_scan(int n)
 **  records and the errors it reports) is compared between the ways of
 **  feeding, and against hand-worked results in the named cases.
 **
-**  Two quirks are pinned down, not endorsed.  After the CRLF that ends a
-**  header line, the scan steps past the first octet of the next line
-**  without looking at it unless it is a CR, so a bare LF there is not
-**  counted, and a NUL there is not reported (an upstream bug: such an
-**  article is accepted; CONVERSION_NOTES.md, "Upstream bugs and quirks
-**  found").  And the first body line is never counted as dot-stuffed (the
-**  body scan's quirk, above).
+**  One quirk is pinned down, not endorsed: the first body line is never
+**  counted as dot-stuffed (the body scan's quirk, above).  Upstream also
+**  skipped the first octet of each header line after the first, so a NUL
+**  there went unreported; that is fixed, and the "first on a line" cases
+**  check it (CONVERSION_NOTES.md, "Upstream bugs and quirks found").
 */
 
 /* A plain restatement of the current header scan, for random articles. */
@@ -561,6 +559,7 @@ reference_header_scan(const std::string &wire)
             }
             if (d[i] == '\r' && d[i + 1] == '\n')
                 return reference_body(wire, i + 2, r);
+            i--;
         } else {
             r.crwithoutlf++;
         }
@@ -624,12 +623,15 @@ static const struct {
      CSgotarticle, 40, 2, 1, 0, 0, 0, "Message-ID (duplicated)\n", ""},
     {"Message-ID trimmed", "Message-ID:   <a@b>  \r\n\r\nb\r\n.\r\n",
      CSgotarticle, 25, 1, 1, 0, 0, 0, "Message-ID=[<a@b>]\n", ""},
-    /* The quirk: the first octet of a header line is skipped. */
+    /* The first octet of a header line is looked at like any other
+       (upstream skipped it, so the NUL went unreported). */
     {"LF first on a line", "Subject: x\r\n\nA: b\r\n\r\nb\r\n.\r\n",
-     CSgotarticle, 21, 2, 1, 0, 0, 0, "Subject=[x]\n", ""},
+     CSgotarticle, 21, 2, 1, 1, 0, 0, "Subject=[x]\n", ""},
+    {"CR first on a line", "Subject: x\r\n\rA: b\r\n\r\nb\r\n.\r\n",
+     CSgotarticle, 21, 2, 1, 0, 1, 0, "Subject=[x]\n", ""},
     {"NUL first on a line",
      std::string("Subject: x\r\n\0A: b\r\n\r\nb\r\n.\r\n", 27), CSgotarticle,
-     21, 2, 1, 0, 0, 0, "Subject=[x]\n", ""},
+     21, 2, 1, 0, 0, 0, "Subject=[x]\n", "437 Nul character in header"},
 };
 
 /* Nine checks for one way of feeding a named header case. */
