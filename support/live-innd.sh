@@ -508,6 +508,136 @@ ok sh -c "grep -qs 'Tracking Enabled (tracker@live.test)' '$tmp'/log/tracklogs/l
 label="nnrpd readertrack copies tracked posts to trackposts"
 ok sh -c "grep -qs 'posttrack ok' '$tmp'/log/tracklogs/log-* && ls '$tmp'/log/trackposts/track.* >/dev/null"
 
+# --- nnrpd Perl and Python hooks ------------------------------------------------
+#
+# The hooks only on a build with INN_PERL_FILTERS or INN_PYTHON_FILTERS
+# (the first check, no access group, on every build).  nnrpd reads
+# readers.conf for each connection, so each hook gets its own readers.conf.
+# The hooks are in tests/data/nnrpd-hooks: authentication accepts foo/foopass
+# and refuses the rest, access allows test.* only, the dynamic hook refuses
+# posting, and the posting filter refuses "make money" subjects.
+
+hk_perl=false
+hk_python=false
+grep -q '^#define DO_PERL 1' "$build/include/config.h" && hk_perl=true
+grep -q '^#define DO_PYTHON 1' "$build/include/config.h" && hk_python=true
+hooks=$root/tests/data/nnrpd-hooks
+hkfilter=$(sed -n 's/^pathfilter:[[:space:]]*//p' "$INNCONF")
+cp "$tmp/etc/readers.conf" "$tmp/etc/readers.conf.keep"
+mkdir -p "$hkfilter"
+# hk_readers LINE: readers.conf whose auth group for 127.0.0.1 also has
+# LINE, with every user reading everything unless the hook says otherwise.
+hk_readers() {
+    cat >"$tmp/etc/readers.conf" <<EOF
+auth "localhost" {
+    hosts: "127.0.0.1"
+    default: "<local>"
+    $1
+}
+access "everyone" {
+    users: "*"
+    newsgroups: "*"
+}
+EOF
+}
+# hk_readers_only LINE: as hk_readers, with no access group (the hook gives
+# the access).  Without access groups nnrpd crashed on every connection
+# before the fix in nnrpd/perm.cc.
+hk_readers_only() {
+    cat >"$tmp/etc/readers.conf" <<EOF
+auth "localhost" {
+    hosts: "127.0.0.1"
+    default: "<local>"
+    $1
+}
+EOF
+}
+# hk_post ID SUBJECT FILE: post one article to test.live.
+hk_post() {
+    cmds="POST
+Path: not-for-mail
+From: reader@live.test
+Newsgroups: test.live
+Subject: $2
+Message-ID: <$1@live.test>
+
+Posted to test the nnrpd hooks.
+.
+"
+    nntp "$3"
+}
+hk_auth_checks() {
+    local lang=$1
+    cmds='AUTHINFO USER foo
+AUTHINFO PASS foopass
+'
+    nntp "hk-$lang-auth-good.out"
+    cmds='AUTHINFO USER foo
+AUTHINFO PASS barpass
+'
+    nntp "hk-$lang-auth-bad.out"
+    label="nnrpd $lang auth hook accepts foo/foopass"
+    ok has "hk-$lang-auth-good.out" '^281 '
+    label="nnrpd $lang auth hook refuses a wrong password"
+    ok has "hk-$lang-auth-bad.out" '^481 '
+}
+hk_access_checks() {
+    local lang=$1
+    cmds='GROUP test.live
+GROUP control
+'
+    nntp "hk-$lang-access.out"
+    label="nnrpd $lang access hook allows test.*"
+    ok has "hk-$lang-access.out" '^211 .* test.live'
+    label="nnrpd $lang access hook refuses other groups"
+    ok has "hk-$lang-access.out" '^480 Read access denied'
+}
+
+# On every build: a readers.conf with an auth group but no access group.
+hk_readers_only ""
+cmds='GROUP test.live
+'
+nntp hk-noaccess.out
+label="nnrpd answers with no access group in readers.conf"
+ok has hk-noaccess.out '^[0-9][0-9][0-9] '
+
+if $hk_perl; then
+    hk_readers "perl_auth: \"$hooks/nnrpd_auth.pl\""
+    hk_auth_checks Perl
+    # Without filter_nnrpd.pl installed: perl_access does not depend on the
+    # posting filter (upstream it did; CONVERSION_NOTES.md, "Upstream bugs
+    # and quirks found").
+    hk_readers_only "perl_access: \"$hooks/nnrpd_access.pl\""
+    hk_access_checks Perl
+    cp "$hooks/filter_nnrpd.pl" "$hkfilter/filter_nnrpd.pl"
+    hk_readers ""
+    hk_post hk-spam 'Make money fast' hk-spam.out
+    hk_post hk-clean 'A clean post' hk-clean.out
+    label="nnrpd Perl filter refuses a post with its reason"
+    ok has hk-spam.out '^441 .*Spam is not acceptable here'
+    label="nnrpd Perl filter accepts a clean post"
+    ok sh -c "grep -q '^240 ' '$tmp/hk-clean.out' && sleep 1 && '$bin/expire/grephistory' '<hk-clean@live.test>' >/dev/null 2>&1"
+    rm -f "$hkfilter/filter_nnrpd.pl"
+fi
+if $hk_python; then
+    cp "$hooks"/nnrpd_*_test.py "$hkfilter/"
+    hk_readers 'python_auth: "nnrpd_auth_test"'
+    hk_auth_checks Python
+    hk_readers_only 'python_access: "nnrpd_access_test"'
+    hk_access_checks Python
+    hk_readers 'python_dynamic: "nnrpd_dynamic_test"'
+    cmds='GROUP test.live
+'
+    nntp hk-dyn-read.out
+    hk_post hk-dyn 'Refused by the dynamic hook' hk-dyn-post.out
+    label="nnrpd Python dynamic hook allows reading"
+    ok has hk-dyn-read.out '^211 .* test.live'
+    label="nnrpd Python dynamic hook refuses posting with its reason"
+    ok sh -c "grep -q 'No posting through this server' '$tmp/hk-dyn-post.out' && ! grep -q '^240 ' '$tmp/hk-dyn-post.out'"
+    rm -f "$hkfilter"/nnrpd_*_test.py
+fi
+mv "$tmp/etc/readers.conf.keep" "$tmp/etc/readers.conf"
+
 # --- frontends that talk to nnrpd ----------------------------------------------
 
 fe=$bin/frontends
