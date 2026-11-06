@@ -211,7 +211,10 @@ from `cmake-build`; record method and raw numbers so rounds compare.
   round"); Linux +4%, user CPU −9% under CNFS.  NUL-first header line bug
   fixed (21d820310); dot-stuffed first body line fixed (ff980d292)
   (CONVERSION_NOTES.md, "Upstream bugs and quirks found").
-- Perl and Python filters in the CMake build (CONVERSION_NOTES.md, same
+- Perl and Python filters in the CMake build: options, innd filter tests
+  and nnrpd hook tests done 2026-11-06 (two upstream nnrpd bugs fixed);
+  open: run them in verification, install samples, BUILDING.md, Linux
+  image.  Original item (CONVERSION_NOTES.md, same
   title, 2026-11-05): DO_PERL/DO_PYTHON are hard-wired off, so innd's and
   nnrpd's filters and auth hooks are never built or tested.  Options,
   ExtUtils::Embed / FindPython3, sample-script tests in verify-cxx.sh,
