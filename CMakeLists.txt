@@ -145,12 +145,13 @@ find_package(SQLite3 REQUIRED)
 # FindBoost module: this uses Boost's own BoostConfig.cmake.
 find_package(Boost 1.92 REQUIRED CONFIG)
 
-# Optional-feature hooks consumed by innd/CMakeLists.txt; empty until those
-# features (Perl, Python, systemd, canlock) are wired into CMake.
-set(INN_PERL_CPPFLAGS "")
-set(INN_PERL_LIBS inn_perl)
-set(INN_PYTHON_CPPFLAGS "")
-set(INN_PYTHON_LIBS "")
+# Optional-feature hooks consumed by innd/CMakeLists.txt and the others.
+# Perl and Python come from cmake/InnFilters.cmake (empty unless
+# INN_PERL_FILTERS or INN_PYTHON_FILTERS); systemd is not wired in yet.
+set(INN_PERL_CPPFLAGS ${INN_FILTER_PERL_CPPFLAGS})
+set(INN_PERL_LIBS inn_perl ${INN_FILTER_PERL_LIBS})
+set(INN_PYTHON_CPPFLAGS ${INN_FILTER_PYTHON_CPPFLAGS})
+set(INN_PYTHON_LIBS ${INN_FILTER_PYTHON_LIBS})
 set(INN_SYSTEMD_CFLAGS "")
 set(INN_SYSTEMD_LIBS "")
 set(INN_CANLOCK_LDFLAGS "")

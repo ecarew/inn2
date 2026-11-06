@@ -62,6 +62,7 @@ foreach(feature DO_LARGEFILES DO_PERL DO_PYTHON DO_TAGGED_HASH HAVE_BDB
         HAVE_SD_NOTIFY)
     set(${feature} FALSE)
 endforeach()
+include(${CMAKE_CURRENT_LIST_DIR}/InnFilters.cmake)
 set(HAVE_SQLITE3 TRUE)   # find_package(SQLite3 REQUIRED)
 set(HAVE_ZLIB TRUE)      # find_package(ZLIB REQUIRED)
 
