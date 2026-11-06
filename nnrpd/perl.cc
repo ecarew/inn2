@@ -253,8 +253,14 @@ perlAccess(char *user, struct vector *access_vec)
     char *key, *val, *buffer;
     SV *errsv;
 
-    if (!PerlFilterActive)
+    /* Whether the access script defines access(), not whether the posting
+       filter is active: the hooks share the interpreter, not the switch.
+       (Upstream tested PerlFilterActive, so perl_access did nothing unless
+       filter_nnrpd.pl was installed and defined filter_post.) */
+    if (perl_get_cv("access", 0) == NULL) {
+        syslog(L_ERROR, "SERVER perl_access script does not define access");
         return;
+    }
 
     ENTER;
     SAVETMPS;
@@ -330,9 +336,8 @@ perlAuthInit(void)
     int rc;
     SV *errsv;
 
-    if (!PerlFilterActive)
-        return;
-
+    /* As in perlAccess: the script's own function decides, not the posting
+       filter's switch (upstream skipped auth_init without filter_nnrpd.pl). */
     if (perl_get_cv("auth_init", 0) == NULL) {
         return;
     }
