@@ -1589,15 +1589,61 @@ in a later release.
 out-of-range throw would make libinn need the C++ runtime, and C programs
 link libinn.  Its object file references no C++ runtime symbols.
 
-Still open:
-- Cap the length of patterns that come from clients (nnrpd's commands).
-  This is less urgent now that the matcher's stack depth is constant.
-- Measure innd's newsfeeds matching before and after.
-- PERMmatch (`nnrpd/misc.cc`): scan the list from the end and stop at the
-  first match.  This change gave the native engine its speed gain in the
-  comparison below.  nativemat by itself still scans forward, as uwildmat
-  did.
-- Remove the deprecated `uwildmat*` wrappers in a later release.
+**Finished 2026-11-06.**
+
+- *Client pattern length: already capped.*  nnrpd rejects a command line
+  over `NNTP_MAXLEN_COMMAND` (512 octets, "Line too long") and any argument
+  over `NNTP_MAXLEN_ARG` ("Argument too long"), in `nnrpd/nnrpd.cc`.  So
+  no pattern from a client is longer than about 500 octets, and no second
+  cap was added.
+- *nativemat's own speed, a regression found and fixed (`e8057d7bc`).*
+  Timed side by side with the old uwildmat through the C API, nativemat
+  was 1.5 to 1.9 times slower.  It measured the text (strlen) for every
+  pattern and the expression before splitting it, and it retried a star
+  one character at a time.  The comparison below did not show this,
+  because its harness held each pattern pre-split as a `std::string` and
+  scanned lists from the end.  Fixes:
+  - Texts are NUL-terminated and never measured.
+  - The splitter walks to the NUL.
+  - A star followed by an ASCII literal scans inline to that octet's next
+    occurrence.  This is safe: an ASCII octet never occurs inside a UTF-8
+    sequence.  An inline loop beat `strchr` because the gaps are short.
+
+  After the fixes nativemat takes 0.86 to 1.05 times uwildmat's time on the
+  six lists, and the slowest hostile case takes 12 ms against 22.  It still
+  agrees with uwildmat on 3,000,000 fuzz cases, except for the 22
+  escaped-`\[` fixes, and still has no C++ runtime symbols.
+- *PERMmatch scans from the end (`6ecfdb5d8`), stopping at the first
+  match.*  The decisions are identical (the same hash over 45,002 groups,
+  from `support/perf/wildbench active`).  The time against the old
+  uwildmat forward scan, in ns per group:
+
+  | `read:` list | uwildmat, forward | nativemat, reverse | time |
+  |---|---|---|---|
+  | all | 4.4 | 2.1 | 0.48× |
+  | public | 70.5 | 55.1 | 0.78× |
+  | nobin | 121.7 | 108.2 | 0.89× |
+  | big8 | 127.4 | 102.9 | 0.81× |
+  | mixed15 | 389.2 | 333.8 | 0.86× |
+  | site40 | 993.9 | 762.6 | 0.77× |
+
+- *innd before and after:* W1 with CNFS and the typical 8-entry
+  storage.conf (every article is matched against 5 to 8 storage patterns
+  plus newsfeeds).  Builds of `6773f9278` (uwildmat) and `6ecfdb5d8`
+  (nativemat) ran alternately, 3 runs each, on macOS:
+
+  | | before | after |
+  |---|---|---|
+  | articles/s | 10,007 (9,802–10,155) | 9,975 (9,945–10,025) |
+  | innd CPU (s) | 3.960 | 3.967 |
+  | wall (s) | 3.998 | 4.010 |
+
+  There is no measurable difference: the ranges overlap, and the
+  differences are under 1% against about 3% spread between runs.  Pattern
+  matching is a negligible part of innd's per-article cost, as the W1
+  profile found.
+
+Still open: remove the deprecated `uwildmat*` wrappers in a later release.
 
 **Why factor it out.**  The goal is modern, safer code with fewer
 dependencies, not speed.  The comparison below is recorded so the choice
@@ -1661,7 +1707,10 @@ Correctness and safety:
 The hostile failures come from backtracking, not from the translation:
 neither regex library bounds a match the way uwildmat does.  Boost would
 also add a dependency.  Conclusion: neither regex library meets the goal.
-An iterative native matcher does, and is faster on real access lists.
+An iterative native matcher does.  (Its speed lead here came from the
+harness, which scanned lists from the end and held each pattern
+pre-split.  Through the C API it was at first slower than uwildmat; see
+"Finished 2026-11-06" above for the fix and the measured result.)
 
 **Upstream bug found by the fuzzing.**  All 3 disagreements are one
 uwildmat bug, and all three new engines give the correct answer.  In list
