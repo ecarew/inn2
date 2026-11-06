@@ -11,12 +11,15 @@ FROM debian:trixie
 # imapfeed.
 # libcanlock (libcanlock-dev): Cancel-Lock support, so lib/canlock.cc is
 # built and tests/lib/canlock runs.
+# Perl and Python development files (libperl-dev, python3-dev): the
+# INN_PERL_FILTERS and INN_PYTHON_FILTERS builds embed both interpreters, so
+# the live test's innd filter and nnrpd hook checks run.
 RUN apt-get update \
     && DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends \
        build-essential ninja-build perl python3 python3-venv flex bison \
        libsqlite3-dev zlib1g-dev ca-certificates procps netcat-openbsd \
        curl bzip2 libkrb5-dev krb5-kdc krb5-admin-server \
-       dovecot-imapd dovecot-lmtpd libcanlock-dev \
+       dovecot-imapd dovecot-lmtpd libcanlock-dev libperl-dev python3-dev \
     && rm -rf /var/lib/apt/lists/*
 
 # The CMake build requires CMake 4.3 or later, newer than Debian ships;
