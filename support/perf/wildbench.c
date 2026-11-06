@@ -17,9 +17,11 @@
 **        a case slower than the limit (default 50 ms).
 **    wildbench active [-r reps] ACTIVE LISTS
 **        For each access list in LISTS, runs the PERMmatch decision over
-**        every group in ACTIVE (first field of each line) and prints the
-**        groups accepted, a hash of the decisions and the time per group.
-**        Two matchers agree only if every hash agrees.
+**        every group in ACTIVE (first field of each line), scanning the
+**        list forward (as INN 2.8 did) and in reverse (stopping at the
+**        first match), and prints for each the groups accepted, a hash of
+**        the decisions and the time per group.  Two variants agree only if
+**        every hash agrees.
 **
 **  Case files: one case per line, tab-separated, '#' starts a comment.
 **    tier  func  expect  text  pattern  [note]
@@ -336,11 +338,11 @@ run_check(int argc, char **argv)
 }
 
 /*
-**  The PERMmatch decision for one group, as nnrpd/misc.cc makes it: every
-**  pattern is tried and the last one that matches decides.
+**  The PERMmatch decision for one group, as nnrpd/misc.cc made it through
+**  INN 2.8: every pattern is tried and the last one that matches decides.
 */
 static bool
-permmatch_current(char **pats, const char *group)
+permmatch_forward(char **pats, const char *group)
 {
     bool match = false;
     int i;
@@ -356,6 +358,36 @@ permmatch_current(char **pats, const char *group)
     }
     return match;
 }
+
+/*
+**  The same decision scanning from the last pattern and stopping at the
+**  first that matches, which decides.
+*/
+static bool
+permmatch_reverse(char **pats, const char *group)
+{
+    size_t n = 0;
+
+    if (pats == NULL || pats[0] == NULL)
+        return true;
+    while (pats[n] != NULL)
+        n++;
+    while (n-- > 0) {
+        bool negated = pats[n][0] == '!';
+
+        if (nativemat(group, negated ? pats[n] + 1 : pats[n]))
+            return !negated;
+    }
+    return false;
+}
+
+static const struct {
+    const char *name;
+    bool (*decide)(char **, const char *);
+} variants[] = {
+    {"forward", permmatch_forward},
+    {"reverse", permmatch_reverse},
+};
 
 struct strings {
     char **v;
@@ -419,10 +451,7 @@ run_active(int argc, char **argv)
     while ((line = read_line(f)) != NULL) {
         struct strings pats = {NULL, 0, 0};
         char *fld[2], *p, *tok;
-        uint64_t hash = 14695981039346656037ULL;
-        size_t accepted = 0, g;
-        double best = 0;
-        long r;
+        size_t v;
 
         if (line[0] == '#' || line[0] == '\0'
             || split_tabs(line, fld, 2) != 2) {
@@ -433,25 +462,33 @@ run_active(int argc, char **argv)
             if (*tok != '\0')
                 strings_add(&pats, tok);
 
-        for (r = 0; r < reps; r++) {
-            double start = now(), took;
+        for (v = 0; v < sizeof(variants) / sizeof(variants[0]); v++) {
+            uint64_t hash = 14695981039346656037ULL;
+            size_t accepted = 0, g;
+            double best = 0;
+            long r;
 
-            accepted = 0;
-            hash = 14695981039346656037ULL;
-            for (g = 0; g < groups.n; g++) {
-                bool ok = permmatch_current(pats.v, groups.v[g]);
+            for (r = 0; r < reps; r++) {
+                double start = now(), took;
 
-                accepted += ok;
-                hash = (hash ^ (ok ? 1 : 0)) * 1099511628211ULL;
+                accepted = 0;
+                hash = 14695981039346656037ULL;
+                for (g = 0; g < groups.n; g++) {
+                    bool ok = variants[v].decide(pats.v, groups.v[g]);
+
+                    accepted += ok;
+                    hash = (hash ^ (ok ? 1 : 0)) * 1099511628211ULL;
+                }
+                took = now() - start;
+                if (r == 0 || took < best)
+                    best = took;
             }
-            took = now() - start;
-            if (r == 0 || took < best)
-                best = took;
+            printf("%-8s list %-12s patterns %3zu accepted %7zu hash %016llx "
+                   "%.1f ns/group\n",
+                   variants[v].name, fld[0], pats.n, accepted,
+                   (unsigned long long) hash,
+                   best * 1e9 / (groups.n ? groups.n : 1));
         }
-        printf("list %-12s patterns %3zu accepted %7zu hash %016llx "
-               "%.1f ns/group\n",
-               fld[0], pats.n, accepted, (unsigned long long) hash,
-               best * 1e9 / (groups.n ? groups.n : 1));
         free(pats.v);
         free(line);
     }
