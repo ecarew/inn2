@@ -226,9 +226,10 @@ from `cmake-build`; record method and raw numbers so rounds compare.
 - uwildmat hardening (CONVERSION_NOTES.md, "uwildmat hardening",
   2026-11-04): the matcher is replaced by lib/nativemat.cc, iterative,
   with the functions renamed nativemat* (2026-11-05).  uwildmat* stay as
-  deprecated wrappers.  Open: cap client pattern length, measure innd's
-  feed matching, PERMmatch reverse scan, and remove the wrappers in a
-  later release.
+  deprecated wrappers.  Finished 2026-11-06: PERMmatch scans in reverse
+  (0.48-0.89x time), nativemat at or under uwildmat's cost, innd W1
+  unchanged, client patterns already capped by nnrpd.  Open: remove the
+  wrappers in a later release.
 - Flaky test nnrpd/auth-ext (CONVERSION_NOTES.md, same title,
   2026-11-05): "caught signal 1" from the auth program, once; not yet
   investigated.
