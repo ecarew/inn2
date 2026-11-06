@@ -2086,8 +2086,17 @@ Behavior of upstream INN found while testing, kept as is unless noted.
   against a running innd.  The faster scan kept it, to stay
   behaviour-preserving, and the fix followed as its own commit.
 
-- Upstream bug (found 2026-11-04 by the ARTparsebody tests; open, low):
-  a dot-stuffed **first** body line is not counted in `DotStuffedLines`.
+- Upstream bug (found 2026-11-04 by the ARTparsebody tests; **fixed
+  2026-11-06**, ff980d292): a dot-stuffed **first** body line was not
+  counted in `DotStuffedLines`.  `ARTparsebody` now checks the first line
+  when it reaches the CRLF that ends it.  `tests/innd/artparse-t` now
+  checks the byte count itself: worked out independently from the
+  article's lines and compared with the stored size less 3 less
+  `DotStuffedLines`, for every named and random body (299 of those checks
+  fail without the fix).  Not covered: an article whose very first header
+  line begins with a dot is not counted either (the header scan, too,
+  looks only after a CRLF); such a header is malformed, and whether innd
+  accepts it is not checked.  What it was:
   `ARTparseheader` counts a dot only at the start of a line after a
   header line's CRLF, and `ARTparsebody` only after a body CRLF, so the
   line right after the blank line is checked by neither.  `ARTstore`
@@ -2098,7 +2107,7 @@ Behavior of upstream INN found while testing, kept as is unless noted.
   by `tests/innd/artparse-t` ("dot-stuffed first"); the effect on the
   byte count is from reading `ARTstore`.  Kept for the faster body scan,
   so that change stays behaviour-preserving; fix it separately, with a
-  test of the byte count.
+  test of the byte count.  (Done, above.)
 
 - Upstream bugs (found 2026-11-04 by the performance comparison's leak
   pass; open, priorities set by the architect):
