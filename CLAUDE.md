@@ -204,15 +204,12 @@ from `cmake-build`; record method and raw numbers so rounds compare.
 - lib fallbacks vs the C++ standard library and Boost; pread/pwrite in
   CONVERSION_NOTES.md, "Positioned file I/O".  Cite libc++/cppreference.
 - ~~ARTparsebody body scan~~ done 2026-11-04 (7d07f923c): W1 CNFS user
-  CPU −17%, wall −10% on Linux.  Next of that kind: ARTparseheader, same
-  memchr technique, after tests (86% line, 76% branch coverage now).
-- tradindexed flushes the group entry per article (CONVERSION_NOTES.md,
-  same title, 2026-11-04): `tdx_data_add` msyncs up to 3 times per
-  article; batch it.  Mainly macOS/BSD (MS_ASYNC is a no-op on Linux).
-- dbzsync flushes only what changed (CONVERSION_NOTES.md, same title,
-  2026-11-04): `putcore` msyncs the whole dbz table every
-  `icdsynccount` writes, about 20% of innd's W1 intake on macOS
-  (doc/perf/2026-11-04-w1-profile.md).  Track the changed range instead.
+  CPU −17%, wall −10% on Linux.
+- ~~ARTparseheader scan, tradindexed batching, dbz dirty-page sync~~ done
+  2026-11-06 (5228973d7, 4ab7d7bda, 364840fd8): W1 macOS CNFS +79%
+  articles/s, timecaf +8% (CONVERSION_NOTES.md, "Results of the 2026-11-06
+  round").  Open: Linux W1 measurement; NUL-first header line bug
+  (CONVERSION_NOTES.md, "Upstream bugs and quirks found").
 - Perl and Python filters in the CMake build (CONVERSION_NOTES.md, same
   title, 2026-11-05): DO_PERL/DO_PYTHON are hard-wired off, so innd's and
   nnrpd's filters and auth hooks are never built or tested.  Options,
