@@ -9,7 +9,8 @@
 #  given), refuses if any change is left unstaged (restoring the index as it
 #  was before the run whenever it does not commit), runs support/verify-cxx.sh
 #  on build/ and, if configured, build-asan/, plus support/live-innd.sh on
-#  build-live/ if configured, and commits with a Tested: section for each.
+#  build-live/ if configured (with the Perl and Python filters, so their
+#  checks run), and commits with a Tested: section for each.
 #  A documentation-only commit (*.md, doc/ but not doc/pod or doc/man,
 #  ChangeLog) skips the checks and says "Tested: none (documentation only)".
 #  Uses your normal git identity; set COMMIT_TRAILER to add a trailer line
@@ -84,6 +85,15 @@ done
 live=false
 if [ -f build-live/CMakeCache.txt ]; then
     live=true
+    # live-innd.sh skips the Perl and Python filter and hook checks on a
+    # build without them, so insist on a build-live that has both.
+    if ! grep -q '^INN_PERL_FILTERS:BOOL=ON' build-live/CMakeCache.txt \
+        || ! grep -q '^INN_PYTHON_FILTERS:BOOL=ON' build-live/CMakeCache.txt
+    then
+        echo "build-live lacks the filters; reconfigure it with"
+        echo "  cmake -S . -B build-live -DINN_PERL_FILTERS=ON -DINN_PYTHON_FILTERS=ON"
+        exit 1
+    fi
     # shellcheck disable=SC2015  # the failure block is for either step failing
     cmake --build build-live -j8 >"$tmp/build-live.log" 2>&1 \
         && support/live-innd.sh build-live >"$tmp/live.txt" 2>&1 \
