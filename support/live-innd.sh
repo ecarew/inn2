@@ -1289,6 +1289,134 @@ else
     innd_pid=
 fi
 
+# --- Embedded Perl and Python filters -------------------------------------------
+#
+# Only on a build with INN_PERL_FILTERS or INN_PYTHON_FILTERS.  innd loads
+# filter_innd.pl (with startup_innd.pl) and filter_innd.py from pathfilter
+# when it starts.  Two runs, so each rejection has one source: the spam
+# filters from tests/data (one rejection reason per rule) in one language,
+# the shipped sample, which accepts everything, in the other; then swapped.
+
+do_perl=false
+do_python=false
+grep -q '^#define DO_PERL 1' "$build/include/config.h" && do_perl=true
+grep -q '^#define DO_PYTHON 1' "$build/include/config.h" && do_python=true
+filterdir=$(sed -n 's/^pathfilter:[[:space:]]*//p' "$INNCONF")
+
+# filt_ihave ID GROUPS SUBJECT PATH FROM: offer one article by IHAVE; innd's
+# reply goes to $tmp/filt-ID.out.  An empty FROM leaves the field out.
+filt_ihave() {
+    { printf 'IHAVE <%s@live.test>\r\n' "$1"
+      { printf 'Path: %s\nNewsgroups: %s\nSubject: %s\n' "$4" "$2" "$3"
+        [ -n "$5" ] && printf 'From: %s\n' "$5"
+        printf 'Message-ID: <%s@live.test>\nDate: %s\n\nBody.\n.\n' "$1" \
+            "$(date -u '+%a, %d %b %Y %H:%M:%S +0000')"
+      } | sed 's/$/\r/'
+      printf 'QUIT\r\n'; } | nc -w 10 127.0.0.1 "$port" >"$tmp/filt-$1.out" 2>&1
+}
+# filt_start LABEL: start innd and wait until it answers ctlinnd.
+filt_start() {
+    "$bin/innd/innd" -f >>"$tmp/innd.out" 2>&1 &
+    innd_pid=$!
+    local up=false
+    for _ in $(seq 1 50); do
+        if "$bin/frontends/ctlinnd" -s mode >/dev/null 2>&1; then
+            up=true
+            break
+        fi
+        kill -0 "$innd_pid" 2>/dev/null || break
+        sleep 0.2
+    done
+    label="$1"
+    ok $up
+}
+filt_stop() {
+    "$bin/frontends/ctlinnd" -s shutdown "filters done" >/dev/null 2>&1
+    for _ in $(seq 1 50); do
+        kill -0 "$innd_pid" 2>/dev/null || break
+        sleep 0.2
+    done
+    wait "$innd_pid" 2>/dev/null
+    innd_pid=
+}
+# filt_checks LANG P: the spam filter's checks, articles prefixed P.
+filt_checks() {
+    local lang=$1 p=$2
+    filt_ihave "$p-clean" test.live 'A clean article' 'live.test!not-for-mail' tester@live.test
+    filt_ihave "$p-xpost" test.live,a.one,a.two,a.three,a.four,a.five 'Hello' 'live.test!not-for-mail' tester@live.test
+    filt_ihave "$p-bin" test.live 'file.zip yEnc (1/3)' 'live.test!not-for-mail' tester@live.test
+    filt_ihave "$p-binok" alt.binaries.test,test.live 'file.zip yEnc (1/3)' 'live.test!not-for-mail' tester@live.test
+    filt_ihave "$p-path" test.live 'Hello' 'live.test!badrelay.example!not-for-mail' tester@live.test
+    label="$lang filter accepts a clean article"
+    ok sh -c "grep -q '^235' '$tmp/filt-$p-clean.out' && '$bin/expire/grephistory' '<$p-clean@live.test>' >/dev/null 2>&1"
+    label="$lang filter rejects cross-posting to 6 groups"
+    ok grep -q '^437.*Excessive cross-posting is limited to 5 groups max' "$tmp/filt-$p-xpost.out"
+    label="$lang filter rejects yEnc outside binaries groups"
+    ok grep -q '^437.*Binary attachments are not allowed in text hierarchies' "$tmp/filt-$p-bin.out"
+    label="$lang filter accepts yEnc in a binaries group"
+    ok grep -q '^235' "$tmp/filt-$p-binok.out"
+    label="$lang filter rejects a blocked host in Path"
+    ok grep -q '^437.*Article injected via a blocked transit host' "$tmp/filt-$p-path.out"
+}
+# filt_logged LANG P: after innd has stopped (it buffers the news log).
+filt_logged() {
+    label="$1 filter rejection is logged in the news log"
+    ok grep -q "<$2-xpost@live.test> 437 Excessive cross-posting" "$tmp/log/news"
+}
+# filt_install PERL PYTHON: put the given filter files (or none) in place.
+filt_install() {
+    mkdir -p "$filterdir"
+    rm -f "$filterdir"/filter_innd.pl "$filterdir"/startup_innd.pl \
+        "$filterdir"/filter_innd.py
+    if [ -n "$1" ]; then
+        cp "$root/samples/startup_innd.pl" "$filterdir/startup_innd.pl"
+        cp "$1" "$filterdir/filter_innd.pl"
+    fi
+    [ -n "$2" ] && cp "$2" "$filterdir/filter_innd.py"
+    return 0
+}
+
+if $do_perl; then
+    filt_install "$root/tests/data/filter_innd_spam.pl" \
+        "$($do_python && echo "$root/samples/filter_innd.py")"
+    filt_start "innd starts with the Perl spam filter"
+    label="ctlinnd mode reports Perl filtering enabled"
+    ok sh -c "'$bin/frontends/ctlinnd' mode | grep -q 'Perl filtering enabled'"
+    if $do_python; then
+        label="ctlinnd mode reports the Python sample enabled"
+        ok sh -c "'$bin/frontends/ctlinnd' mode | grep -q 'Python filtering enabled'"
+    fi
+    filt_checks Perl pl
+    # Off, the same article that was refused is accepted.
+    label="ctlinnd perl n turns the Perl filter off"
+    ok sh -c "'$bin/frontends/ctlinnd' -s perl n && '$bin/frontends/ctlinnd' mode | grep -q 'Perl filtering disabled'"
+    filt_ihave pl-xpost-off test.live,a.one,a.two,a.three,a.four,a.five 'Hello' 'live.test!not-for-mail' tester@live.test
+    label="with Perl filtering off, the cross-post is accepted"
+    ok grep -q '^235' "$tmp/filt-pl-xpost-off.out"
+    filt_stop
+    filt_logged Perl pl
+fi
+if $do_python; then
+    filt_install "$($do_perl && echo "$root/samples/filter_innd.pl")" \
+        "$root/tests/data/filter_innd_spam.py"
+    filt_start "innd starts with the Python spam filter"
+    label="ctlinnd mode reports Python filtering enabled"
+    ok sh -c "'$bin/frontends/ctlinnd' mode | grep -q 'Python filtering enabled'"
+    if $do_perl; then
+        label="ctlinnd mode reports the Perl sample enabled"
+        ok sh -c "'$bin/frontends/ctlinnd' mode | grep -q 'Perl filtering enabled'"
+    fi
+    filt_checks Python py
+    label="ctlinnd python n turns the Python filter off"
+    ok sh -c "'$bin/frontends/ctlinnd' -s python n && '$bin/frontends/ctlinnd' mode | grep -q 'Python filtering disabled'"
+    filt_ihave py-xpost-off test.live,a.one,a.two,a.three,a.four,a.five 'Hello' 'live.test!not-for-mail' tester@live.test
+    label="with Python filtering off, the cross-post is accepted"
+    ok grep -q '^235' "$tmp/filt-py-xpost-off.out"
+    filt_stop
+    filt_logged Python py
+fi
+filt_install "" ""
+
 # --- xrefslave mode -----------------------------------------------------------
 #
 # A slave server files each article under the numbers in its Xref header
