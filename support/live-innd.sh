@@ -521,6 +521,8 @@ hk_perl=false
 hk_python=false
 grep -q '^#define DO_PERL 1' "$build/include/config.h" && hk_perl=true
 grep -q '^#define DO_PYTHON 1' "$build/include/config.h" && hk_python=true
+hk_denied=502
+grep -q '^#define HAVE_SASL 1' "$build/include/config.h" && hk_denied=480
 hooks=$root/tests/data/nnrpd-hooks
 hkfilter=$(sed -n 's/^pathfilter:[[:space:]]*//p' "$INNCONF")
 cp "$tmp/etc/readers.conf" "$tmp/etc/readers.conf.keep"
@@ -589,8 +591,10 @@ GROUP control
     nntp "hk-$lang-access.out"
     label="nnrpd $lang access hook allows test.*"
     ok has "hk-$lang-access.out" '^211 .* test.live'
+    # 480 (authenticate first) where nnrpd could still take AUTHINFO SASL,
+    # since it then always offers authentication; 502 without SASL.
     label="nnrpd $lang access hook refuses other groups"
-    ok has "hk-$lang-access.out" '^480 Read access denied'
+    ok has "hk-$lang-access.out" "^$hk_denied Read access denied"
 }
 
 # On every build: a readers.conf with an auth group but no access group.
