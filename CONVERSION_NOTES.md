@@ -1409,7 +1409,7 @@ Found when removing the `HDR` macros (2026-11-05): `innd/perl.cc` and
 - Not part of this item: TLS, Berkeley DB (ovdb) and systemd, the other
   features BUILDING.md lists as not wired in.
 
-### ChaiScript filter hooks as a successor to Perl filters (proposed 2026-11-05)
+### ChaiScript filter hooks as a successor to Perl filters (proposed 2026-11-05, rejected 2026-11-06)
 
 **Proposed by** the architect: add ChaiScript as a language for filter
 scripts, as Perl is used today, so that Perl filters can be phased out
@@ -1449,6 +1449,30 @@ commits 2026-05-02).  INN++ would pin a commit, not a release.
 **Decision this would revise:** "Perl and Python stay" (2026-10-28).
 Phasing out Perl *filters* revises it for filters only; INN's Perl
 administration tools and `INN::Config` are a separate question.
+
+**Decision (2026-11-06): rejected.**  The architect's verdict: ChaiScript
+"isn't ready".  "Perl and Python stay" stands for filters too.  The
+evaluation code (an innd hook, `innd/chai.cc`, at ChaiScript commit
+f635b51e) was scratch and is not in the tree.  What it measured:
+- **Speed.**  W1, CNFS, 5 runs each, about 40,000 articles, the
+  sample's rules in each language, 0 rejects in all runs.  No filter
+  22,329 art/s (innd CPU 1.79 s); Perl 20,492 (1.95 s); Python 20,258
+  (1.95 s); ChaiScript 5,518 with Boost.Regex (7.23 s), 5,430 with
+  POSIX regcomp (7.35 s), 5,315 with std::regex (7.47 s).  The filter
+  costs about 4 µs per article in Perl or Python and about 140 µs in
+  ChaiScript, some 35 times as much; the regex engine changes it by 4% at
+  most, so the time goes to the interpreter and to boxing the header
+  fields.
+- **Size.**  Stripped innd grows by 1.5-1.7 MB (534 KB to 2.03-2.20 MB),
+  linked in and not shared; Perl adds 21 KB to innd plus the shared 3.3 MB
+  libperl.  `chai.cc` alone compiles in about 15 s (object about 26 MB).
+- **Language gaps.**  No regular expressions and no string split: innd
+  has to supply them (`re_match`, `nativemat`).  Pitfalls met: a line may
+  not begin with `||`; `[]` fails on a const Map; destroying the
+  interpreter in static destruction crashed innd at shutdown.
+- **Not measured:** memory with the filter loaded, sandboxing, and the
+  Luau and AngelScript comparators; not needed once the speed ruled it
+  out.
 
 ### ARTparsebody body scan (noted 2026-11-04, refactoring phase)
 
