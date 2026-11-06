@@ -224,9 +224,14 @@ from `cmake-build`; record method and raw numbers so rounds compare.
   and AngelScript first; last release v6.1.0 (2018), so pin a commit.
   Phasing out Perl filters revises "Perl and Python stay" for filters.
 - uwildmat hardening (CONVERSION_NOTES.md, "uwildmat hardening",
-  2026-11-04): keep the RFC 3977 syntax (not std::regex); make the
-  matcher iterative, cap client pattern length, fuzz against the current
-  matcher, measure innd's feed matching.
+  2026-11-04): the matcher is replaced by lib/nativemat.cc, iterative,
+  with the functions renamed nativemat* (2026-11-05).  uwildmat* stay as
+  deprecated wrappers.  Open: cap client pattern length, measure innd's
+  feed matching, PERMmatch reverse scan, and remove the wrappers in a
+  later release.
+- Flaky test nnrpd/auth-ext (CONVERSION_NOTES.md, same title,
+  2026-11-05): "caught signal 1" from the auth program, once; not yet
+  investigated.
 - Legacy C functions with standard C++ replacements (qsort, bsearch, ...):
   once the last use of one is converted, remove what remains of it from
   the source tree: leftover comparators and helpers, INN's own
