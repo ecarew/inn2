@@ -9,7 +9,8 @@
 #  on one with AddressSanitizer, UndefinedBehaviorSanitizer and keyword
 #  generation: glibc marks more arguments as never null than macOS does, so
 #  UBSan finds things here that it cannot there (NEWGROUPS' qsort of a null
-#  list, 2026-10-31).
+#  list, 2026-10-31).  Both live builds embed Perl and Python, so the
+#  filter and hook checks run on Linux too.
 
 set -e
 step() { echo "=== $*"; }
@@ -23,12 +24,14 @@ cmake --build build >/tmp/build.log 2>&1 \
 step "CMake build (build-live, for $(id -un))"
 cmake -S . -B build-live -G Ninja \
     -DINN_RUNAS_USER="$(id -un)" -DINN_RUNAS_GROUP="$(id -gn)" \
+    -DINN_PERL_FILTERS=ON -DINN_PYTHON_FILTERS=ON \
     >/tmp/cmake-live.log 2>&1 || { tail -30 /tmp/cmake-live.log; exit 1; }
 cmake --build build-live >/tmp/build-live.log 2>&1 \
     || { grep -B12 -m3 -E 'error' /tmp/build-live.log | head -60; exit 1; }
 
-step "CMake build (build-asan-live: sanitizers, INN_KEYWORDS)"
+step "CMake build (build-asan-live: sanitizers, INN_KEYWORDS, filters)"
 cmake -S . -B build-asan-live -G Ninja -DINN_SANITIZE=ON -DINN_KEYWORDS=ON \
+    -DINN_PERL_FILTERS=ON -DINN_PYTHON_FILTERS=ON \
     -DINN_RUNAS_USER="$(id -un)" -DINN_RUNAS_GROUP="$(id -gn)" \
     >/tmp/cmake-asan-live.log 2>&1 \
     || { tail -30 /tmp/cmake-asan-live.log; exit 1; }
