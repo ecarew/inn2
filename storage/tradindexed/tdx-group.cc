@@ -116,7 +116,16 @@ struct group_index {
     struct group_entry *entries;
     size_t mapped_size;
     int count;
+    int unflushed; /* articles stored since the entries were last flushed */
 };
+
+/* Without nfswriter, the group entries are flushed (msync, MS_ASYNC) once
+   every this many stored articles and when the index is unmapped, rather
+   than after every article: only readers on other hosts over NFS need each
+   update on disk at once, and nfswriter keeps the per-article flush for
+   them.  A crash can lose up to this many articles' entry updates (high
+   and low marks, counts), which rebuilding overview recovers. */
+enum { TDX_FLUSH_EVERY = 100 };
 
 /* Forward declaration. */
 struct hashmap;
@@ -422,6 +431,9 @@ index_unmap(struct group_index *index)
         free(index->header);
         free(index->entries);
     } else {
+        if (index->writable && index->unflushed > 0)
+            msync(index->header, index->mapped_size, MS_ASYNC);
+        index->unflushed = 0;
         if (munmap(index->header, index->mapped_size) < 0) {
             syswarn("tradindexed: cannot munmap %s", index->path);
         }
@@ -515,6 +527,7 @@ tdx_index_open(bool writable)
     index = xmalloc(sizeof(struct group_index));
     index->path = concatpath(innconf->pathoverview, "group.index");
     index->writable = writable;
+    index->unflushed = 0;
     if (!file_open_group_index(index, &st)) {
         goto fail;
     }
@@ -1004,7 +1017,12 @@ tdx_data_add(struct group_index *index, struct group_entry *entry,
     if (data->high > article->number)
         data->remapoutoforder = true;
 
-    inn_msync_page(entry, sizeof(*entry), MS_ASYNC);
+    if (innconf->nfswriter) {
+        inn_msync_page(entry, sizeof(*entry), MS_ASYNC);
+    } else if (++index->unflushed >= TDX_FLUSH_EVERY) {
+        msync(index->header, index->mapped_size, MS_ASYNC);
+        index->unflushed = 0;
+    }
     index_lock_group(index->fd, offset, INN_LOCK_UNLOCK);
     return true;
 
