@@ -1522,6 +1522,16 @@ PERMgetinitialaccess(char *readersconf)
     /* Remove unused access groups. */
     strip_accessgroups();
 
+    /* A readers.conf without access groups is valid: with perl_access or
+       python_access in the auth group, the hook generates the access group
+       (readers.conf(5)), and without them the client gets no access.  The
+       code below indexes access_realms either way, so make it an empty
+       list, with room for the generated group in [0] and its terminator.
+       (Upstream left it null, so nnrpd crashed on every connection.) */
+    if (access_realms == nullptr)
+        access_realms = static_cast<ACCESSGROUP **>(
+            xcalloc(2, sizeof(ACCESSGROUP *)));
+
     if (auth_realms == nullptr) {
         /* No one can talk, empty file. */
         syslog(L_NOTICE, "%s no_permission", Client.host);
