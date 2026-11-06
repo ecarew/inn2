@@ -945,6 +945,16 @@ ARTparsebody(CHANNEL *cp)
             return;
         }
 
+        /* A CRLF that ends the first body line (no line counted yet): the
+           checks below for a line beginning with a dot only look after a
+           body CRLF, so check the first line here.  (Upstream never
+           counted it, so a dot-stuffed first line made the byte count one
+           too high.)  The terminator alone at the start of the body
+           returned above, so a dot here is dot-stuffing. */
+        if (data->Lines == 0 && bp->data[i + 1] == '\n'
+            && bp->data[data->Body] == '.')
+            data->DotStuffedLines++;
+
         if (memcmp(&bp->data[i], "\r\n.\r\n", 5) == 0) {
             if (cp->State == CSeatarticle)
                 cp->State = CSgotlargearticle;

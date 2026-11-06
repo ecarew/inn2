@@ -184,8 +184,8 @@ ok_article(int n, const char *path, const char *error, bool slow, bool shift)
 **  across reads.  The articles above come from native files through
 **  wire_from_native, which cannot make a bare CR or LF, and the checks
 **  above do not look at the counters, so these cases are built as wire
-**  data here.  They pin down the current behaviour, quirks included, so a
-**  faster scan must give exactly the same results.
+**  data here.  They pin down the current behaviour, so a faster scan must
+**  give exactly the same results.
 */
 
 /* Every article below has this header, which adds nothing to the
@@ -284,10 +284,10 @@ scan_splits_agree(const std::string &wire, const scan_result &whole)
 }
 
 /* A plain restatement of the current body scan, for the random bodies:
-   the counters a complete article gives, and where the scan stops.  The
-   first body line is never counted as dot-stuffed: the header scan counts
-   dots only after the header lines' CRLFs, and the body scan only after
-   body CRLFs (CONVERSION_NOTES.md, "Upstream bugs and quirks found"). */
+   the counters a complete article gives, and where the scan stops.  A
+   dot-stuffed first body line is counted when its CRLF is reached (upstream
+   never counted it; CONVERSION_NOTES.md, "Upstream bugs and quirks
+   found"). */
 /* What body_header alone records (its header line and Subject field), for
    the body cases' expected results; set by test_body_scan. */
 static scan_result body_header_result;
@@ -311,6 +311,9 @@ reference_body(const std::string &wire, size_t body, scan_result r)
             r.next = i + 2;
             return r;
         }
+        if (r.lines == 0 && i + 1 < wire.size() && d[i + 1] == '\n'
+            && d[body] == '.')
+            r.dotstuffed++;
         if (wire.compare(i, 5, "\r\n.\r\n") == 0) {
             r.lines++;
             r.next = i + 5;
@@ -352,7 +355,11 @@ static const struct {
     {"two lines",            "a\r\nb\r\n",       2, 0, 0, 0, ""},
     {"empty lines",          "\r\n\r\n",         2, 0, 0, 0, ""},
     {"dot-stuffed line",     "a\r\n..b\r\n",     2, 0, 0, 1, ""},
-    {"dot-stuffed first",    "..a\r\n",          1, 0, 0, 0, ""},
+    {"dot-stuffed first",    "..a\r\n",          1, 0, 0, 1, ""},
+    {"dot-stuffed first, more", "..a\r\n..b\r\nc\r\n",
+                                                 3, 0, 0, 2, ""},
+    {"dot first, bare CR",   ".a\rb\r\n",         1, 0, 1, 1, ""},
+    {"dot first, bare LF",   ".a\nb\r\n",         1, 1, 0, 1, ""},
     {"dot then text",        "a\r\n.x\r\n",      2, 0, 0, 1, ""},
     {"bare LF",              "a\nb\r\n",         1, 1, 0, 0, ""},
     {"bare LF before end",   "a\n\r\n",          1, 1, 0, 0, ""},
@@ -443,6 +450,32 @@ ok_large(int n, const std::string &wire, const char *name)
 
 enum { BODY_RANDOM = 300 };
 
+/* The article's size as RFC 3977 counts it, worked out independently of
+   the scans: the octets before the terminating ".\r\n" line, less the dot
+   that stuffs each CRLF-delimited line beginning with one.  ARTstore takes
+   the stored size less 3 less DotStuffedLines, so the scans' count must
+   make the two agree.  The articles here have a header that does not begin
+   with a dot. */
+static bool
+byte_count_agrees(const std::string &wire, const scan_result &got)
+{
+    long bytes = 0;
+    size_t start = 0;
+
+    for (;;) {
+        size_t end = wire.find("\r\n", start);
+        if (end == std::string::npos)
+            return false;
+        if (end == start + 1 && wire[start] == '.')
+            break;
+        bytes += static_cast<long>(end + 2 - start);
+        if (wire[start] == '.')
+            bytes--;
+        start = end + 2;
+    }
+    return static_cast<long>(wire.size()) - 3 - got.dotstuffed == bytes;
+}
+
 static int
 test_body_scan(int n)
 {
@@ -464,6 +497,7 @@ test_body_scan(int n)
         n = ok_scan(n, whole, want, c.name, "whole");
         n = ok_scan(n, scan_bytewise(wire), want, c.name, "byte by byte");
         ok(n++, scan_splits_agree(wire, whole));
+        ok(n++, byte_count_agrees(wire, whole));
     }
 
     /* The terminator at the very start of the body. */
@@ -500,6 +534,7 @@ test_body_scan(int n)
         ok(n++, whole == want);
         ok(n++, scan_bytewise(wire) == want);
         ok(n++, scan_splits_agree(wire, want));
+        ok(n++, byte_count_agrees(wire, whole));
         if (!(whole == want))
             diag("random body %d differs from the reference", i);
     }
@@ -514,11 +549,11 @@ test_body_scan(int n)
 **  records and the errors it reports) is compared between the ways of
 **  feeding, and against hand-worked results in the named cases.
 **
-**  One quirk is pinned down, not endorsed: the first body line is never
-**  counted as dot-stuffed (the body scan's quirk, above).  Upstream also
-**  skipped the first octet of each header line after the first, so a NUL
-**  there went unreported; that is fixed, and the "first on a line" cases
-**  check it (CONVERSION_NOTES.md, "Upstream bugs and quirks found").
+**  Two upstream bugs are fixed and checked here: the scan skipped the
+**  first octet of each header line after the first, so a NUL there went
+**  unreported (the "first on a line" cases), and a dot-stuffed first body
+**  line was never counted ("body starts with dot"; CONVERSION_NOTES.md,
+**  "Upstream bugs and quirks found").
 */
 
 /* A plain restatement of the current header scan, for random articles. */
@@ -617,7 +652,7 @@ static const struct {
     {"empty body", "Subject: x\r\n\r\n.\r\n", CSgotarticle, 14, 1, 0, 0, 0,
      0, "Subject=[x]\n", ""},
     {"body starts with dot", "Subject: x\r\n\r\n..b\r\n.\r\n", CSgotarticle,
-     14, 1, 1, 0, 0, 0, "Subject=[x]\n", ""},
+     14, 1, 1, 0, 0, 1, "Subject=[x]\n", ""},
     {"duplicated Message-ID",
      "Message-ID: <a@b>\r\nMessage-ID: <c@d>\r\n\r\nb\r\n.\r\n",
      CSgotarticle, 40, 2, 1, 0, 0, 0, "Message-ID (duplicated)\n", ""},
@@ -717,8 +752,8 @@ main(void)
     size_t i;
     int n = 1;
 
-    test_init(ARRAY_SIZE(articles) * 5 * 4 + ARRAY_SIZE(body_cases) * 15
-              + 14 + 6 + BODY_RANDOM * 3 + ARRAY_SIZE(header_cases) * 19
+    test_init(ARRAY_SIZE(articles) * 5 * 4 + ARRAY_SIZE(body_cases) * 16
+              + 14 + 6 + BODY_RANDOM * 4 + ARRAY_SIZE(header_cases) * 19
               + HEADER_RANDOM * 3);
     initialize();
     message_handlers_notice(0);
