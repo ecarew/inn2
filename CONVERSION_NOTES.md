@@ -2071,16 +2071,20 @@ Open items from CLAUDE.md, moved here when done, newest first.
 
 Behavior of upstream INN found while testing, kept as is unless noted.
 
-- Upstream bug (found 2026-11-06 by the ARTparseheader tests; open): a NUL
-  as the **first** byte of a header line is not reported.  After each
+- Upstream bug (found 2026-11-06 by the ARTparseheader tests; **fixed
+  2026-11-06**, 21d820310): a NUL as the **first** byte of a header line
+  was not reported.  The fix steps back after the end-of-headers check so
+  the loop looks at that octet; the named cases now expect the error, the
+  LF counted and a lone CR counted ("CR first on a line", new).  What it
+  was:  After each
   header line's CRLF, `ARTparseheader` advances past the next byte (`i += 2`
   plus the loop's `i++`) and only looks at it if it is a CR, so a NUL there
   is not checked (nor a bare LF counted).  The test "NUL first on a line"
   gets no error, and only the Subject field is parsed.  Nothing later in
   `innd/art.cc` looks for a NUL in the header, so such an article is
-  probably accepted; that is from reading the code, not yet confirmed
-  against a running innd.  Kept by the faster scan so it stays
-  behaviour-preserving; fix it separately, with a test.
+  probably accepted; that is from reading the code, not confirmed
+  against a running innd.  The faster scan kept it, to stay
+  behaviour-preserving, and the fix followed as its own commit.
 
 - Upstream bug (found 2026-11-04 by the ARTparsebody tests; open, low):
   a dot-stuffed **first** body line is not counted in `DotStuffedLines`.
