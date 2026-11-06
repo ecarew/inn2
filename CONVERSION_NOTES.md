@@ -1577,8 +1577,22 @@ tradindexed flushes and the header scan.
 | timecaf | 6,348 | 6,850 (+8%) | 6.03 | 4.55 | 6.30 | 6.03 |
 
 Under timecaf innd's CPU fell by a quarter but wall time barely moved:
-timecaf's own file writes now bound the run.  Linux is not measured yet;
-there `MS_ASYNC` is a no-op, so expect only the header-scan part of the gain.
+timecaf's own file writes now bound the run.
+
+Linux, measured 2026-11-06: the same builds and runs in Docker's Linux VM
+(Debian trixie, arm64, ext4 volume; the setup in
+doc/perf/2026-11-04-w1-profile.md, "Linux"), 3 runs each, means and ranges.
+
+| Storage | articles/s before | after | innd user s before | after | innd sys s before | after | wall s before | after |
+|---|---|---|---|---|---|---|---|---|
+| CNFS | 38,643 (34,101–42,105) | 40,310 (37,383–42,689) | 0.467 | 0.427 | 0.533 | 0.523 | 1.04 | 1.00 |
+| timecaf | 31,610 (31,153–32,206) | 32,688 (32,026–33,223) | 0.610 | 0.600 | 0.613 | 0.583 | 1.27 | 1.22 |
+
+As expected with `MS_ASYNC` a no-op on Linux, the gain is small: about 4%
+in wall time and articles/s, within the run-to-run spread under CNFS.
+innd's user CPU fell about 9% under CNFS, which fits the header scan; the
+msync changes make no measurable difference on Linux.  The large gain is
+macOS's (and, by the same reasoning, the BSDs', not measured).
 
 ### uwildmat hardening (noted 2026-11-04, refactoring phase)
 
