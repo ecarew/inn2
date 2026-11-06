@@ -201,6 +201,8 @@ struct scan_result {
     int lfwithoutcr;
     int crwithoutlf;
     int dotstuffed;
+    int headerlines;
+    std::string fields; /* every header field ARTcheckheader recorded */
     std::string error;
 
     bool operator==(const scan_result &) const = default;
@@ -238,6 +240,16 @@ scan(const std::string &wire, const std::vector<size_t> &cuts)
     r.lfwithoutcr = cp->Data.LFwithoutCR;
     r.crwithoutlf = cp->Data.CRwithoutLF;
     r.dotstuffed = cp->Data.DotStuffedLines;
+    r.headerlines = cp->Data.HeaderLines;
+    for (int h = 0; h < MAX_ARTHEADER; h++) {
+        const HDRCONTENT &hc = cp->Data.HdrContent[h];
+
+        if (hc.duplicated())
+            r.fields += std::string(ARTheaders[h].Name) + " (duplicated)\n";
+        else if (hc.found())
+            r.fields += std::string(ARTheaders[h].Name) + "=["
+                        + std::string(hc.view()) + "]\n";
+    }
     r.error = cp->Error;
     free(cp->In.data);
     free(cp);
@@ -276,11 +288,13 @@ scan_splits_agree(const std::string &wire, const scan_result &whole)
    first body line is never counted as dot-stuffed: the header scan counts
    dots only after the header lines' CRLFs, and the body scan only after
    body CRLFs (CONVERSION_NOTES.md, "Upstream bugs and quirks found"). */
+/* What body_header alone records (its header line and Subject field), for
+   the body cases' expected results; set by test_body_scan. */
+static scan_result body_header_result;
+
 static scan_result
-reference_scan(const std::string &wire)
+reference_body(const std::string &wire, size_t body, scan_result r)
 {
-    scan_result r{};
-    const size_t body = sizeof(body_header) - 1;
     const char *d = wire.data();
     size_t i;
 
@@ -313,6 +327,16 @@ reference_scan(const std::string &wire)
     }
     r.next = i;
     return r;
+}
+
+static scan_result
+reference_scan(const std::string &wire)
+{
+    scan_result r{};
+
+    r.headerlines = body_header_result.headerlines;
+    r.fields = body_header_result.fields;
+    return reference_body(wire, sizeof(body_header) - 1, r);
 }
 
 /* Named body cases: the body, ending in CRLF (the terminating ".\r\n" is
@@ -422,6 +446,7 @@ enum { BODY_RANDOM = 300 };
 static int
 test_body_scan(int n)
 {
+    body_header_result = scan_whole(std::string(body_header) + ".\r\n");
     for (const auto &c : body_cases) {
         std::string wire = std::string(body_header) + c.body + ".\r\n";
         scan_result want{};
@@ -433,6 +458,8 @@ test_body_scan(int n)
         want.crwithoutlf = c.crwithoutlf;
         want.dotstuffed = c.dotstuffed;
         want.error = c.error;
+        want.headerlines = body_header_result.headerlines;
+        want.fields = body_header_result.fields;
         scan_result whole = scan_whole(wire);
         n = ok_scan(n, whole, want, c.name, "whole");
         n = ok_scan(n, scan_bytewise(wire), want, c.name, "byte by byte");
@@ -446,6 +473,8 @@ test_body_scan(int n)
         want.state = CSgotarticle;
         want.next = wire.size();
         want.body = sizeof(body_header) - 1;
+        want.headerlines = body_header_result.headerlines;
+        want.fields = body_header_result.fields;
         n = ok_scan(n, scan_whole(wire), want, "empty body", "whole");
         n = ok_scan(n, scan_bytewise(wire), want, "empty body", "byte by byte");
     }
@@ -477,6 +506,209 @@ test_body_scan(int n)
     return n;
 }
 
+/*
+**  Header scan.  The same approach as the body scan: named cases with
+**  results worked out by hand, and random headers that must parse the same
+**  whole, byte by byte and split anywhere, with the counters a plain
+**  restatement of the scan gives.  ARTcheckheader's work (the fields it
+**  records and the errors it reports) is compared between the ways of
+**  feeding, and against hand-worked results in the named cases.
+**
+**  Two quirks are pinned down, not endorsed.  After the CRLF that ends a
+**  header line, the scan steps past the first octet of the next line
+**  without looking at it unless it is a CR, so a bare LF there is not
+**  counted, and a NUL there is not reported (an upstream bug: such an
+**  article is accepted; CONVERSION_NOTES.md, "Upstream bugs and quirks
+**  found").  And the first body line is never counted as dot-stuffed (the
+**  body scan's quirk, above).
+*/
+
+/* A plain restatement of the current header scan, for random articles. */
+static scan_result
+reference_header_scan(const std::string &wire)
+{
+    scan_result r{};
+    const char *d = wire.data();
+    const size_t size = wire.size();
+    size_t i;
+
+    r.state = CSgetheader;
+    for (i = 0; i < size; i++) {
+        if (d[i] == '\n')
+            r.lfwithoutcr++;
+        if (d[i] != '\r')
+            continue;
+        if (i == 1 && size - i > 1 && wire.compare(0, 3, ".\r\n") == 0) {
+            r.state = CSnoarticle;
+            r.next = i + 2;
+            return r;
+        }
+        if (size - i < 5) {
+            r.next = i;
+            return r;
+        }
+        if (wire.compare(i, 5, "\r\n.\r\n") == 0) {
+            r.state = i == 0 ? CSnoarticle : CSgotarticle;
+            r.next = i + 5;
+            return r;
+        }
+        if (d[i + 1] == '\n') {
+            if (i != 0) {
+                i += 2;
+                r.headerlines++;
+                if (d[i] == '.')
+                    r.dotstuffed++;
+            }
+            if (d[i] == '\r' && d[i + 1] == '\n')
+                return reference_body(wire, i + 2, r);
+        } else {
+            r.crwithoutlf++;
+        }
+    }
+    r.next = i;
+    return r;
+}
+
+/* Whether two results agree on what the header and body scans themselves
+   decide (not ARTcheckheader's fields and errors). */
+static bool
+same_counters(const scan_result &a, const scan_result &b)
+{
+    return a.state == b.state && a.next == b.next && a.body == b.body
+           && a.lines == b.lines && a.lfwithoutcr == b.lfwithoutcr
+           && a.crwithoutlf == b.crwithoutlf && a.dotstuffed == b.dotstuffed
+           && a.headerlines == b.headerlines;
+}
+
+/* Named header cases: the whole article and everything it must give.
+   Fields lists ARTcheckheader's records as "Name=[value]" lines, in
+   ARTheaders order. */
+static const struct {
+    const char *name;
+    std::string wire;
+    int state;
+    size_t body;
+    int headerlines, lines, lfwithoutcr, crwithoutlf, dotstuffed;
+    std::string fields;
+    const char *error;
+} header_cases[] = {
+    {"two fields", "Subject: x\r\nFrom: y\r\n\r\nb\r\n.\r\n", CSgotarticle,
+     23, 2, 1, 0, 0, 0, "From=[y]\nSubject=[x]\n", ""},
+    {"continuation", "Subject: x\r\n y\r\n\r\nb\r\n.\r\n", CSgotarticle,
+     18, 2, 1, 0, 0, 0, "Subject=[x\r\n y]\n", ""},
+    {"dot-started line", "Subject: x\r\n.A: b\r\n\r\nb\r\n.\r\n",
+     CSgotarticle, 21, 2, 1, 0, 0, 1, "Subject=[x]\n", ""},
+    {"bare LF", "Subject: x\ny\r\n\r\nb\r\n.\r\n", CSgotarticle, 16, 1, 1,
+     1, 0, 0, "Subject=[x\ny]\n", ""},
+    {"bare CR", "Subject: x\ry\r\n\r\nb\r\n.\r\n", CSgotarticle, 16, 1, 1,
+     0, 1, 0, "Subject=[x\ry]\n", ""},
+    {"CR CR LF", "Subject: x\r\r\n\r\nb\r\n.\r\n", CSgotarticle, 15, 1, 1,
+     0, 1, 0, "Subject=[x\r]\n", ""},
+    {"NUL", std::string("Subject: x\0y\r\n\r\nb\r\n.\r\n", 22),
+     CSgotarticle, 16, 1, 1, 0, 0, 0,
+     std::string("Subject=[x\0y]\n", 14), "437 Nul character in header"},
+    {"no headers", "\r\nb\r\n.\r\n", CSgotarticle, 2, 0, 1, 0, 0, 0, "",
+     "437 No headers"},
+    {"empty article", ".\r\n", CSnoarticle, 0, 0, 0, 0, 0, 0, "",
+     "437 Empty article"},
+    {"empty headers and body", "\r\n.\r\n", CSnoarticle, 0, 0, 0, 0, 0, 0,
+     "", "437 Empty headers and body"},
+    {"no body", "Subject: x\r\n.\r\n", CSgotarticle, 0, 0, 0, 0, 0, 0, "",
+     "437 No body"},
+    {"empty body", "Subject: x\r\n\r\n.\r\n", CSgotarticle, 14, 1, 0, 0, 0,
+     0, "Subject=[x]\n", ""},
+    {"body starts with dot", "Subject: x\r\n\r\n..b\r\n.\r\n", CSgotarticle,
+     14, 1, 1, 0, 0, 0, "Subject=[x]\n", ""},
+    {"duplicated Message-ID",
+     "Message-ID: <a@b>\r\nMessage-ID: <c@d>\r\n\r\nb\r\n.\r\n",
+     CSgotarticle, 40, 2, 1, 0, 0, 0, "Message-ID (duplicated)\n", ""},
+    {"Message-ID trimmed", "Message-ID:   <a@b>  \r\n\r\nb\r\n.\r\n",
+     CSgotarticle, 25, 1, 1, 0, 0, 0, "Message-ID=[<a@b>]\n", ""},
+    /* The quirk: the first octet of a header line is skipped. */
+    {"LF first on a line", "Subject: x\r\n\nA: b\r\n\r\nb\r\n.\r\n",
+     CSgotarticle, 21, 2, 1, 0, 0, 0, "Subject=[x]\n", ""},
+    {"NUL first on a line",
+     std::string("Subject: x\r\n\0A: b\r\n\r\nb\r\n.\r\n", 27), CSgotarticle,
+     21, 2, 1, 0, 0, 0, "Subject=[x]\n", ""},
+};
+
+/* Nine checks for one way of feeding a named header case. */
+static int
+ok_hscan(int n, const scan_result &got, const scan_result &want,
+         const char *name, const char *how)
+{
+    n = ok_scan(n, got, want, name, how);
+    ok(n++, got.body == want.body && got.headerlines == want.headerlines);
+    ok(n++, got.fields == want.fields);
+    if (!(got == want))
+        diag("header case \"%s\", %s", name, how);
+    return n;
+}
+
+/* A random article: header lines from pieces that include the octets the
+   header scan cares about, a blank line, a short body and the terminator,
+   with that terminator its only one. */
+static std::string
+random_header_article(uint32_t &state)
+{
+    static const std::string pieces[] = {
+        "Subject: x", "From: y", "Message-ID: <a@b>", "Path: p", "A: b",
+        " c", "\r\n", "\r\n", "\r\n", "\r", "\n", ".", ".",
+        std::string(1, '\0'), "a", ":"};
+    for (;;) {
+        std::string wire;
+        size_t len = next_random(state) % 30;
+        for (size_t i = 0; i < len; i++)
+            wire += pieces[next_random(state) % ARRAY_SIZE(pieces)];
+        wire += "\r\n\r\n";
+        len = next_random(state) % 10;
+        for (size_t i = 0; i < len; i++)
+            wire += "ab.\r\n"[next_random(state) % 5];
+        wire += "\r\n.\r\n";
+        scan_result r = reference_header_scan(wire);
+        if (r.next == wire.size()
+            && (r.state == CSgotarticle || r.state == CSnoarticle))
+            return wire;
+    }
+}
+
+enum { HEADER_RANDOM = 300 };
+
+static int
+test_header_scan(int n)
+{
+    for (const auto &c : header_cases) {
+        scan_result want{};
+        want.state = c.state;
+        want.next = c.wire.size();
+        want.body = c.body;
+        want.headerlines = c.headerlines;
+        want.lines = c.lines;
+        want.lfwithoutcr = c.lfwithoutcr;
+        want.crwithoutlf = c.crwithoutlf;
+        want.dotstuffed = c.dotstuffed;
+        want.fields = c.fields;
+        want.error = c.error;
+        scan_result whole = scan_whole(c.wire);
+        n = ok_hscan(n, whole, want, c.name, "whole");
+        n = ok_hscan(n, scan_bytewise(c.wire), want, c.name, "byte by byte");
+        ok(n++, scan_splits_agree(c.wire, whole));
+    }
+
+    uint32_t state = 0x4ead;
+    for (int i = 0; i < HEADER_RANDOM; i++) {
+        std::string wire = random_header_article(state);
+        scan_result want = reference_header_scan(wire);
+        scan_result whole = scan_whole(wire);
+        ok(n++, same_counters(whole, want));
+        ok(n++, scan_bytewise(wire) == whole);
+        ok(n++, scan_splits_agree(wire, whole));
+        if (!same_counters(whole, want))
+            diag("random header %d differs from the reference", i);
+    }
+    return n;
+}
+
 int
 main(void)
 {
@@ -484,7 +716,8 @@ main(void)
     int n = 1;
 
     test_init(ARRAY_SIZE(articles) * 5 * 4 + ARRAY_SIZE(body_cases) * 15
-              + 14 + 6 + BODY_RANDOM * 3);
+              + 14 + 6 + BODY_RANDOM * 3 + ARRAY_SIZE(header_cases) * 19
+              + HEADER_RANDOM * 3);
     initialize();
     message_handlers_notice(0);
 
@@ -498,6 +731,7 @@ main(void)
         ok_article(n, articles[i].path, articles[i].error, true, true);
         n += 5;
     }
-    test_body_scan(n);
+    n = test_body_scan(n);
+    test_header_scan(n);
     return 0;
 }
