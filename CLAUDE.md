@@ -208,7 +208,7 @@ from `cmake-build`; record method and raw numbers so rounds compare.
 - ~~ARTparseheader scan, tradindexed batching, dbz dirty-page sync~~ done
   2026-11-06 (5228973d7, 4ab7d7bda, 364840fd8): W1 macOS CNFS +79%
   articles/s, timecaf +8% (CONVERSION_NOTES.md, "Results of the 2026-11-06
-  round").  Open: Linux W1 measurement; NUL-first header line bug
+  round"); Linux +4%, user CPU −9% under CNFS.  Open: NUL-first header line bug
   (CONVERSION_NOTES.md, "Upstream bugs and quirks found").
 - Perl and Python filters in the CMake build (CONVERSION_NOTES.md, same
   title, 2026-11-05): DO_PERL/DO_PYTHON are hard-wired off, so innd's and
