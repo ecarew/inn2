@@ -1432,8 +1432,17 @@ administration tools and `INN::Config` are a separate question.
 **Done 2026-11-04** (7d07f923c): the scan jumps between `\r`, `\n` and
 `\0` with `memchr`.  W1 under CNFS: innd user CPU −17% and wall time −10%
 on Linux, user CPU −22% on macOS (doc/perf/2026-11-04-w1-profile.md,
-"ARTparsebody result").  `ARTparseheader` has the same byte-by-byte shape;
-it needs tests first (86% line, 76% branch coverage).
+"ARTparsebody result").
+
+**ARTparseheader done 2026-11-06.**  Tests first (a5c1b323a):
+`tests/innd/artparse-t` gained 17 named header cases with hand-checked
+results, 300 random ones, and a check of the parsed fields, each fed whole,
+byte by byte and split at every offset (2,668 tests); `ARTparseheader` went
+from 86% line and 76% branch coverage to 100% region, line and branch.
+Then the same `memchr` scan (5228973d7), coverage still 100%.  The tests
+also found an upstream bug, the NUL at the start of a header line ("Upstream
+bugs and quirks found").  W1 results with the msync changes below
+("Results of the 2026-11-06 round").
 
 **Found by** the W1 profiles (`doc/perf/2026-11-04-w1-profile.md`, "CNFS
 and timecaf"): with CNFS or timecaf storage, parsing is innd's largest
@@ -1466,6 +1475,15 @@ resumes there on the next read.
 
 ### tradindexed flushes the group entry per article (noted 2026-11-04, refactoring phase)
 
+**Done 2026-11-06** (4ab7d7bda), at the architect's direction:
+- With `nfswriter` set, the per-article entry flush stays as it was:
+  readers on other hosts see the index only through the file.
+- Otherwise `tdx_data_add` flushes the whole `group.index` once every 100
+  articles (`TDX_FLUSH_EVERY`), and `index_unmap` flushes it before unmapping
+  if anything is unflushed.  The rebuild paths' flushes are unchanged.
+- Overview tests pass.  Kept small on purpose: the architect sees no future
+  for the tradindexed workflow, so no further work is planned on it.
+
 **Found by** the W1 profiles (`doc/perf/2026-11-04-w1-profile.md`): on
 macOS, overview is 16–26% of innd's intake under timecaf and CNFS, mostly
 `msync` from `tdx_data_add` (`storage/tradindexed/tdx-group.cc`).
@@ -1489,6 +1507,27 @@ the overview data.  Each call flushes the page holding the entry.
 - Measure W1 under CNFS before and after.
 
 ### dbzsync flushes only what changed (noted 2026-11-04, refactoring phase)
+
+**Done 2026-11-06** (364840fd8), with dirty-page tracking instead of the
+range below.  A range from the lowest to the highest offset written was the
+wrong plan: `dbzstore` writes at hashed offsets, so ten writes span most of
+the table and the range saves nothing.  Instead:
+- `set()` records each page it writes, up to 64 per table; past that the
+  table is marked to flush whole.
+- `dbzsync` msyncs only the recorded pages, or the whole table on overflow,
+  then clears the list.  `dbzclose` always flushes whole tables.
+
+Measured on macOS with a scratch check (20,000 stores, `dbzsync` every 10,
+then reopened from disk with `INCORE_NO`: no entries missing):
+
+| Table | sync time before | after |
+|---|---|---|
+| 21 MB (dbzsize 1M) | 0.67–0.69 s | 0.67–0.75 s |
+| 420 MB (dbzsize 20M) | 2.07–2.17 s | 0.47–0.78 s |
+
+So macOS's `MS_ASYNC` cost is per dirty page for small tables, and the
+whole-table walk only matters for large ones: no gain at W1's history size,
+2.7–4.4 times less sync time at a production-sized table.
 
 **Found by** the innd W1 profile (`doc/perf/2026-11-04-w1-profile.md`):
 about 20% of innd's intake time on macOS is `msync` in `putcore`
@@ -1522,6 +1561,24 @@ last one.
 - Not instead: raising `icdsynccount` is a configuration change with no
   code, but loses more history in a crash.  Document it as the
   administrator's trade-off, not a default change.
+
+### Results of the 2026-11-06 round
+
+W1 on macOS, `PERF_LAYOUT=typical`, 3 runs each, means.  Before is
+6ecfdb5d8; after is 4ab7d7bda, which adds the `ARTparseheader` scan, dbz
+dirty-page tracking and tradindexed batching together, so the gain is not
+split between them.  W1's history table is small, so by the measurement
+above the dbz change adds little here; most of the gain is expected from the
+tradindexed flushes and the header scan.
+
+| Storage | articles/s before | after | innd CPU s before | after | wall s before | after |
+|---|---|---|---|---|---|---|
+| CNFS | 9,566 | 17,077 (+79%) | 4.11 | 2.31 | 4.18 | 2.35 |
+| timecaf | 6,348 | 6,850 (+8%) | 6.03 | 4.55 | 6.30 | 6.03 |
+
+Under timecaf innd's CPU fell by a quarter but wall time barely moved:
+timecaf's own file writes now bound the run.  Linux is not measured yet;
+there `MS_ASYNC` is a no-op, so expect only the header-scan part of the gain.
 
 ### uwildmat hardening (noted 2026-11-04, refactoring phase)
 
@@ -1999,6 +2056,17 @@ Open items from CLAUDE.md, moved here when done, newest first.
 ### Upstream bugs and quirks found
 
 Behavior of upstream INN found while testing, kept as is unless noted.
+
+- Upstream bug (found 2026-11-06 by the ARTparseheader tests; open): a NUL
+  as the **first** byte of a header line is not reported.  After each
+  header line's CRLF, `ARTparseheader` advances past the next byte (`i += 2`
+  plus the loop's `i++`) and only looks at it if it is a CR, so a NUL there
+  is not checked (nor a bare LF counted).  The test "NUL first on a line"
+  gets no error, and only the Subject field is parsed.  Nothing later in
+  `innd/art.cc` looks for a NUL in the header, so such an article is
+  probably accepted; that is from reading the code, not yet confirmed
+  against a running innd.  Kept by the faster scan so it stays
+  behaviour-preserving; fix it separately, with a test.
 
 - Upstream bug (found 2026-11-04 by the ARTparsebody tests; open, low):
   a dot-stuffed **first** body line is not counted in `DotStuffedLines`.
