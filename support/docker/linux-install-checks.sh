@@ -5,7 +5,8 @@
 #  directory: a production build (no INN_RUNAS_*), installed with
 #  cmake --install as root, then checked for what make install left:
 #  ownership, modes, innbind the only setuid-root file, the first-install
-#  data, a server that starts, and a reinstall that keeps the configuration.
+#  data, the sample filters, a server that starts, and a reinstall that
+#  keeps the configuration.
 set -u
 fail=0
 res() { printf '  %-58s %s\n' "$1" "$2"; [ "$2" = PASS ] || fail=1; }
@@ -35,6 +36,17 @@ ok "inews is news:news 550" test "$(stat -c '%U:%G %a' $N/bin/inews)" = "news:ne
 ok "run/ is 750" test "$(stat -c '%a' $N/run)" = 750
 ok "history database created (makedbz -i -o)" test -s $N/db/history.dir -a -e $N/db/history
 ok "history files owned by news" test -z "$(find $N/db ! -user news)"
+# The sample filters and hooks, as site/Makefile installs them, whether or
+# not the build embeds Perl or Python; the .pl.in ones with their #! line.
+filters="startup_innd.pl filter_innd.pl filter_nnrpd.pl filter_innd.py INN.py
+nnrpd.py nnrpd_auth.pl nnrpd_access.pl nnrpd_auth.py nnrpd_access.py
+nnrpd_dynamic.py"
+bad_filters=$(for f in $filters; do
+    [ "$(stat -c '%U:%G %a' $N/bin/filter/$f 2>/dev/null)" = "news:news 644" ] || echo "$f"
+done)
+ok "sample filters installed in bin/filter, news:news 644" test -z "$bad_filters"
+[ -n "$bad_filters" ] && echo "$bad_filters" | sed 's/^/    /'
+ok "nnrpd_auth.pl has its #! line filled in" sh -c "head -1 $N/bin/filter/nnrpd_auth.pl | grep -q '^#! */.*perl'"
 
 # The container's host name has no domain; an administrator sets one.
 sed -i 's/^#* *domain:.*/domain: example.test/' $N/etc/inn.conf
