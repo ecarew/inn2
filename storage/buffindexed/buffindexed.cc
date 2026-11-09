@@ -2621,7 +2621,7 @@ buffindexed_expiregroup(const char *group, int *lo, struct history *h)
         ah = nullptr;
         if (len == 0)
             continue;
-        if (!SMprobe(EXPENSIVESTAT, &token, nullptr) || OVstatall) {
+        if (!SMexpensivestat(&token) || OVstatall) {
             if ((ah = SMretrieve(token, RETR_STAT)) == nullptr)
                 continue;
             SMfreearticle(ah);
