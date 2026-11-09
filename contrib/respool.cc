@@ -135,7 +135,7 @@ main(int argc UNUSED, char *argv[])
     if (!innconf_read(NULL))
         exit(1);
 
-    if (!SMsetup(SM_PREOPEN, &one) || !SMsetup(SM_RDWR, (void *) &one)) {
+    if (!SMsetpreopen(one) || !SMsetrdwr(one)) {
         fprintf(stderr, "%s: can't init storage manager\n", ME);
         exit(1);
     }
