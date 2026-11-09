@@ -55,8 +55,9 @@ and Kerberos development files (found if present: `libpam0g-dev`,
 `libsasl2-dev`, `libkrb5-dev` on Debian).  libcanlock (Cancel-Lock) is
 used when it is installed.  For the Perl and Python filters (options
 below): Perl with ExtUtils::Embed and Python 3.3 or later with its
-embedding files (`libperl-dev`, `python3-dev` on Debian; macOS's Perl and
-Homebrew's Python have them).  TLS, Berkeley DB (ovdb) and systemd are not
+embedding files (`libperl-dev`, `python3-dev` on Debian; on macOS,
+MacPorts' Perl and Anaconda's Python 3.12 are what is tested).  CMake uses
+the first `perl` and `python3` on the PATH.  TLS, Berkeley DB (ovdb) and systemd are not
 yet wired into CMake.
 
 ## Build
