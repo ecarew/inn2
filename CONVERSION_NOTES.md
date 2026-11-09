@@ -151,6 +151,31 @@ C-callable.  After the conversion, the internal headers can drop
 linkage, which verify-cxx.sh checks, so that change waits for its own
 decision.
 
+### Typed containers and storage controls, breaking the C API (decided 2026-11-09)
+
+The `void *` work (opaque typed handles, "option 1") stopped at two groups
+it could not type while `include/inn` stayed C-callable:
+- **hashtab, tst, list:** generic containers whose element is `void *`;
+  every table's key, equal, free and traverse functions cast.
+- **Storage controls:** `SMsetup`, `SMprobe`, `OVctl` and the methods'
+  `ctl` take one `void *` whose type depends on the selector.
+
+**Decided** by the architect: refactor both even though it breaks the
+public C API, "to see what this will do to the code, its stability and its
+performance".  The C++ callers move to typed containers (the standard
+library first, as CLAUDE.md orders) and typed per-selector functions.  The
+tests that call the changed API become C++, as the internal-header tests
+did; this revises "the tests stay C" for those tests only.  Affected:
+tests/lib/hashtab-t, tst-t and list-t; tests/expire/tombstone-t and
+tombstone-hisexpire-t; tests/overview/api-t, ovsqlite-read-t and xref-t;
+tests/storage/methods-t.
+
+**Measured against a frozen baseline** (commit 8e5e7b9f9, built in a
+separate worktree before any change): the performance comparison's W1 to
+W6 run on both builds, alternating, on the same feed, once the refactoring
+is done; stability through the full verification, the sanitizer build and
+the Linux checks.
+
 ### Names that are C++ keywords
 
 - **Struct fields in headers that C still uses** (`TOKEN.class`,

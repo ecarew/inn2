@@ -57,7 +57,10 @@ than wrapping its `#include`.
   that includes a program's internal headers (innd/innd.h, nnrpd/nnrpd.h,
   the tradindexed, buffindexed and timecaf private headers): it is C++, so
   those headers can use C++ types (architect, 2026-11-04;
-  CONVERSION_NOTES, "Internal tests in C++").
+  CONVERSION_NOTES, "Internal tests in C++").  A second exception: tests
+  that call hashtab, tst, list or the storage controls (SMsetup, SMprobe,
+  OVctl) become C++ as those APIs are refactored to typed C++ (architect,
+  2026-11-09; CONVERSION_NOTES, "Typed containers and storage controls").
 
 ## Testing before commit
 
