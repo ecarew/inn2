@@ -166,4 +166,112 @@ int endpointConfigLoadCbk(void *data);
 
 END_DECLS
 
+/* Typed registration (C++).  The functions above hand their callback the
+   client data as void *, so each callback converted it back with a cast.
+   These templates take the callback as a template argument and the client
+   data as a typed pointer; the callback is declared with its own type
+   (Connection, Host, ...), and a callback that does not match the data
+   does not compile.  A small trampoline does the one conversion from the
+   untyped API.  For example:
+
+       static void getBanner(EndPoint, IoStatus, Buffer *, Connection);
+       prepareRead<getBanner>(e, readBuffers, cxn, 1);
+*/
+#include <type_traits>
+
+namespace endpoint_detail {
+template <auto F, typename T>
+void
+rw(EndPoint e, IoStatus i, Buffer *b, void *d)
+{
+    F(e, i, b, static_cast<T *>(d));
+}
+template <auto F, typename T>
+void
+timer(TimeoutId id, void *d)
+{
+    F(id, static_cast<T *>(d));
+}
+template <auto F>
+void
+timer_nodata(TimeoutId id, void *)
+{
+    F(id);
+}
+template <auto F, typename T>
+void
+work(EndPoint e, void *d)
+{
+    F(e, static_cast<T *>(d));
+}
+template <auto F, typename T>
+inline constexpr bool is_rw =
+    std::is_invocable_r_v<void, decltype(F), EndPoint, IoStatus, Buffer *,
+                          T *>;
+template <auto F, typename T>
+inline constexpr bool is_timer =
+    std::is_invocable_r_v<void, decltype(F), TimeoutId, T *>;
+} // namespace endpoint_detail
+
+/* The typed form of an EndpRWCB for data of type T, for code that passes a
+   read/write callback on to prepareWrite at run time. */
+template <auto F, typename T>
+    requires endpoint_detail::is_rw<F, T>
+inline constexpr EndpRWCB endpRW = &endpoint_detail::rw<F, T>;
+
+template <auto F, typename T>
+    requires endpoint_detail::is_rw<F, T>
+int
+prepareRead(EndPoint endp, Buffer *buffers, T *clientData, int minlen)
+{
+    return prepareRead(endp, buffers, &endpoint_detail::rw<F, T>, clientData,
+                       minlen);
+}
+
+/* A write with only a completion callback (no progress callback). */
+template <auto Done, typename T>
+    requires endpoint_detail::is_rw<Done, T>
+int
+prepareWrite(EndPoint endp, Buffer *buffers, T *clientData)
+{
+    return prepareWrite(endp, buffers, nullptr, &endpoint_detail::rw<Done, T>,
+                        clientData);
+}
+
+template <auto F, typename T>
+    requires endpoint_detail::is_timer<F, T>
+TimeoutId
+prepareSleep(int timeToSleep, T *clientData)
+{
+    return prepareSleep(&endpoint_detail::timer<F, T>, timeToSleep,
+                        clientData);
+}
+
+/* A timer whose callback needs no client data: F takes the TimeoutId only. */
+template <auto F>
+    requires std::is_invocable_r_v<void, decltype(F), TimeoutId>
+TimeoutId
+prepareSleep(int timeToSleep)
+{
+    return prepareSleep(&endpoint_detail::timer_nodata<F>, timeToSleep,
+                        nullptr);
+}
+
+template <auto F, typename T>
+    requires endpoint_detail::is_timer<F, T>
+TimeoutId
+updateSleep(TimeoutId tid, int timeToSleep, T *clientData)
+{
+    return updateSleep(tid, &endpoint_detail::timer<F, T>, timeToSleep,
+                       clientData);
+}
+
+template <auto F, typename T>
+    requires std::is_invocable_r_v<void, decltype(F), EndPoint, T *>
+void *
+addWorkCallback(EndPoint endp, T *data)
+{
+    return addWorkCallback(endp, &endpoint_detail::work<F, T>, data);
+}
+
 #endif /* ENDPOINT_H */
