@@ -52,9 +52,12 @@ A distribution's own package works once it is 1.92 or later.
 
 **Optional:** `ccache` (used automatically when installed), PAM, Cyrus SASL
 and Kerberos development files (found if present: `libpam0g-dev`,
-`libsasl2-dev`, `libkrb5-dev` on Debian).  Perl and Python filters, TLS,
-Berkeley DB (ovdb) and systemd are not yet wired into CMake.  libcanlock
-(Cancel-Lock) is used when it is installed.
+`libsasl2-dev`, `libkrb5-dev` on Debian).  libcanlock (Cancel-Lock) is
+used when it is installed.  For the Perl and Python filters (options
+below): Perl with ExtUtils::Embed and Python 3.3 or later with its
+embedding files (`libperl-dev`, `python3-dev` on Debian; macOS's Perl and
+Homebrew's Python have them).  TLS, Berkeley DB (ovdb) and systemd are not
+yet wired into CMake.
 
 ## Build
 
@@ -83,6 +86,16 @@ Build options (`-D<option>=<value>` on the first `cmake` command):
 - `INN_SETGID_INEWS` (default `OFF`): install inews setgid news (mode
   2555) so local users can post without nnrpd authentication
   (configure's `--enable-setgid-inews`).
+- `INN_PERL_FILTERS` (default `OFF`): embed Perl in innd and nnrpd for
+  innd's and nnrpd's filters and nnrpd's `perl_auth` and `perl_access`
+  hooks (configure's `--with-perl`).
+- `INN_PYTHON_FILTERS` (default `OFF`): embed Python, for the same filters
+  and nnrpd's `python_auth`, `python_access` and `python_dynamic` hooks
+  (configure's `--with-python`).
+
+The filters are written as INN documents them in `doc/pod/hook-perl.pod`
+and `doc/pod/hook-python.pod`.  Sample filters are installed either way,
+in `bin/filter`.
 
 ## Install
 
@@ -105,8 +118,7 @@ minimal `active` and `newsgroups`, and an empty history database.
   package (the install says what to set).
 - A build configured with `INN_RUNAS_USER`/`INN_RUNAS_GROUP` refuses to
   install.
-- Man pages, the documentation and the Perl/Python filter samples are not
-  installed yet.
+- Man pages and the documentation are not installed yet.
 
 Then set `domain` in `etc/inn.conf` if the host name has no domain part,
 configure INN following its INSTALL, and start the server as news:
@@ -146,10 +158,16 @@ scratch installation in a temporary directory, as your own user:
 
 ```sh
 cmake -S . -B build-live -G Ninja \
-    -DINN_RUNAS_USER=$(id -un) -DINN_RUNAS_GROUP=$(id -gn)
+    -DINN_RUNAS_USER=$(id -un) -DINN_RUNAS_GROUP=$(id -gn) \
+    -DINN_PERL_FILTERS=ON -DINN_PYTHON_FILTERS=ON
 cmake --build build-live
 support/live-innd.sh build-live
 ```
+
+With the two filter options it also checks innd's Perl and Python filters
+and nnrpd's hooks, using the filters in `tests/data`; without them those
+checks are skipped.  `support/cxx-tools/commit-verified.sh` refuses a
+`build-live` without them.
 
 Never use `INN_RUNAS_USER`/`INN_RUNAS_GROUP` for a build meant for real use:
 they make INN run as that account instead of `news`.
@@ -166,8 +184,9 @@ support/docker-root-checks.sh        # Linux, as root in a Docker container
 
 **Install checks** (Linux, as root in a Docker container): installs with
 `cmake --install`, checks the owners and modes, that innbind is the only
-setuid file, that rc.news starts innd as news on port 119, and that a
-reinstall keeps the configuration:
+setuid file, that the sample filters are in `bin/filter`, that rc.news
+starts innd as news on port 119, and that a reinstall keeps the
+configuration:
 
 ```sh
 support/docker-install-checks.sh
@@ -180,6 +199,9 @@ user who is not the news user):
 support/docker-linux-checks.sh       # the working tree
 support/docker-linux-checks.sh -c    # only the last commit, as a clone gets
 ```
+
+Its live builds have the Perl and Python filters, so the filter checks run
+on Linux too.
 
 **Sanitizers and coverage** (coverage needs clang):
 
