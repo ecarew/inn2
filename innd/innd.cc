@@ -749,7 +749,7 @@ main(int ac, char *av[])
 
     /* Initialize the storage subsystem. */
     flag = true;
-    if (!SMsetup(SM_RDWR, &flag) || !SMsetup(SM_PREOPEN, &flag))
+    if (!SMsetrdwr(flag) || !SMsetpreopen(flag))
         die("SERVER cant set up storage manager");
     if (!SMinit())
         die("SERVER cant initialize storage manager: %s", SMerrorstr);
