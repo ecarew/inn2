@@ -111,8 +111,8 @@ static void checkpointTape(Tape tape);
 static void removeTapeGlobally(Tape tape);
 static void addTapeGlobally(Tape tape);
 static void prepareFiles(Tape tape);
-static void tapeCkNewFileCbk(TimeoutId id, void *d);
-static void tapeCheckpointCallback(TimeoutId id, void *d);
+static void tapeCkNewFileCbk(TimeoutId id);
+static void tapeCheckpointCallback(TimeoutId id);
 #if defined(INNFEED_DEBUG)
 static void flushTape(Tape tape);
 #endif
@@ -326,11 +326,10 @@ newTape(const char *peerName, bool dontRotate)
     addTapeGlobally(nt);
 
     if (checkPtId == 0 && tapeCkPtPeriod > 0) /* only done once. */
-        checkPtId = prepareSleep(tapeCheckpointCallback, tapeCkPtPeriod, NULL);
+        checkPtId = prepareSleep<tapeCheckpointCallback>(tapeCkPtPeriod);
 
     if (ckNewFileId == 0 && tapeCkNewFilePeriod > 0)
-        ckNewFileId =
-            prepareSleep(tapeCkNewFileCbk, tapeCkNewFilePeriod, NULL);
+        ckNewFileId = prepareSleep<tapeCkNewFileCbk>(tapeCkNewFilePeriod);
 
     return nt;
 }
@@ -1088,20 +1087,20 @@ prepareFiles(Tape tape)
 
 
 static void
-tapeCkNewFileCbk(TimeoutId id, void *d UNUSED)
+tapeCkNewFileCbk(TimeoutId id)
 {
     ASSERT(id == ckNewFileId);
     ASSERT(tapeCkNewFilePeriod > 0);
 
     tapesSetCheckNew();
 
-    ckNewFileId = prepareSleep(tapeCkNewFileCbk, tapeCkNewFilePeriod, NULL);
+    ckNewFileId = prepareSleep<tapeCkNewFileCbk>(tapeCkNewFilePeriod);
 }
 
 
 /* The timer callback function that will checkpoint all the active tapes. */
 static void
-tapeCheckpointCallback(TimeoutId id, void *d UNUSED)
+tapeCheckpointCallback(TimeoutId id)
 {
     ASSERT(id == checkPtId);
     ASSERT(tapeCkPtPeriod > 0);
@@ -1110,7 +1109,7 @@ tapeCheckpointCallback(TimeoutId id, void *d UNUSED)
 
     checkPointTapes();
 
-    checkPtId = prepareSleep(tapeCheckpointCallback, tapeCkPtPeriod, NULL);
+    checkPtId = prepareSleep<tapeCheckpointCallback>(tapeCkPtPeriod);
 }
 
 
