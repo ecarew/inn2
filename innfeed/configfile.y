@@ -562,13 +562,13 @@ keyOk(const char *key)
     return NULL;
 }
 
-static PFIVP *funcs = NULL;
-static FILE **args = NULL;
+static ConfigLoadCbk *funcs = NULL;
+static std::FILE **args = NULL;
 static int funcCount;
 static int funcIdx;
 
 void
-configAddLoadCallback(PFIVP func, FILE *arg)
+configAddLoadCallback(ConfigLoadCbk func, std::FILE *arg)
 {
     if (func == NULL)
         return;
@@ -576,10 +576,10 @@ configAddLoadCallback(PFIVP func, FILE *arg)
     if (funcIdx == funcCount) {
         funcCount += 10;
         if (funcs == NULL) {
-            funcs = xmalloc(sizeof(PFIVP) * funcCount);
+            funcs = xmalloc(sizeof(ConfigLoadCbk) * funcCount);
             args = xmalloc(sizeof(FILE *) * funcCount);
         } else {
-            funcs = xrealloc(funcs, sizeof(PFIVP) * funcCount);
+            funcs = xrealloc(funcs, sizeof(ConfigLoadCbk) * funcCount);
             args = xrealloc(args, sizeof(FILE *) * funcCount);
         }
     }
@@ -590,7 +590,7 @@ configAddLoadCallback(PFIVP func, FILE *arg)
 
 
 void
-configRemoveLoadCallback(PFIVP func)
+configRemoveLoadCallback(ConfigLoadCbk func)
 {
     int i, j;
 
