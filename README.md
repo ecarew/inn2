@@ -159,25 +159,27 @@ compiling or running INN++, or if you successfully run it on a platform
 other than macOS and Linux, please let us know (see
 [Reporting Bugs](#reporting-bugs) below).
 
-Perl 5.8.0 or later is required to build INN, run several subsystems,
-and use the embedded Perl filtering and authentication hook support (which is
-highly recommended; some excellent spam filters have been written for INN).
-Depending on what language you want to write your filters and authentication
-hooks in, you may also want to install Python 2.3.0 or later, or Python
-3.3.0 or later.
+Perl 5.8.0 or later is required to build INN++ (the build runs Perl
+scripts) and to run several subsystems.  The embedded Perl filtering and
+authentication hook support is highly recommended (some excellent spam
+filters have been written for INN); it needs Perl's embedding support,
+ExtUtils::Embed, and is turned on with `-DINN_PERL_FILTERS=ON`.  To write
+filters and authentication hooks in Python instead, install Python 3.3.0 or
+later with its embedding files and use `-DINN_PYTHON_FILTERS=ON`; INN++
+does not support Python 2.  See [BUILDING.md](BUILDING.md).
 
 For support for authenticated control messages, you will need either PGP
 or GnuPG, the latter being recommended.  See `INSTALL` for more details.
 
-For the `ovdb` overview storage method, you'll need Berkeley DB 4.4 or
-later (4.7 or later recommended).  For the `hissqlite` history storage method
+The original INN's `ovdb` overview storage method (Berkeley DB) and news
+reading over TLS (OpenSSL or LibreSSL) are not yet available in INN++: the
+CMake build does not build them.  For the `hissqlite` history storage method
 or the `ovsqlite` overview storage method, you'll need SQLite 3.24.0 or
 later.  If you have zlib available, you can also compress overview before it's
-stored into `ovdb` or `ovsqlite`, and enable the COMPRESS capability, an
-NNTP extension.  For support for news reading over TLS, you'll need OpenSSL or
-LibreSSL.  To support SASL authentication to **nnrpd** or to feed newsgroups to
+stored into `ovsqlite`, and enable the COMPRESS capability, an NNTP
+extension.  To support SASL authentication to **nnrpd** or to feed newsgroups to
 an IMAP server with SASL authentication, you'll need the Cyrus SASL libraries.
-INN can also check passwords against a Kerberos KDC; for this, you will need
+INN++ can also check passwords against a Kerberos KDC; for this, you will need
 Kerberos libraries.
 
 # Getting Started
