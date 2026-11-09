@@ -67,7 +67,13 @@ Please see:
 These files can also be found in the `doc` or `doc/pod` directories if not
 present at top-level.
 
-# What is INN?
+# What is INN++?
+
+INN++ is INN, described below, converted to C++20 and built with CMake.
+It is the same news server: the same programs, protocols, configuration
+files and filter hooks, so what follows about INN holds for INN++ too.
+What INN++ changes, and why, is under [Conversion goals](#conversion-goals)
+above.
 
 INN (InterNetNews), originally written by Rich Salz, is a very full-featured
 and extremely flexible and configurable Usenet / Netnews news server.  For a
@@ -223,7 +229,11 @@ to build one.
 
 ## Documentation
 
-INN also comes with a very complete set of man pages; there is a man page
+INN++ contains all of the original INN documentation, as well as
+documentation of its own.
+
+**INN's documentation** is unchanged.  INN comes with a very complete set
+of man pages; there is a man page
 for every configuration file and program that comes with INN.  (If you
 find one that doesn't have a man page, that's a bug.  Please do report
 it.)  When trying to figure out some specific problem, reading the man
@@ -231,6 +241,26 @@ pages for all of the configuration files involved is a very good start.
 
 URL: <https://www.eyrie.org/~eagle/software/inn/docs/> (online
 documentation)
+
+INN's documentation is in `doc/pod` (the man pages and guides such as
+`install.pod`, from which the man pages are generated), `doc/man`, and the
+other files in `doc`.  Where it describes building with `configure` and
+`make`, INN++ builds with CMake instead; see [BUILDING.md](BUILDING.md).
+
+**INN++'s own documentation** is, at this point, mostly notes on the
+conversion of the original code base to C++ and CMake:
+
+- [BUILDING.md](BUILDING.md): building, testing and installing INN++.
+- [CONVERSION_NOTES.md](CONVERSION_NOTES.md): the conversion's decisions,
+  findings, upstream bugs fixed along the way, proposals and their
+  outcomes, and the conversion log.
+- [CONVERSION_PLAYBOOK.md](CONVERSION_PLAYBOOK.md): the order of work and
+  the tools, written for the next conversion of this kind.
+- [CPP_GUIDELINES.md](CPP_GUIDELINES.md): C++ style and class design for
+  new code and the refactoring phase.
+- `doc/spec`: specifications for deployment (Docker, virtual machines) and
+  the performance comparison with INN.
+- `doc/perf`: performance reports.
 
 # Reporting Bugs
 
