@@ -285,7 +285,7 @@ fail:
 **  between the given low and high article numbers.  Returns an opaque handle
 **  or NULL if the search fails.
 */
-void *
+struct ov_search *
 overview_search_open(struct overview *overview, const char *group, ARTNUM low,
                      ARTNUM high)
 {
@@ -298,7 +298,7 @@ overview_search_open(struct overview *overview, const char *group, ARTNUM low,
 **  false if no more articles are found.
 */
 bool
-overview_search(struct overview *overview, void *handle,
+overview_search(struct overview *overview, struct ov_search *handle,
                 struct overview_data *data)
 {
     ARTNUM number;
@@ -308,9 +308,8 @@ overview_search(struct overview *overview, void *handle,
     time_t arrived;
     bool status;
 
-    status = overview->method->search(static_cast<struct ov_search *>(handle),
-                                      &number, &overdata, &length, &token,
-                                      &arrived);
+    status = overview->method->search(handle, &number, &overdata, &length,
+                                      &token, &arrived);
     if (!status)
         return false;
     data->number = number;
@@ -327,9 +326,9 @@ overview_search(struct overview *overview, void *handle,
 **  Close an open search.
 */
 void
-overview_search_close(struct overview *overview, void *handle)
+overview_search_close(struct overview *overview, struct ov_search *handle)
 {
-    overview->method->closesearch(static_cast<struct ov_search *>(handle));
+    overview->method->closesearch(handle);
 }
 
 

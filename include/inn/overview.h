@@ -105,6 +105,10 @@ struct overview_expire {
 #define OV_READ  1
 #define OV_WRITE 2
 
+/* A search in progress (opaque): OVopensearch and overview_search_open
+   return one, and the search and close functions take it back. */
+struct ov_search;
+
 BEGIN_DECLS
 
 /* Open or close the overview API.  overview_open takes some combination of
@@ -153,10 +157,11 @@ bool overview_cancel_xref(struct overview *, TOKEN token);
    returned by overview_search may be invalidated by the next call to that
    function unless overview_config returns persistent as true.  When done with
    the search, overview_search_close will discard the search handle. */
-void *overview_search_open(struct overview *, const char *group, ARTNUM low,
-                           ARTNUM high);
-bool overview_search(struct overview *, void *handle, struct overview_data *);
-void overview_search_close(struct overview *, void *handle);
+struct ov_search *overview_search_open(struct overview *, const char *group,
+                                       ARTNUM low, ARTNUM high);
+bool overview_search(struct overview *, struct ov_search *handle,
+                     struct overview_data *);
+void overview_search_close(struct overview *, struct ov_search *handle);
 
 /* Given the group and article number, retrieve the storage token for that
    article from the overview data. */

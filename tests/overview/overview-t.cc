@@ -301,7 +301,7 @@ overview_verify_data(const char *data)
     int length;
     TOKEN token;
     bool status = true;
-    void *search;
+    struct ov_search *search;
     time_t arrived;
 
     overdata = fopen(data, "r");
@@ -374,7 +374,7 @@ overview_verify_search(const char *data)
     char buffer[4096];
     int length;
     TOKEN token;
-    void *search;
+    struct ov_search *search;
     time_t arrived;
     bool status = true;
 
@@ -450,7 +450,7 @@ overview_verify_full_search(const char *data)
     char buffer[4096];
     int length;
     TOKEN token;
-    void *search;
+    struct ov_search *search;
     time_t arrived;
     bool status = true;
 

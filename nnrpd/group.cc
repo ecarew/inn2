@@ -20,7 +20,7 @@ CMDgroup(int ac, char *av[])
     int low, high;
     char *grplist[2];
     char *group;
-    void *handle;
+    struct ov_search *handle;
     TOKEN token;
     int count;
     bool boolval;
@@ -293,7 +293,7 @@ ARTNUM
 GRPexactcount(char *group, ARTNUM low, ARTNUM high)
 {
     ARTNUM count = 0;
-    void *handle;
+    struct ov_search *handle;
     TOKEN token;
 
     handle = OVopensearch(group, low, high);

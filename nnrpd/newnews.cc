@@ -142,7 +142,7 @@ process_newnews(char *group, bool AllGroups, time_t date)
     int low, high;
     char **xrefs;
     int count;
-    void *handle;
+    struct ov_search *handle;
     char *p;
     time_t arrived;
     ARTHANDLE *art = nullptr;

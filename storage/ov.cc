@@ -320,7 +320,7 @@ fail:
     return false;
 }
 
-void *
+struct ov_search *
 OVopensearch(char *group, int low, int high)
 {
     if (!ov.open) {
@@ -332,27 +332,26 @@ OVopensearch(char *group, int low, int high)
 }
 
 bool
-OVsearch(void *handle, ARTNUM *artnum, char **data, int *len, TOKEN *token,
-         time_t *arrived)
+OVsearch(struct ov_search *handle, ARTNUM *artnum, char **data, int *len,
+         TOKEN *token, time_t *arrived)
 {
     if (!ov.open) {
         /* must be opened */
         warn("ovopen must be called first");
         return false;
     }
-    return ((*ov.search)(static_cast<struct ov_search *>(handle), artnum, data,
-                         len, token, arrived));
+    return ((*ov.search)(handle, artnum, data, len, token, arrived));
 }
 
 void
-OVclosesearch(void *handle)
+OVclosesearch(struct ov_search *handle)
 {
     if (!ov.open) {
         /* must be opened */
         warn("ovopen must be called first");
         return;
     }
-    (*ov.closesearch)(static_cast<struct ov_search *>(handle));
+    (*ov.closesearch)(handle);
     return;
 }
 

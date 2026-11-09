@@ -13,6 +13,10 @@
 #include "inn/portable-stdbool.h"
 #include "inn/storage.h"
 
+/* A search in progress (opaque): OVopensearch and overview_search_open
+   return one, and the search and close functions take it back. */
+struct ov_search;
+
 BEGIN_DECLS
 
 #define OV_READ  1
@@ -67,10 +71,10 @@ bool OVgroupdel(char *group);
 OVADDRESULT OVadd(TOKEN token, char *data, int len, time_t arrived,
                   time_t expires);
 bool OVcancel(TOKEN token);
-void *OVopensearch(char *group, int low, int high);
-bool OVsearch(void *handle, ARTNUM *artnum, char **data, int *len,
+struct ov_search *OVopensearch(char *group, int low, int high);
+bool OVsearch(struct ov_search *handle, ARTNUM *artnum, char **data, int *len,
               TOKEN *token, time_t *arrived);
-void OVclosesearch(void *handle);
+void OVclosesearch(struct ov_search *handle);
 bool OVgetartinfo(char *group, ARTNUM artnum, TOKEN *token);
 bool OVexpiregroup(char *group, int *lo, struct history *h);
 bool OVctl(OVCTLTYPE type, void *val);

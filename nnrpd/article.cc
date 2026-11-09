@@ -898,7 +898,7 @@ CMDnextlast(int ac UNUSED, char *av[])
 {
     char *msgid;
     int save, delta, errcode;
-    void *handle;
+    struct ov_search *handle;
     ARTNUM missing, i;
     bool next;
     const char *message;
@@ -1100,7 +1100,7 @@ CMDover(int ac, char *av[])
     ARTRANGE range;
     struct timeval stv, etv;
     ARTNUM artnum;
-    void *handle;
+    struct ov_search *handle;
     char *data, *r;
     const char *p, *q;
     int len, useIOb = 0;
@@ -1158,8 +1158,7 @@ CMDover(int ac, char *av[])
         OVERcount++;
         gettimeofday(&stv, nullptr);
     }
-    if ((handle = (void *) OVopensearch(GRPcur, range.Low, range.High))
-        == nullptr) {
+    if ((handle = OVopensearch(GRPcur, range.Low, range.High)) == nullptr) {
         /* The response code for OVER is different if a range is provided.
          * Note that XOVER answers OK. */
         if (ac > 1)
@@ -1323,7 +1322,7 @@ CMDpat(int ac, char *av[])
     int Overview;
     ARTNUM artnum;
     char buff[SPOOLNAMEBUFF];
-    void *handle;
+    struct ov_search *handle;
     char *data;
     int len;
     TOKEN token;
@@ -1499,7 +1498,7 @@ CMDpat(int ac, char *av[])
         }
 
         /* Okay then, we can grab values from the overview database. */
-        handle = (void *) OVopensearch(GRPcur, range.Low, range.High);
+        handle = OVopensearch(GRPcur, range.Low, range.High);
         if (handle == nullptr) {
             if (hdr) {
                 if (ac > 2)
