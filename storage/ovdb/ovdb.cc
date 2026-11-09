@@ -2909,7 +2909,7 @@ ovdb_expiregroup(const char *group, int *lo, struct history *h)
                 memcpy(&ovd, val.data, sizeof ovd);
 
                 ah = NULL;
-                if (!SMprobe(EXPENSIVESTAT, &ovd.token, NULL) || OVstatall) {
+                if (!SMexpensivestat(&ovd.token) || OVstatall) {
                     if ((ah = SMretrieve(ovd.token, RETR_STAT)) == NULL) {
                         delete = 1;
                     } else
