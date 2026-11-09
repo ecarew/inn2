@@ -213,8 +213,7 @@ OVadd(TOKEN token, char *data, int len, time_t arrived, time_t expires)
             if (groupmatch == NATIVEMAT_POISON) {
                 return OVADDGROUPNOMATCH;
             } else if (groupmatch == NATIVEMAT_FAIL) {
-                if (!SMprobe(SELFEXPIRE, &token, nullptr)
-                    && innconf->groupbaseexpiry) {
+                if (!SMselfexpire(&token) && innconf->groupbaseexpiry) {
                     /* This article will never be expired, since it does not
                      * have self expiry function in stored method and
                      * groupbaseexpiry is true. */
