@@ -282,7 +282,7 @@ main(int argc, char **argv)
     }
 
     val = true;
-    if (!SMsetup(SM_PREOPEN, (void *) &val)) {
+    if (!SMsetpreopen(val)) {
         syslog(LOG_ERR, "cant setup the storage subsystem\n");
         exit(1);
     }
