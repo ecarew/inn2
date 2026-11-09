@@ -231,30 +231,33 @@ static Buffer crlfBuffer;
 
 
 /* I/O Callbacks */
-static void connectionDone(EndPoint e, IoStatus i, Buffer *b, void *d);
-static void getBanner(EndPoint e, IoStatus i, Buffer *b, void *d);
-static void getAuthUserResponse(EndPoint e, IoStatus i, Buffer *b, void *d);
-static void getAuthPassResponse(EndPoint e, IoStatus i, Buffer *b, void *d);
-static void getModeResponse(EndPoint e, IoStatus i, Buffer *b, void *d);
-static void responseIsRead(EndPoint e, IoStatus i, Buffer *b, void *d);
-static void quitWritten(EndPoint e, IoStatus i, Buffer *b, void *d);
-static void ihaveBodyDone(EndPoint e, IoStatus i, Buffer *b, void *d);
-static void commandWriteDone(EndPoint e, IoStatus i, Buffer *b, void *d);
-static void modeCmdIssued(EndPoint e, IoStatus i, Buffer *b, void *d);
-static void authUserIssued(EndPoint e, IoStatus i, Buffer *b, void *d);
-static void authPassIssued(EndPoint e, IoStatus i, Buffer *b, void *d);
-static void writeProgress(EndPoint e, IoStatus i, Buffer *b, void *d);
+static void connectionDone(EndPoint e, IoStatus i, Buffer *b, Connection cxn);
+static void getBanner(EndPoint e, IoStatus i, Buffer *b, Connection cxn);
+static void getAuthUserResponse(EndPoint e, IoStatus i, Buffer *b,
+                                Connection cxn);
+static void getAuthPassResponse(EndPoint e, IoStatus i, Buffer *b,
+                                Connection cxn);
+static void getModeResponse(EndPoint e, IoStatus i, Buffer *b, Connection cxn);
+static void responseIsRead(EndPoint e, IoStatus i, Buffer *b, Connection cxn);
+static void quitWritten(EndPoint e, IoStatus i, Buffer *b, Connection cxn);
+static void ihaveBodyDone(EndPoint e, IoStatus i, Buffer *b, Connection cxn);
+static void commandWriteDone(EndPoint e, IoStatus i, Buffer *b,
+                             Connection cxn);
+static void modeCmdIssued(EndPoint e, IoStatus i, Buffer *b, Connection cxn);
+static void authUserIssued(EndPoint e, IoStatus i, Buffer *b, Connection cxn);
+static void authPassIssued(EndPoint e, IoStatus i, Buffer *b, Connection cxn);
+static void writeProgress(EndPoint e, IoStatus i, Buffer *b, Connection cxn);
 
 
 /* Timer callbacks */
-static void responseTimeoutCbk(TimeoutId id, void *data);
-static void writeTimeoutCbk(TimeoutId id, void *data);
-static void reopenTimeoutCbk(TimeoutId id, void *data);
-static void flushCxnCbk(TimeoutId, void *data);
-static void articleTimeoutCbk(TimeoutId id, void *data);
+static void responseTimeoutCbk(TimeoutId id, Connection cxn);
+static void writeTimeoutCbk(TimeoutId id, Connection cxn);
+static void reopenTimeoutCbk(TimeoutId id, Connection cxn);
+static void flushCxnCbk(TimeoutId, Connection cxn);
+static void articleTimeoutCbk(TimeoutId id, Connection cxn);
 
 /* Work callbacks */
-static void cxnWorkProc(EndPoint ep, void *data);
+static void cxnWorkProc(EndPoint ep, Connection cxn);
 
 
 static void cxnSleepOrDie(Connection cxn);
@@ -294,8 +297,9 @@ static Buffer buildCheckBuffer(Connection cxn);
 static Buffer *buildTakethisBuffers(Connection cxn, Buffer checkBuffer);
 static void issueQUIT(Connection cxn);
 static void initReadBlockedTimeout(Connection cxn);
+template <auto Done>
 static int prepareWriteWithTimeout(EndPoint endp, Buffer *buffers,
-                                   EndpRWCB done, Connection cxn);
+                                   Connection cxn);
 static void delConnection(Connection cxn);
 static void incrFilter(Connection cxn);
 static void decrFilter(Connection cxn);
@@ -553,7 +557,7 @@ cxnConnect(Connection cxn)
 
     if (rval < 0)
         /* when the write callback gets done the connection went through */
-        prepareWrite(cxn->myEp, NULL, NULL, connectionDone, cxn);
+        prepareWrite<connectionDone>(cxn->myEp, NULL, cxn);
     else
         connectionDone(cxn->myEp, IoDone, NULL, cxn);
 
@@ -1175,10 +1179,9 @@ cxnCheckstate(Connection cxn)
  * cxnSleepingS state.
  */
 static void
-connectionDone(EndPoint e, IoStatus i, Buffer *b, void *d)
+connectionDone(EndPoint e, IoStatus i, Buffer *b, Connection cxn)
 {
     Buffer *readBuffers;
-    Connection cxn = (Connection) d;
     const char *peerName;
     int optval;
     socklen_t size;
@@ -1213,7 +1216,7 @@ connectionDone(EndPoint e, IoStatus i, Buffer *b, void *d)
     } else {
         readBuffers = makeBufferArray(bufferTakeRef(cxn->respBuffer), NULL);
 
-        if (!prepareRead(e, readBuffers, getBanner, cxn, 1)) {
+        if (!prepareRead<getBanner>(e, readBuffers, cxn, 1)) {
             warn("%s:%u cxnsleep prepare read failed", peerName, cxn->ident);
 
             cxnSleepOrDie(cxn);
@@ -1224,7 +1227,7 @@ connectionDone(EndPoint e, IoStatus i, Buffer *b, void *d)
                intervals (due to problems with long running nntpd). */
             if (cxn->flushTimeout > 0)
                 cxn->flushTimerId =
-                    prepareSleep(flushCxnCbk, cxn->flushTimeout, cxn);
+                    prepareSleep<flushCxnCbk>(cxn->flushTimeout, cxn);
 
             /* The state doesn't change yet until we've read the banner and
                tried the MODE STREAM command. */
@@ -1264,10 +1267,9 @@ connectionIfIpv6DeleteIpv4Addr(Connection cxn)
  * in which case it probably went into the cxnSleepiongS state.
  */
 static void
-getBanner(EndPoint e, IoStatus i, Buffer *b, void *d)
+getBanner(EndPoint e, IoStatus i, Buffer *b, Connection cxn)
 {
     Buffer *readBuffers;
-    Connection cxn = (Connection) d;
     char *p = static_cast<char *>(bufferBase(b[0]));
     int code;
     bool isOk = false;
@@ -1296,7 +1298,7 @@ getBanner(EndPoint e, IoStatus i, Buffer *b, void *d)
         expandBuffer(b[0], BUFFER_EXPAND_AMOUNT);
         readBuffers = makeBufferArray(bufferTakeRef(b[0]), NULL);
 
-        if (!prepareRead(e, readBuffers, getBanner, cxn, 1)) {
+        if (!prepareRead<getBanner>(e, readBuffers, cxn, 1)) {
             warn("%s:%u cxnsleep prepare read failed", peerName, cxn->ident);
 
             cxnSleepOrDie(cxn);
@@ -1375,7 +1377,7 @@ issueAuthUser(EndPoint e, Connection cxn)
 
     authUserCmdBuffers = makeBufferArray(authUserBuffer, NULL);
 
-    if (!prepareWriteWithTimeout(e, authUserCmdBuffers, authUserIssued, cxn)) {
+    if (!prepareWriteWithTimeout<authUserIssued>(e, authUserCmdBuffers, cxn)) {
         die("%s:%u fatal prepare write for authinfo user failed",
             hostPeerName(cxn->myHost), cxn->ident);
     }
@@ -1384,7 +1386,7 @@ issueAuthUser(EndPoint e, Connection cxn)
 
     readBuffers = makeBufferArray(bufferTakeRef(cxn->respBuffer), NULL);
 
-    if (!prepareRead(e, readBuffers, getAuthUserResponse, cxn, 1)) {
+    if (!prepareRead<getAuthUserResponse>(e, readBuffers, cxn, 1)) {
         warn("%s:%u cxnsleep prepare read failed", hostPeerName(cxn->myHost),
              cxn->ident);
         freeBufferArray(readBuffers);
@@ -1411,7 +1413,7 @@ issueAuthPass(EndPoint e, Connection cxn)
 
     authPassCmdBuffers = makeBufferArray(authPassBuffer, NULL);
 
-    if (!prepareWriteWithTimeout(e, authPassCmdBuffers, authPassIssued, cxn)) {
+    if (!prepareWriteWithTimeout<authPassIssued>(e, authPassCmdBuffers, cxn)) {
         die("%s:%u fatal prepare write for authinfo pass failed",
             hostPeerName(cxn->myHost), cxn->ident);
     }
@@ -1420,7 +1422,7 @@ issueAuthPass(EndPoint e, Connection cxn)
 
     readBuffers = makeBufferArray(bufferTakeRef(cxn->respBuffer), NULL);
 
-    if (!prepareRead(e, readBuffers, getAuthPassResponse, cxn, 1)) {
+    if (!prepareRead<getAuthPassResponse>(e, readBuffers, cxn, 1)) {
         warn("%s:%u cxnsleep prepare read failed", hostPeerName(cxn->myHost),
              cxn->ident);
         freeBufferArray(readBuffers);
@@ -1451,7 +1453,7 @@ issueModeStream(EndPoint e, Connection cxn)
 
     modeCmdBuffers = makeBufferArray(modeBuffer, NULL);
 
-    if (!prepareWriteWithTimeout(e, modeCmdBuffers, modeCmdIssued, cxn)) {
+    if (!prepareWriteWithTimeout<modeCmdIssued>(e, modeCmdBuffers, cxn)) {
         die("%s:%u fatal prepare write for mode stream failed",
             hostPeerName(cxn->myHost), cxn->ident);
     }
@@ -1460,7 +1462,7 @@ issueModeStream(EndPoint e, Connection cxn)
 
     readBuffers = makeBufferArray(bufferTakeRef(cxn->respBuffer), NULL);
 
-    if (!prepareRead(e, readBuffers, getModeResponse, cxn, 1)) {
+    if (!prepareRead<getModeResponse>(e, readBuffers, cxn, 1)) {
         warn("%s:%u cxnsleep prepare read failed", hostPeerName(cxn->myHost),
              cxn->ident);
         freeBufferArray(readBuffers);
@@ -1473,9 +1475,8 @@ issueModeStream(EndPoint e, Connection cxn)
  *
  */
 static void
-getAuthUserResponse(EndPoint e, IoStatus i, Buffer *b, void *d)
+getAuthUserResponse(EndPoint e, IoStatus i, Buffer *b, Connection cxn)
 {
-    Connection cxn = (Connection) d;
     int code;
     char *p = static_cast<char *>(bufferBase(b[0]));
     char *q;
@@ -1519,7 +1520,7 @@ getAuthUserResponse(EndPoint e, IoStatus i, Buffer *b, void *d)
         expandBuffer(b[0], BUFFER_EXPAND_AMOUNT);
 
         buffers = makeBufferArray(bufferTakeRef(b[0]), NULL);
-        if (!prepareRead(e, buffers, getAuthUserResponse, cxn, 1)) {
+        if (!prepareRead<getAuthUserResponse>(e, buffers, cxn, 1)) {
             warn("%s:%u cxnsleep prepare read failed", peerName, cxn->ident);
             freeBufferArray(buffers);
             cxnSleepOrDie(cxn);
@@ -1556,9 +1557,8 @@ getAuthUserResponse(EndPoint e, IoStatus i, Buffer *b, void *d)
  *
  */
 static void
-getAuthPassResponse(EndPoint e, IoStatus i, Buffer *b, void *d)
+getAuthPassResponse(EndPoint e, IoStatus i, Buffer *b, Connection cxn)
 {
-    Connection cxn = (Connection) d;
     int code;
     char *p = static_cast<char *>(bufferBase(b[0]));
     char *q;
@@ -1602,7 +1602,7 @@ getAuthPassResponse(EndPoint e, IoStatus i, Buffer *b, void *d)
         expandBuffer(b[0], BUFFER_EXPAND_AMOUNT);
 
         buffers = makeBufferArray(bufferTakeRef(b[0]), NULL);
-        if (!prepareRead(e, buffers, getAuthPassResponse, cxn, 1)) {
+        if (!prepareRead<getAuthPassResponse>(e, buffers, cxn, 1)) {
             warn("%s:%u cxnsleep prepare read failed", peerName, cxn->ident);
             freeBufferArray(buffers);
             cxnSleepOrDie(cxn);
@@ -1641,9 +1641,8 @@ getAuthPassResponse(EndPoint e, IoStatus i, Buffer *b, void *d)
  * we'll arrive here with the MODE STREAM command still queued up.
  */
 static void
-getModeResponse(EndPoint e, IoStatus i, Buffer *b, void *d)
+getModeResponse(EndPoint e, IoStatus i, Buffer *b, Connection cxn)
 {
-    Connection cxn = (Connection) d;
     int code;
     char *p = static_cast<char *>(bufferBase(b[0]));
     char *q;
@@ -1686,7 +1685,7 @@ getModeResponse(EndPoint e, IoStatus i, Buffer *b, void *d)
         expandBuffer(b[0], BUFFER_EXPAND_AMOUNT);
 
         buffers = makeBufferArray(bufferTakeRef(b[0]), NULL);
-        if (!prepareRead(e, buffers, getModeResponse, cxn, 1)) {
+        if (!prepareRead<getModeResponse>(e, buffers, cxn, 1)) {
             warn("%s:%u cxnsleep prepare read failed", peerName, cxn->ident);
             freeBufferArray(buffers);
             cxnSleepOrDie(cxn);
@@ -1740,7 +1739,7 @@ getModeResponse(EndPoint e, IoStatus i, Buffer *b, void *d)
             /* sleepTimeout get changed at each failed attempt, so reset. */
             cxn->sleepTimeout = init_reconnect_period;
 
-            if (!prepareRead(cxn->myEp, buffers, responseIsRead, cxn, 1)) {
+            if (!prepareRead<responseIsRead>(cxn->myEp, buffers, cxn, 1)) {
                 freeBufferArray(buffers);
 
                 cxnSleepOrDie(cxn);
@@ -1765,9 +1764,8 @@ getModeResponse(EndPoint e, IoStatus i, Buffer *b, void *d)
  * where the bulk of the processing starts.
  */
 static void
-responseIsRead(EndPoint e, IoStatus i, Buffer *b, void *d)
+responseIsRead(EndPoint e, IoStatus i, Buffer *b, Connection cxn)
 {
-    Connection cxn = (Connection) d;
     char *response;
     char *endr;
     char *bufBase;
@@ -1821,7 +1819,7 @@ responseIsRead(EndPoint e, IoStatus i, Buffer *b, void *d)
             freeBufferArray(b);
 
             cxnSleepOrDie(cxn);
-        } else if (!prepareRead(cxn->myEp, b, responseIsRead, cxn, 1)) {
+        } else if (!prepareRead<responseIsRead>(cxn->myEp, b, cxn, 1)) {
             warn("%s:%u cxnsleep prepare read failed", peerName, cxn->ident);
             freeBufferArray(b);
 
@@ -2016,7 +2014,7 @@ responseIsRead(EndPoint e, IoStatus i, Buffer *b, void *d)
 
         bArr = makeBufferArray(bufferTakeRef(cxn->respBuffer), NULL);
 
-        if (!prepareRead(e, bArr, responseIsRead, cxn, 1)) {
+        if (!prepareRead<responseIsRead>(e, bArr, cxn, 1)) {
             warn("%s:%u cxnsleep prepare read failed", peerName, cxn->ident);
             freeBufferArray(bArr);
             cxnWait(cxn);
@@ -2039,9 +2037,8 @@ responseIsRead(EndPoint e, IoStatus i, Buffer *b, void *d)
                benefit of the doubt.  XXX - maybe should just increase
                timeout for these! */
             if (cxn->readBlockedTimerId)
-                cxn->readBlockedTimerId =
-                    updateSleep(cxn->readBlockedTimerId, responseTimeoutCbk,
-                                cxn->readTimeout, cxn);
+                cxn->readBlockedTimerId = updateSleep<responseTimeoutCbk>(
+                    cxn->readBlockedTimerId, cxn->readTimeout, cxn);
         }
         VALIDATE_CONNECTION(cxn);
         break;
@@ -2066,9 +2063,8 @@ responseIsRead(EndPoint e, IoStatus i, Buffer *b, void *d)
  * called when the write of the QUIT command has completed.
  */
 static void
-quitWritten(EndPoint e, IoStatus i, Buffer *b, void *d)
+quitWritten(EndPoint e, IoStatus i, Buffer *b, Connection cxn)
 {
-    Connection cxn = (Connection) d;
     const char *peerName;
 
     peerName = hostPeerName(cxn->myHost);
@@ -2098,9 +2094,8 @@ quitWritten(EndPoint e, IoStatus i, Buffer *b, void *d)
  * called when the write of the IHAVE-body data is finished
  */
 static void
-ihaveBodyDone(EndPoint e, IoStatus i, Buffer *b, void *d)
+ihaveBodyDone(EndPoint e, IoStatus i, Buffer *b, Connection cxn)
 {
-    Connection cxn = (Connection) d;
 
     ASSERT(e == cxn->myEp);
 
@@ -2139,9 +2134,8 @@ ihaveBodyDone(EndPoint e, IoStatus i, Buffer *b, void *d)
  * written to the remote.
  */
 static void
-commandWriteDone(EndPoint e, IoStatus i, Buffer *b, void *d)
+commandWriteDone(EndPoint e, IoStatus i, Buffer *b, Connection cxn)
 {
-    Connection cxn = (Connection) d;
     const char *peerName;
 
     ASSERT(e == cxn->myEp);
@@ -2189,9 +2183,8 @@ commandWriteDone(EndPoint e, IoStatus i, Buffer *b, void *d)
  * Called when the MODE STREAM command has been written down the pipe.
  */
 static void
-modeCmdIssued(EndPoint e, IoStatus i, Buffer *b, void *d)
+modeCmdIssued(EndPoint e, IoStatus i, Buffer *b, Connection cxn)
 {
-    Connection cxn = (Connection) d;
 
     ASSERT(e == cxn->myEp);
 
@@ -2218,9 +2211,8 @@ modeCmdIssued(EndPoint e, IoStatus i, Buffer *b, void *d)
  * Called when the AUTHINFO USER command has been written down the pipe.
  */
 static void
-authUserIssued(EndPoint e, IoStatus i, Buffer *b, void *d)
+authUserIssued(EndPoint e, IoStatus i, Buffer *b, Connection cxn)
 {
-    Connection cxn = (Connection) d;
 
     ASSERT(e == cxn->myEp);
 
@@ -2247,9 +2239,8 @@ authUserIssued(EndPoint e, IoStatus i, Buffer *b, void *d)
  * Called when the AUTHINFO USER command has been written down the pipe.
  */
 static void
-authPassIssued(EndPoint e, IoStatus i, Buffer *b, void *d)
+authPassIssued(EndPoint e, IoStatus i, Buffer *b, Connection cxn)
 {
-    Connection cxn = (Connection) d;
 
     ASSERT(e == cxn->myEp);
 
@@ -2277,15 +2268,14 @@ authPassIssued(EndPoint e, IoStatus i, Buffer *b, void *d)
  * more data remains to be written
  */
 static void
-writeProgress(EndPoint e UNUSED, IoStatus i, Buffer *b UNUSED, void *d)
+writeProgress(EndPoint e UNUSED, IoStatus i, Buffer *b UNUSED, Connection cxn)
 {
-    Connection cxn = (Connection) d;
 
     ASSERT(i == IoProgress);
 
     if (cxn->writeTimeout > 0)
-        cxn->writeBlockedTimerId = updateSleep(
-            cxn->writeBlockedTimerId, writeTimeoutCbk, cxn->writeTimeout, cxn);
+        cxn->writeBlockedTimerId = updateSleep<writeTimeoutCbk>(
+            cxn->writeBlockedTimerId, cxn->writeTimeout, cxn);
 }
 
 
@@ -2298,9 +2288,8 @@ writeProgress(EndPoint e UNUSED, IoStatus i, Buffer *b UNUSED, void *d)
  * goes off. We tear down the connection and notify our host.
  */
 static void
-responseTimeoutCbk(TimeoutId id, void *data)
+responseTimeoutCbk(TimeoutId id, Connection cxn)
 {
-    Connection cxn = (Connection) data;
     const char *peerName;
 
     ASSERT(id == cxn->readBlockedTimerId);
@@ -2332,9 +2321,8 @@ responseTimeoutCbk(TimeoutId id, void *data)
  * goes off. We tear down the connection and notify our host.
  */
 static void
-writeTimeoutCbk(TimeoutId id, void *data)
+writeTimeoutCbk(TimeoutId id, Connection cxn)
 {
-    Connection cxn = (Connection) data;
     const char *peerName;
 
     ASSERT(id == cxn->writeBlockedTimerId);
@@ -2365,9 +2353,8 @@ writeTimeoutCbk(TimeoutId id, void *data)
  * Called by the EndPoint class when the timer goes off
  */
 static void
-reopenTimeoutCbk(TimeoutId id, void *data)
+reopenTimeoutCbk(TimeoutId id, Connection cxn)
 {
-    Connection cxn = (Connection) data;
 
     ASSERT(id == cxn->sleepTimerId);
 
@@ -2386,9 +2373,8 @@ reopenTimeoutCbk(TimeoutId id, void *data)
  * timeout callback to close down long running connection.
  */
 static void
-flushCxnCbk(TimeoutId id, void *data)
+flushCxnCbk(TimeoutId id, Connection cxn)
 {
-    Connection cxn = (Connection) data;
 
     ASSERT(id == cxn->flushTimerId);
     VALIDATE_CONNECTION(cxn);
@@ -2417,9 +2403,8 @@ flushCxnCbk(TimeoutId id, void *data)
  * connection to help recycle fds
  */
 static void
-articleTimeoutCbk(TimeoutId id, void *data)
+articleTimeoutCbk(TimeoutId id, Connection cxn)
 {
-    Connection cxn = (Connection) data;
     const char *peerName = hostPeerName(cxn->myHost);
 
     ASSERT(cxn->artReceiptTimerId == id);
@@ -2462,9 +2447,8 @@ articleTimeoutCbk(TimeoutId id, void *data)
  * finished sending the body.
  */
 static void
-cxnWorkProc(EndPoint ep UNUSED, void *data)
+cxnWorkProc(EndPoint ep UNUSED, Connection cxn)
 {
-    Connection cxn = (Connection) data;
 
     d_printf(2, "%s:%u calling work proc\n", hostPeerName(cxn->myHost),
              cxn->ident);
@@ -3305,8 +3289,8 @@ cxnIdle(Connection cxn)
     if (cxn->state == cxnFeedingS || cxn->state == cxnConnectingS) {
         if (cxn->articleReceiptTimeout > 0) {
             clearTimer(cxn->artReceiptTimerId);
-            cxn->artReceiptTimerId = prepareSleep(
-                articleTimeoutCbk, cxn->articleReceiptTimeout, cxn);
+            cxn->artReceiptTimerId = prepareSleep<articleTimeoutCbk>(
+                cxn->articleReceiptTimeout, cxn);
         }
 
         if (cxn->readTimeout > 0 && cxn->state == cxnFeedingS)
@@ -3403,7 +3387,7 @@ prepareReopenCbk(Connection cxn)
     d_printf(1, "%s:%u Setting up a reopen callback\n",
              hostPeerName(cxn->myHost), cxn->ident);
 
-    cxn->sleepTimerId = prepareSleep(reopenTimeoutCbk, cxn->sleepTimeout, cxn);
+    cxn->sleepTimerId = prepareSleep<reopenTimeoutCbk>(cxn->sleepTimeout, cxn);
 
     /* bump the sleep timer amount each time to wait longer and longer. Gets
        reset in resetConnection() */
@@ -3549,8 +3533,8 @@ doSomeWrites(Connection cxn)
            for next time around. */
         if (!doneSome) {
             if (writesNeeded(cxn)) /* Host gave us something */
-                addWorkCallback(cxn->myEp, cxnWorkProc,
-                                cxn); /* for next time. */
+                addWorkCallback<cxnWorkProc>(cxn->myEp,
+                                             cxn); /* for next time. */
             else if (cxn->articleQTotal == 0) {
                 /* if we were in cxnFeedingS, then issueStreamingCommands
                    already called cxnIdle(). */
@@ -3616,7 +3600,7 @@ issueIHAVE(Connection cxn)
              cxn->ident, msgid);
 
     writeArr = makeBufferArray(ihaveBuff, NULL);
-    if (!prepareWriteWithTimeout(cxn->myEp, writeArr, commandWriteDone, cxn)) {
+    if (!prepareWriteWithTimeout<commandWriteDone>(cxn->myEp, writeArr, cxn)) {
         die("%s:%u fatal prepare write for IHAVE failed",
             hostPeerName(cxn->myHost), cxn->ident);
     }
@@ -3674,7 +3658,7 @@ issueIHAVEBody(Connection cxn)
     }
 
 
-    if (!prepareWriteWithTimeout(cxn->myEp, writeArray, ihaveBodyDone, cxn)) {
+    if (!prepareWriteWithTimeout<ihaveBodyDone>(cxn->myEp, writeArray, cxn)) {
         die("%s:%u fatal prepare write failed in issueIHAVEBody",
             hostPeerName(cxn->myHost), cxn->ident);
     } else {
@@ -3732,8 +3716,8 @@ issueStreamingCommands(Connection cxn)
     /* If not null, then writeArray will have checkBuffer (if it wasn't NULL)
        in the first spot and the takethis buffers after that. */
     if (writeArray) {
-        if (!prepareWriteWithTimeout(cxn->myEp, writeArray, commandWriteDone,
-                                     cxn)) {
+        if (!prepareWriteWithTimeout<commandWriteDone>(cxn->myEp, writeArray,
+                                                       cxn)) {
             die("%s:%u fatal prepare write for STREAMING commands failed",
                 hostPeerName(cxn->myHost), cxn->ident);
         }
@@ -3982,8 +3966,8 @@ issueQUIT(Connection cxn)
 
         cxn->quitWasIssued = true; /* not exactly true, but good enough */
 
-        if (!prepareWriteWithTimeout(cxn->myEp, writeArray, quitWritten,
-                                     cxn)) {
+        if (!prepareWriteWithTimeout<quitWritten>(cxn->myEp, writeArray,
+                                                  cxn)) {
             die("%s:%u fatal prepare write for QUIT command failed", peerName,
                 cxn->ident);
         }
@@ -4005,16 +3989,16 @@ initReadBlockedTimeout(Connection cxn)
 
     if (cxn->readTimeout > 0)
         cxn->readBlockedTimerId =
-            prepareSleep(responseTimeoutCbk, cxn->readTimeout, cxn);
+            prepareSleep<responseTimeoutCbk>(cxn->readTimeout, cxn);
 }
 
 
 /*
  * Set up the timer for the blocked reads
  */
+template <auto Done>
 static int
-prepareWriteWithTimeout(EndPoint endp, Buffer *buffers, EndpRWCB done,
-                        Connection cxn)
+prepareWriteWithTimeout(EndPoint endp, Buffer *buffers, Connection cxn)
 {
     /* Clear the read timer, since we can't expect a response until everything
        is sent.
@@ -4027,10 +4011,11 @@ prepareWriteWithTimeout(EndPoint endp, Buffer *buffers, EndpRWCB done,
 
     if (cxn->writeTimeout > 0)
         cxn->writeBlockedTimerId =
-            prepareSleep(writeTimeoutCbk, cxn->writeTimeout, cxn);
+            prepareSleep<writeTimeoutCbk>(cxn->writeTimeout, cxn);
 
     /* set up the write. */
-    return prepareWrite(endp, buffers, writeProgress, done, cxn);
+    return prepareWrite(endp, buffers, endpRW<writeProgress, connection_s>,
+                        endpRW<Done, connection_s>, cxn);
 }
 
 
