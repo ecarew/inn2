@@ -187,7 +187,7 @@ sm_initialize()
     if (!innconf_read(nullptr))
         exit(1);
     value = true;
-    if (!SMsetup(SM_RDWR, &value) || !SMsetup(SM_PREOPEN, &value))
+    if (!SMsetrdwr(value) || !SMsetpreopen(value))
         die("can't set up storage manager");
     if (!SMinit())
         die("can't initialize storage manager: %s", SMerrorstr);
