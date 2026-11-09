@@ -142,6 +142,15 @@ bool SMcancel(TOKEN token);
 bool SMcanceltombstone(TOKEN token);
 
 bool SMprobe(PROBETYPE type, TOKEN *token, void *value);
+
+/* Typed forms of SMsetup and SMprobe, one function per selector
+   (CONVERSION_NOTES, "Typed containers and storage controls").  SMsetrdwr
+   and SMsetpreopen fail once the storage manager is initialized. */
+bool SMsetrdwr(bool readwrite);
+bool SMsetpreopen(bool preopen);
+bool SMselfexpire(const TOKEN *token);
+bool SMexpensivestat(const TOKEN *token);
+bool SMartngnum(TOKEN *token, struct artngnum *ann);
 bool SMflushcacheddata(FLUSHTYPE type);
 void SMprintfiles(FILE *file, TOKEN token, char **xref, int ngroups);
 char *SMexplaintoken(const TOKEN token);

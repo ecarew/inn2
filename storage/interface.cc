@@ -504,21 +504,34 @@ SMreadconfig()
 ** setup storage api environment (open mode etc.)
 */
 bool
-SMsetup(SMSETUP type, void *value)
+SMsetrdwr(bool readwrite)
 {
     if (Initialized)
         return false;
+    SMopenmode = readwrite;
+    return true;
+}
+
+bool
+SMsetpreopen(bool preopen)
+{
+    if (Initialized)
+        return false;
+    SMpreopen = preopen;
+    return true;
+}
+
+bool
+SMsetup(SMSETUP type, void *value)
+{
     switch (type) {
     case SM_RDWR:
-        SMopenmode = *(bool *) value;
-        break;
+        return SMsetrdwr(*static_cast<bool *>(value));
     case SM_PREOPEN:
-        SMpreopen = *(bool *) value;
-        break;
+        return SMsetpreopen(*static_cast<bool *>(value));
     default:
         return false;
     }
-    return true;
 }
 
 /*
@@ -958,61 +971,74 @@ SMcanceltombstone(TOKEN token)
 }
 
 bool
-SMprobe(PROBETYPE type, TOKEN *token, void *value)
+SMselfexpire(const TOKEN *token)
 {
-    struct artngnum *ann;
+    return method_data[typetoindex[token->type]].selfexpire;
+}
+
+bool
+SMexpensivestat(const TOKEN *token)
+{
+    return method_data[typetoindex[token->type]].expensivestat;
+}
+
+bool
+SMartngnum(TOKEN *token, struct artngnum *ann)
+{
     ARTHANDLE *art;
 
+    if (method_data[typetoindex[token->type]].initialized == INIT_FAIL) {
+        SMseterror(SMERR_UNINIT, nullptr);
+        return false;
+    }
+    if (method_data[typetoindex[token->type]].initialized == INIT_NO
+        && !InitMethod(typetoindex[token->type])) {
+        SMseterror(SMERR_UNINIT, nullptr);
+        warn("SM: can't probe article with uninitialized method");
+        return false;
+    }
+    if (ann == nullptr)
+        return false;
+    ann->groupname = nullptr;
+    if (!storage_methods[typetoindex[token->type]].ctl(SMARTNGNUM, token, ann))
+        return false;
+    if (ann->artnum != 0) {
+        /* set by storage method */
+        return true;
+    }
+    art =
+        storage_methods[typetoindex[token->type]].retrieve(*token, RETR_HEAD);
+    if (art == nullptr) {
+        if (ann->groupname != nullptr)
+            free(ann->groupname);
+        storage_methods[typetoindex[token->type]].freearticle(art);
+        return false;
+    }
+    if ((ann->groupname = GetXref(art)) == nullptr) {
+        if (ann->groupname != nullptr)
+            free(ann->groupname);
+        storage_methods[typetoindex[token->type]].freearticle(art);
+        return false;
+    }
+    storage_methods[typetoindex[token->type]].freearticle(art);
+    if ((ann->artnum = GetGroups(ann->groupname)) == 0) {
+        if (ann->groupname != nullptr)
+            free(ann->groupname);
+        return false;
+    }
+    return true;
+}
+
+bool
+SMprobe(PROBETYPE type, TOKEN *token, void *value)
+{
     switch (type) {
     case SELFEXPIRE:
-        return (method_data[typetoindex[token->type]].selfexpire);
+        return SMselfexpire(token);
     case SMARTNGNUM:
-        if (method_data[typetoindex[token->type]].initialized == INIT_FAIL) {
-            SMseterror(SMERR_UNINIT, nullptr);
-            return false;
-        }
-        if (method_data[typetoindex[token->type]].initialized == INIT_NO
-            && !InitMethod(typetoindex[token->type])) {
-            SMseterror(SMERR_UNINIT, nullptr);
-            warn("SM: can't probe article with uninitialized method");
-            return false;
-        }
-        if ((ann = (struct artngnum *) value) == nullptr)
-            return false;
-        ann->groupname = nullptr;
-        if (storage_methods[typetoindex[token->type]].ctl(type, token,
-                                                          value)) {
-            if (ann->artnum != 0) {
-                /* set by storage method */
-                return true;
-            } else {
-                art = storage_methods[typetoindex[token->type]].retrieve(
-                    *token, RETR_HEAD);
-                if (art == nullptr) {
-                    if (ann->groupname != nullptr)
-                        free(ann->groupname);
-                    storage_methods[typetoindex[token->type]].freearticle(art);
-                    return false;
-                }
-                if ((ann->groupname = GetXref(art)) == nullptr) {
-                    if (ann->groupname != nullptr)
-                        free(ann->groupname);
-                    storage_methods[typetoindex[token->type]].freearticle(art);
-                    return false;
-                }
-                storage_methods[typetoindex[token->type]].freearticle(art);
-                if ((ann->artnum = GetGroups(ann->groupname)) == 0) {
-                    if (ann->groupname != nullptr)
-                        free(ann->groupname);
-                    return false;
-                }
-                return true;
-            }
-        } else {
-            return false;
-        }
+        return SMartngnum(token, static_cast<struct artngnum *>(value));
     case EXPENSIVESTAT:
-        return (method_data[typetoindex[token->type]].expensivestat);
+        return SMexpensivestat(token);
     default:
         return false;
     }
