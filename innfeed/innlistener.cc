@@ -58,8 +58,8 @@ bool fastExit = false;
 static void giveArticleToPeer(InnListener lis, Article article,
                               const char *peerName);
 static void newArticleCommand(EndPoint ep, IoStatus i, Buffer *buffs,
-                              void *data);
-static void wakeUp(TimeoutId id, void *data);
+                              InnListener lis);
+static void wakeUp(TimeoutId id, InnListener lis);
 static void writeCheckPoint(int offsetAdjust);
 static void dropArticle(const char *peer, Article article);
 static void listenerCleanup(void);
@@ -102,7 +102,7 @@ newListener(EndPoint endp, bool isDummy, bool dynamicPeers)
     addPointerFreedOnExit((char *) l);
 
     readArray = makeBufferArray(bufferTakeRef(l->inputBuffer), NULL);
-    prepareRead(endp, readArray, newArticleCommand, l, 1);
+    prepareRead<newArticleCommand>(endp, readArray, l, 1);
 
     l->next = listenerList;
     listenerList = l;
@@ -355,9 +355,8 @@ listenerConfigLoadCbk(void *data UNUSED)
 /* EndPoint callback function for when the InnListener's fd is ready for
    reading. */
 static void
-newArticleCommand(EndPoint ep, IoStatus i, Buffer *buffs, void *data)
+newArticleCommand(EndPoint ep, IoStatus i, Buffer *buffs, InnListener lis)
 {
-    InnListener lis = (InnListener) data;
     char *msgid, *msgidEnd;
     char *fileName, *fileNameEnd;
     char *peer, *peerEnd;
@@ -379,10 +378,10 @@ newArticleCommand(EndPoint ep, IoStatus i, Buffer *buffs, void *data)
                 openInputFile();
                 RollInputFile = false;
                 readArray = makeBufferArray(bufferTakeRef(buffs[0]), NULL);
-                prepareRead(ep, readArray, newArticleCommand, data, 1);
+                prepareRead<newArticleCommand>(ep, readArray, lis, 1);
             } else {
                 lis->inputEOFSleepId =
-                    prepareSleep(wakeUp, EOF_SLEEP_TIME, data);
+                    prepareSleep<wakeUp>(EOF_SLEEP_TIME, lis);
             }
         } else {
             d_printf(1, "Got EOF on listener\n");
@@ -415,7 +414,7 @@ newArticleCommand(EndPoint ep, IoStatus i, Buffer *buffs, void *data)
             }
         }
         readArray = makeBufferArray(bufferTakeRef(buffs[0]), NULL);
-        if (!prepareRead(ep, readArray, newArticleCommand, data, 1)) {
+        if (!prepareRead<newArticleCommand>(ep, readArray, lis, 1)) {
             warn("ME error prepare read failed");
             freeBufferArray(readArray);
             shutDown(lis);
@@ -539,7 +538,7 @@ newArticleCommand(EndPoint ep, IoStatus i, Buffer *buffs, void *data)
 
             bArr = makeBufferArray(bufferTakeRef(buffs[0]), NULL);
 
-            if (!prepareRead(lis->myep, bArr, newArticleCommand, lis, 1)) {
+            if (!prepareRead<newArticleCommand>(lis->myep, bArr, lis, 1)) {
                 warn("ME error prepare read failed");
 
                 freeBufferArray(bArr);
@@ -554,7 +553,7 @@ newArticleCommand(EndPoint ep, IoStatus i, Buffer *buffs, void *data)
 
             bufferSetDataSize(buffs[0], 0);
 
-            if (!prepareRead(lis->myep, bArr, newArticleCommand, lis, 1)) {
+            if (!prepareRead<newArticleCommand>(lis->myep, bArr, lis, 1)) {
                 warn("ME error prepare read failed");
 
                 shutDown(lis);
@@ -570,16 +569,15 @@ newArticleCommand(EndPoint ep, IoStatus i, Buffer *buffs, void *data)
 /* EndPoint callback function for when the sleep due to
    having reached EOF on InputFile is done. */
 static void
-wakeUp(TimeoutId id, void *data)
+wakeUp(TimeoutId id, InnListener lis)
 {
-    InnListener lis = (InnListener) data;
     Buffer *readArray;
 
     ASSERT(id == lis->inputEOFSleepId);
 
     lis->inputEOFSleepId = 0;
     readArray = makeBufferArray(bufferTakeRef(lis->inputBuffer), NULL);
-    prepareRead(lis->myep, readArray, newArticleCommand, lis, 1);
+    prepareRead<newArticleCommand>(lis->myep, readArray, lis, 1);
 }
 
 
