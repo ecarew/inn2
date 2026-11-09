@@ -287,11 +287,11 @@ main(int argc, char *argv[])
        the use of fastrm. */
     if (!ovge.delayrm) {
         value = true;
-        if (!SMsetup(SM_RDWR, &value))
+        if (!SMsetrdwr(value))
             die("can't setup storage manager read/write");
     }
     value = true;
-    if (!SMsetup(SM_PREOPEN, &value))
+    if (!SMsetpreopen(value))
         die("can't setup storage manager");
     if (!SMinit())
         die("can't initialize storage manager: %s", SMerrorstr);
