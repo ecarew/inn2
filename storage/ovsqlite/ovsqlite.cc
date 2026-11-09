@@ -1523,7 +1523,7 @@ expire_one(char const *group, int *low, struct history *h)
             if (!overview)
                 return false;
 
-            if (!SMprobe(EXPENSIVESTAT, &token, nullptr) || OVstatall) {
+            if (!SMexpensivestat(&token) || OVstatall) {
                 ah = SMretrieve(token, RETR_STAT);
                 if (ah) {
                     SMfreearticle(ah);
