@@ -277,8 +277,8 @@ static void articleGone(Host host, Connection cxn, Article article);
 static void hostStopSpooling(Host host);
 static void hostStartSpooling(Host host);
 static void hostLogStats(Host host, bool final);
-static void hostStatsTimeoutCbk(TimeoutId tid, void *data);
-static void hostDeferredArtCbk(TimeoutId tid, void *data);
+static void hostStatsTimeoutCbk(TimeoutId tid, Host host);
+static void hostDeferredArtCbk(TimeoutId tid, Host host);
 static void backlogToTape(Host host);
 static void queuesToTape(Host host);
 static bool amClosing(Host host);
@@ -298,7 +298,7 @@ static void freeHostParams(HostParams params);
 
 static HostHolder FindBlockedHost(const char *name);
 static void addBlockedHost(HostParams params);
-static void tryBlockedHosts(TimeoutId tid, void *data);
+static void tryBlockedHosts(TimeoutId tid);
 static Host newHost(InnListener listener, HostParams p);
 
 static HostParams getHostInfo(void);
@@ -826,7 +826,7 @@ addBlockedHost(HostParams params)
  * where we couldn't get a lock
  */
 static void
-tryBlockedHosts(TimeoutId tid UNUSED, void *data UNUSED)
+tryBlockedHosts(TimeoutId tid UNUSED)
 {
     HostHolder hh, hi;
     HostParams params;
@@ -869,8 +869,7 @@ tryBlockedHosts(TimeoutId tid UNUSED, void *data UNUSED)
             }
         }
     }
-    tryBlockedHostsId =
-        prepareSleep(tryBlockedHosts, TRYBLOCKEDHOSTPERIOD, NULL);
+    tryBlockedHostsId = prepareSleep<tryBlockedHosts>(TRYBLOCKEDHOSTPERIOD);
 }
 
 
@@ -934,7 +933,7 @@ newHost(InnListener listener, HostParams p)
      */
     if (tryBlockedHostsId == 0)
         tryBlockedHostsId =
-            prepareSleep(tryBlockedHosts, TRYBLOCKEDHOSTPERIOD, NULL);
+            prepareSleep<tryBlockedHosts>(TRYBLOCKEDHOSTPERIOD);
 
     nh = xcalloc(1, sizeof(struct host_s));
 
@@ -1486,9 +1485,8 @@ hostClose(Host host)
  * check if host should get more connections opened, or some closed...
  */
 void
-hostChkCxns(TimeoutId tid UNUSED, void *data)
+hostChkCxns(TimeoutId tid UNUSED, Host host)
 {
-    Host host = (Host) data;
     unsigned int currArticles, currSentArticles, currTotalArticles, newMaxCxns;
     double lastAPS, currAPS, percentTaken, ratio;
     double backlogRatio, backlogMult;
@@ -1632,7 +1630,7 @@ hostChkCxns(TimeoutId tid UNUSED, void *data)
     else
         host->nextCxnTimeChk = 300;
     d_printf(1, "prepareSleep hostChkCxns, %u\n", host->nextCxnTimeChk);
-    host->ChkCxnsId = prepareSleep(hostChkCxns, host->nextCxnTimeChk, host);
+    host->ChkCxnsId = prepareSleep<hostChkCxns>(host->nextCxnTimeChk, host);
 }
 
 
@@ -1839,11 +1837,11 @@ hostRemoteStreams(Host host, Connection cxn, bool doesStreaming)
         /* set up the callback for statistics logging. */
         if (host->statsId != 0)
             clearTimer(host->statsId);
-        host->statsId = prepareSleep(hostStatsTimeoutCbk, statsPeriod, host);
+        host->statsId = prepareSleep<hostStatsTimeoutCbk>(statsPeriod, host);
 
         if (host->ChkCxnsId != 0)
             clearTimer(host->ChkCxnsId);
-        host->ChkCxnsId = prepareSleep(hostChkCxns, 30, host);
+        host->ChkCxnsId = prepareSleep<hostChkCxns>(30, host);
 
         host->remoteStreams =
             (host->params->wantStreaming ? doesStreaming : false);
@@ -2153,7 +2151,7 @@ hostArticleDeferred(Host host, Connection cxn, Article article)
             if (host->deferredId != 0)
                 clearTimer(host->deferredId);
             host->deferredId =
-                prepareSleep(hostDeferredArtCbk, deferTimeout, host);
+                prepareSleep<hostDeferredArtCbk>(deferTimeout, host);
         }
 
         queueArticle(article, &host->deferred, &host->deferredTail,
@@ -2838,7 +2836,7 @@ hostStartSpooling(Host host)
     host->notifiedChangedRemBlckd = false;
 
     clearTimer(host->statsId);
-    host->statsId = prepareSleep(hostStatsTimeoutCbk, statsPeriod, host);
+    host->statsId = prepareSleep<hostStatsTimeoutCbk>(statsPeriod, host);
 }
 
 
@@ -3477,9 +3475,8 @@ hostPrintStatus(Host host, FILE *fp)
  * The callback function for the statistics timer to call.
  */
 static void
-hostStatsTimeoutCbk(TimeoutId tid UNUSED, void *data)
+hostStatsTimeoutCbk(TimeoutId tid UNUSED, Host host)
 {
-    Host host = (Host) data;
     time_t now = theTime();
 
     ASSERT(tid == host->statsId);
@@ -3490,7 +3487,7 @@ hostStatsTimeoutCbk(TimeoutId tid UNUSED, void *data)
     if (now - lastStatusLog >= statsPeriod)
         hostLogStatus();
 
-    host->statsId = prepareSleep(hostStatsTimeoutCbk, statsPeriod, host);
+    host->statsId = prepareSleep<hostStatsTimeoutCbk>(statsPeriod, host);
 }
 
 
@@ -3498,9 +3495,8 @@ hostStatsTimeoutCbk(TimeoutId tid UNUSED, void *data)
  * The callback function for the deferred article timer to call.
  */
 static void
-hostDeferredArtCbk(TimeoutId tid UNUSED, void *data)
+hostDeferredArtCbk(TimeoutId tid UNUSED, Host host)
 {
-    Host host = (Host) data;
     time_t now = theTime();
     Article article;
 
@@ -3513,8 +3509,8 @@ hostDeferredArtCbk(TimeoutId tid UNUSED, void *data)
     }
 
     if (host->deferred)
-        host->deferredId = prepareSleep(
-            hostDeferredArtCbk, host->deferred->whenToRequeue - now, host);
+        host->deferredId = prepareSleep<hostDeferredArtCbk>(
+            host->deferred->whenToRequeue - now, host);
     else
         host->deferredId = 0;
 }

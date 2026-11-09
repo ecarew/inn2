@@ -189,7 +189,7 @@ void hostSetStatusFile(const char *filename);
 /* function called when config file is loaded. */
 int hostConfigLoadCbk(void *data);
 
-void hostChkCxns(TimeoutId tid, void *data);
+void hostChkCxns(TimeoutId tid, Host host);
 
 END_DECLS
 
