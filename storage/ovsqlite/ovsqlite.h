@@ -6,6 +6,8 @@
 #include "inn/ov.h"
 #include "inn/storage.h"
 
+struct ov_search;
+
 BEGIN_DECLS
 
 bool ovsqlite_open(int mode);
@@ -16,10 +18,10 @@ bool ovsqlite_groupdel(const char *group);
 bool ovsqlite_add(const char *group, ARTNUM artnum, TOKEN token, char *data,
                   int len, time_t arrived, time_t expires);
 bool ovsqlite_cancel(const char *group, ARTNUM artnum);
-void *ovsqlite_opensearch(const char *group, int low, int high);
-bool ovsqlite_search(void *handle, ARTNUM *artnum, char **data, int *len,
-                     TOKEN *token, time_t *arrived);
-void ovsqlite_closesearch(void *handle);
+struct ov_search *ovsqlite_opensearch(const char *group, int low, int high);
+bool ovsqlite_search(struct ov_search *handle, ARTNUM *artnum, char **data,
+                     int *len, TOKEN *token, time_t *arrived);
+void ovsqlite_closesearch(struct ov_search *handle);
 bool ovsqlite_getartinfo(const char *group, ARTNUM artnum, TOKEN *token);
 bool ovsqlite_expiregroup(const char *group, int *lo, struct history *h);
 bool ovsqlite_ctl(OVCTLTYPE type, void *val);

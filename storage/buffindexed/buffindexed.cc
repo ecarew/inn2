@@ -232,7 +232,7 @@ typedef struct _GDB {
     struct _GDB *next;
 } GROUPDATABLOCK;
 
-typedef struct {
+typedef struct ovsearch_t : ov_search {
     char *group;
     ARTNUM lo;
     ARTNUM hi;
@@ -291,9 +291,9 @@ static bool GROUPlock(GROUPLOC gloc, enum inn_locktype type);
 static bool GROUPentrycount(off_t size, int *count);
 static bool GROUPfilesize(int count, off_t *size);
 static bool GROUPexpand(int mode);
-static void *ovopensearch(const char *group, ARTNUM low, ARTNUM high,
-                          bool needov);
-static void ovclosesearch(void *handle, bool freeblock);
+static OVSEARCH *ovopensearch(const char *group, ARTNUM low, ARTNUM high,
+                              bool needov);
+static void ovclosesearch(OVSEARCH *search, bool freeblock);
 static OVINDEX *Gib;
 static GIBLIST *Giblist;
 static int Gibcount;
@@ -2189,7 +2189,7 @@ ovgroupmmap(GROUPENTRY *ge, ARTNUM low, ARTNUM high, bool needov)
     return true;
 }
 
-static void *
+static OVSEARCH *
 ovopensearch(const char *group, ARTNUM low, ARTNUM high, bool needov)
 {
     GROUPLOC gloc;
@@ -2219,14 +2219,14 @@ ovopensearch(const char *group, ARTNUM low, ARTNUM high, bool needov)
     search->gloc = gloc;
     search->count = ge->count;
     search->gdb.mmapped = false;
-    return (void *) search;
+    return search;
 }
 
-void *
+struct ov_search *
 buffindexed_opensearch(const char *group, int low, int high)
 {
     GROUPLOC gloc;
-    void *handle;
+    OVSEARCH *handle;
 
     if (Gib != nullptr) {
         free(Gib);
@@ -2248,10 +2248,9 @@ buffindexed_opensearch(const char *group, int low, int high)
 }
 
 static bool
-ovsearch(void *handle, ARTNUM *artnum, char **data, int *len, TOKEN *token,
+ovsearch(OVSEARCH *search, ARTNUM *artnum, char **data, int *len, TOKEN *token,
          time_t *arrived, time_t *expires)
 {
-    OVSEARCH *search = (OVSEARCH *) handle;
     OV srchov;
     GROUPDATABLOCK *gdb;
     off_t offset, mmapoffset;
@@ -2360,16 +2359,16 @@ ovsearch(void *handle, ARTNUM *artnum, char **data, int *len, TOKEN *token,
 }
 
 bool
-buffindexed_search(void *handle, ARTNUM *artnum, char **data, int *len,
-                   TOKEN *token, time_t *arrived)
+buffindexed_search(struct ov_search *handle, ARTNUM *artnum, char **data,
+                   int *len, TOKEN *token, time_t *arrived)
 {
-    return (ovsearch(handle, artnum, data, len, token, arrived, nullptr));
+    return (ovsearch(static_cast<OVSEARCH *>(handle), artnum, data, len, token,
+                     arrived, nullptr));
 }
 
 static void
-ovclosesearch(void *handle, bool freeblock)
+ovclosesearch(OVSEARCH *search, bool freeblock)
 {
-    OVSEARCH *search = (OVSEARCH *) handle;
 #ifdef OV_DEBUG
     GROUPENTRY *ge;
     GROUPLOC gloc;
@@ -2399,13 +2398,13 @@ ovclosesearch(void *handle, bool freeblock)
 }
 
 void
-buffindexed_closesearch(void *handle)
+buffindexed_closesearch(struct ov_search *handle)
 {
-    OVSEARCH *search = (OVSEARCH *) handle;
+    OVSEARCH *search = static_cast<OVSEARCH *>(handle);
     GROUPLOC gloc;
 
     gloc = search->gloc;
-    ovclosesearch(handle, false);
+    ovclosesearch(search, false);
     GROUPlock(gloc, INN_LOCK_UNLOCK);
 }
 
@@ -2464,7 +2463,7 @@ bool
 buffindexed_getartinfo(const char *group, ARTNUM artnum, TOKEN *token)
 {
     GROUPLOC gloc;
-    void *handle;
+    OVSEARCH *handle;
     bool retval, grouplocked = false;
 
     if (Gib != nullptr) {
@@ -2524,7 +2523,7 @@ buffindexed_getartinfo(const char *group, ARTNUM artnum, TOKEN *token)
 bool
 buffindexed_expiregroup(const char *group, int *lo, struct history *h)
 {
-    void *handle;
+    OVSEARCH *handle;
     GROUPENTRY newge, *ge;
     GROUPLOC gloc, next;
     char *data = nullptr;
@@ -2538,7 +2537,7 @@ buffindexed_expiregroup(const char *group, int *lo, struct history *h)
     HASH hash;
     time_t arrived = 0;
     time_t expires = 0;
-    OVSEARCH search = {nullptr};
+    OVSEARCH search = {};
 
     if (group == nullptr) {
         /* Refresh a mapping that may have been extended by another writer,
@@ -2566,8 +2565,8 @@ buffindexed_expiregroup(const char *group, int *lo, struct history *h)
             search.lo = ge->low;
             search.cur = 0;
             search.needov = true;
-            while (ovsearch((void *) &search, nullptr, &data, &len, &token,
-                            &arrived, &expires)) {
+            while (ovsearch(&search, nullptr, &data, &len, &token, &arrived,
+                            &expires)) {
                 if (innconf->groupbaseexpiry)
                     /* assuming "." is not real newsgroup */
                     OVgroupbasedexpire(token, ".", data, len, arrived,
@@ -2952,7 +2951,7 @@ main(int argc, char **argv)
     flag[1] = '\0';
     fprintf(stdout, "%s: low is %d, high is %d, count is %d, flag is '%s'\n",
             group, lo, hi, count, flag);
-    if ((search = (OVSEARCH *) ovopensearch(group, lo, hi, true)) == nullptr) {
+    if ((search = ovopensearch(group, lo, hi, true)) == nullptr) {
         fprintf(stderr, "ovopensearch failed for group %s\n", group);
         exit(1);
     }
@@ -2982,8 +2981,8 @@ main(int argc, char **argv)
         char *data = nullptr;
         int len = 0;
         TOKEN token;
-        while (buffindexed_search((void *) search, &artnum, &data, &len,
-                                  &token, nullptr)) {
+        while (buffindexed_search(search, &artnum, &data, &len, &token,
+                                  nullptr)) {
             if (len == 0)
                 fprintf(stdout, "%lu: len is 0\n", artnum);
             else {

@@ -17,6 +17,12 @@
 #include "inn/ov.h"
 #include "inn/storage.h"
 
+/* An overview method's search in progress, as its opensearch returns it
+   and its search and closesearch take it back: each method's search
+   structure derives from it.  Outside BEGIN_DECLS: an empty struct has no
+   C layout, and only C++ includes this header. */
+struct ov_search {};
+
 BEGIN_DECLS
 
 struct buffer;
@@ -32,10 +38,10 @@ typedef struct overview_method {
     bool (*add)(const char *group, ARTNUM artnum, TOKEN token, char *data,
                 int len, time_t arrived, time_t expires);
     bool (*cancel)(const char *group, ARTNUM artnum);
-    void *(*opensearch)(const char *group, int low, int high);
-    bool (*search)(void *handle, ARTNUM *artnum, char **data, int *len,
-                   TOKEN *token, time_t *arrived);
-    void (*closesearch)(void *handle);
+    struct ov_search *(*opensearch)(const char *group, int low, int high);
+    bool (*search)(struct ov_search *handle, ARTNUM *artnum, char **data,
+                   int *len, TOKEN *token, time_t *arrived);
+    void (*closesearch)(struct ov_search *handle);
     bool (*getartinfo)(const char *group, ARTNUM artnum, TOKEN *token);
     bool (*expiregroup)(const char *group, int *lo, struct history *h);
     bool (*ctl)(OVCTLTYPE type, void *val);

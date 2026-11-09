@@ -340,7 +340,8 @@ OVsearch(void *handle, ARTNUM *artnum, char **data, int *len, TOKEN *token,
         warn("ovopen must be called first");
         return false;
     }
-    return ((*ov.search)(handle, artnum, data, len, token, arrived));
+    return ((*ov.search)(static_cast<struct ov_search *>(handle), artnum, data,
+                         len, token, arrived));
 }
 
 void
@@ -351,7 +352,7 @@ OVclosesearch(void *handle)
         warn("ovopen must be called first");
         return;
     }
-    (*ov.closesearch)(handle);
+    (*ov.closesearch)(static_cast<struct ov_search *>(handle));
     return;
 }
 

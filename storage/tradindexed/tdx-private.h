@@ -17,6 +17,7 @@
 
 #include "inn/libinn.h"
 #include "inn/storage.h"
+#include "ovinterface.h"
 
 /* Forward declarations to avoid unnecessary includes. */
 struct history;
@@ -27,8 +28,13 @@ struct cache;
 /* Opaque data structure returned by group index functions. */
 struct group_index;
 
-/* Opaque data structure returned by search functions. */
-struct search;
+/* A search in progress, returned by tdx_search_open; handed to the
+   overview interface as its struct ov_search. */
+struct search : ov_search {
+    ARTNUM limit;
+    ARTNUM current;
+    struct group_data *data;
+};
 
 /* All of the information about an open set of group data files. */
 struct group_data {

@@ -250,7 +250,7 @@ tradindexed_cancel(const char *group, ARTNUM artnum)
 **  Open an overview search.  Open the appropriate group and then start a
 **  search in it.
 */
-void *
+struct ov_search *
 tradindexed_opensearch(const char *group, int low, int high)
 {
     struct group_entry *entry;
@@ -281,8 +281,8 @@ tradindexed_opensearch(const char *group, int low, int high)
 **  pointer API and the structure API we use internally.
 */
 bool
-tradindexed_search(void *handle, ARTNUM *artnum, char **data, int *length,
-                   TOKEN *token, time_t *arrived)
+tradindexed_search(struct ov_search *handle, ARTNUM *artnum, char **data,
+                   int *length, TOKEN *token, time_t *arrived)
 {
     struct article article;
 
@@ -310,7 +310,7 @@ tradindexed_search(void *handle, ARTNUM *artnum, char **data, int *length,
 **  Close an overview search.
 */
 void
-tradindexed_closesearch(void *handle)
+tradindexed_closesearch(struct ov_search *handle)
 {
     tdx_search_close(static_cast<struct search *>(handle));
 }

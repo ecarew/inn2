@@ -47,7 +47,7 @@
 
 #    define OVSQLITE_DB_FILE "ovsqlite.db"
 
-typedef struct handle_t {
+typedef struct handle_t : ov_search {
     uint8_t buffer[SEARCHSPACE];
     uint64_t low;
     uint64_t high;
@@ -954,7 +954,7 @@ ovsqlite_cancel(const char *group, ARTNUM artnum)
     return true;
 }
 
-void *
+struct ov_search *
 ovsqlite_opensearch(const char *group, int low, int high)
 {
     handle_t *rh;
@@ -1298,8 +1298,8 @@ fill_search_buffer(handle_t *rh)
 }
 
 bool
-ovsqlite_search(void *handle, ARTNUM *artnum, char **data, int *len,
-                TOKEN *token, time_t *arrived)
+ovsqlite_search(struct ov_search *handle, ARTNUM *artnum, char **data,
+                int *len, TOKEN *token, time_t *arrived)
 {
     handle_t *rh;
     unsigned int cols;
@@ -1351,7 +1351,7 @@ ovsqlite_search(void *handle, ARTNUM *artnum, char **data, int *len,
 }
 
 void
-ovsqlite_closesearch(void *handle)
+ovsqlite_closesearch(struct ov_search *handle)
 {
     if (!direct_reader && sock == -1)
         warn("ovsqlite: not connected to server");
@@ -1728,21 +1728,22 @@ ovsqlite_cancel(const char *group UNUSED, ARTNUM artnum UNUSED)
     return false;
 }
 
-void *
+struct ov_search *
 ovsqlite_opensearch(const char *group UNUSED, int low UNUSED, int high UNUSED)
 {
     return NULL;
 }
 
 bool
-ovsqlite_search(void *handle UNUSED, ARTNUM *artnum UNUSED, char **data UNUSED,
-                int *len UNUSED, TOKEN *token UNUSED, time_t *arrived UNUSED)
+ovsqlite_search(struct ov_search *handle UNUSED, ARTNUM *artnum UNUSED,
+                char **data UNUSED, int *len UNUSED, TOKEN *token UNUSED,
+                time_t *arrived UNUSED)
 {
     return false;
 }
 
 void
-ovsqlite_closesearch(void *handle UNUSED)
+ovsqlite_closesearch(struct ov_search *handle UNUSED)
 {
 }
 

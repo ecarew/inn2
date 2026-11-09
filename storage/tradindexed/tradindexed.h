@@ -15,6 +15,8 @@
 #include "inn/ov.h"
 #include "inn/storage.h"
 
+struct ov_search;
+
 BEGIN_DECLS
 
 bool tradindexed_open(int mode);
@@ -26,10 +28,10 @@ bool tradindexed_groupdel(const char *group);
 bool tradindexed_add(const char *group, ARTNUM artnum, TOKEN token, char *data,
                      int length, time_t arrived, time_t expires);
 bool tradindexed_cancel(const char *group, ARTNUM artnum);
-void *tradindexed_opensearch(const char *group, int low, int high);
-bool tradindexed_search(void *handle, ARTNUM *artnum, char **data, int *length,
-                        TOKEN *token, time_t *arrived);
-void tradindexed_closesearch(void *handle);
+struct ov_search *tradindexed_opensearch(const char *group, int low, int high);
+bool tradindexed_search(struct ov_search *handle, ARTNUM *artnum, char **data,
+                        int *length, TOKEN *token, time_t *arrived);
+void tradindexed_closesearch(struct ov_search *handle);
 bool tradindexed_getartinfo(const char *group, ARTNUM artnum, TOKEN *token);
 bool tradindexed_expiregroup(const char *group, int *low, struct history *);
 bool tradindexed_ctl(OVCTLTYPE type, void *val);

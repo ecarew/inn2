@@ -308,8 +308,9 @@ overview_search(struct overview *overview, void *handle,
     time_t arrived;
     bool status;
 
-    status = overview->method->search(handle, &number, &overdata, &length,
-                                      &token, &arrived);
+    status = overview->method->search(static_cast<struct ov_search *>(handle),
+                                      &number, &overdata, &length, &token,
+                                      &arrived);
     if (!status)
         return false;
     data->number = number;
@@ -328,7 +329,7 @@ overview_search(struct overview *overview, void *handle,
 void
 overview_search_close(struct overview *overview, void *handle)
 {
-    overview->method->closesearch(handle);
+    overview->method->closesearch(static_cast<struct ov_search *>(handle));
 }
 
 

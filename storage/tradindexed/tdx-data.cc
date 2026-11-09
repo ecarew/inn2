@@ -39,14 +39,6 @@
 #include "tdx-private.h"
 #include "tdx-structure.h"
 
-/* Returned to callers as an opaque data type, this holds the information
-   needed to manage a search in progress. */
-struct search {
-    ARTNUM limit;
-    ARTNUM current;
-    struct group_data *data;
-};
-
 /* Internal prototypes. */
 static char *group_path(const char *group);
 static int file_open(const char *base, const char *suffix, bool writable,

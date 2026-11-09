@@ -3,6 +3,8 @@
 
 #include "config.h"
 
+struct ov_search;
+
 BEGIN_DECLS
 
 bool ovdb_open(int mode);
@@ -13,10 +15,10 @@ bool ovdb_groupdel(const char *group);
 bool ovdb_add(const char *group, ARTNUM artnum, TOKEN token, char *data,
               int len, time_t arrived, time_t expires);
 bool ovdb_cancel(const char *group, ARTNUM artnum);
-void *ovdb_opensearch(const char *group, int low, int high);
-bool ovdb_search(void *handle, ARTNUM *artnum, char **data, int *len,
-                 TOKEN *token, time_t *arrived);
-void ovdb_closesearch(void *handle);
+struct ov_search *ovdb_opensearch(const char *group, int low, int high);
+bool ovdb_search(struct ov_search *handle, ARTNUM *artnum, char **data,
+                 int *len, TOKEN *token, time_t *arrived);
+void ovdb_closesearch(struct ov_search *handle);
 bool ovdb_getartinfo(const char *group, ARTNUM artnum, TOKEN *token);
 bool ovdb_expiregroup(const char *group, int *lo, struct history *h);
 bool ovdb_ctl(OVCTLTYPE type, void *val);

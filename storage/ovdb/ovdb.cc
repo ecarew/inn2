@@ -160,21 +160,22 @@ ovdb_cancel(const char *group UNUSED, ARTNUM artnum UNUSED)
     return false;
 }
 
-void *
+struct ov_search *
 ovdb_opensearch(const char *group UNUSED, int low UNUSED, int high UNUSED)
 {
     return nullptr;
 }
 
 bool
-ovdb_search(void *handle UNUSED, ARTNUM *artnum UNUSED, char **data UNUSED,
-            int *len UNUSED, TOKEN *token UNUSED, time_t *arrived UNUSED)
+ovdb_search(struct ov_search *handle UNUSED, ARTNUM *artnum UNUSED,
+            char **data UNUSED, int *len UNUSED, TOKEN *token UNUSED,
+            time_t *arrived UNUSED)
 {
     return false;
 }
 
 void
-ovdb_closesearch(void *handle UNUSED)
+ovdb_closesearch(struct ov_search *handle UNUSED)
 {
 }
 
@@ -2213,7 +2214,7 @@ myuncompress(char *buf, size_t buflen, size_t *newlen)
 }
 #    endif
 
-struct ovdbsearch {
+struct ovdbsearch : ov_search {
     DBC *cursor;
     group_id_t gid;
     u_int32_t firstart;
@@ -2228,7 +2229,7 @@ static struct ovdbsearch **searches = NULL;
 static int nsearches = 0;
 static int maxsearches = 0;
 
-void *
+struct ov_search *
 ovdb_opensearch(const char *group, int low, int high)
 {
     DB *db;
@@ -2304,10 +2305,10 @@ ovdb_opensearch(const char *group, int low, int high)
 }
 
 bool
-ovdb_search(void *handle, ARTNUM *artnum, char **data, int *len, TOKEN *token,
-            time_t *arrived)
+ovdb_search(struct ov_search *handle, ARTNUM *artnum, char **data, int *len,
+            TOKEN *token, time_t *arrived)
 {
-    struct ovdbsearch *s = (struct ovdbsearch *) handle;
+    struct ovdbsearch *s = static_cast<struct ovdbsearch *>(handle);
     DBT key, val;
     u_int32_t flags;
     struct ovdata ovd;
@@ -2506,7 +2507,7 @@ ovdb_search(void *handle, ARTNUM *artnum, char **data, int *len, TOKEN *token,
 }
 
 void
-ovdb_closesearch(void *handle)
+ovdb_closesearch(struct ov_search *handle)
 {
     int i;
     if (clientmode) {
@@ -2517,7 +2518,7 @@ ovdb_closesearch(void *handle)
         csend(&rs, sizeof(rs));
         /* no reply is sent for a CMD_CLOSESRCH */
     } else {
-        struct ovdbsearch *s = (struct ovdbsearch *) handle;
+        struct ovdbsearch *s = static_cast<struct ovdbsearch *>(handle);
 
         for (i = 0; i < nsearches; i++) {
             if (s == searches[i])
