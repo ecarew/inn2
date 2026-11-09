@@ -894,7 +894,7 @@ tdx_data_expire_start(const char *group, struct group_data *data,
     while (tdx_search(search, &article)) {
         ARTHANDLE *ah;
 
-        if (!SMprobe(EXPENSIVESTAT, &article.token, nullptr) || OVstatall) {
+        if (!SMexpensivestat(&article.token) || OVstatall) {
             ah = SMretrieve(article.token, RETR_STAT);
             if (ah == nullptr)
                 continue;
