@@ -17,38 +17,40 @@ BEGIN_DECLS
 struct token;
 struct histopts;
 struct history;
+struct his_handle;
 
-void *hisv6_open(const char *path, int flags, struct history *);
+struct his_handle *hisv6_open(const char *path, int flags, struct history *);
 
-bool hisv6_close(void *);
+bool hisv6_close(struct his_handle *);
 
-bool hisv6_sync(void *);
+bool hisv6_sync(struct his_handle *);
 
-bool hisv6_lookup(void *, const char *key, time_t *arrived, time_t *posted,
-                  time_t *expires, struct token *token);
+bool hisv6_lookup(struct his_handle *, const char *key, time_t *arrived,
+                  time_t *posted, time_t *expires, struct token *token);
 
-bool hisv6_check(void *, const char *key);
+bool hisv6_check(struct his_handle *, const char *key);
 
-bool hisv6_write(void *, const char *key, time_t arrived, time_t posted,
-                 time_t expires, const struct token *token);
+bool hisv6_write(struct his_handle *, const char *key, time_t arrived,
+                 time_t posted, time_t expires, const struct token *token);
 
-bool hisv6_replace(void *, const char *key, time_t arrived, time_t posted,
-                   time_t expires, const struct token *token);
+bool hisv6_replace(struct his_handle *, const char *key, time_t arrived,
+                   time_t posted, time_t expires, const struct token *token);
 
-bool hisv6_expire(void *, const char *, const char *, bool, void *,
-                  time_t threshold,
+bool hisv6_expire(struct his_handle *, const char *, const char *, bool,
+                  void *, time_t threshold,
                   bool (*exists)(void *, time_t, time_t, time_t,
                                  struct token *));
 
-bool hisv6_walk(void *, const char *, void *,
+bool hisv6_walk(struct his_handle *, const char *, void *,
                 bool (*)(void *, const HASH *, time_t, time_t, time_t,
                          const struct token *));
 
-const char *hisv6_error(void *);
+const char *hisv6_error(struct his_handle *);
 
-bool hisv6_remember(void *, const char *key, time_t arrived, time_t posted);
+bool hisv6_remember(struct his_handle *, const char *key, time_t arrived,
+                    time_t posted);
 
-bool hisv6_ctl(void *, int, void *);
+bool hisv6_ctl(struct his_handle *, int, void *);
 
 END_DECLS
 

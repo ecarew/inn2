@@ -513,7 +513,7 @@ hisv6_new(const char *path, int flags, struct history *history)
 /*
 **  open the history database identified by path in mode flags
 */
-void *
+struct his_handle *
 hisv6_open(const char *path, int flags, struct history *history)
 {
     struct hisv6 *h;
@@ -536,7 +536,7 @@ hisv6_open(const char *path, int flags, struct history *history)
 **  close and free a history handle
 */
 bool
-hisv6_close(void *history)
+hisv6_close(struct his_handle *history)
 {
     struct hisv6 *h = static_cast<struct hisv6 *>(history);
     bool r;
@@ -552,7 +552,7 @@ hisv6_close(void *history)
 **  synchronise any outstanding history changes to disk
 */
 bool
-hisv6_sync(void *history)
+hisv6_sync(struct his_handle *history)
 {
     struct hisv6 *h = static_cast<struct hisv6 *>(history);
     bool r = true;
@@ -681,8 +681,8 @@ fail:
 **  for that component.
 */
 bool
-hisv6_lookup(void *history, const char *key, time_t *arrived, time_t *posted,
-             time_t *expires, TOKEN *token)
+hisv6_lookup(struct his_handle *history, const char *key, time_t *arrived,
+             time_t *posted, time_t *expires, TOKEN *token)
 {
     struct hisv6 *h = static_cast<struct hisv6 *>(history);
     HASH messageid;
@@ -721,7 +721,7 @@ hisv6_lookup(void *history, const char *key, time_t *arrived, time_t *posted,
 **  check `key' has been seen in this history database
 */
 bool
-hisv6_check(void *history, const char *key)
+hisv6_check(struct his_handle *history, const char *key)
 {
     struct hisv6 *h = static_cast<struct hisv6 *>(history);
     bool r;
@@ -891,8 +891,8 @@ fail:
 **  expires, and storage token.
 */
 bool
-hisv6_write(void *history, const char *key, time_t arrived, time_t posted,
-            time_t expires, const TOKEN *token)
+hisv6_write(struct his_handle *history, const char *key, time_t arrived,
+            time_t posted, time_t expires, const TOKEN *token)
 {
     struct hisv6 *h = static_cast<struct hisv6 *>(history);
     HASH hash;
@@ -911,7 +911,8 @@ hisv6_write(void *history, const char *key, time_t arrived, time_t posted,
 **  posting time if known.
 */
 bool
-hisv6_remember(void *history, const char *key, time_t arrived, time_t posted)
+hisv6_remember(struct his_handle *history, const char *key, time_t arrived,
+               time_t posted)
 {
     struct hisv6 *h = static_cast<struct hisv6 *>(history);
     HASH hash;
@@ -933,8 +934,8 @@ hisv6_remember(void *history, const char *key, time_t arrived, time_t posted)
 **  certainly lose.
 */
 bool
-hisv6_replace(void *history, const char *key, time_t arrived, time_t posted,
-              time_t expires, const TOKEN *token)
+hisv6_replace(struct his_handle *history, const char *key, time_t arrived,
+              time_t posted, time_t expires, const TOKEN *token)
 {
     struct hisv6 *h = static_cast<struct hisv6 *>(history);
     HASH hash;
@@ -1111,7 +1112,7 @@ hisv6_traversecb(struct hisv6 *h UNUSED, void *cookie, const HASH *hash,
 **  history API interface to the database traversal routine
 */
 bool
-hisv6_walk(void *history, const char *reason, void *cookie,
+hisv6_walk(struct his_handle *history, const char *reason, void *cookie,
            bool (*callback)(void *, const HASH *, time_t, time_t, time_t,
                             const TOKEN *))
 {
@@ -1269,8 +1270,8 @@ hisv6_rename(struct hisv6 *hold, struct hisv6 *hnew)
 **  expire the history database, history.
 */
 bool
-hisv6_expire(void *history, const char *path, const char *reason, bool writing,
-             void *cookie, time_t threshold,
+hisv6_expire(struct his_handle *history, const char *path, const char *reason,
+             bool writing, void *cookie, time_t threshold,
              bool (*exists)(void *, time_t, time_t, time_t, TOKEN *))
 {
     struct hisv6 *h = static_cast<struct hisv6 *>(history), *hnew = nullptr;
@@ -1408,7 +1409,7 @@ fail:
 **  control interface
 */
 bool
-hisv6_ctl(void *history, int selector, void *val)
+hisv6_ctl(struct his_handle *history, int selector, void *val)
 {
     struct hisv6 *h = static_cast<struct hisv6 *>(history);
     bool r = true;

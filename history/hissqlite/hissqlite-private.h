@@ -8,6 +8,7 @@
 #define HISSQLITE_PRIVATE_H
 
 #include "config.h"
+#include "hisinterface.h"
 #include "inn/history.h"
 #include "inn/libinn.h"
 #include "inn/storage.h"
@@ -65,7 +66,7 @@ BEGIN_DECLS
 #define HISSQLITE_DEF_MMAP_SIZE   0 /* bytes; 0 disables mmap (as ovsqlite) */
 #define HISSQLITE_DEF_RCACHE_SIZE 2000 /* per-nnrpd reader page cache, kB */
 
-struct hissqlite {
+struct hissqlite : his_handle {
     char *path;              /* SQLite database file path. */
     struct history *history; /* For his_seterror(). */
     sqlite3 *db;

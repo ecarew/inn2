@@ -9,6 +9,7 @@
 #define HISV6_PRIVATE_H
 
 #include "config.h"
+#include "hisinterface.h"
 #include "inn/history.h"
 #include "inn/libinn.h"
 #include "inn/storage.h"
@@ -46,7 +47,7 @@ BEGIN_DECLS
     1 - \n */
 #define HISV6_MINLINE     37
 
-struct hisv6 {
+struct hisv6 : his_handle {
     char *histpath;
     FILE *writefp;
     off_t offset; /* Offset into writefp. */

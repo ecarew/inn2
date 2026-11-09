@@ -17,37 +17,40 @@ BEGIN_DECLS
 
 struct token;
 struct history;
+struct his_handle;
 
-void *hissqlite_open(const char *path, int flags, struct history *);
+struct his_handle *hissqlite_open(const char *path, int flags,
+                                  struct history *);
 
-bool hissqlite_close(void *);
+bool hissqlite_close(struct his_handle *);
 
-bool hissqlite_sync(void *);
+bool hissqlite_sync(struct his_handle *);
 
-bool hissqlite_lookup(void *, const char *key, time_t *arrived, time_t *posted,
-                      time_t *expires, struct token *token);
+bool hissqlite_lookup(struct his_handle *, const char *key, time_t *arrived,
+                      time_t *posted, time_t *expires, struct token *token);
 
-bool hissqlite_check(void *, const char *key);
+bool hissqlite_check(struct his_handle *, const char *key);
 
-bool hissqlite_write(void *, const char *key, time_t arrived, time_t posted,
-                     time_t expires, const struct token *token);
+bool hissqlite_write(struct his_handle *, const char *key, time_t arrived,
+                     time_t posted, time_t expires, const struct token *token);
 
-bool hissqlite_replace(void *, const char *key, time_t arrived, time_t posted,
-                       time_t expires, const struct token *token);
+bool hissqlite_replace(struct his_handle *, const char *key, time_t arrived,
+                       time_t posted, time_t expires,
+                       const struct token *token);
 
-bool hissqlite_expire(void *, const char *, const char *, bool, void *,
-                      time_t threshold,
+bool hissqlite_expire(struct his_handle *, const char *, const char *, bool,
+                      void *, time_t threshold,
                       bool (*exists)(void *, time_t, time_t, time_t,
                                      struct token *));
 
-bool hissqlite_walk(void *, const char *, void *,
+bool hissqlite_walk(struct his_handle *, const char *, void *,
                     bool (*)(void *, const HASH *, time_t, time_t, time_t,
                              const struct token *));
 
-bool hissqlite_remember(void *, const char *key, time_t arrived,
+bool hissqlite_remember(struct his_handle *, const char *key, time_t arrived,
                         time_t posted);
 
-bool hissqlite_ctl(void *, int, void *);
+bool hissqlite_ctl(struct his_handle *, int, void *);
 
 END_DECLS
 

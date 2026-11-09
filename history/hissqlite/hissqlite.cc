@@ -432,7 +432,7 @@ fail:
     return false;
 }
 
-void *
+struct his_handle *
 hissqlite_open(const char *path, int flags, struct history *history)
 {
     struct hissqlite *h;
@@ -457,7 +457,7 @@ hissqlite_open(const char *path, int flags, struct history *history)
 }
 
 bool
-hissqlite_sync(void *history)
+hissqlite_sync(struct his_handle *history)
 {
     struct hissqlite *h = static_cast<struct hissqlite *>(history);
     bool ok = true;
@@ -485,7 +485,7 @@ hissqlite_sync(void *history)
 }
 
 bool
-hissqlite_close(void *history)
+hissqlite_close(struct his_handle *history)
 {
     struct hissqlite *h = static_cast<struct hissqlite *>(history);
     bool ok = true;
@@ -531,7 +531,7 @@ hissqlite_close(void *history)
 }
 
 bool
-hissqlite_lookup(void *history, const char *key, time_t *arrived,
+hissqlite_lookup(struct his_handle *history, const char *key, time_t *arrived,
                  time_t *posted, time_t *expires, struct token *token)
 {
     struct hissqlite *h = static_cast<struct hissqlite *>(history);
@@ -569,7 +569,7 @@ hissqlite_lookup(void *history, const char *key, time_t *arrived,
 }
 
 bool
-hissqlite_check(void *history, const char *key)
+hissqlite_check(struct his_handle *history, const char *key)
 {
     struct hissqlite *h = static_cast<struct hissqlite *>(history);
     sqlite3_stmt *stmt = h->direct_reader ? h->read.check : h->main.check;
@@ -588,8 +588,8 @@ hissqlite_check(void *history, const char *key)
 }
 
 bool
-hissqlite_write(void *history, const char *key, time_t arrived, time_t posted,
-                time_t expires, const struct token *token)
+hissqlite_write(struct his_handle *history, const char *key, time_t arrived,
+                time_t posted, time_t expires, const struct token *token)
 {
     struct hissqlite *h = static_cast<struct hissqlite *>(history);
     sqlite3_stmt *stmt = h->main.write;
@@ -623,7 +623,7 @@ hissqlite_write(void *history, const char *key, time_t arrived, time_t posted,
 }
 
 bool
-hissqlite_remember(void *history, const char *key, time_t arrived,
+hissqlite_remember(struct his_handle *history, const char *key, time_t arrived,
                    time_t posted)
 {
     struct hissqlite *h = static_cast<struct hissqlite *>(history);
@@ -642,7 +642,7 @@ hissqlite_remember(void *history, const char *key, time_t arrived,
 }
 
 bool
-hissqlite_replace(void *history, const char *key, time_t arrived,
+hissqlite_replace(struct his_handle *history, const char *key, time_t arrived,
                   time_t posted, time_t expires, const struct token *token)
 {
     struct hissqlite *h = static_cast<struct hissqlite *>(history);
@@ -667,7 +667,8 @@ hissqlite_replace(void *history, const char *key, time_t arrived,
 }
 
 bool
-hissqlite_walk(void *history, const char *reason UNUSED, void *cookie,
+hissqlite_walk(struct his_handle *history, const char *reason UNUSED,
+               void *cookie,
                bool (*callback)(void *, const HASH *, time_t, time_t, time_t,
                                 const TOKEN *))
 {
@@ -724,7 +725,7 @@ struct expire_action {
 };
 
 bool
-hissqlite_expire(void *history, const char *path UNUSED,
+hissqlite_expire(struct his_handle *history, const char *path UNUSED,
                  const char *reason UNUSED, bool writing, void *cookie,
                  time_t threshold,
                  bool (*decide)(void *, time_t, time_t, time_t,
@@ -871,7 +872,7 @@ hissqlite_expire(void *history, const char *path UNUSED,
 }
 
 bool
-hissqlite_ctl(void *history, int selector, void *val)
+hissqlite_ctl(struct his_handle *history, int selector, void *val)
 {
     struct hissqlite *h = static_cast<struct hissqlite *>(history);
 
@@ -930,7 +931,7 @@ hissqlite_ctl(void *history, int selector, void *val)
 
 #else /* ! HAVE_SQLITE3 */
 
-void *
+struct his_handle *
 hissqlite_open(const char *path UNUSED, int flags UNUSED,
                struct history *history UNUSED)
 {
@@ -939,19 +940,19 @@ hissqlite_open(const char *path UNUSED, int flags UNUSED,
 }
 
 bool
-hissqlite_close(void *history UNUSED)
+hissqlite_close(struct his_handle *history UNUSED)
 {
     return false;
 }
 
 bool
-hissqlite_sync(void *history UNUSED)
+hissqlite_sync(struct his_handle *history UNUSED)
 {
     return false;
 }
 
 bool
-hissqlite_lookup(void *history UNUSED, const char *key UNUSED,
+hissqlite_lookup(struct his_handle *history UNUSED, const char *key UNUSED,
                  time_t *arrived UNUSED, time_t *posted UNUSED,
                  time_t *expires UNUSED, struct token *token UNUSED)
 {
@@ -959,13 +960,13 @@ hissqlite_lookup(void *history UNUSED, const char *key UNUSED,
 }
 
 bool
-hissqlite_check(void *history UNUSED, const char *key UNUSED)
+hissqlite_check(struct his_handle *history UNUSED, const char *key UNUSED)
 {
     return false;
 }
 
 bool
-hissqlite_write(void *history UNUSED, const char *key UNUSED,
+hissqlite_write(struct his_handle *history UNUSED, const char *key UNUSED,
                 time_t arrived UNUSED, time_t posted UNUSED,
                 time_t expires UNUSED, const struct token *token UNUSED)
 {
@@ -973,7 +974,7 @@ hissqlite_write(void *history UNUSED, const char *key UNUSED,
 }
 
 bool
-hissqlite_replace(void *history UNUSED, const char *key UNUSED,
+hissqlite_replace(struct his_handle *history UNUSED, const char *key UNUSED,
                   time_t arrived UNUSED, time_t posted UNUSED,
                   time_t expires UNUSED, const struct token *token UNUSED)
 {
@@ -981,7 +982,7 @@ hissqlite_replace(void *history UNUSED, const char *key UNUSED,
 }
 
 bool
-hissqlite_expire(void *history UNUSED, const char *path UNUSED,
+hissqlite_expire(struct his_handle *history UNUSED, const char *path UNUSED,
                  const char *reason UNUSED, bool writing UNUSED,
                  void *cookie UNUSED, time_t threshold UNUSED,
                  bool (*decide)(void *, time_t, time_t, time_t, struct token *)
@@ -991,7 +992,7 @@ hissqlite_expire(void *history UNUSED, const char *path UNUSED,
 }
 
 bool
-hissqlite_walk(void *history UNUSED, const char *reason UNUSED,
+hissqlite_walk(struct his_handle *history UNUSED, const char *reason UNUSED,
                void *cookie UNUSED,
                bool (*callback)(void *, const HASH *, time_t, time_t, time_t,
                                 const struct token *) UNUSED)
@@ -1000,14 +1001,15 @@ hissqlite_walk(void *history UNUSED, const char *reason UNUSED,
 }
 
 bool
-hissqlite_remember(void *history UNUSED, const char *key UNUSED,
+hissqlite_remember(struct his_handle *history UNUSED, const char *key UNUSED,
                    time_t arrived UNUSED, time_t posted UNUSED)
 {
     return false;
 }
 
 bool
-hissqlite_ctl(void *history UNUSED, int selector UNUSED, void *val UNUSED)
+hissqlite_ctl(struct his_handle *history UNUSED, int selector UNUSED,
+              void *val UNUSED)
 {
     return false;
 }

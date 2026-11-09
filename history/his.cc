@@ -65,7 +65,7 @@ struct hiscache {
 
 struct history {
     struct hismethod *methods;
-    void *sub;
+    struct his_handle *sub;
     struct hiscache *cache;
     size_t cachesize;
     const char *error;
