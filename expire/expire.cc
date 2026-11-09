@@ -572,7 +572,7 @@ EXPdoline(void *cookie, time_t arrived, time_t posted, time_t expires,
         return false;
     }
 
-    selfexpiring = SMprobe(SELFEXPIRE, token, nullptr);
+    selfexpiring = SMselfexpire(token);
 
     if (innconf->groupbaseexpiry || selfexpiring) {
         if (tombstone != nullptr && !selfexpiring) {
@@ -943,8 +943,7 @@ main(int ac, char *av[])
     }
 
     val = true;
-    if (!SMsetup(SM_RDWR, (void *) &val)
-        || !SMsetup(SM_PREOPEN, (void *) &val)) {
+    if (!SMsetrdwr(val) || !SMsetpreopen(val)) {
         warn("cannot set up storage manager");
         CleanupAndExit(Server, false, 1);
     }
