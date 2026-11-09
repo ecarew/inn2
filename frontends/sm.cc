@@ -252,7 +252,7 @@ process_token(const char *id, const struct options *options)
     token = TextToToken(id);
 
     if (options->artinfo) {
-        if (!SMprobe(SMARTNGNUM, &token, &artinfo)) {
+        if (!SMartngnum(&token, &artinfo)) {
             warn("could not get article information for %s", id);
             return false;
         } else {
@@ -370,7 +370,7 @@ main(int argc, char *argv[])
     if (store || options.dodelete) {
         bool value = true;
 
-        if (!SMsetup(SM_RDWR, &value))
+        if (!SMsetrdwr(value))
             die("cannot set up storage manager");
     }
 
