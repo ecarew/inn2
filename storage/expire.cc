@@ -752,7 +752,7 @@ OVgroupbasedexpire(TOKEN token, const char *group, const char *data,
     bool purge;
     char *Xref;
 
-    if (SMprobe(SELFEXPIRE, &token, nullptr)) {
+    if (SMselfexpire(&token)) {
         if (!OVignoreselfexpire)
             /* this article should be kept */
             return false;
