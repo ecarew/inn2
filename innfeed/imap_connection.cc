@@ -387,26 +387,26 @@ typedef enum {
 
 /********** Private Function Declarations *************/
 
-static void lmtp_readCB(EndPoint e, IoStatus i, Buffer *b, void *d);
-static void imap_readCB(EndPoint e, IoStatus i, Buffer *b, void *d);
-static void imap_writeCB(EndPoint e, IoStatus i, Buffer *b, void *d);
-static void lmtp_writeCB(EndPoint e, IoStatus i, Buffer *b, void *d);
+static void lmtp_readCB(EndPoint e, IoStatus i, Buffer *b, Connection cxn);
+static void imap_readCB(EndPoint e, IoStatus i, Buffer *b, Connection cxn);
+static void imap_writeCB(EndPoint e, IoStatus i, Buffer *b, Connection cxn);
+static void lmtp_writeCB(EndPoint e, IoStatus i, Buffer *b, Connection cxn);
 
 static conn_ret lmtp_Connect(connection_t *cxn);
 static conn_ret imap_Connect(connection_t *cxn);
 
 static void prepareReopenCbk(Connection cxn, int type);
 
-static void lmtp_readTimeoutCbk(TimeoutId id, void *data);
-static void imap_readTimeoutCbk(TimeoutId id, void *data);
+static void lmtp_readTimeoutCbk(TimeoutId id, Connection cxn);
+static void imap_readTimeoutCbk(TimeoutId id, Connection cxn);
 
-static void dosomethingTimeoutCbk(TimeoutId id, void *data);
+static void dosomethingTimeoutCbk(TimeoutId id, Connection cxn);
 
 static conn_ret WriteToWire_imapstr(connection_t *cxn, char *str, int slen);
 static conn_ret WriteToWire_lmtpstr(connection_t *cxn, char *str, int slen);
 
-static conn_ret WriteToWire(connection_t *cxn, EndpRWCB callback,
-                            EndPoint endp, Buffer *array);
+template <auto Callback>
+static conn_ret WriteToWire(connection_t *cxn, EndPoint endp, Buffer *array);
 static void lmtp_sendmessage(connection_t *cxn, Article justadded);
 static void imap_ProcessQueue(connection_t *cxn);
 
@@ -436,8 +436,8 @@ static void imap_DisconnectNoDelete(connection_t *cxn);
 static conn_ret imap_listenintro(connection_t *cxn);
 static void CloseEndpoint(EndPoint *endpoint, int *sockfd);
 
-static void imap_writeTimeoutCbk(TimeoutId id, void *data);
-static void lmtp_writeTimeoutCbk(TimeoutId id, void *data);
+static void imap_writeTimeoutCbk(TimeoutId id, Connection cxn);
+static void lmtp_writeTimeoutCbk(TimeoutId id, Connection cxn);
 
 /******************** PRIVATE FUNCTIONS ***************************/
 
@@ -930,22 +930,23 @@ GetLine(char *buf, std::string &line)
 
 /************************ Writing to Network functions *****************/
 
+template <auto Callback>
 static conn_ret
-WriteToWire(connection_t *cxn, EndpRWCB callback, EndPoint endp, Buffer *array)
+WriteToWire(connection_t *cxn, EndPoint endp, Buffer *array)
 {
 
     if (array == NULL)
         return RET_FAIL;
 
-    if (!prepareWrite(endp, array, NULL, callback, cxn))
+    if (!prepareWrite<Callback>(endp, array, cxn))
         return RET_FAIL;
 
     return RET_OK;
 }
 
+template <auto Callback>
 static conn_ret
-WriteToWire_str(connection_t *cxn, EndpRWCB callback, EndPoint endp, char *str,
-                int slen)
+WriteToWire_str(connection_t *cxn, EndPoint endp, char *str, int slen)
 {
     conn_ret result;
     Buffer buff;
@@ -960,7 +961,7 @@ WriteToWire_str(connection_t *cxn, EndpRWCB callback, EndPoint endp, char *str,
 
     writeArr = makeBufferArray(buff, NULL);
 
-    result = WriteToWire(cxn, callback, endp, writeArr);
+    result = WriteToWire<Callback>(cxn, endp, writeArr);
     if (result != RET_OK)
         freeBufferArray(writeArr);
 
@@ -980,8 +981,8 @@ WriteToWire_imapstr(connection_t *cxn, char *str, int slen)
 
     if (cxn->imap_writeTimeout > 0)
         cxn->imap_writeBlockedTimerId =
-            prepareSleep(imap_writeTimeoutCbk, cxn->imap_writeTimeout, cxn);
-    result = WriteToWire_str(cxn, imap_writeCB, cxn->imap_endpoint, str, slen);
+            prepareSleep<imap_writeTimeoutCbk>(cxn->imap_writeTimeout, cxn);
+    result = WriteToWire_str<imap_writeCB>(cxn, cxn->imap_endpoint, str, slen);
     if (result != RET_OK)
         clearTimer(cxn->imap_writeBlockedTimerId);
     return result;
@@ -1000,9 +1001,9 @@ WriteToWire_lmtpstr(connection_t *cxn, char *str, int slen)
 
     if (cxn->lmtp_writeTimeout > 0)
         cxn->lmtp_writeBlockedTimerId =
-            prepareSleep(lmtp_writeTimeoutCbk, cxn->lmtp_writeTimeout, cxn);
+            prepareSleep<lmtp_writeTimeoutCbk>(cxn->lmtp_writeTimeout, cxn);
 
-    result = WriteToWire_str(cxn, lmtp_writeCB, cxn->lmtp_endpoint, str, slen);
+    result = WriteToWire_str<lmtp_writeCB>(cxn, cxn->lmtp_endpoint, str, slen);
     if (result != RET_OK)
         clearTimer(cxn->lmtp_writeBlockedTimerId);
     return result;
@@ -1014,7 +1015,7 @@ WriteArticle(connection_t *cxn, Buffer *array)
     conn_ret result;
 
     /* Just call WriteToWire since it's easy. */
-    result = WriteToWire(cxn, lmtp_writeCB, cxn->lmtp_endpoint, array);
+    result = WriteToWire<lmtp_writeCB>(cxn, cxn->lmtp_endpoint, array);
 
     if (result != RET_OK) {
         return result;
@@ -1561,7 +1562,7 @@ Initialize(connection_t *cxn, int respTimeout)
 
     if (cxn->dosomethingTimeout > 0)
         cxn->dosomethingTimerId =
-            prepareSleep(dosomethingTimeoutCbk, cxn->dosomethingTimeout, cxn);
+            prepareSleep<dosomethingTimeoutCbk>(cxn->dosomethingTimeout, cxn);
 
 
     return RET_OK;
@@ -1816,7 +1817,7 @@ lmtp_listenintro(connection_t *cxn)
 
     /* set up to receive */
     readBuffers = makeBufferArray(bufferTakeRef(cxn->lmtp_rBuffer), NULL);
-    if (!prepareRead(cxn->lmtp_endpoint, readBuffers, lmtp_readCB, cxn, 5)) {
+    if (!prepareRead<lmtp_readCB>(cxn->lmtp_endpoint, readBuffers, cxn, 5)) {
         freeBufferArray(readBuffers);
         return RET_FAIL;
     }
@@ -1854,9 +1855,8 @@ imap_Connect(connection_t *cxn)
  * goes off. We tear down the connection and notify our host.
  */
 static void
-imap_writeTimeoutCbk(TimeoutId id UNUSED, void *data)
+imap_writeTimeoutCbk(TimeoutId id UNUSED, Connection cxn)
 {
-    connection_t *cxn = (Connection) data;
     const char *peerName;
 
     peerName = hostPeerName(cxn->myHost);
@@ -1875,9 +1875,8 @@ imap_writeTimeoutCbk(TimeoutId id UNUSED, void *data)
  * goes off. We tear down the connection and notify our host.
  */
 static void
-imap_readTimeoutCbk(TimeoutId id, void *data)
+imap_readTimeoutCbk(TimeoutId id, Connection cxn)
 {
-    Connection cxn = (Connection) data;
     const char *peerName;
 
     ASSERT(id == cxn->imap_readBlockedTimerId);
@@ -1902,9 +1901,8 @@ imap_readTimeoutCbk(TimeoutId id, void *data)
  * Called by the EndPoint class when the timer goes off
  */
 static void
-imap_reopenTimeoutCbk(TimeoutId id, void *data)
+imap_reopenTimeoutCbk(TimeoutId id, Connection cxn)
 {
-    Connection cxn = (Connection) data;
 
     ASSERT(id == cxn->imap_sleepTimerId);
 
@@ -2033,9 +2031,8 @@ lmtp_Disconnect(connection_t *cxn)
  * Called by the EndPoint class when the timer goes off
  */
 static void
-lmtp_reopenTimeoutCbk(TimeoutId id, void *data)
+lmtp_reopenTimeoutCbk(TimeoutId id, Connection cxn)
 {
-    Connection cxn = (Connection) data;
 
     ASSERT(id == cxn->lmtp_sleepTimerId);
 
@@ -2070,7 +2067,7 @@ prepareReopenCbk(Connection cxn, int type)
     if (type == 0) {
 
         cxn->imap_sleepTimerId =
-            prepareSleep(imap_reopenTimeoutCbk, cxn->imap_sleepTimeout, cxn);
+            prepareSleep<imap_reopenTimeoutCbk>(cxn->imap_sleepTimeout, cxn);
         d_printf(1,
                  "%s:%u IMAP connection error\n"
                  "  will try to reconnect in %u seconds\n",
@@ -2078,7 +2075,7 @@ prepareReopenCbk(Connection cxn, int type)
                  cxn->imap_sleepTimeout);
     } else {
         cxn->lmtp_sleepTimerId =
-            prepareSleep(lmtp_reopenTimeoutCbk, cxn->lmtp_sleepTimeout, cxn);
+            prepareSleep<lmtp_reopenTimeoutCbk>(cxn->lmtp_sleepTimeout, cxn);
         d_printf(1,
                  "%s:%u:LMTP connection error\n"
                  "will try to reconnect in %u seconds\n",
@@ -2104,9 +2101,8 @@ prepareReopenCbk(Connection cxn, int type)
  * goes off. We tear down the connection and notify our host.
  */
 static void
-lmtp_readTimeoutCbk(TimeoutId id, void *data)
+lmtp_readTimeoutCbk(TimeoutId id, Connection cxn)
 {
-    Connection cxn = (Connection) data;
     const char *peerName;
 
     ASSERT(id == cxn->lmtp_readBlockedTimerId);
@@ -2133,9 +2129,8 @@ lmtp_readTimeoutCbk(TimeoutId id, void *data)
  * goes off. We tear down the connection and notify our host.
  */
 static void
-lmtp_writeTimeoutCbk(TimeoutId id UNUSED, void *data)
+lmtp_writeTimeoutCbk(TimeoutId id UNUSED, Connection cxn)
 {
-    connection_t *cxn = (Connection) data;
     const char *peerName;
 
     peerName = hostPeerName(cxn->myHost);
@@ -2328,9 +2323,8 @@ lmtp_getauthline(char *str, char **line, int *linelen)
 #endif /* HAVE_SASL */
 
 static void
-lmtp_writeCB(EndPoint e, IoStatus i, Buffer *b, void *d)
+lmtp_writeCB(EndPoint e, IoStatus i, Buffer *b, Connection cxn)
 {
-    connection_t *cxn = (connection_t *) d;
     Buffer *readBuffers;
 
     clearTimer(cxn->lmtp_writeBlockedTimerId);
@@ -2347,7 +2341,7 @@ lmtp_writeCB(EndPoint e, IoStatus i, Buffer *b, void *d)
 
     /* set up to receive */
     readBuffers = makeBufferArray(bufferTakeRef(cxn->lmtp_rBuffer), NULL);
-    if (!prepareRead(cxn->lmtp_endpoint, readBuffers, lmtp_readCB, cxn, 5)) {
+    if (!prepareRead<lmtp_readCB>(cxn->lmtp_endpoint, readBuffers, cxn, 5)) {
         freeBufferArray(readBuffers);
         lmtp_Disconnect(cxn);
         return;
@@ -2358,7 +2352,7 @@ lmtp_writeCB(EndPoint e, IoStatus i, Buffer *b, void *d)
 
     if (cxn->lmtp_readTimeout > 0)
         cxn->lmtp_readBlockedTimerId =
-            prepareSleep(lmtp_readTimeoutCbk, cxn->lmtp_readTimeout, cxn);
+            prepareSleep<lmtp_readTimeoutCbk>(cxn->lmtp_readTimeout, cxn);
 
 
     switch (cxn->lmtp_state) {
@@ -2408,9 +2402,8 @@ lmtp_writeCB(EndPoint e, IoStatus i, Buffer *b, void *d)
 
 
 static void
-imap_writeCB(EndPoint e, IoStatus i, Buffer *b, void *d)
+imap_writeCB(EndPoint e, IoStatus i, Buffer *b, Connection cxn)
 {
-    connection_t *cxn = (connection_t *) d;
     Buffer *readBuffers;
 
     clearTimer(cxn->imap_writeBlockedTimerId);
@@ -2429,7 +2422,7 @@ imap_writeCB(EndPoint e, IoStatus i, Buffer *b, void *d)
        request ("+ " CRLF, as Dovecot sends for AUTHENTICATE PLAIN) is only
        four */
     readBuffers = makeBufferArray(bufferTakeRef(cxn->imap_rBuffer), NULL);
-    if (!prepareRead(cxn->imap_endpoint, readBuffers, imap_readCB, cxn, 1)) {
+    if (!prepareRead<imap_readCB>(cxn->imap_endpoint, readBuffers, cxn, 1)) {
         freeBufferArray(readBuffers);
         imap_Disconnect(cxn);
         return;
@@ -2440,7 +2433,7 @@ imap_writeCB(EndPoint e, IoStatus i, Buffer *b, void *d)
 
     if (cxn->imap_readTimeout > 0)
         cxn->imap_readBlockedTimerId =
-            prepareSleep(imap_readTimeoutCbk, cxn->imap_readTimeout, cxn);
+            prepareSleep<imap_readTimeoutCbk>(cxn->imap_readTimeout, cxn);
 
     switch (cxn->imap_state) {
     case IMAP_WRITING_CAPABILITY:
@@ -2836,7 +2829,7 @@ imap_listenintro(connection_t *cxn)
 
     /* set up to receive */
     readBuffers = makeBufferArray(bufferTakeRef(cxn->imap_rBuffer), NULL);
-    if (!prepareRead(cxn->imap_endpoint, readBuffers, imap_readCB, cxn, 5)) {
+    if (!prepareRead<imap_readCB>(cxn->imap_endpoint, readBuffers, cxn, 5)) {
         freeBufferArray(readBuffers);
         return RET_FAIL;
     }
@@ -2897,9 +2890,8 @@ imap_ParseCapability(char *string, imap_capabilities_t **caps)
 
 
 static void
-imap_readCB(EndPoint e, IoStatus i, Buffer *b, void *d)
+imap_readCB(EndPoint e, IoStatus i, Buffer *b, Connection cxn)
 {
-    connection_t *cxn = (connection_t *) d;
     Buffer *readBuffers;
 
     int okno;
@@ -2935,7 +2927,7 @@ imap_readCB(EndPoint e, IoStatus i, Buffer *b, void *d)
         }
         readBuffers = makeBufferArray(bufferTakeRef(b[0]), NULL);
 
-        if (!prepareRead(e, readBuffers, imap_readCB, cxn, 1)) {
+        if (!prepareRead<imap_readCB>(e, readBuffers, cxn, 1)) {
             imap_Disconnect(cxn);
         }
 
@@ -2966,7 +2958,7 @@ reset:
 
         readBuffers = makeBufferArray(bufferTakeRef(cxn->imap_rBuffer), NULL);
 
-        if (!prepareRead(e, readBuffers, imap_readCB, cxn, 1)) {
+        if (!prepareRead<imap_readCB>(e, readBuffers, cxn, 1)) {
             freeBufferArray(readBuffers);
             imap_Disconnect(cxn);
         }
@@ -3288,9 +3280,8 @@ reset:
  * ****************************/
 
 static void
-lmtp_readCB(EndPoint e, IoStatus i, Buffer *b, void *d)
+lmtp_readCB(EndPoint e, IoStatus i, Buffer *b, Connection cxn)
 {
-    connection_t *cxn = (connection_t *) d;
     std::string line;
     char *str = NULL;
     Buffer *readBuffers;
@@ -3331,7 +3322,7 @@ lmtp_readCB(EndPoint e, IoStatus i, Buffer *b, void *d)
         expandBuffer(b[0], BUFFER_EXPAND_AMOUNT);
         readBuffers = makeBufferArray(bufferTakeRef(b[0]), NULL);
 
-        if (!prepareRead(e, readBuffers, lmtp_readCB, cxn, 1)) {
+        if (!prepareRead<lmtp_readCB>(e, readBuffers, cxn, 1)) {
             lmtp_Disconnect(cxn);
         }
 
@@ -3365,8 +3356,8 @@ reset:
 
         /* set up to receive some more */
         readBuffers = makeBufferArray(bufferTakeRef(cxn->lmtp_rBuffer), NULL);
-        if (!prepareRead(cxn->lmtp_endpoint, readBuffers, lmtp_readCB, cxn,
-                         5)) {
+        if (!prepareRead<lmtp_readCB>(cxn->lmtp_endpoint, readBuffers, cxn,
+                                      5)) {
             freeBufferArray(readBuffers);
             lmtp_Disconnect(cxn);
         }
@@ -4189,9 +4180,8 @@ retry:
  * Called by the EndPoint class when the timer goes off
  */
 static void
-dosomethingTimeoutCbk(TimeoutId id, void *data)
+dosomethingTimeoutCbk(TimeoutId id, Connection cxn)
 {
-    Connection cxn = (Connection) data;
 
     ASSERT(id == cxn->dosomethingTimerId);
 
@@ -4230,7 +4220,7 @@ dosomethingTimeoutCbk(TimeoutId id, void *data)
     clearTimer(cxn->dosomethingTimerId);
 
     cxn->dosomethingTimerId =
-        prepareSleep(dosomethingTimeoutCbk, cxn->dosomethingTimeout, cxn);
+        prepareSleep<dosomethingTimeoutCbk>(cxn->dosomethingTimeout, cxn);
 }
 
 /* Give all articles in the queue back to the host. We're probably
