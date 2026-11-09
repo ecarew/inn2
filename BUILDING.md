@@ -56,8 +56,9 @@ and Kerberos development files (found if present: `libpam0g-dev`,
 used when it is installed.  For the Perl and Python filters (options
 below): Perl with ExtUtils::Embed and Python 3.3 or later with its
 embedding files (`libperl-dev`, `python3-dev` on Debian; on macOS,
-MacPorts' Perl and Anaconda's Python 3.12 are what is tested).  CMake uses
-the first `perl` and `python3` on the PATH.  TLS, Berkeley DB (ovdb) and systemd are not
+MacPorts' Perl and Anaconda's Python 3.12 are what is tested).  To choose
+others, set `PERL_EXECUTABLE` or `Python3_EXECUTABLE` on the first `cmake`
+command.  TLS, Berkeley DB (ovdb) and systemd are not
 yet wired into CMake.
 
 ## Build
