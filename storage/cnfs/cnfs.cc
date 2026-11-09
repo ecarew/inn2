@@ -2082,7 +2082,7 @@ cnfs_ctl(PROBETYPE type, TOKEN *token UNUSED, void *value)
     case SMARTNGNUM:
         if ((ann = (struct artngnum *) value) == nullptr)
             return false;
-        /* make SMprobe() call cnfs_retrieve() */
+        /* make SMartngnum() call cnfs_retrieve() */
         ann->artnum = 0;
         return true;
     default:
