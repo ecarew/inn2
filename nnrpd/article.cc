@@ -377,12 +377,11 @@ ARTinstorebytoken(TOKEN token)
      * we should not run them when the operator has explicitly
      * disabled article-existence checking.
      *
-     * SMprobe(SELFEXPIRE) is checked first so pure-CNFS sites pay
+     * SMselfexpire() is checked first so pure-CNFS sites pay
      * only that probe (a static per-method attribute, no I/O) and
      * skip both the hash lookup and the cache refresh. */
     if (innconf->expiretombstone && PERMaccessconf->nnrpdcheckart
-        && !SMprobe(SELFEXPIRE, &token, nullptr)
-        && nnrpd_tombstone_refresh()) {
+        && !SMselfexpire(&token) && nnrpd_tombstone_refresh()) {
         return !tombstone_present(nnrpd_tombstone, &token);
     }
 
