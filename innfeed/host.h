@@ -187,7 +187,7 @@ void gHostStats(void);
 void hostSetStatusFile(const char *filename);
 
 /* function called when config file is loaded. */
-int hostConfigLoadCbk(void *data);
+int hostConfigLoadCbk(FILE *fp);
 
 void hostChkCxns(TimeoutId tid, Host host);
 

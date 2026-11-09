@@ -155,12 +155,11 @@ bool debugShrinking = false;
 
 /* callback when config file is loaded */
 int
-tapeConfigLoadCbk(void *data)
+tapeConfigLoadCbk(FILE *fp)
 {
     int rval = 1;
     long iv;
     int bv;
-    FILE *fp = (FILE *) data;
     char *dir, *p;
 
     if (getString(topScope, "backlog-directory", &p, NO_INHERIT)) {

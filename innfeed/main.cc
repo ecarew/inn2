@@ -83,8 +83,8 @@ static void usage(int) __attribute__((__noreturn__));
 static void gprintinfo(void);
 static void openLogFile(void);
 static void writePidFile(void);
-static int mainOptionsProcess(void *data);
-static int mainConfigLoadCbk(void *data);
+static int mainOptionsProcess(FILE *fp);
+static int mainConfigLoadCbk(FILE *fp);
 static void mainCleanup(void);
 
 static char *bopt = NULL;
@@ -731,9 +731,8 @@ gprintinfo(void)
 /* called after the config file is loaded and after the config data has
   been updated with command line options. */
 static int
-mainConfigLoadCbk(void *data)
+mainConfigLoadCbk(FILE *fp)
 {
-    FILE *fp = (FILE *) data;
     char *p;
     long ival;
     int bval;
@@ -831,7 +830,7 @@ mainConfigLoadCbk(void *data)
  * second callback.
  */
 static int
-mainOptionsProcess(void *data UNUSED)
+mainOptionsProcess(FILE *fp UNUSED)
 {
     value *v;
 

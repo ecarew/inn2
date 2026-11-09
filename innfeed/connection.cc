@@ -333,11 +333,10 @@ static int fudgeFactor(int initVal);
 
 
 int
-cxnConfigLoadCbk(void *data UNUSED)
+cxnConfigLoadCbk(FILE *fp)
 {
     long iv;
     int rval = 1;
-    FILE *fp = (FILE *) data;
 
     if (getInteger(topScope, "max-reconnect-time", &iv, NO_INHERIT)) {
         if (iv < 1) {

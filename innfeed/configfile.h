@@ -12,7 +12,10 @@
 BEGIN_DECLS
 
 /* pointer to function taking void-star param and returning int. */
-typedef int (*PFIVP)(void *);
+/* A function called after the configuration is (re)loaded.  Its argument is
+   where to report problems: stderr when only checking the configuration
+   (-C), otherwise NULL (report through syslog). */
+typedef int (*PFIVP)(FILE *);
 
 typedef enum {
     intval,
@@ -72,7 +75,7 @@ scope *findScope(scope *s, const char *name, int mustExist);
 value *findValue(scope *s, const char *name, int inherit);
 value *findPeer(const char *name);
 value *getNextPeer(int *cookie);
-void configAddLoadCallback(PFIVP func, void *arg);
+void configAddLoadCallback(PFIVP func, FILE *arg);
 void configRemoveLoadCallback(PFIVP func);
 int readConfig(const char *file, FILE *errorDest, int justCheck, int dump);
 int buildPeerTable(FILE *fp, scope *currScope);

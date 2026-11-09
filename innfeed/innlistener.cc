@@ -337,7 +337,7 @@ openInputFile(void)
 
 
 int
-listenerConfigLoadCbk(void *data UNUSED)
+listenerConfigLoadCbk(FILE *fp UNUSED)
 {
     int bval;
 

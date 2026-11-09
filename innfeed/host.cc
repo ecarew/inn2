@@ -352,11 +352,10 @@ unsigned int hostHighwater = HOST_HIGHWATER;
 
 /* function called when the config file is loaded */
 int
-hostConfigLoadCbk(void *data)
+hostConfigLoadCbk(FILE *fp)
 {
     int rval = 1, bval;
     long iv;
-    FILE *fp = (FILE *) data;
     char *p;
 
 

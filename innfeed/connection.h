@@ -105,7 +105,7 @@ void gPrintCxnInfo(FILE *fp, unsigned int indentAmt);
 void printCxnInfo(Connection cxn, FILE *fp, unsigned int indentAmt);
 
 /* config file load callback */
-int cxnConfigLoadCbk(void *data);
+int cxnConfigLoadCbk(FILE *fp);
 
 /* Check connection state is in cxnFeedingS, cxnIdleS or cxnConnectingS. */
 bool cxnCheckstate(Connection cxn);

@@ -62,7 +62,7 @@ const char *getTapeDirectory(void);
    limit. */
 void setOutputSizeLimit(long limit);
 
-int tapeConfigLoadCbk(void *data);
+int tapeConfigLoadCbk(FILE *fp);
 
 void tapeLogGlobalStatus(FILE *fp);
 void tapeLogStatus(Tape tape, FILE *fp);

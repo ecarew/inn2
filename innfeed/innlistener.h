@@ -54,7 +54,7 @@ bool listenerIsDummy(InnListener listener);
 void shutDown(InnListener cxn);
 
 /* Callback fired after config file is loaded */
-int listenerConfigLoadCbk(void *data);
+int listenerConfigLoadCbk(FILE *fp);
 
 /* stop a specific host. */
 void shutDownHost(InnListener cxn, const char *peerName);

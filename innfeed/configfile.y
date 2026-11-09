@@ -563,12 +563,12 @@ keyOk(const char *key)
 }
 
 static PFIVP *funcs = NULL;
-static void **args = NULL;
+static FILE **args = NULL;
 static int funcCount;
 static int funcIdx;
 
 void
-configAddLoadCallback(PFIVP func, void *arg)
+configAddLoadCallback(PFIVP func, FILE *arg)
 {
     if (func == NULL)
         return;
@@ -577,10 +577,10 @@ configAddLoadCallback(PFIVP func, void *arg)
         funcCount += 10;
         if (funcs == NULL) {
             funcs = xmalloc(sizeof(PFIVP) * funcCount);
-            args = xmalloc(sizeof(void *) * funcCount);
+            args = xmalloc(sizeof(FILE *) * funcCount);
         } else {
             funcs = xrealloc(funcs, sizeof(PFIVP) * funcCount);
-            args = xrealloc(args, sizeof(void *) * funcCount);
+            args = xrealloc(args, sizeof(FILE *) * funcCount);
         }
     }
 

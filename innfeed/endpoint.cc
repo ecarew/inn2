@@ -1486,9 +1486,8 @@ handleSignals(void)
 
 
 int
-endpointConfigLoadCbk(void *data)
+endpointConfigLoadCbk(FILE *fp)
 {
-    FILE *fp = (FILE *) data;
     long ival;
     int rval = 1;
 

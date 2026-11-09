@@ -162,7 +162,7 @@ int getMainEndPointFd(void);
 
 void freeTimeoutQueue(void);
 
-int endpointConfigLoadCbk(void *data);
+int endpointConfigLoadCbk(FILE *fp);
 
 END_DECLS
 
