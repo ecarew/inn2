@@ -1220,7 +1220,7 @@ main(int ac, char *av[])
         sysdie("cannot cd to %s", innconf->patharticles);
 
     val = true;
-    if (!SMsetup(SM_PREOPEN, (void *) &val))
+    if (!SMsetpreopen(val))
         die("cannot set up the storage manager");
     if (!SMinit())
         die("cannot initialize the storage manager: %s", SMerrorstr);
