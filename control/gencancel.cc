@@ -69,7 +69,7 @@ getNewsgroups(char *mid)
             mid);
     }
 
-    if (!SMsetup(SM_RDWR, &flag) || !SMsetup(SM_PREOPEN, &flag)) {
+    if (!SMsetrdwr(flag) || !SMsetpreopen(flag)) {
         HISclose(History);
         die("Cannot set up storage manager; you may want to use -n\n");
     }
