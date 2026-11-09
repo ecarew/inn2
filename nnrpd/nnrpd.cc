@@ -917,7 +917,7 @@ SetupDaemon()
     bool val;
 
     val = true;
-    if (SMsetup(SM_PREOPEN, (void *) &val) && !SMinit()) {
+    if (SMsetpreopen(val) && !SMinit()) {
         syslog(L_NOTICE, "can't initialize storage method, %s", SMerrorstr);
         Reply("%d NNTP server unavailable.  Try later!\r\n",
               NNTP_FAIL_TERMINATING);
