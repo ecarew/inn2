@@ -80,7 +80,7 @@ static Buffer artGetContents(Article article); /* Return the buffer that
                                                   fillContents() filled up. */
 
 /* Log statistics on article memory usage. */
-static void logArticleStats(TimeoutId, void *);
+static void logArticleStats(TimeoutId);
 
 static bool fillContents(Article article); /* Read the article's bits
                                               off the disk. */
@@ -198,7 +198,7 @@ newArticle(const char *filename, const char *msgid)
 
         if (ARTICLE_STATS_PERIOD > 0)
             articleStatsId =
-                prepareSleep(logArticleStats, ARTICLE_STATS_PERIOD, 0);
+                prepareSleep<logArticleStats>(ARTICLE_STATS_PERIOD);
     }
 
     /* now look for it in the hash table. We presume the disk file is still
@@ -538,7 +538,7 @@ artUnmap(Article article)
 
 
 static void
-logArticleStats(TimeoutId id, void *data UNUSED)
+logArticleStats(TimeoutId id)
 {
     ASSERT(id == articleStatsId);
 
@@ -548,7 +548,7 @@ logArticleStats(TimeoutId id, void *data UNUSED)
     byteTotal = 0;
     articleTotal = 0;
 
-    articleStatsId = prepareSleep(logArticleStats, ARTICLE_STATS_PERIOD, 0);
+    articleStatsId = prepareSleep<logArticleStats>(ARTICLE_STATS_PERIOD);
 }
 
 
