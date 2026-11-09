@@ -728,7 +728,7 @@ DoArt(ARTHANDLE *art)
         }
     }
     if (DoOverview && Xrefp->HeaderLength == 0) {
-        if (!SMprobe(SMARTNGNUM, art->token, (void *) &ann)) {
+        if (!SMartngnum(art->token, &ann)) {
             Xrefp->Header = nullptr;
             Xrefp->HeaderLength = 0;
         } else {
@@ -1024,8 +1024,7 @@ main(int argc, char **argv)
 
     /* Init the Storage Manager. */
     val = true;
-    if (!SMsetup(SM_RDWR, (void *) &val)
-        || !SMsetup(SM_PREOPEN, (void *) &val))
+    if (!SMsetrdwr(val) || !SMsetpreopen(val))
         sysdie("cannot set up storage manager");
     if (!SMinit())
         sysdie("cannot initialize storage manager: %s", SMerrorstr);
