@@ -336,7 +336,7 @@ tests=(
     lib/network/server lib/pread:::lib/pread lib/pwrite:::lib/pwrite lib/qio
     lib/readin lib/reallocarray:::lib/reallocarray lib/reservedfd
     lib/setenv:::lib/setenv lib/snprintf:::lib/snprintf
-    lib/strlcat:::lib/strlcat lib/strlcpy:::lib/strlcpy lib/tst lib/uwildmat
+    lib/strlcat:::lib/strlcat lib/strlcpy:::lib/strlcpy lib/uwildmat
     lib/vector lib/wire lib/xwrite:::lib/xwrite,tests/lib/fakewrite
     authprogs/ident authprogs/identport authprogs/radius authprogs/ckpasswd.t
     authprogs/domain.t

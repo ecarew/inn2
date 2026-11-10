@@ -28,7 +28,7 @@ add_library(inn STATIC
     nativemat.cc network.cc
     network-innbind.cc newsuser.cc nntp.cc qio.cc radix32.cc readin.cc remopen.cc
     reservedfd.cc resource.cc secrets.cc sendarticle.cc sendpass.cc sequence.cc
-    sqlite-helper.cc timer.cc tst.cc uwildmat.cc vector.cc wire.cc xfopena.cc
+    sqlite-helper.cc timer.cc uwildmat.cc vector.cc wire.cc xfopena.cc
     xmalloc.cc xsignal.cc xwrite.cc
 )
 target_include_directories(inn PRIVATE ${CMAKE_CURRENT_SOURCE_DIR})

@@ -63,11 +63,6 @@ files.  Specifically (but possibly not comprehensively):
    similar to the new BSD license (no advertising clause) but with Thus
    plc as the copyright holder.  See those files for details.
 
-   lib/tst.c, include/inn/tst.h and doc/pod/tst.pod are derived from
-   tst1.3.tar.gz in www.octavian.org (no longer available), and are under
-   the new BSD license (no advertising clause), but with Peter A. Friend
-   as the copyright holder.
-
    tests/runtests.c is covered under a license very similar to the MIT/X
    Consortium license.  See the beginning of the file for details.
 
