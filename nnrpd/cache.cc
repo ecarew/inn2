@@ -14,33 +14,69 @@
 
 #include "portable/system.h"
 
+#include <list>
+#include <unordered_map>
+
 #include "inn/innconf.h"
 #include "inn/libinn.h"
-#include "inn/list.h"
 #include "inn/storage.h"
-#include "inn/tst.h"
 
 #include "cache.h"
 
-/*
-**  Pointer to the Message-ID to storage token ternary search tree.
-*/
-static struct tst *msgidcache;
-
-/*
-**  Count of Message-IDs in the cache so that someone doing GROUP,
-**  (X)OVER, GROUP, (X)OVER, etc. for example doesn't blow up with
-**  out of memory.
-*/
-static unsigned long msgcachecount;
-
+namespace {
 struct cache_entry {
-    struct node node;
     HASH hash;
     TOKEN token;
+    bool used; /* Which list holds it. */
+};
+using entry_list = std::list<cache_entry>;
+
+struct hash_hasher {
+    size_t
+    operator()(const HASH &hash) const
+    {
+        size_t bucket;
+
+        memcpy(&bucket, &hash, sizeof(bucket));
+        return bucket;
+    }
 };
 
-static struct list unused, used;
+struct hash_equal {
+    bool
+    operator()(const HASH &a, const HASH &b) const
+    {
+        return HashCompare(&a, &b) == 0;
+    }
+};
+
+/*
+**  The Message-ID to storage token cache: entries by hash, each in one of
+**  two lists, oldest first.  "used" holds entries already fetched by a final
+**  lookup, which are thrown away first when the cache is full; "unused"
+**  holds the rest.  The cache's size, bounded by msgidcachesize, keeps
+**  someone doing GROUP, (X)OVER, GROUP, (X)OVER, etc. from running out of
+**  memory.
+*/
+std::unordered_map<HASH, entry_list::iterator, hash_hasher, hash_equal>
+    msgidcache;
+entry_list unused, used;
+
+
+/*
+**  Move an entry to the end of the unused or used list.
+*/
+void
+cache_touch(entry_list::iterator entry, bool to_used)
+{
+    entry_list &from = entry->used ? used : unused;
+    entry_list &to = to_used ? used : unused;
+
+    to.splice(to.end(), from, entry);
+    entry->used = to_used;
+}
+} // namespace
+
 
 /*
 **  Add a translation from HASH, h, to TOKEN, t, to the Message-ID
@@ -49,40 +85,25 @@ static struct list unused, used;
 void
 cache_add(const HASH h, const TOKEN t)
 {
-    if (innconf->msgidcachesize != 0) {
-        struct cache_entry *entry, *old;
-        const unsigned char *p;
-        void *exist;
+    if (innconf->msgidcachesize == 0)
+        return;
 
-        if (!msgidcache) {
-            msgidcache = tst_init((innconf->msgidcachesize + 9) / 10);
-            list_new(&unused);
-            list_new(&used);
-        }
+    auto found = msgidcache.find(h);
+    if (found != msgidcache.end()) {
+        cache_touch(found->second, false);
+    } else {
+        if (msgidcache.empty())
+            msgidcache.reserve((innconf->msgidcachesize + 9) / 10);
+        unused.push_back(cache_entry{h, t, false});
+        msgidcache.emplace(h, std::prev(unused.end()));
+    }
+    if (msgidcache.size() >= innconf->msgidcachesize) {
+        /* Need to throw away an entry. */
+        entry_list &victims = !used.empty() ? used : unused;
 
-        entry = xmalloc(sizeof *entry);
-        entry->hash = h;
-        entry->token = t;
-        p = (unsigned char *) HashToText(h);
-        if (tst_insert(msgidcache, p, entry, 0, &exist) == TST_DUPLICATE_KEY) {
-            free(entry);
-            old = static_cast<struct cache_entry *>(exist);
-            list_remove(&old->node);
-            list_addtail(&unused, &old->node);
-        } else {
-            list_addtail(&unused, &entry->node);
-            ++msgcachecount;
-        }
-        if (msgcachecount >= innconf->msgidcachesize) {
-            /* Need to throw away a node. */
-            entry = (struct cache_entry *) list_remhead(&used);
-            if (entry == nullptr)
-                entry = (struct cache_entry *) list_remhead(&unused);
-            if (entry != nullptr) {
-                tst_delete(msgidcache,
-                           (unsigned char *) HashToText(entry->hash));
-                free(entry);
-            }
+        if (!victims.empty()) {
+            msgidcache.erase(victims.front().hash);
+            victims.pop_front();
         }
     }
 }
@@ -105,21 +126,12 @@ cache_get(const HASH h, bool final)
     if (HashCompare(&h, &last_hash) == 0 && !HashEmpty(last_hash))
         return last_token;
 
-    if (msgidcache) {
-        struct cache_entry *entry;
-
-        entry = static_cast<struct cache_entry *>(
-            tst_search(msgidcache, (unsigned char *) HashToText(h)));
-        if (entry != nullptr) {
-            list_remove(&entry->node);
-            if (!final)
-                list_addtail(&unused, &entry->node);
-            else
-                list_addtail(&used, &entry->node);
-            last_hash = entry->hash;
-            last_token = entry->token;
-            return last_token;
-        }
+    auto found = msgidcache.find(h);
+    if (found != msgidcache.end()) {
+        cache_touch(found->second, final);
+        last_hash = found->second->hash;
+        last_token = found->second->token;
+        return last_token;
     }
     return empty_token;
 }
