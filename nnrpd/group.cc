@@ -23,7 +23,6 @@ CMDgroup(int ac, char *av[])
     struct ov_search *handle;
     TOKEN token;
     int count;
-    bool boolval;
     bool hookpresent = false;
 
 #ifdef DO_PYTHON
@@ -179,7 +178,7 @@ CMDgroup(int ac, char *av[])
         ARTnumber = (count == 0 ? 0 : ARTlow);
         if (GRPcur) {
             if (strcmp(GRPcur, group) != 0) {
-                OVctl(OVCACHEFREE, &boolval);
+                OVcachefree();
                 free(GRPcur);
                 GRPcur = xstrdup(group);
             }
@@ -254,7 +253,7 @@ CMDgroup(int ac, char *av[])
         ARTnumber = (count == 0 ? 0 : ARTlow);
         if (GRPcur) {
             if (strcmp(GRPcur, group) != 0) {
-                OVctl(OVCACHEFREE, &boolval);
+                OVcachefree();
                 free(GRPcur);
                 GRPcur = xstrdup(group);
             }
