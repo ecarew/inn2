@@ -1158,12 +1158,14 @@ tradspool_next(ARTHANDLE *article, const RETRTYPE amount)
 
     while (!priv.curdir
            || ((de = FindDir(priv.curdir, priv.curdirname)) == nullptr)) {
+        /* curdirname is set even when its opendir failed (a group with
+           no directory yet), so free it whether or not curdir is open. */
         if (priv.curdir) {
             closedir(priv.curdir);
             priv.curdir = nullptr;
-            free(priv.curdirname);
-            priv.curdirname = nullptr;
         }
+        free(priv.curdirname);
+        priv.curdirname = nullptr;
 
         /* Advance ngtp to the next entry, if it exists, otherwise start
          * searching down another ngtable hashchain. */
