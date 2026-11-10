@@ -19,7 +19,9 @@
 #include <errno.h>
 #include <sys/stat.h>
 
-#include "inn/hashtab.h"
+#include <string>
+#include <unordered_map>
+
 #include "inn/innconf.h"
 #include "inn/libinn.h"
 #include "inn/messages.h"
@@ -30,32 +32,13 @@
 
 static const TOKEN faketoken = {1, 1, ""};
 
+/* What a group should hold once the data is loaded. */
 struct group {
-    char *group;
     unsigned long count;
     unsigned long low;
     unsigned long high;
 };
-
-static const void *
-group_key(const void *entry)
-{
-    return ((const struct group *) entry)->group;
-}
-
-static bool
-group_eq(const void *key, const void *entry)
-{
-    return !strcmp((const char *) key, ((const struct group *) entry)->group);
-}
-
-static void
-group_del(void *entry)
-{
-    struct group *g = (struct group *) entry;
-    free(g->group);
-    free(g);
-}
+using group_map = std::unordered_map<std::string, group>;
 
 /* Parse the Xref field from an overview line to find group:artnum pairs.
  * The overview line format includes "Xref: hostname group:artnum ..."
@@ -75,7 +58,7 @@ static int
 parse_xref(const char *data, size_t datalen, struct xref_entry *entries,
            int max_entries)
 {
-    const char *xref = NULL;
+    const char *xref = nullptr;
     const char *p;
     int n = 0;
 
@@ -105,7 +88,7 @@ parse_xref(const char *data, size_t datalen, struct xref_entry *entries,
         if (xref >= data + datalen)
             break;
 
-        colon = memchr(xref, ':', data + datalen - xref);
+        colon = (const char *) memchr(xref, ':', data + datalen - xref);
         if (!colon)
             break;
         glen = colon - xref;
@@ -114,15 +97,15 @@ parse_xref(const char *data, size_t datalen, struct xref_entry *entries,
         memcpy(entries[n].group, xref, glen);
         entries[n].group[glen] = '\0';
 
-        entries[n].artnum = strtoul(colon + 1, NULL, 10);
+        entries[n].artnum = strtoul(colon + 1, nullptr, 10);
         if (entries[n].artnum == 0)
             break;
         n++;
 
         /* Advance to next space or end. */
-        end = memchr(xref, ' ', data + datalen - xref);
+        end = (const char *) memchr(xref, ' ', data + datalen - xref);
         if (!end)
-            end = memchr(xref, '\t', data + datalen - xref);
+            end = (const char *) memchr(xref, '\t', data + datalen - xref);
         if (!end)
             break;
         xref = end + 1;
@@ -132,43 +115,39 @@ parse_xref(const char *data, size_t datalen, struct xref_entry *entries,
 
 /* Build expected group stats from the data file, using Xref-derived
  * artnums (which is what OVadd actually stores). */
-static struct hash *
+static group_map
 load_expected(const char *path)
 {
-    struct hash *groups;
-    struct group *g;
+    group_map groups;
     FILE *f;
     char buffer[4096];
     struct xref_entry entries[16];
     int i, nxref;
     size_t len;
 
-    groups = hash_create(32, hash_string, group_key, group_eq, group_del);
     f = fopen(path, "r");
-    if (f == NULL)
+    if (f == nullptr)
         sysdie("Cannot open %s", path);
 
-    while (fgets(buffer, sizeof(buffer), f) != NULL) {
+    while (fgets(buffer, sizeof(buffer), f) != nullptr) {
         len = strlen(buffer);
         if (len > 0 && buffer[len - 1] == '\n')
             len--;
 
         nxref = parse_xref(buffer, len, entries, 16);
         for (i = 0; i < nxref; i++) {
-            g = hash_lookup(groups, entries[i].group);
-            if (g == NULL) {
-                g = xmalloc(sizeof(*g));
-                g->group = xstrdup(entries[i].group);
-                g->count = 1;
-                g->low = entries[i].artnum;
-                g->high = entries[i].artnum;
-                hash_insert(groups, g->group, g);
+            auto found = groups.find(entries[i].group);
+            if (found == groups.end()) {
+                groups.emplace(entries[i].group,
+                               group{1, entries[i].artnum, entries[i].artnum});
             } else {
-                g->count++;
-                if (entries[i].artnum < g->low)
-                    g->low = entries[i].artnum;
-                if (entries[i].artnum > g->high)
-                    g->high = entries[i].artnum;
+                group &g = found->second;
+
+                g.count++;
+                if (entries[i].artnum < g.low)
+                    g.low = entries[i].artnum;
+                if (entries[i].artnum > g.high)
+                    g.high = entries[i].artnum;
             }
         }
     }
@@ -177,30 +156,36 @@ load_expected(const char *path)
 }
 
 /* Verify group stats via the OV API. */
-static void
-verify_group(void *data, void *cookie)
+static bool
+verify_groups(const group_map &groups)
 {
-    struct group *g = (struct group *) data;
-    bool *status = (bool *) cookie;
-    int low, high, count, flag;
+    bool status = true;
 
-    if (!OVgroupstats(g->group, &low, &high, &count, &flag)) {
-        warn("No stats for %s", g->group);
-        *status = false;
-        return;
+    for (const auto &entry : groups) {
+        std::string namecopy = entry.first; /* OVgroupstats takes char * */
+        char *name = namecopy.data();
+        const group &g = entry.second;
+        int low, high, count, flag;
+
+        if (!OVgroupstats(name, &low, &high, &count, &flag)) {
+            warn("No stats for %s", name);
+            status = false;
+            continue;
+        }
+        if ((unsigned long) low != g.low) {
+            warn("Low wrong for %s: %d != %lu", name, low, g.low);
+            status = false;
+        }
+        if ((unsigned long) high != g.high) {
+            warn("High wrong for %s: %d != %lu", name, high, g.high);
+            status = false;
+        }
+        if ((unsigned long) count != g.count) {
+            warn("Count wrong for %s: %d != %lu", name, count, g.count);
+            status = false;
+        }
     }
-    if ((unsigned long) low != g->low) {
-        warn("Low wrong for %s: %d != %lu", g->group, low, g->low);
-        *status = false;
-    }
-    if ((unsigned long) high != g->high) {
-        warn("High wrong for %s: %d != %lu", g->group, high, g->high);
-        *status = false;
-    }
-    if ((unsigned long) count != g->count) {
-        warn("Count wrong for %s: %d != %lu", g->group, count, g->count);
-        *status = false;
-    }
+    return status;
 }
 
 /* Verify per-article data: getartinfo returns correct token, search returns
@@ -220,7 +205,7 @@ verify_articles(const char *path)
     int nxref, i;
     size_t linelen;
     TOKEN token;
-    void *search;
+    struct ov_search *search;
     ARTNUM overnum;
     char *data;
     int len;
@@ -228,10 +213,10 @@ verify_articles(const char *path)
     bool status = true;
 
     f = fopen(path, "r");
-    if (f == NULL)
+    if (f == nullptr)
         sysdie("Cannot open %s", path);
 
-    while (fgets(buffer, sizeof(buffer), f) != NULL) {
+    while (fgets(buffer, sizeof(buffer), f) != nullptr) {
         linelen = strlen(buffer);
         if (linelen > 0 && buffer[linelen - 1] == '\n')
             linelen--;
@@ -241,7 +226,7 @@ verify_articles(const char *path)
         if (!colon)
             continue;
         start = colon + 1;
-        file_artnum = strtoul(start, NULL, 10);
+        file_artnum = strtoul(start, nullptr, 10);
 
         /* Parse Xref to get the actual stored artnum(s). */
         nxref = parse_xref(buffer, linelen, entries, 16);
@@ -262,7 +247,7 @@ verify_articles(const char *path)
             /* Search for this article and verify arrival time. */
             search = OVopensearch(entries[i].group, entries[i].artnum,
                                   entries[i].artnum);
-            if (search == NULL) {
+            if (search == nullptr) {
                 warn("Cannot open search for %s:%lu", entries[i].group,
                      entries[i].artnum);
                 status = false;
@@ -308,10 +293,10 @@ verify_search_order(const char *path)
     struct xref_entry entries[16];
     int nxref;
     size_t len;
-    char *group = NULL;
+    char *group = nullptr;
     unsigned long low = 0, high = 0;
     unsigned long article_count = 0;
-    void *search;
+    struct ov_search *search;
     ARTNUM overnum, last = 0;
     char *data;
     int dlen;
@@ -321,18 +306,18 @@ verify_search_order(const char *path)
     bool status = true;
 
     f = fopen(path, "r");
-    if (f == NULL)
+    if (f == nullptr)
         sysdie("Cannot open %s", path);
 
     /* Scan the file to find the range for the first group. */
-    while (fgets(buffer, sizeof(buffer), f) != NULL) {
+    while (fgets(buffer, sizeof(buffer), f) != nullptr) {
         len = strlen(buffer);
         if (len > 0 && buffer[len - 1] == '\n')
             len--;
         nxref = parse_xref(buffer, len, entries, 16);
         if (nxref == 0)
             continue;
-        if (group == NULL) {
+        if (group == nullptr) {
             group = xstrdup(entries[0].group);
             low = entries[0].artnum;
             high = entries[0].artnum;
@@ -353,7 +338,7 @@ verify_search_order(const char *path)
     }
 
     search = OVopensearch(group, low, high);
-    if (search == NULL) {
+    if (search == nullptr) {
         warn("Cannot open search for %s:%lu-%lu", group, low, high);
         free(group);
         return false;
@@ -383,8 +368,7 @@ verify_search_order(const char *path)
 int
 main(void)
 {
-    struct hash *groups;
-    bool status;
+    group_map groups;
 
     test_init(5);
 
@@ -404,9 +388,7 @@ main(void)
 
     /* Test 2: group stats match expected values. */
     groups = load_expected("overview/basic");
-    status = true;
-    hash_traverse(groups, verify_group, &status);
-    ok(2, status);
+    ok(2, verify_groups(groups));
 
     /* Test 3: per-article data integrity (token, overview, arrived). */
     ok(3, verify_articles("overview/basic"));
@@ -414,7 +396,6 @@ main(void)
     /* Test 4: multi-article search returns articles in order. */
     ok(4, verify_search_order("overview/basic"));
 
-    hash_free(groups);
     OVclose();
 
     /* Test 5: close and reopen works. */
