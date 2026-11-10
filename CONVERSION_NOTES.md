@@ -176,6 +176,36 @@ W6 run on both builds, alternating, on the same feed, once the refactoring
 is done; stability through the full verification, the sanitizer build and
 the Linux checks.
 
+**Result (2026-11-10, at 961f494d0, 49 commits after the baseline):**
+- **Code:** lines with `void *` 515 → 388; casts 274 → 246; C/C++
+  source 157,507 → 155,814 lines (68 files, +1,258 −2,951).  Gone:
+  `SMsetup`, `SMprobe`, `OVctl`, the method tables' `ctl` entries, and
+  lib/hashtab, lib/tst and lib/list with their headers, tests and man
+  pages; the architect chose to delete the three libraries once nothing
+  used them.  Tables became `std::unordered_map`/`unordered_set`; the
+  tombstone set is an opaque `struct tombstone_set`; nnrpd's Message-ID
+  cache is a map plus two `std::list`s with the old eviction order.
+  Binaries: innd, innfeed, expire and expireover the same size; nnrpd and
+  makehistory one 16 KB page larger.
+- **Stability:** full verification (with the sanitizer build and the live
+  innd test with Perl and Python filters) passed at every commit; the
+  Linux checks passed at the end.  One latent INN bug was found and fixed:
+  tradindexed's `hashmap_load` looped forever on a malformed active line
+  (b6a538c9e).
+- **Performance** (tradspool, 40,000 articles, 5 alternating repetitions,
+  medians, baseline → refactored): W1 4,818 → 4,841 articles/s, innd CPU
+  −0.7% (noise); W2, W3 and W5 expire unchanged within noise.  W4 readers:
+  nnrpd peak RSS 46.2 MB → 11.7 MB (−75%) and user CPU 2.91 → 2.13 s
+  (−27%), wall unchanged (system time dominates); peak footprint 3.05 →
+  3.13 MB.  The gain is the Message-ID cache: the trie keyed each entry by
+  the 32-character hex text of its hash, up to 32 nodes per article, where
+  the map holds one entry keyed by the 16-byte hash.  W5 expireover and W6
+  makehistory wall times fell 36% and 39%, but the baseline's runs spread
+  51-64% with CPU unchanged, so those are noise.
+- **Conclusion:** breaking the C API cost nothing measurable in the server
+  paths, removed about 1,700 lines and the last `void *` container and
+  selector interfaces, and cut nnrpd's memory sharply.
+
 ### Names that are C++ keywords
 
 - **Struct fields in headers that C still uses** (`TOKEN.class`,
