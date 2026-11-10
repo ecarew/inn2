@@ -17,6 +17,8 @@
 
 #include "portable/system.h"
 
+#include <string>
+
 #include "innfeed.h"
 
 #include <assert.h>
@@ -122,7 +124,7 @@ static void tapeCleanup(void);
 
 
 /* pathname of directory we store tape files in. */
-static char *tapeDirectory;
+static std::string tapeDirectory;
 
 /* the callback ID of the checkpoint timer callback. */
 static TimeoutId checkPtId;
@@ -160,36 +162,34 @@ tapeConfigLoadCbk(FILE *fp)
     int rval = 1;
     long iv;
     int bv;
-    char *dir, *p;
+    std::string dir, name;
 
-    if (getString(topScope, "backlog-directory", &p, NO_INHERIT)) {
-        dir = concatpath(innconf->pathspool, p);
-        free(p);
-        if (tapeDirectory != NULL && strcmp(tapeDirectory, dir) != 0) {
+    if (getString(topScope, "backlog-directory", name, NO_INHERIT)) {
+        char *path = concatpath(innconf->pathspool, name.c_str());
+
+        dir = path;
+        free(path);
+        if (!tapeDirectory.empty() && tapeDirectory != dir) {
             warn("ME config: cannot change backlog-directory of a running"
                  " process");
-            free(dir);
-            dir = xstrdup(tapeDirectory);
+            dir = tapeDirectory;
         }
 
-        if (!isDirectory(dir) && isDirectory(dflTapeDir)) {
+        if (!isDirectory(dir.c_str()) && isDirectory(dflTapeDir)) {
             logOrPrint(LOG_ERR, fp,
                        "ME config: definition of backlog-directory (%s) is a"
                        " non-existent directory. Using %s",
-                       dir, dflTapeDir);
-            free(dir);
-            dir = xstrdup(dflTapeDir);
-        } else if (!isDirectory(dir))
+                       dir.c_str(), dflTapeDir);
+            dir = dflTapeDir;
+        } else if (!isDirectory(dir.c_str()))
             logAndExit(1, "ME config: no usable value for backlog-directory");
     } else if (!isDirectory(dflTapeDir)) {
         logAndExit(1, "ME config: no usable value for backlog-directory");
         /* NOTREACHED */
         return -1;
     } else
-        dir = xstrdup(dflTapeDir);
+        dir = dflTapeDir;
 
-    if (tapeDirectory != NULL)
-        free(tapeDirectory);
     tapeDirectory = dir;
 
 
@@ -273,7 +273,8 @@ newTape(const char *peerName, bool dontRotate)
 {
     Tape nt = xmalloc(sizeof(struct tape_s));
     size_t pLen = strlen(peerName);
-    size_t dLen = strlen(tapeDirectory);
+    size_t dLen = tapeDirectory.size();
+    const char *tapeDir = tapeDirectory.c_str();
 
     if (!inited) {
         inited = true;
@@ -294,16 +295,16 @@ newTape(const char *peerName, bool dontRotate)
     nt->peerName = xstrdup(peerName);
 
     nt->handFilename = xmalloc(pLen + dLen + 2);
-    sprintf(nt->handFilename, "%s/%s", tapeDirectory, peerName);
+    sprintf(nt->handFilename, "%s/%s", tapeDir, peerName);
 
     nt->lockFilename = xmalloc(pLen + dLen + strlen(LOCK_TAIL) + 2);
-    sprintf(nt->lockFilename, "%s/%s%s", tapeDirectory, peerName, LOCK_TAIL);
+    sprintf(nt->lockFilename, "%s/%s%s", tapeDir, peerName, LOCK_TAIL);
 
     nt->inputFilename = xmalloc(pLen + dLen + strlen(INPUT_TAIL) + 2);
-    sprintf(nt->inputFilename, "%s/%s%s", tapeDirectory, peerName, INPUT_TAIL);
+    sprintf(nt->inputFilename, "%s/%s%s", tapeDir, peerName, INPUT_TAIL);
 
     nt->outputFilename = xmalloc(pLen + dLen + strlen(OUTPUT_TAIL) + 2);
-    sprintf(nt->outputFilename, "%s/%s%s", tapeDirectory, peerName,
+    sprintf(nt->outputFilename, "%s/%s%s", tapeDir, peerName,
             OUTPUT_TAIL);
 
     if (!lockFile(nt->lockFilename)) {
@@ -451,7 +452,7 @@ tapeLogGlobalStatus(FILE *fp)
 {
     fprintf(fp, "%sBacklog file global values:%s\n", genHtml ? "<strong>" : "",
             genHtml ? "</strong>" : "");
-    fprintf(fp, "        directory: %s\n", tapeDirectory);
+    fprintf(fp, "        directory: %s\n", tapeDirectory.c_str());
     fprintf(fp, "    rotate period: %-3ld seconds\n", (long) rotatePeriod);
     fprintf(fp, "checkpoint period: %-3ld seconds\n", (long) tapeCkPtPeriod);
     fprintf(fp, "   newfile period: %-3ld seconds\n",
@@ -778,16 +779,13 @@ tapesSetCheckNew(void)
 const char *
 getTapeDirectory(void)
 {
-    ASSERT(tapeDirectory != NULL);
-
 #if defined(INNFEED_DEBUG)
-    if (tapeDirectory == NULL) {
-        tapeDirectory = xstrdup(dflTapeDir);
-        addPointerFreedOnExit(tapeDirectory);
-    }
+    if (tapeDirectory.empty())
+        tapeDirectory = dflTapeDir;
 #endif
+    ASSERT(!tapeDirectory.empty());
 
-    return tapeDirectory;
+    return tapeDirectory.c_str();
 }
 
 
@@ -1165,6 +1163,5 @@ flushTape(Tape tape)
 static void
 tapeCleanup(void)
 {
-    free(tapeDirectory);
-    tapeDirectory = NULL;
+    tapeDirectory.clear();
 }
