@@ -301,10 +301,10 @@ main(int argc, char *argv[])
         die("can't open overview database");
     if (innconf->groupbaseexpiry) {
         time(&ovge.now);
-        if (!OVctl(OVGROUPBASEDEXPIRE, &ovge))
+        if (!OVsetgroupbasedexpire(&ovge))
             die("can't configure group-based expire");
     }
-    if (!OVctl(OVSTATALL, &always_stat))
+    if (!OVsetstatall(always_stat))
         die("can't configure overview stat behavior");
 
     /* Open the tombstone log.  OVEXPremove appends a line per article
@@ -498,7 +498,7 @@ main(int argc, char *argv[])
             bloom_free(bloom);
             bloom = nullptr;
         }
-        OVctl(OVTOKENCACHE, &bloom);
+        OVsettokencache(bloom);
     }
 
     /* Loop through each line of the input file and process each group,
@@ -527,7 +527,7 @@ main(int argc, char *argv[])
 
     /* Close everything down in an orderly fashion. */
     if (bloom) {
-        OVctl(OVTOKENCACHE, &null_bloom);
+        OVsettokencache(null_bloom);
         bloom_free(bloom);
     }
     QIOclose(qp);
