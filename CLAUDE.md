@@ -235,8 +235,8 @@ from `cmake-build`; record method and raw numbers so rounds compare.
   unchanged, client patterns already capped by nnrpd.  Open: remove the
   wrappers in a later release.
 - Flaky test nnrpd/auth-ext (CONVERSION_NOTES.md, same title,
-  2026-11-05): "caught signal 1" from the auth program, once; not yet
-  investigated.
+  2026-11-05): resolved 2026-11-10 (`1f12571b4`): an inherited ignored
+  or blocked SIGHUP, not a race; auth-test now resets it.
 - Legacy C functions with standard C++ replacements (qsort, bsearch, ...):
   once the last use of one is converted, remove what remains of it from
   the source tree: leftover comparators and helpers, INN's own

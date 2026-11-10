@@ -2004,10 +2004,18 @@ Signal 1 is SIGHUP.  On the same tree, it then passed 5 runs out of 5,
 and it passed again in the commit's second verification.  Nothing in the
 test goes through the wildmat code that commit changed, so it looks like
 a timing race between the test and the auth program it starts, possibly
-over when the program sees its input close.  Not investigated yet.  If it
-fails again, record the date and the platform here.  The fix is in the
-test or in nnrpd's handling of the auth program, not a retry in
-verify-cxx.sh.
+over when the program sees its input close.
+
+Resolved 2026-11-10 (`1f12571b4`): not a race.  Checks 45 and 48 are the
+"signal" mode, and the failing run reported no error where "caught
+signal 1" was expected: auth-test's kill('HUP', $$) did nothing and it
+fell through to exit 0.  An ignored or blocked SIGHUP survives fork and
+exec, so a test run started with one (nohup, a background job runner)
+fails exactly this way; `trap "" HUP` or a blocked SIGHUP reproduces it
+every time, while 300 runs under CPU load with a normal signal state
+never failed.  auth-test now restores SIGHUP's default and unblocks it
+before the kill.  nnrpd needs no change: the signals it catches reset at
+exec, and it neither ignores nor blocks SIGHUP.
 
 ### Lesson from the audit regression (2026-10-30)
 
