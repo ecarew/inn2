@@ -1578,6 +1578,54 @@ hooks", above), so the numbers compare directly:
 "Perl and Python stay" (2026-10-28, confirmed 2026-11-06) holds until this
 is done.
 
+**Evaluated (2026-11-10); decision pending.**  JaiScript is
+github.com/Devacor/jaiscript (unrelated to Jonathan Blow's Jai): MIT, C++20,
+CMake, no dependencies, two interchangeable backends (a bytecode VM, the
+default, and a tree-walking interpreter held to byte-identical behavior).
+Tested at commit 458d516 (0.5.2).  Maturity is the open question: 0.5
+beta, first released the week of the test, one author, three commits, no
+outside users yet; ChaiScript, rejected as not ready, had years of
+history.  The evaluation code (an innd hook, `innd/jai.cc`, built against
+the library with its debugger's socket code off) was scratch and is not in
+the tree.
+- **Method, better than ChaiScript's:** the script reads header fields on
+  demand through `hdr(name)`, a host function over innd's parsed header
+  (`HDRCONTENT::view`), instead of innd copying every field into a map
+  per article; its patterns are JaiScript's own regexes, compiled once at
+  load.  innd supplies no regex or split helpers.
+- **Speed.**  W1, CNFS, 10 alternating runs each, about 40,000 articles,
+  the sample's rules, every article accepted in every run.  Mean innd CPU
+  and the filter's extra CPU per article over no filter: no filter 1.950 s;
+  JaiScript VM 2.146 s, 4.9 µs; Python 2.168 s, 5.5 µs; Perl 2.207 s,
+  6.4 µs; JaiScript interpreter 2.329 s, 9.5 µs (run-to-run spread about
+  0.1 s, so the VM, Python and Perl are level within noise, and the
+  interpreter is about twice their cost).  Throughput 20,513 art/s with
+  no filter, 18,540 VM, 18,180 Python, 18,073 Perl, 17,078 interpreter.
+  ChaiScript cost about 140 µs per article: JaiScript's VM is some 30
+  times faster and as fast as Perl or Python.  A standalone loop of the
+  same call gave 2.6 µs (VM) and 4.8 µs (interpreter).
+- **Size: the weak point.**  Stripped innd grows from 564 KB to 8.38 MB
+  with the VM alone (+7.8 MB) and to 9.09 MB with both backends; it needs
+  no shared library.  Perl costs about 3.3 MB counting libperl, ChaiScript
+  1.5-1.7 MB.  The library takes 48 s to build (two static libraries of
+  about 24 MB each); `jai.cc` compiles in under 2 s.
+- **Memory with the filter loaded** (innd peak footprint, median): no
+  filter 8.1 MB, Perl 8.7, JaiScript 9.1-9.2, Python 12.3.
+- **Language:** regular expressions built in (linear time: no pattern can
+  backtrack, so a site's pattern cannot stall innd), `split`,
+  `starts_with`/`contains` and the other string methods.  The sample's
+  Perl patterns ran unchanged.  The bare engine (no standard library
+  registered) was enough.
+- **Sandboxing, tested in the hook:** filesystem access is a privilege the
+  host withdraws after loading the script (`include "/etc/passwd"` then
+  raises "Insufficient privilege: filesystem"); network access is off
+  unless granted; an execution budget per call (10 ms here) ends a
+  runaway script with an error the script cannot catch, even
+  `while (true)` inside its own `try`, and the engine keeps working; a
+  memory cap per call.  ChaiScript had none of these.
+- **Correct in innd:** live IHAVE tests accept a clean article (235) and
+  reject one per rule (437) on both backends, as Perl and Python do.
+
 ### ARTparsebody body scan (noted 2026-11-04, refactoring phase)
 
 **Done 2026-11-04** (7d07f923c): the scan jumps between `\r`, `\n` and
