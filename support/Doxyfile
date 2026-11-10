@@ -7,7 +7,7 @@ PROJECT_BRIEF          = "INN converted to C++ and CMake"
 OUTPUT_DIRECTORY       = build-doxygen
 
 # The architecture overview as the main page, then all of INN's sources;
-# not tests/ (C test programs), cmake/ (feature checks) or the rest of
+# not tests/ (the test programs), cmake/ (feature checks) or the rest of
 # support/.
 INPUT                  = support/doxygen-mainpage.md \
                          include lib history storage innd nnrpd innfeed \
