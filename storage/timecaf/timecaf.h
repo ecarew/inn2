@@ -18,7 +18,7 @@ ARTHANDLE *timecaf_retrieve(const TOKEN token, const RETRTYPE amount);
 ARTHANDLE *timecaf_next(ARTHANDLE *article, const RETRTYPE amount);
 void timecaf_freearticle(ARTHANDLE *article);
 bool timecaf_cancel(TOKEN token);
-bool timecaf_ctl(PROBETYPE type, TOKEN *token, void *value);
+bool timecaf_artngnum(TOKEN *token, struct artngnum *ann);
 bool timecaf_flushcacheddata(FLUSHTYPE type);
 void timecaf_printfiles(FILE *file, TOKEN token, char **xref, int ngroups);
 char *timecaf_explaintoken(const TOKEN token);

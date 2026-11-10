@@ -77,14 +77,14 @@ setup(const char *tmp)
     free(path);
 
     path = concat(tmp, "/etc/storage.conf", (char *) 0);
-    write_file(path,
-               "method cnfs {\n    newsgroups: test.cnfs\n    class: 1\n"
-               "    options: TEST\n}\n"
-               "method timecaf {\n    newsgroups: test.timecaf\n"
-               "    class: 2\n}\n"
-               "method timehash {\n    newsgroups: test.timehash\n"
-               "    class: 3\n}\n"
-               "method trash {\n    newsgroups: test.trash\n    class: 4\n}\n");
+    write_file(
+        path, "method cnfs {\n    newsgroups: test.cnfs\n    class: 1\n"
+              "    options: TEST\n}\n"
+              "method timecaf {\n    newsgroups: test.timecaf\n"
+              "    class: 2\n}\n"
+              "method timehash {\n    newsgroups: test.timehash\n"
+              "    class: 3\n}\n"
+              "method trash {\n    newsgroups: test.trash\n    class: 4\n}\n");
     free(path);
 
     /* A zero-filled cycbuff has no magic, so CNFS initializes it. */
@@ -192,7 +192,7 @@ test_method(const struct method *m)
     is_int(m->type, token.type, "%s: stored with its token type", m->name);
     if (token.type != m->type)
         diag("SMstore error: %s", SMerrorstr ? SMerrorstr : "(none)");
-    is_int(m->storageclass, token.class, "%s: stored with its class",
+    is_int(m->storageclass, token.class_, "%s: stored with its class",
            m->name);
 
     innconf->articlemmap = true;
@@ -246,7 +246,7 @@ main(void)
         sysbail("cannot clean %s", tmp);
     setup(tmp);
 
-    if (!SMsetup(SM_RDWR, &value) || !SMsetup(SM_PREOPEN, &value))
+    if (!SMsetrdwr(value) || !SMsetpreopen(value))
         bail("cannot set up storage manager");
     if (!SMinit())
         bail("cannot initialize storage manager: %s", SMerrorstr);
@@ -258,7 +258,7 @@ main(void)
     data = make_article("test.trash", "trash", 300, &art);
     token = SMstore(art);
     is_int(TOKEN_TRASH, token.type, "trash: stored with its token type");
-    is_int(4, token.class, "trash: stored with its class");
+    is_int(4, token.class_, "trash: stored with its class");
     ok(SMretrieve(token, RETR_ALL) == NULL && SMerrno == SMERR_NOENT,
        "trash: retrieve reports no such article");
     ok(!SMcancel(token), "trash: cancel fails");

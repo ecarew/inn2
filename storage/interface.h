@@ -25,7 +25,7 @@ typedef struct {
     ARTHANDLE *(*next)(ARTHANDLE *article, const RETRTYPE amount);
     void (*freearticle)(ARTHANDLE *article);
     bool (*cancel)(TOKEN token);
-    bool (*ctl)(PROBETYPE type, TOKEN *token, void *value);
+    bool (*artngnum)(TOKEN *token, struct artngnum *ann);
     bool (*flushcacheddata)(FLUSHTYPE type);
     void (*printfiles)(FILE *, TOKEN, char **xref, int ngroups);
     char *(*explaintoken)(const TOKEN token);

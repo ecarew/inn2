@@ -611,20 +611,13 @@ timehash_next(ARTHANDLE *article, const RETRTYPE amount)
 }
 
 bool
-timehash_ctl(PROBETYPE type, TOKEN *token UNUSED, void *value)
+timehash_artngnum(TOKEN *token UNUSED, struct artngnum *ann)
 {
-    struct artngnum *ann;
-
-    switch (type) {
-    case SMARTNGNUM:
-        if ((ann = (struct artngnum *) value) == nullptr)
-            return false;
-        /* make SMartngnum() call timehash_retrieve() */
-        ann->artnum = 0;
-        return true;
-    default:
+    if (ann == nullptr)
         return false;
-    }
+    /* make SMartngnum() call timehash_retrieve() */
+    ann->artnum = 0;
+    return true;
 }
 
 bool

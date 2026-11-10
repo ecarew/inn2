@@ -13,11 +13,6 @@ libinnstorage - Routines for managing INN storage
         RETR_STAT
     } RETRTYPE;
 
-    typedef enum {
-        SM_RDWR,
-        SM_PREOPEN
-    } SMSETUP;
-
     typedef unsigned char STORAGECLASS;
     typedef unsigned char STORAGETYPE;
 
@@ -46,12 +41,6 @@ libinnstorage - Routines for managing INN storage
     } ARTHANDLE;
 
     typedef enum {
-        SELFEXPIRE,
-        SMARTNGNUM,
-        EXPENSIVESTAT
-    } PROBETYPE;
-
-    typedef enum {
         SM_ALL,
         SM_HEAD,
         SM_CANCELLEDART
@@ -68,7 +57,9 @@ libinnstorage - Routines for managing INN storage
 
     TOKEN TextToToken(const char *text);
 
-    bool SMsetup(SMSETUP type, void *value);
+    bool SMsetrdwr(bool readwrite);
+
+    bool SMsetpreopen(bool preopen);
 
     bool SMinit(void);
 
@@ -84,7 +75,11 @@ libinnstorage - Routines for managing INN storage
 
     bool SMcanceltombstone(TOKEN token);
 
-    bool SMprobe(PROBETYPE type, TOKEN *token, void *value);
+    bool SMselfexpire(const TOKEN *token);
+
+    bool SMexpensivestat(const TOKEN *token);
+
+    bool SMartngnum(TOKEN *token, struct artngnum *ann);
 
     void SMprintfiles(FILE *file, TOKEN token, char **xref,
                       int ngroups);
@@ -204,27 +199,18 @@ The B<TokenToText> function converts a token into a text string for output.
 
 The B<TextToToken> function converts a text string into a token.
 
-The B<SMsetup> function configures some parameters for use by the storage
-manager.  I<type> is one of the following:
-
-=over 4
-
-=item C<SM_RDWR>
-
-Allow read/write open for storage files (default is false).
-
-=item C<SM_PREOPEN>
-
-Open all storage files at startup time and keep them (default is false).
-
-=back
-
-I<value> is the pointer which tells each type's value.  It returns true
-if setup is successful, or false if not.
+The B<SMsetrdwr> function allows read/write open for storage files when
+I<readwrite> is true (the default is false).  The B<SMsetpreopen> function
+makes the storage manager open all storage files at startup time and keep
+them when I<preopen> is true (the default is false).  Both return true if
+the setting is made, or false if the storage manager is already
+initialized.  (In INN, both were B<SMsetup> with C<SM_RDWR> or
+C<SM_PREOPEN> and a pointer to the value; INN++ replaced it with these
+typed functions.)
 
 The B<SMinit> function calls the setup function for all of the configured
-methods based on B<SMsetup>.  This function should be called prior to all
-other storage API functions which begin with C<SM> except B<SMsetup>.  It
+methods based on B<SMsetrdwr> and B<SMsetpreopen>.  This function should be called prior to all
+other storage API functions which begin with C<SM> except B<SMsetrdwr> and B<SMsetpreopen>.  It
 returns true if initialization is successful or returns false if not.
 B<SMinit> returns false if any configured storage method fails
 initialization.
@@ -237,7 +223,7 @@ its value as article's arrival time; otherwise B<SMstore> uses the current
 time for it.  B<SMstore> returns the token type or returns B<TOKEN_EMPTY>
 if the article is not stored because some error occurs or simply does not
 match any I<wildmat> expression in F<storage.conf>.  B<SMstore> fails if
-B<SM_RDWR> has not been set to true with B<SMsetup>.
+read/write open has not been allowed with B<SMsetrdwr>.
 
 The B<SMretrieve> function retrieves an article specified with I<token>.
 I<amount> is one of the following, which specifies the retrieval type:
@@ -283,7 +269,7 @@ frees allocated memory internally.
 
 The B<SMcancel> function removes the article specified with I<token>.
 It returns true if cancellation is successful or returns false if not.
-B<SMcancel> fails if B<SM_RDWR> has not been set to true with B<SMsetup>.
+B<SMcancel> fails if read/write open has not been allowed with B<SMsetrdwr>.
 
 The B<SMcanceltombstone> function appends the I<token> to the out-of-band
 cancel tombstone log so a later expire run can drop the matching history
@@ -296,27 +282,14 @@ flushed, file closed), false on any failure path.  Callers can ignore
 the return value (the cancel itself has already succeeded by the time
 this is called).
 
-The B<SMprobe> function checks the token on B<PROBETYPE>.  I<type> is
-one of following:
-
-=over 4
-
-=item C<SELFEXPIRE>
-
-Check to see if the method of the token
-has self expire functionality.
-
-=item C<SMARTNGNUM>
-
-Get the newsgroup name and
-the article number of the token.
-
-=item C<EXPENSIVESTAT>
-
-Check to see whether
-checking the existence of an article is expensive or not.
-
-=back
+The B<SMselfexpire> function returns true if the storage method of
+I<token> has self expire functionality.  The B<SMexpensivestat> function
+returns true if checking the existence of an article stored with the
+method of I<token> is expensive.  The B<SMartngnum> function gets the
+newsgroup name and the article number of I<token> into I<ann>, and
+returns true if it could.  (In INN, these three were B<SMprobe> with
+C<SELFEXPIRE>, C<EXPENSIVESTAT> or C<SMARTNGNUM>; INN++ replaced it with
+these typed functions.)
 
 The B<SMprintfiles> function shows file name or token usable by fastrm(1).
 

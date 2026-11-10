@@ -108,7 +108,7 @@ overview_load(int n, const char *data, struct overview *overview)
     const char *group, *result;
     unsigned long artnum;
     size_t count, i;
-    void *search;
+    struct ov_search *search;
     struct overview_data article;
 
     overdata = fopen(data, "r");
@@ -230,7 +230,7 @@ main(void)
        store one of the articles into a real storage method to get a token.
        Cheat on where the article is stored, since overview doesn't care. */
     value = true;
-    if (!SMsetup(SM_RDWR, &value))
+    if (!SMsetrdwr(value))
         die("Cannot set up storage manager");
     if (!SMinit())
         die("Cannot initialize storage manager: %s", SMerrorstr);

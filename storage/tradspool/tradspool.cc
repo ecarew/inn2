@@ -1340,38 +1340,32 @@ FreeNGTree()
 }
 
 bool
-tradspool_ctl(PROBETYPE type, TOKEN *token, void *value)
+tradspool_artngnum(TOKEN *token, struct artngnum *ann)
 {
-    struct artngnum *ann;
     unsigned long ngnum;
     unsigned long artnum;
     char *ng, *p;
 
-    switch (type) {
-    case SMARTNGNUM:
-        if ((ann = (struct artngnum *) value) == nullptr)
-            return false;
-        CheckNeedReloadDB(false);
-        memcpy(&ngnum, &token->token[0], sizeof(ngnum));
-        memcpy(&artnum, &token->token[sizeof(ngnum)], sizeof(artnum));
-        artnum = ntohl(artnum);
-        ngnum = ntohl(ngnum);
-        ng = FindNGByNum(ngnum);
-        if (ng == nullptr) {
-            CheckNeedReloadDB(true);
-            ng = FindNGByNum(ngnum);
-            if (ng == nullptr)
-                return false;
-        }
-        ann->groupname = xstrdup(ng);
-        for (p = ann->groupname; *p != 0; p++)
-            if (*p == '/')
-                *p = '.';
-        ann->artnum = (ARTNUM) artnum;
-        return true;
-    default:
+    if (ann == nullptr)
         return false;
+    CheckNeedReloadDB(false);
+    memcpy(&ngnum, &token->token[0], sizeof(ngnum));
+    memcpy(&artnum, &token->token[sizeof(ngnum)], sizeof(artnum));
+    artnum = ntohl(artnum);
+    ngnum = ntohl(ngnum);
+    ng = FindNGByNum(ngnum);
+    if (ng == nullptr) {
+        CheckNeedReloadDB(true);
+        ng = FindNGByNum(ngnum);
+        if (ng == nullptr)
+            return false;
     }
+    ann->groupname = xstrdup(ng);
+    for (p = ann->groupname; *p != 0; p++)
+        if (*p == '/')
+            *p = '.';
+    ann->artnum = (ARTNUM) artnum;
+    return true;
 }
 
 bool

@@ -304,7 +304,8 @@ extra_obj() {
 }
 
 # Compile a test program's own source: tests that reach a program's
-# internals are C++ (X-t.cc), the rest C (X-t.c).
+# internals or call an API refactored to typed C++ are C++ (X-t.cc), the
+# rest C (X-t.c).
 test_obj() {
     local src=$1 out=$2
     shift 2

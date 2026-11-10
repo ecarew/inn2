@@ -29,11 +29,6 @@ typedef enum {
     RETR_STAT
 } RETRTYPE;
 
-typedef enum {
-    SM_RDWR,
-    SM_PREOPEN
-} SMSETUP;
-
 #define NUM_STORAGE_CLASSES 256
 typedef unsigned char STORAGECLASS;
 typedef unsigned char STORAGETYPE;
@@ -90,12 +85,6 @@ extern int SMerrno;
 extern char *SMerrorstr;
 
 typedef enum {
-    SELFEXPIRE,
-    SMARTNGNUM,
-    EXPENSIVESTAT
-} PROBETYPE;
-
-typedef enum {
     SM_ALL,
     SM_HEAD,
     SM_CANCELLEDART
@@ -112,7 +101,6 @@ char *TokenToText(const TOKEN token);
 TOKEN TextToToken(const char *text);
 bool IsToken(const char *text);
 
-bool SMsetup(SMSETUP type, void *value);
 bool SMinit(void);
 TOKEN SMstore(const ARTHANDLE article);
 ARTHANDLE *SMretrieve(const TOKEN token, const RETRTYPE amount);
@@ -141,11 +129,11 @@ bool SMcancel(TOKEN token);
  */
 bool SMcanceltombstone(TOKEN token);
 
-bool SMprobe(PROBETYPE type, TOKEN *token, void *value);
 
-/* Typed forms of SMsetup and SMprobe, one function per selector
-   (CONVERSION_NOTES, "Typed containers and storage controls").  SMsetrdwr
-   and SMsetpreopen fail once the storage manager is initialized. */
+/* Storage manager settings and article properties, one function each
+   (they replace SMsetup and SMprobe: CONVERSION_NOTES, "Typed containers
+   and storage controls").  SMsetrdwr and SMsetpreopen fail once the
+   storage manager is initialized. */
 bool SMsetrdwr(bool readwrite);
 bool SMsetpreopen(bool preopen);
 bool SMselfexpire(const TOKEN *token);

@@ -23,7 +23,7 @@ sub outpath { my ($file) = @_; defined($out) ? "$out/$file" : $file }
 
 # Storage API functions.
 @STORAGE = qw(
-    init store retrieve next freearticle cancel ctl flushcacheddata
+    init store retrieve next freearticle cancel artngnum flushcacheddata
     printfiles explaintoken shutdown
 );
 

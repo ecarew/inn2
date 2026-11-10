@@ -521,19 +521,6 @@ SMsetpreopen(bool preopen)
     return true;
 }
 
-bool
-SMsetup(SMSETUP type, void *value)
-{
-    switch (type) {
-    case SM_RDWR:
-        return SMsetrdwr(*static_cast<bool *>(value));
-    case SM_PREOPEN:
-        return SMsetpreopen(*static_cast<bool *>(value));
-    default:
-        return false;
-    }
-}
-
 /*
 ** Calls the setup function for all of the configured methods and returns
 ** true if they all initialize ok, false if they don't
@@ -1000,7 +987,7 @@ SMartngnum(TOKEN *token, struct artngnum *ann)
     if (ann == nullptr)
         return false;
     ann->groupname = nullptr;
-    if (!storage_methods[typetoindex[token->type]].ctl(SMARTNGNUM, token, ann))
+    if (!storage_methods[typetoindex[token->type]].artngnum(token, ann))
         return false;
     if (ann->artnum != 0) {
         /* set by storage method */
@@ -1027,21 +1014,6 @@ SMartngnum(TOKEN *token, struct artngnum *ann)
         return false;
     }
     return true;
-}
-
-bool
-SMprobe(PROBETYPE type, TOKEN *token, void *value)
-{
-    switch (type) {
-    case SELFEXPIRE:
-        return SMselfexpire(token);
-    case SMARTNGNUM:
-        return SMartngnum(token, static_cast<struct artngnum *>(value));
-    case EXPENSIVESTAT:
-        return SMexpensivestat(token);
-    default:
-        return false;
-    }
 }
 
 bool

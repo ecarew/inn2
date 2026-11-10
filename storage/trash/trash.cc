@@ -61,13 +61,9 @@ trash_cancel(TOKEN token UNUSED)
 }
 
 bool
-trash_ctl(PROBETYPE type, TOKEN *token UNUSED, void *value UNUSED)
+trash_artngnum(TOKEN *token UNUSED, struct artngnum *ann UNUSED)
 {
-    switch (type) {
-    case SMARTNGNUM:
-    default:
-        return false;
-    }
+    return false;
 }
 
 bool

@@ -35,8 +35,9 @@ function(inn_tap_test name)
         set(T_SOURCE ${name})
     endif()
     string(REPLACE "/" "_" target test_${name})
-    # Tests that reach a program's internals are C++ (CONVERSION_NOTES,
-    # "Internal tests in C++"); the rest stay C.
+    # Tests that reach a program's internals, or call an API refactored to
+    # typed C++, are C++ (CONVERSION_NOTES, "Internal tests in C++" and
+    # "Typed containers and storage controls"); the rest stay C.
     if(EXISTS ${CMAKE_CURRENT_SOURCE_DIR}/${T_SOURCE}-t.cc)
         set(srcs ${T_SOURCE}-t.cc)
     else()
