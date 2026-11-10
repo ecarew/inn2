@@ -277,10 +277,9 @@ SASLauth(int ac, char *av[])
              * RFC 4643 requires the reset of any knowledge about the client.
              */
             if (GRPcur) {
-                bool boolval;
                 ARTclose();
                 GRPreport();
-                OVctl(OVCACHEFREE, &boolval);
+                OVcachefree();
                 free(GRPcur);
                 GRPcur = nullptr;
                 if (ARTcount) {
