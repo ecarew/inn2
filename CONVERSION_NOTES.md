@@ -1503,6 +1503,25 @@ f635b51e) was scratch and is not in the tree.  What it measured:
   Luau and AngelScript comparators; not needed once the speed ruled it
   out.
 
+### JaiScript as an embedded filter language (to research, noted 2026-11-10)
+
+**Proposed by** the architect: research JaiScript as an embedded language
+for filter scripts, as was done for ChaiScript.  Nothing is known about it
+here yet: not its implementation language, licence, maintenance state or
+speed.  Evaluate it the way ChaiScript was evaluated (see "ChaiScript filter
+hooks", above), so the numbers compare directly:
+- **Speed:** the sample spam rules in JaiScript under W1 on CNFS, against
+  no filter, Perl and Python (ChaiScript ran about 35 times slower than
+  Perl).
+- **Size:** what it adds to innd, counting any shared library it needs, as
+  Perl was counted with libperl.
+- **Language:** regular expressions and string handling, or what innd
+  would have to supply.
+- **Sandboxing:** what a script can reach, and limits on time and memory.
+
+"Perl and Python stay" (2026-10-28, confirmed 2026-11-06) holds until this
+is done.
+
 ### ARTparsebody body scan (noted 2026-11-04, refactoring phase)
 
 **Done 2026-11-04** (7d07f923c): the scan jumps between `\r`, `\n` and
