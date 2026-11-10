@@ -101,7 +101,10 @@ control channel (innd/cc.cc).  expire and expireover, run daily by
 news.daily, remove old articles from history, the spool and overview.
 
 **Libraries.**  libinn (lib/) is the shared utility library: wildmat,
-network, configuration, dates and headers.  libinnstorage (storage/)
-holds the storage and overview methods behind one API each
-(`SMstore`/`SMretrieve`, `OVadd`/`OVopensearch`), and libinnhist
-(history/) the history methods behind `HISwrite`/`HISlookup`.
+network, configuration, dates and headers; tables are standard C++
+containers (INN's generic hash table, ternary search trie and list are
+gone).  libinnstorage (storage/) holds the storage and overview methods
+behind one API each (`SMstore`/`SMretrieve`, `OVadd`/`OVopensearch`), with
+a typed function for each setting (`SMsetrdwr`, `OVgetspace`, ...) where
+INN had `SMsetup`, `SMprobe` and `OVctl`; libinnhist (history/) holds the
+history methods behind `HISwrite`/`HISlookup`.
