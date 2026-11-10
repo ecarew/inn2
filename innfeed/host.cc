@@ -17,6 +17,7 @@
 #include <math.h>
 #include <netdb.h>
 #include <sys/param.h>
+#include <string>
 #include <syslog.h>
 
 #include "inn/innconf.h"
@@ -74,11 +75,12 @@ typedef struct proc_q_elem {
     time_t whenToRequeue;
 } *ProcQElem;
 
+/* A host's parameters.  The strings are empty when not set. */
 typedef struct host_param_s {
-    char *peerName;
-    char *ipName;
-    char *bindAddr;
-    char *bindAddr6;
+    std::string peerName;
+    std::string ipName;
+    std::string bindAddr;
+    std::string bindAddr6;
     unsigned int articleTimeout;
     unsigned int responseTimeout;
     unsigned int initialConnections;
@@ -101,8 +103,8 @@ typedef struct host_param_s {
     double dynBacklogLowWaterMark;
     double dynBacklogHighWaterMark;
     bool backlogFeedFirst;
-    char *username;
-    char *password;
+    std::string username;
+    std::string password;
 } *HostParams;
 
 struct host_s {
@@ -230,7 +232,7 @@ struct host_s {
                              revert to spooling articles to tape. */
     time_t nextIpLookup;  /* time of last IP name resolution */
 
-    char *blockedReason; /* what the 400 from the remote says. */
+    std::string blockedReason; /* what the 400 from the remote says. */
 
     Host next; /* for global list of hosts. */
 
@@ -302,9 +304,10 @@ static void tryBlockedHosts(TimeoutId tid);
 static Host newHost(InnListener listener, HostParams p);
 
 static HostParams getHostInfo(void);
-static HostParams hostDetails(scope *s, char *name, bool isDefault, FILE *fp);
+static HostParams hostDetails(scope *s, const char *name, bool isDefault,
+                              FILE *fp);
 
-static Host findHostByName(char *name);
+static Host findHostByName(const char *name);
 static void hostCleanup(void);
 static void hostAlterMaxConnections(Host host, unsigned int absMaxCxns,
                                     unsigned int maxCxns, bool makeConnect);
@@ -338,7 +341,7 @@ static unsigned int maxPeerNameLen = 0;
 static time_t start;
 static char startTime[30]; /* for timeToString */
 static pid_t myPid;
-static char *statusFile = NULL;
+static std::string statusFile;
 static unsigned int dnsRetPeriod;
 static unsigned int dnsExpPeriod;
 
@@ -401,10 +404,9 @@ hostConfigLoadCbk(FILE *fp)
     else
         genHtml = GEN_HTML;
 
-    if (getString(topScope, "status-file", &p, NO_INHERIT)) {
-        hostSetStatusFile(p);
-        free(p);
-    } else
+    if (std::string file; getString(topScope, "status-file", file, NO_INHERIT))
+        hostSetStatusFile(file.c_str());
+    else
         hostSetStatusFile(INNFEED_STATUS);
 
     if (getBool(topScope, "connection-stats", &bval, NO_INHERIT))
@@ -471,25 +473,12 @@ newHostParams(HostParams p)
 {
     HostParams params;
 
-    params = xmalloc(sizeof(struct host_param_s));
-
     if (p != NULL) {
         /* Copy old stuff in */
-        memcpy((char *) params, (char *) p, sizeof(struct host_param_s));
-        if (params->peerName)
-            params->peerName = xstrdup(params->peerName);
-        if (params->ipName)
-            params->ipName = xstrdup(params->ipName);
-        if (params->bindAddr)
-            params->bindAddr = xstrdup(params->bindAddr);
-        if (params->bindAddr6)
-            params->bindAddr6 = xstrdup(params->bindAddr6);
+        params = new host_param_s(*p);
     } else {
         /* Fill in defaults */
-        params->peerName = NULL;
-        params->ipName = NULL;
-        params->bindAddr = NULL;
-        params->bindAddr6 = NULL;
+        params = new host_param_s();
         params->articleTimeout = ARTTOUT;
         params->responseTimeout = RESPTOUT;
         params->initialConnections = INIT_CXNS;
@@ -512,8 +501,6 @@ newHostParams(HostParams p)
         params->dynBacklogLowWaterMark = BACKLOGLWM;
         params->dynBacklogHighWaterMark = BACKLOGHWM;
         params->backlogFeedFirst = false;
-        params->username = NULL;
-        params->password = NULL;
     }
     return (params);
 }
@@ -526,15 +513,7 @@ static void
 freeHostParams(HostParams params)
 {
     ASSERT(params != NULL);
-    if (params->peerName)
-        free(params->peerName);
-    if (params->ipName)
-        free(params->ipName);
-    if (params->bindAddr)
-        free(params->bindAddr);
-    if (params->bindAddr6)
-        free(params->bindAddr6);
-    free(params);
+    delete params;
 }
 
 static void
@@ -543,9 +522,8 @@ hostReconfigure(Host h, HostParams params)
     unsigned int i;
     double oldBacklogFilter;
 
-    if (strcmp(h->params->ipName, params->ipName) != 0) {
-        free(h->params->ipName);
-        h->params->ipName = xstrdup(params->ipName);
+    if (h->params->ipName != params->ipName) {
+        h->params->ipName = params->ipName.c_str();
         h->nextIpLookup = theTime();
     }
 
@@ -610,7 +588,7 @@ configHosts(bool talkSelf)
     openDroppedArticleFile();
 
     while ((params = getHostInfo()) != NULL) {
-        h = findHostByName(params->peerName);
+        h = findHostByName(params->peerName.c_str());
         /* We know the host isn't blocked as we cleared the blocked list */
         /* Have we already got this host up and running ?*/
         if (h != NULL) {
@@ -624,12 +602,12 @@ configHosts(bool talkSelf)
             if (nHost == NULL) {
                 addBlockedHost(params);
 
-                warn("ME locked cannot setup peer %s", params->peerName);
+                warn("ME locked cannot setup peer %s", params->peerName.c_str());
             } else {
                 if (params->initialConnections == 0 && talkSelf)
                     notice("%s config ignored batch mode with initial"
                            " connection count of 0",
-                           params->peerName);
+                           params->peerName.c_str());
 
                 if (!listenerAddPeer(mainListener, nHost))
                     die("failed to add a new peer\n");
@@ -644,12 +622,12 @@ configHosts(bool talkSelf)
             if (h->isDynamic) {
                 /* change to the new default parameters */
                 params = newHostParams(defaultParams);
-                ASSERT(params->peerName == NULL);
-                ASSERT(params->ipName == NULL);
-                ASSERT(h->params->peerName != NULL);
-                ASSERT(h->params->ipName != NULL);
-                params->peerName = xstrdup(h->params->peerName);
-                params->ipName = xstrdup(h->params->ipName);
+                ASSERT(params->peerName.empty());
+                ASSERT(params->ipName.empty());
+                ASSERT(!h->params->peerName.empty());
+                ASSERT(!h->params->ipName.empty());
+                params->peerName = h->params->peerName.c_str();
+                params->ipName = h->params->ipName.c_str();
                 hostReconfigure(h, params);
                 h->removeOnReload = true;
             } else
@@ -774,7 +752,7 @@ hostAlterMaxConnections(Host host, unsigned int absMaxCxns,
             host->cxnSleeping[i] = false;
             /* create a new connection */
             host->connections[i] = newConnection(
-                host, i, host->params->ipName, host->params->articleTimeout,
+                host, i, host->params->ipName.c_str(), host->params->articleTimeout,
                 host->params->portNum, host->params->responseTimeout,
                 host->params->closePeriod, host->params->lowPassLow,
                 host->params->lowPassHigh, host->params->lowPassFilter);
@@ -798,8 +776,7 @@ FindBlockedHost(const char *name)
 {
     HostHolder hh = blockedHosts;
     while (hh != NULL)
-        if ((hh->params) && (hh->params->peerName)
-            && (strcmp(name, hh->params->peerName) == 0))
+        if (hh->params && hh->params->peerName == name)
             return hh;
         else
             hh = hh->next;
@@ -839,8 +816,8 @@ tryBlockedHosts(TimeoutId tid UNUSED)
         free(hh);
         hh = hi;
 
-        if (params && params->peerName) {
-            if (findHostByName(params->peerName) != NULL) {
+        if (params && !params->peerName.empty()) {
+            if (findHostByName(params->peerName.c_str()) != NULL) {
                 /* Weird, someone has managed to start it when it is on
                  * the blocked list.  Just silently discard.
                  */
@@ -852,15 +829,15 @@ tryBlockedHosts(TimeoutId tid UNUSED)
                 if (nHost == NULL) {
                     addBlockedHost(params);
 
-                    warn("ME locked cannot setup peer %s", params->peerName);
+                    warn("ME locked cannot setup peer %s", params->peerName.c_str());
                 } else {
-                    d_printf(1, "Unblocked host %s\n", params->peerName);
+                    d_printf(1, "Unblocked host %s\n", params->peerName.c_str());
 
                     if (params->initialConnections == 0
                         && listenerIsDummy(mainListener) /*talk to self*/)
                         notice("%s config ignored batch mode with initial"
                                " connection count of 0",
-                               params->peerName);
+                               params->peerName.c_str());
 
                     if (!listenerAddPeer(mainListener, nHost))
                         die("failed to add a new peer\n");
@@ -889,15 +866,15 @@ newDefaultHost(InnListener listener, const char *name)
         ASSERT(p != NULL);
 
         /* relies on fact listener and names are null in default*/
-        p->peerName = xstrdup(name);
-        p->ipName = xstrdup(name);
+        p->peerName = name;
+        p->ipName = name;
 
         h = newHost(listener, p);
         if (h == NULL) {
             /* Couldn't get a lock - add to list of blocked peers */
             addBlockedHost(p);
 
-            warn("ME locked cannot setup peer %s", p->peerName);
+            warn("ME locked cannot setup peer %s", p->peerName.c_str());
 
             return NULL;
         }
@@ -905,7 +882,7 @@ newDefaultHost(InnListener listener, const char *name)
         h->isDynamic = true;
         h->removeOnReload = true;
 
-        notice("ME unconfigured peer %s added", p->peerName);
+        notice("ME unconfigured peer %s added", p->peerName.c_str());
     }
     return h;
 }
@@ -934,7 +911,7 @@ newHost(InnListener listener, HostParams p)
         tryBlockedHostsId =
             prepareSleep<tryBlockedHosts>(TRYBLOCKEDHOSTPERIOD);
 
-    nh = xcalloc(1, sizeof(struct host_s));
+    nh = new host_s();
 
     nh->params = p;
     nh->listener = listener;
@@ -962,7 +939,7 @@ newHost(InnListener listener, HostParams p)
     nh->ChkCxnsId = 0;
     nh->deferredId = 0;
 
-    nh->myTape = newTape(nh->params->peerName, listenerIsDummy(nh->listener));
+    nh->myTape = newTape(nh->params->peerName.c_str(), listenerIsDummy(nh->listener));
     if (nh->myTape == NULL) { /* tape couldn't be locked, probably */
         free(nh->connections);
         free(nh->cxnActive);
@@ -1075,10 +1052,10 @@ newHost(InnListener listener, HostParams p)
         myPid = getpid();
     }
 
-    if (strlen(nh->params->ipName) > maxIpNameLen)
-        maxIpNameLen = strlen(nh->params->ipName);
-    if (strlen(nh->params->peerName) > maxPeerNameLen)
-        maxPeerNameLen = strlen(nh->params->peerName);
+    if (strlen(nh->params->ipName.c_str()) > maxIpNameLen)
+        maxIpNameLen = strlen(nh->params->ipName.c_str());
+    if (strlen(nh->params->peerName.c_str()) > maxPeerNameLen)
+        maxPeerNameLen = strlen(nh->params->peerName.c_str());
 
     return nh;
 }
@@ -1103,20 +1080,18 @@ hostIpAddr(Host host)
         memset(&hints, 0, sizeof(hints));
         hints.ai_family = AF_UNSPEC;
 #ifdef HAVE_INET6
-        if (host->params->bindAddr
-            && strcmp(host->params->bindAddr, "none") == 0)
+        if (host->params->bindAddr == "none")
             hints.ai_family = AF_INET6;
-        if (host->params->bindAddr6
-            && strcmp(host->params->bindAddr6, "none") == 0)
+        if (host->params->bindAddr6 == "none")
             hints.ai_family = AF_INET;
 #endif
         hints.ai_socktype = SOCK_STREAM;
         hints.ai_flags = AI_NUMERICSERV | AI_ADDRCONFIG;
         snprintf(port, sizeof(port), "%hu", host->params->portNum);
-        gai_ret = getaddrinfo(host->params->ipName, port, &hints, &res);
+        gai_ret = getaddrinfo(host->params->ipName.c_str(), port, &hints, &res);
         if (gai_ret != 0 || res == NULL) {
-            warn("%s can't resolve hostname %s: %s", host->params->peerName,
-                 host->params->ipName,
+            warn("%s can't resolve hostname %s: %s", host->params->peerName.c_str(),
+                 host->params->ipName.c_str(),
                  gai_ret == 0 ? "no addresses returned"
                               : gai_strerror(gai_ret));
         } else {
@@ -1237,12 +1212,14 @@ printHostInfo(Host host, FILE *fp, unsigned int indentAmt)
     cnt = (host->blCount) ? (host->blCount) : 1.0;
 
     fprintf(fp, "%sHost : %p {\n", indent, (void *) host);
-    fprintf(fp, "%s    peer-name : %s\n", indent, host->params->peerName);
-    fprintf(fp, "%s    ip-name : %s\n", indent, host->params->ipName);
+    fprintf(fp, "%s    peer-name : %s\n", indent, host->params->peerName.c_str());
+    fprintf(fp, "%s    ip-name : %s\n", indent, host->params->ipName.c_str());
     fprintf(fp, "%s    bindaddress : %s\n", indent,
-            host->params->bindAddr ? host->params->bindAddr : "any");
+            host->params->bindAddr.empty() ? "any"
+                                           : host->params->bindAddr.c_str());
     fprintf(fp, "%s    bindaddress6 : %s\n", indent,
-            host->params->bindAddr6 ? host->params->bindAddr6 : "any");
+            host->params->bindAddr6.empty() ? "any"
+                                            : host->params->bindAddr6.c_str());
     fprintf(fp, "%s    abs-max-connections : %u\n", indent,
             host->params->absMaxConnections);
     fprintf(fp, "%s    active-connections : %u\n", indent, host->activeCxns);
@@ -1453,7 +1430,7 @@ hostClose(Host host)
     unsigned int i;
     unsigned int cxnCount;
 
-    d_printf(1, "Closing host %s\n", host->params->peerName);
+    d_printf(1, "Closing host %s\n", host->params->peerName.c_str());
 
     queuesToTape(host);
     delTape(host->myTape);
@@ -1533,7 +1510,7 @@ hostChkCxns(TimeoutId tid UNUSED, Host host)
 
     d_printf(
         1, "%s hostChkCxns - entry filter=%3.3f blmult=%3.3f blratio=%3.3f\n",
-        host->params->peerName, host->backlogFilter, backlogMult,
+        host->params->peerName.c_str(), host->backlogFilter, backlogMult,
         backlogRatio);
 
     ratio = 0.0; /* ignore APS by default */
@@ -1575,7 +1552,7 @@ hostChkCxns(TimeoutId tid UNUSED, Host host)
             1,
             "%s hostChkCxns - entry hwm=%3.3f lwm=%3.3f new=%3.3f "
             "[%3.3f,%3.3f]\n",
-            host->params->peerName, host->params->dynBacklogHighWaterMark,
+            host->params->peerName.c_str(), host->params->dynBacklogHighWaterMark,
             host->params->dynBacklogLowWaterMark, host->backlogFilter,
             (host->params->dynBacklogLowWaterMark * backlogMult / 100.0),
             (host->params->dynBacklogHighWaterMark * backlogMult / 100.0));
@@ -1609,7 +1586,7 @@ hostChkCxns(TimeoutId tid UNUSED, Host host)
 
     if (newMaxCxns != host->maxConnections) {
         notice("%s hostChkCxns - maxConnections was %u now %u",
-               host->params->peerName, host->maxConnections, newMaxCxns);
+               host->params->peerName.c_str(), host->maxConnections, newMaxCxns);
 
         host->backlogFilter = ((host->params->dynBacklogLowWaterMark
                                 + host->params->dynBacklogHighWaterMark)
@@ -1677,7 +1654,7 @@ hostSendArticle(Host host, Article article)
                                 d_printf(1,
                                          "%s Inactive connection %u refused "
                                          "an article\n",
-                                         host->params->peerName, idx);
+                                         host->params->peerName.c_str(), idx);
                         }
                     } else {
                         unsigned int queue =
@@ -1735,7 +1712,7 @@ hostSendArticle(Host host, Article article)
                         d_printf(
                             1,
                             "%s Inactive connection %u refused an article\n",
-                            host->params->peerName, idx);
+                            host->params->peerName.c_str(), idx);
                 }
         }
 
@@ -1784,20 +1761,20 @@ hostCxnBlocked(Host host, Connection cxn, char *reason)
     }
 #endif
 
-    if (host->blockedReason == NULL)
-        host->blockedReason = xstrdup(reason);
+    if (host->blockedReason.empty())
+        host->blockedReason = reason;
 
     if (host->activeCxns == 0 && host->spoolTime == 0) {
         host->blockedCxn = cxn; /* to limit log notices */
         notice("%s remote cannot accept articles initial: %s",
-               host->params->peerName, reason);
+               host->params->peerName.c_str(), reason);
     } else if (host->activeCxns > 0 && !host->notifiedChangedRemBlckd) {
         notice("%s remote cannot accept articles change: %s",
-               host->params->peerName, reason);
+               host->params->peerName.c_str(), reason);
         host->notifiedChangedRemBlckd = true;
     } else if (host->spoolTime != 0 && host->blockedCxn == cxn) {
         notice("%s remote cannot accept articles still: %s",
-               host->params->peerName, reason);
+               host->params->peerName.c_str(), reason);
     }
 }
 
@@ -1812,9 +1789,7 @@ hostRemoteStreams(Host host, Connection cxn, bool doesStreaming)
     unsigned int i;
 
     host->blockedCxn = NULL;
-    if (host->blockedReason != NULL)
-        free(host->blockedReason);
-    host->blockedReason = NULL;
+    host->blockedReason.clear();
 
     /* we may have told the connection to quit while it was in the middle
        of connecting */
@@ -1824,11 +1799,11 @@ hostRemoteStreams(Host host, Connection cxn, bool doesStreaming)
     if (host->connectTime == 0) /* first connection for this cycle. */
     {
         if (doesStreaming && host->params->wantStreaming)
-            notice("%s remote MODE STREAM", host->params->peerName);
+            notice("%s remote MODE STREAM", host->params->peerName.c_str());
         else if (doesStreaming)
-            notice("%s remote MODE STREAM disabled", host->params->peerName);
+            notice("%s remote MODE STREAM disabled", host->params->peerName.c_str());
         else
-            notice("%s remote MODE STREAM failed", host->params->peerName);
+            notice("%s remote MODE STREAM failed", host->params->peerName.c_str());
 
         if (host->spoolTime > 0)
             hostStopSpooling(host);
@@ -1852,7 +1827,7 @@ hostRemoteStreams(Host host, Connection cxn, bool doesStreaming)
             host->firstConnectTime = host->connectTime;
     } else if (host->remoteStreams != doesStreaming
                && host->params->wantStreaming)
-        notice("%s remote MODE STREAM change", host->params->peerName);
+        notice("%s remote MODE STREAM change", host->params->peerName.c_str());
 
     for (i = 0; i < host->maxConnections; i++)
         if (host->connections[i] == cxn) {
@@ -1978,7 +1953,7 @@ hostCxnGone(Host host, Connection cxn)
     for (i = 0; i < host->maxConnections; i++)
         if (host->connections[i] == cxn) {
             if (!amClosing(host)) {
-                warn("%s:%u connection vanishing", host->params->peerName, i);
+                warn("%s:%u connection vanishing", host->params->peerName.c_str(), i);
             }
             host->connections[i] = NULL;
             if (host->cxnActive[i]) {
@@ -2001,7 +1976,7 @@ hostCxnGone(Host host, Connection cxn)
                      host->gArtsSizeAccepted, host->gArtsSizeRejected);
             notice("%s global seconds %ld offered %u accepted %u refused %u"
                    " rejected %u missing %u %s spooled %u unspooled %u",
-                   host->params->peerName,
+                   host->params->peerName.c_str(),
                    (long) (now - host->firstConnectTime), host->gArtsOffered,
                    host->gArtsAccepted, host->gArtsNotWanted,
                    host->gArtsRejected, host->gArtsMissing, msgstr,
@@ -2195,7 +2170,7 @@ hostArticleIsMissing(Host host, Connection cxn, Article article)
     const char *filename = artFileName(article);
     const char *msgid = artMsgId(article);
 
-    d_printf(5, "%s article is missing %s %s\n", host->params->peerName, msgid,
+    d_printf(5, "%s article is missing %s %s\n", host->params->peerName.c_str(), msgid,
              filename);
 
     host->artsMissing++;
@@ -2226,13 +2201,13 @@ hostGimmeArticle(Host host, Connection cxn)
 
     if (amClosing(host)) {
         d_printf(5, "%s no article to give due to closing\n",
-                 host->params->peerName);
+                 host->params->peerName.c_str());
 
         return false;
     }
 
     if (amtToGive == 0)
-        d_printf(5, "%s Queue space is zero....\n", host->params->peerName);
+        d_printf(5, "%s Queue space is zero....\n", host->params->peerName.c_str());
 
     while (amtToGive > 0) {
         bool tookIt;
@@ -2318,7 +2293,14 @@ hostPeerName(Host host)
 {
     ASSERT(host != NULL);
 
-    return host->params->peerName;
+    return host->params->peerName.c_str();
+}
+
+/* A parameter for the callers, which take NULL for "not set". */
+static const char *
+unlessEmpty(const std::string &s)
+{
+    return s.empty() ? NULL : s.c_str();
 }
 
 /*
@@ -2329,7 +2311,7 @@ hostBindAddr(Host host)
 {
     ASSERT(host != NULL);
 
-    return host->params->bindAddr;
+    return unlessEmpty(host->params->bindAddr);
 }
 
 /*
@@ -2340,7 +2322,7 @@ hostBindAddr6(Host host)
 {
     ASSERT(host != NULL);
 
-    return host->params->bindAddr6;
+    return unlessEmpty(host->params->bindAddr6);
 }
 
 /*
@@ -2351,14 +2333,14 @@ hostUsername(Host host)
 {
     ASSERT(host != NULL);
 
-    return host->params->username;
+    return unlessEmpty(host->params->username);
 }
 const char *
 hostPassword(Host host)
 {
     ASSERT(host != NULL);
 
-    return host->params->password;
+    return unlessEmpty(host->params->password);
 }
 
 
@@ -2414,11 +2396,11 @@ hostLogNoCheckMode(Host host, bool on, double low, double cur, double high)
 {
     if (on && host->loggedModeOn == false) {
         notice("%s mode no-CHECK entered [%.2f,%.2f,%.2f]",
-               host->params->peerName, low, cur, high);
+               host->params->peerName.c_str(), low, cur, high);
         host->loggedModeOn = true;
     } else if (!on && host->loggedModeOff == false) {
         notice("%s mode no-CHECK exited [%.2f,%.2f,%.2f]",
-               host->params->peerName, low, cur, high);
+               host->params->peerName.c_str(), low, cur, high);
         host->loggedModeOff = true;
     }
 }
@@ -2434,23 +2416,21 @@ hostSetStatusFile(const char *filename)
     else if (*filename == '\0')
         die("Can't set status file name with an empty string\n");
 
-    /* statusFile may already be initialized (several status-file: lines,
-     * reload of the config file, shutdown process). */
-    free(statusFile);
-
+    /* statusFile may already be set (several status-file: lines, reload of
+     * the config file, shutdown process). */
     if (*filename == '/')
-        statusFile = xstrdup(filename);
+        statusFile = filename;
     else {
-        if (genHtml)
-            statusFile = concatpath(innconf->pathhttp, filename);
-        else
-            statusFile = concatpath(innconf->pathlog, filename);
+        char *path = concatpath(genHtml ? innconf->pathhttp : innconf->pathlog,
+                                filename);
+        statusFile = path;
+        free(path);
     }
 
-    if ((fp = fopen(statusFile, "w")) == NULL) {
-        syslog(LOG_ERR, "Status file is not a valid pathname: %s", statusFile);
-        free(statusFile);
-        statusFile = NULL;
+    if ((fp = fopen(statusFile.c_str(), "w")) == NULL) {
+        syslog(LOG_ERR, "Status file is not a valid pathname: %s",
+               statusFile.c_str());
+        statusFile.clear();
     } else
         fclose(fp);
 }
@@ -2468,7 +2448,7 @@ gHostStats(void)
                      h->gArtsSizeAccepted, h->gArtsSizeRejected);
             notice("%s global seconds %ld offered %u accepted %u refused %u"
                    " rejected %u missing %u %s spooled %u unspooled %u",
-                   h->params->peerName, (long) (now - h->firstConnectTime),
+                   h->params->peerName.c_str(), (long) (now - h->firstConnectTime),
                    h->gArtsOffered, h->gArtsAccepted, h->gArtsNotWanted,
                    h->gArtsRejected, h->gArtsMissing, msgstr, h->gArtsToTape,
                    h->gArtsFromTape);
@@ -2482,7 +2462,7 @@ gHostStats(void)
 
 
 static HostParams
-hostDetails(scope *s, char *name, bool isDefault, FILE *fp)
+hostDetails(scope *s, const char *name, bool isDefault, FILE *fp)
 {
     long iv;
     int bv, vival, inherit;
@@ -2496,50 +2476,33 @@ hostDetails(scope *s, char *name, bool isDefault, FILE *fp)
     if (isDefault) {
         ASSERT(name == NULL);
     } else {
-        if (name) {
-            p->peerName = xstrdup(name);
-        }
+        if (name)
+            p->peerName = name;
 
-        if (s != NULL) {
-            if (getString(s, IP_NAME, &q, NO_INHERIT))
-                p->ipName = q;
-            else
-                p->ipName = xstrdup(name);
-        }
+        if (s != NULL && !getString(s, IP_NAME, p->ipName, NO_INHERIT))
+            p->ipName = name;
 
-        if (getString(s, "username", &q, NO_INHERIT))
-            p->username = q;
-        if (getString(s, "password", &q, NO_INHERIT))
-            p->password = q;
+        getString(s, "username", p->username, NO_INHERIT);
+        getString(s, "password", p->password, NO_INHERIT);
 
-        if (p->username != NULL && p->password == NULL)
+        if (!p->username.empty() && p->password.empty())
             logOrPrint(LOG_ERR, fp, "cannot find password for %s",
-                       p->peerName);
-        if (p->username == NULL && p->password != NULL)
+                       p->peerName.c_str());
+        if (p->username.empty() && !p->password.empty())
             logOrPrint(LOG_ERR, fp, "cannot find username for %s",
-                       p->peerName);
+                       p->peerName.c_str());
     }
 
-    if (getString(s, "bindaddress", &q, isDefault ? NO_INHERIT : INHERIT)) {
-        if (p->bindAddr)
-            free(p->bindAddr);
-        p->bindAddr = q;
-    }
-    if (getString(s, "bindaddress6", &q, isDefault ? NO_INHERIT : INHERIT)) {
-        if (p->bindAddr6)
-            free(p->bindAddr6);
-        p->bindAddr6 = q;
-    }
-    if (p->bindAddr && strcmp(p->bindAddr, "none") == 0 && p->bindAddr6
-        && strcmp(p->bindAddr6, "none") == 0) {
+    getString(s, "bindaddress", p->bindAddr, isDefault ? NO_INHERIT : INHERIT);
+    getString(s, "bindaddress6", p->bindAddr6,
+              isDefault ? NO_INHERIT : INHERIT);
+    if (p->bindAddr == "none" && p->bindAddr6 == "none") {
         logOrPrint(LOG_ERR, fp,
                    "cannot set both bindaddress and bindaddress6"
                    " to \"none\" -- ignoring them for %s",
-                   p->peerName);
-        free(p->bindAddr);
-        free(p->bindAddr6);
-        p->bindAddr = NULL;
-        p->bindAddr6 = NULL;
+                   p->peerName.c_str());
+        p->bindAddr.clear();
+        p->bindAddr6.clear();
     }
 
     /* check required global defaults are there and have good values */
@@ -2614,15 +2577,10 @@ hostDetails(scope *s, char *name, bool isDefault, FILE *fp)
 
     GETBOOL(s, fp, "force-ipv4", NOTREQ, p->forceIPv4, inherit);
     if (p->forceIPv4) {
-        if (p->bindAddr && strcmp(p->bindAddr, "none") == 0) {
-            free(p->bindAddr);
-            p->bindAddr = NULL;
-        }
-        if (p->bindAddr6) {
-            free(p->bindAddr6);
-        }
+        if (p->bindAddr == "none")
+            p->bindAddr.clear();
         /* Force bindaddress6: to "none". */
-        p->bindAddr6 = xstrdup("none");
+        p->bindAddr6 = "none";
     }
 
     if (findValue(s, "backlog-factor", inherit) == NULL
@@ -2645,11 +2603,11 @@ hostDetails(scope *s, char *name, bool isDefault, FILE *fp)
        initial-connections both set to "1" */
     if ((p->backlogFeedFirst)
         && ((p->initialConnections <= 1) || (p->absMaxConnections != 1))) {
-        if (p->peerName != NULL)
+        if (!p->peerName.empty())
             logOrPrint(LOG_WARNING, fp,
                        "ME config: innfeed will make more than one connection"
                        " to peer %s, but backlog-feed-first is set",
-                       p->peerName);
+                       p->peerName.c_str());
         else
             logOrPrint(LOG_WARNING, fp,
                        "ME config: innfeed will make more than one connection"
@@ -2708,7 +2666,7 @@ getHostInfo(void)
 
         s = v->v.scope_val;
 
-        p = hostDetails(s, v->name.data(), false, NULL);
+        p = hostDetails(s, v->name.c_str(), false, NULL);
 
         break;
     }
@@ -2744,8 +2702,7 @@ delHost(Host host)
     free(host->connections);
     free(host->cxnActive);
     free(host->cxnSleeping);
-    free(host->params->peerName);
-    free(host->params->ipName);
+    freeHostParams(host->params);
 
     if (host->ipAddrs) {
         if (host->ipAddrs[0])
@@ -2753,18 +2710,18 @@ delHost(Host host)
         free(host->ipAddrs);
     }
 
-    free(host);
+    delete host;
     gHostCount--;
 }
 
 
 static Host
-findHostByName(char *name)
+findHostByName(const char *name)
 {
     Host h;
 
     for (h = gHostList; h != NULL; h = h->next)
-        if (strcmp(h->params->peerName, name) == 0)
+        if (strcmp(h->params->peerName.c_str(), name) == 0)
             return h;
 
     return NULL;
@@ -2826,7 +2783,7 @@ hostStartSpooling(Host host)
     /* don't want to log too frequently */
     if (SPOOL_LOG_PERIOD > 0
         && (host->spoolTime - host->lastSpoolTime) > SPOOL_LOG_PERIOD) {
-        notice("%s spooling no active connections", host->params->peerName);
+        notice("%s spooling no active connections", host->params->peerName.c_str());
         host->lastSpoolTime = host->spoolTime;
     }
 
@@ -2862,7 +2819,7 @@ hostLogStats(Host host, bool final)
     if (host->spoolTime != 0) {
         /* Log a checkpoint in any case. */
         notice("%s checkpoint seconds %ld spooled %u on_close %u sleeping %u",
-               host->params->peerName,
+               host->params->peerName.c_str(),
                (long) (now - host->spoolTime_checkpoint),
                host->artsToTape - host->artsToTape_checkpoint,
                host->artsHostClose - host->artsHostClose_checkpoint,
@@ -2875,7 +2832,7 @@ hostLogStats(Host host, bool final)
 
         if (final) {
             notice("%s final seconds %ld spooled %u on_close %u sleeping %u",
-                   host->params->peerName, (long) (now - host->spoolTime),
+                   host->params->peerName.c_str(), (long) (now - host->spoolTime),
                    host->artsToTape, host->artsHostClose, host->artsHostSleep);
         }
     } else {
@@ -2888,7 +2845,7 @@ hostLogStats(Host host, bool final)
             " rejected %u missing %u accsize %.0f rejsize %.0f spooled %u"
             " on_close %u unspooled %u deferred %u/%.1f requeued %u"
             " queue %.1f/%u:%.0f,%.0f,%.0f,%.0f,%.0f,%.0f",
-            host->params->peerName,
+            host->params->peerName.c_str(),
             (long) (now - host->connectTime_checkpoint),
             host->artsOffered - host->artsOffered_checkpoint,
             host->artsAccepted - host->artsAccepted_checkpoint,
@@ -2928,7 +2885,7 @@ hostLogStats(Host host, bool final)
                    " rejected %u missing %u accsize %.0f rejsize %.0f"
                    " spooled %u on_close %u unspooled %u deferred %u/%.1f"
                    " requeued %u queue %.1f/%u:%.0f,%.0f,%.0f,%.0f,%.0f,%.0f",
-                   host->params->peerName, (long) (now - host->connectTime),
+                   host->params->peerName.c_str(), (long) (now - host->connectTime),
                    host->artsOffered, host->artsAccepted, host->artsNotWanted,
                    host->artsRejected, host->artsMissing,
                    host->artsSizeAccepted, host->artsSizeRejected,
@@ -3050,7 +3007,7 @@ hostLogStatus(void)
     static bool logged = false;
     static bool flogged = false;
 
-    if (statusFile == NULL && !logged) {
+    if (statusFile.empty() && !logged) {
         syslog(LOG_ERR, "No status file to write to");
         logged = true;
         return;
@@ -3075,9 +3032,9 @@ hostLogStatus(void)
     lastStatusLog = theTime();
 
     TMRstart(TMR_STATUSFILE);
-    if ((fp = fopen(statusFile, "w")) == NULL) {
+    if ((fp = fopen(statusFile.c_str(), "w")) == NULL) {
         if (!flogged)
-            syswarn("ME oserr status file open: %s", statusFile);
+            syswarn("ME oserr status file open: %s", statusFile.c_str());
         flogged = true;
     } else {
         char timeString[30];
@@ -3122,7 +3079,7 @@ hostLogStatus(void)
             fprintf(fp, "<ul>\n");
             for (h = gHostList; h != NULL; h = h->next)
                 fprintf(fp, "<li><a href=\"#%s\">%s</a></li>\n",
-                        h->params->peerName, h->params->peerName);
+                        h->params->peerName.c_str(), h->params->peerName.c_str());
             fprintf(fp, "</ul>\n\n");
             fprintf(fp, "<pre>\n");
         }
@@ -3294,13 +3251,13 @@ hostPrintStatus(Host host, FILE *fp)
     ASSERT(fp != NULL);
 
     if (genHtml)
-        fprintf(fp, "<strong id=\"%s\">%s</strong>", host->params->peerName,
-                host->params->peerName);
+        fprintf(fp, "<strong id=\"%s\">%s</strong>", host->params->peerName.c_str(),
+                host->params->peerName.c_str());
     else
-        fprintf(fp, "%s", host->params->peerName);
+        fprintf(fp, "%s", host->params->peerName.c_str());
 
-    if (host->blockedReason != NULL)
-        fprintf(fp, "  (remote status: ``%s'')", host->blockedReason);
+    if (!host->blockedReason.empty())
+        fprintf(fp, "  (remote status: ``%s'')", host->blockedReason.c_str());
 
     fputc('\n', fp);
 
@@ -3334,7 +3291,7 @@ hostPrintStatus(Host host, FILE *fp)
     fprintf(fp, "   seconds: %-7ld   art. timeout: %-5u        ip name: %s\n",
             host->firstConnectTime > 0 ? (long) (now - host->firstConnectTime)
                                        : 0,
-            host->params->articleTimeout, host->params->ipName);
+            host->params->articleTimeout, host->params->ipName.c_str());
 
     fprintf(fp, "   offered: %-7ld  resp. timeout: %-5u           port: %u\n",
             (long) host->gArtsOffered, host->params->responseTimeout,
@@ -3843,7 +3800,5 @@ gCalcHostBlStat(void)
 static void
 hostCleanup(void)
 {
-    if (statusFile != NULL)
-        free(statusFile);
-    statusFile = NULL;
+    statusFile.clear();
 }
