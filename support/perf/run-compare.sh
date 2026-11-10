@@ -17,6 +17,10 @@
 #  PERF_KEEP=1 keeps the last scratch installation.
 #  PERF_STORAGE=cnfs stores articles in CNFS (one 1 GB buffer, the
 #    PERF_CNFS_KB size) instead of tradspool; =timecaf in timecaf.
+#    CNFS keeps each buffer's path in a 64-byte header field, so with
+#    cnfs the scratch installation goes under /tmp (PERF_SCRATCH_BASE
+#    overrides) when $TMPDIR would make the paths longer than 63 bytes;
+#    macOS's $TMPDIR always does.
 #  PERF_LAYOUT=typical gives cnfs or timecaf a storage.conf of 8 entries
 #    split by hierarchy, as a production site has, instead of one; each
 #    article is matched against 5 to 8 of them (first match wins).
@@ -261,6 +265,20 @@ ctl() { INNCONF=$main/etc/inn.conf "$bin/frontends/ctlinnd" -s "$@"; }
 
 spool_files() { find "$1/spool/articles" -type f | wc -l | tr -d ' '; }
 
+# peer_stored <dir>: what W3's peer has stored, and the count that means
+# done.  Tradspool has one file per group placement; other methods keep
+# articles inside their own files, so count the peer's history lines
+# instead, one per article (the peer syncs history after every article,
+# see setup).
+peer_stored() {
+    if [ "${PERF_STORAGE:-tradspool}" = tradspool ]; then spool_files "$1"
+    else wc -l <"$1/db/history" | tr -d ' '; fi
+}
+peer_want() {
+    if [ "${PERF_STORAGE:-tradspool}" = tradspool ]; then echo "$placements"
+    else echo "$narts"; fi
+}
+
 # --- Scenarios ----------------------------------------------------------------
 # Each returns non-zero after printing FAILED.
 
@@ -305,10 +323,15 @@ w2() {
 # W3: innfeed streams every article to a peer innd (a second scratch
 # server from the same build), from the channel lines innd writes for it.
 w3() {
-    local peer=$scratch/peer pport=$((mport + 1)) ppid t0 t1
+    local peer=$scratch/peer pport=$((mport + 1)) ppid t0 t1 want
+    want=$(peer_want)
     if ! setup "$bin" "$peer" "$pport" peer.perf.test; then
         failed W3 "peer: makedbz"; return 1
     fi
+    # Outside tradspool the peer is counted by its history lines, so have
+    # it write history out after every article.
+    [ "${PERF_STORAGE:-tradspool}" = tradspool ] \
+        || printf 'icdsynccount: 1\n' >>"$peer/etc/inn.conf"
     if ! start_innd "$bin" "$peer"; then
         failed W3 "peer innd did not start: $start_error"; return 1
     fi
@@ -341,7 +364,7 @@ EOF
     # peer has every article (or the time limit passes).
     { awk '{ print $1, $2, "perfpeer" }' "$batch"
       local waited=0
-      while [ "$(spool_files "$peer")" -lt "$placements" ] && [ "$waited" -lt "$((limit * 2))" ]; do
+      while [ "$(peer_stored "$peer")" -lt "$want" ] && [ "$waited" -lt "$((limit * 2))" ]; do
           sleep 0.5; waited=$((waited + 1))
       done
     } | INNCONF=$main/etc/inn.conf "${measured_cmd[@]}" \
@@ -349,10 +372,10 @@ EOF
         -S "$main/innfeed.status" -p "$main/run/innfeed.pid" >"$main/innfeed.out" 2>&1
     t1=$(now)
     local got
-    got=$(spool_files "$peer")
+    got=$(peer_stored "$peer")
     stop_innd "$bin" "$peer" "$ppid"
-    if [ "$got" != "$placements" ]; then
-        failed W3 "peer has $got of $placements article files"; return 1
+    if [ "$got" != "$want" ]; then
+        failed W3 "peer has $got of $want articles stored"; return 1
     fi
     out W3 wall_s "$(elapsed "$t0" "$t1")"
     rusage innfeed W3 "$main/innfeed.time"
@@ -474,12 +497,14 @@ EOF
     out W5 expireover_wall_s "$(elapsed "$t0" "$t1")"
     rusage expireover W5 "$main/expireover.time"
     leakcount expireover W5 "$main/expireover.out"
-    local after
-    after=$(spool_files "$main")
-    if [ "$after" -ge "$before" ] || [ "$after" -eq 0 ]; then
-        failed W5 "spool files $before before, $after after"; return 1
+    if [ "${PERF_STORAGE:-tradspool}" = tradspool ]; then
+        local after
+        after=$(spool_files "$main")
+        if [ "$after" -ge "$before" ] || [ "$after" -eq 0 ]; then
+            failed W5 "spool files $before before, $after after"; return 1
+        fi
+        out W5 spool_files_left "$after"
     fi
-    out W5 spool_files_left "$after"
 }
 
 # W6: makehistory rebuilds the history from the spool, with innd stopped.
@@ -495,9 +520,18 @@ w6() {
     t1=$(now)
     local lines unique
     lines=$(wc -l <"$main/db/history.rebuilt" | tr -d ' ')
-    unique=$(find "$main/spool/articles" -type f -exec stat -f %i {} + | sort -u | wc -l | tr -d ' ')
-    if [ "$lines" != "$unique" ]; then
-        failed W6 "history has $lines lines for $unique articles"; return 1
+    if [ "${PERF_STORAGE:-tradspool}" = tradspool ]; then
+        unique=$(find "$main/spool/articles" -type f -exec stat -f %i {} + | sort -u | wc -l | tr -d ' ')
+        if [ "$lines" != "$unique" ]; then
+            failed W6 "history has $lines lines for $unique articles"; return 1
+        fi
+    else
+        # The other methods have no file per article to compare with;
+        # report the count so a difference between builds shows.
+        if [ "$lines" -eq 0 ]; then
+            failed W6 "rebuilt history is empty"; return 1
+        fi
+        out W6 history_lines "$lines"
     fi
     out W6 wall_s "$(elapsed "$t0" "$t1")"
     rusage makehistory W6 "$main/makehistory.time"
@@ -508,6 +542,16 @@ w6() {
 
 scratch=$(mktemp -d "${TMPDIR:-/tmp}/perf.XXXXXX")
 scratch=$(cd "$scratch" && pwd -P)
+if [ "${PERF_STORAGE:-tradspool}" = cnfs ] && [ ${#scratch} -gt 48 ]; then
+    rmdir "$scratch"
+    scratch=$(mktemp -d "${PERF_SCRATCH_BASE:-/tmp}/perf.XXXXXX")
+    scratch=$(cd "$scratch" && pwd -P)
+    if [ ${#scratch} -gt 48 ]; then
+        echo "CNFS buffer paths under $scratch would pass CNFS's 63-byte" \
+             "limit; set PERF_SCRATCH_BASE to a shorter directory" >&2
+        rmdir "$scratch"; exit 2
+    fi
+fi
 main=$scratch/main
 cleanup() {
     pkill -f "$scratch/" 2>/dev/null
