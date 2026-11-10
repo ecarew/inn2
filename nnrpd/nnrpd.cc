@@ -939,7 +939,7 @@ SetupDaemon()
               NNTP_FAIL_TERMINATING);
         ExitWithStats(1, true);
     }
-    if (!OVctl(OVCACHEKEEP, &val)) {
+    if (!OVsetcachekeep(val)) {
         syslog(L_NOTICE, "can't enable overview cache %m");
         Reply("%d NNTP server unavailable.  Try later!\r\n",
               NNTP_FAIL_TERMINATING);
