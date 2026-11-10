@@ -2576,8 +2576,7 @@ ARTpost(CHANNEL *cp)
                            data->State->overview.size(), data->Arrived,
                            data->Expires))
                 == OVADDFAILED) {
-                if (OVctl(OVSPACE, (void *) &f)
-                    && (int) (f + 0.01f) == OV_NOSPACE)
+                if (OVgetspace(&f) && (int) (f + 0.01f) == OV_NOSPACE)
                     IOError("creating overview", ENOSPC);
                 else
                     IOError("creating overview", 0);
