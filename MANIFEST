@@ -192,7 +192,6 @@ doc/man/libinn.3                      Manpage for INN library routines
 doc/man/libinn_clientlib.3            Manpage for C News library interface
 doc/man/libinn_dbz.3                  Manpage for DBZ database interface
 doc/man/libinn_inndcomm.3             Manpage for part of INN library
-doc/man/libinn_list.3                 Manpage for list routines
 doc/man/libinn_qio.3                  Manpage for fast I/O file routines
 doc/man/libinn_uwildmat.3             Manpage for uwildmat library routine
 doc/man/libinnauth.3                  Manpage for authprogs utility routines
@@ -317,7 +316,6 @@ doc/pod/libinn.pod                    Master file for libinn.3
 doc/pod/libinn_clientlib.pod          Master file for libinn_clientlib.3
 doc/pod/libinn_dbz.pod                Master file for libinn_dbz.3
 doc/pod/libinn_inndcomm.pod           Master file for libinn_inndcomm.3
-doc/pod/libinn_list.pod               Master file for libinn_list.3
 doc/pod/libinn_qio.pod                Master file for libinn_qio.3
 doc/pod/libinn_uwildmat.pod           Master file for libinn_uwildmat.3
 doc/pod/libinnauth.pod                Master file for libinnauth.3
@@ -448,7 +446,6 @@ include/inn/history.h                 Header file for the history API
 include/inn/innconf.h                 Header file for the innconf struct
 include/inn/inndcomm.h                Header file for control channel commands
 include/inn/libinn.h                  Header file for utility functions
-include/inn/list.h                    Header file for list routines
 include/inn/macros.h                  Header file for useful macros
 include/inn/md5.h                     Header file for MD5 digests
 include/inn/messages.h                Header file for message functions
@@ -576,7 +573,6 @@ lib/inet_ntoa.c                       inet_ntoa replacement
 lib/inet_ntop.c                       inet_ntop replacement
 lib/innconf.c                         Parsing and manipulation of inn.conf
 lib/inndcomm.c                        Library routines to talk to innd
-lib/list.c                            List routines
 lib/localopen.c                       Open a local NNTP connection
 lib/lockfile.c                        Try to lock a file descriptor
 lib/makedir.c                         Make directory recursively
@@ -995,7 +991,6 @@ tests/lib/inet_aton-t.c               Tests for lib/inet_aton.c
 tests/lib/inet_ntoa-t.c               Tests for lib/inet_ntoa.c
 tests/lib/inet_ntop-t.c               Tests for lib/inet_ntop.c
 tests/lib/innconf-t.c                 Tests for lib/innconf.c
-tests/lib/list-t.c                    Tests for lib/list.c
 tests/lib/md5-t.c                     Tests for lib/md5.c
 tests/lib/messageid-t.c               Tests for lib/messageid.c
 tests/lib/messages-t.c                Tests for lib/messages.c
