@@ -135,7 +135,7 @@ void addPointerFreedOnExit(char *pointerToFree);
 /* string the file opened by FP to the give SIZE. The NEWNAME is the name
    of the file to have after truncation. FP will be reopened for writing on
    the new file and will be positioned at the end */
-bool shrinkfile(FILE *fp, long size, char *name, const char *mode);
+bool shrinkfile(FILE *fp, long size, const char *name, const char *mode);
 
 /* max length of pathname */
 long pathMax(const char *pathname);

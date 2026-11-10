@@ -57,19 +57,19 @@ typedef struct q_e_s {
 /* The Tape class type. */
 struct tape_s {
     /* the pathname of the file the administrator can drop in by hand. */
-    char *handFilename;
+    std::string handFilename;
 
     /* the pathname of the file the Tape will read from */
-    char *inputFilename;
+    std::string inputFilename;
 
     /* the pathname of the file the Tape will write to. */
-    char *outputFilename;
+    std::string outputFilename;
 
     /* the pathname of the file used in locking */
-    char *lockFilename;
+    std::string lockFilename;
 
     /* the peer we're doing this for. */
-    char *peerName;
+    std::string peerName;
 
     FILE *inFp;  /* input FILE */
     FILE *outFp; /* output FILE */
@@ -271,10 +271,7 @@ static bool inited = false;
 Tape
 newTape(const char *peerName, bool dontRotate)
 {
-    Tape nt = xmalloc(sizeof(struct tape_s));
-    size_t pLen = strlen(peerName);
-    size_t dLen = tapeDirectory.size();
-    const char *tapeDir = tapeDirectory.c_str();
+    Tape nt = new tape_s();
 
     if (!inited) {
         inited = true;
@@ -292,29 +289,16 @@ newTape(const char *peerName, bool dontRotate)
     if (endsIn(peerName, LOCK_TAIL))
         die("Sorry, can't have a peer name ending in \"%s\"", LOCK_TAIL);
 
-    nt->peerName = xstrdup(peerName);
+    nt->peerName = peerName;
+    nt->handFilename = tapeDirectory + "/" + peerName;
+    nt->lockFilename = nt->handFilename + LOCK_TAIL;
+    nt->inputFilename = nt->handFilename + INPUT_TAIL;
+    nt->outputFilename = nt->handFilename + OUTPUT_TAIL;
 
-    nt->handFilename = xmalloc(pLen + dLen + 2);
-    sprintf(nt->handFilename, "%s/%s", tapeDir, peerName);
+    if (!lockFile(nt->lockFilename.c_str())) {
+        warn("ME lock failed for host: %s", nt->lockFilename.c_str());
 
-    nt->lockFilename = xmalloc(pLen + dLen + strlen(LOCK_TAIL) + 2);
-    sprintf(nt->lockFilename, "%s/%s%s", tapeDir, peerName, LOCK_TAIL);
-
-    nt->inputFilename = xmalloc(pLen + dLen + strlen(INPUT_TAIL) + 2);
-    sprintf(nt->inputFilename, "%s/%s%s", tapeDir, peerName, INPUT_TAIL);
-
-    nt->outputFilename = xmalloc(pLen + dLen + strlen(OUTPUT_TAIL) + 2);
-    sprintf(nt->outputFilename, "%s/%s%s", tapeDir, peerName,
-            OUTPUT_TAIL);
-
-    if (!lockFile(nt->lockFilename)) {
-        warn("ME lock failed for host: %s", nt->lockFilename);
-
-        free(nt->handFilename);
-        free(nt->lockFilename);
-        free(nt->inputFilename);
-        free(nt->outputFilename);
-        free(nt);
+        delete nt;
 
         return NULL;
     }
@@ -337,7 +321,7 @@ newTape(const char *peerName, bool dontRotate)
 static void
 initTape(Tape nt)
 {
-    value *peerVal = findPeer(nt->peerName);
+    value *peerVal = findPeer(nt->peerName.c_str());
     scope *s = (peerVal == NULL ? NULL : peerVal->v.scope_val);
 
     nt->inFp = NULL;
@@ -378,7 +362,7 @@ initTape(Tape nt)
                 if (!getInteger(s, "backlog-limit-highwater",
                                 &nt->outputHighLimit, INHERIT)) {
                     warn("%s no backlog-factor or backlog-limit-highwater",
-                         nt->peerName);
+                         nt->peerName.c_str());
                     nt->outputLowLimit = BLOGLIMIT;
                     nt->outputHighLimit = BLOGLIMIT_HIGH;
                     nt->backlogFactor = LIMIT_FUDGE;
@@ -390,10 +374,10 @@ initTape(Tape nt)
             warn("ME config: no definition for required key backlog-limit");
     }
 
-    d_printf(1, "%s spooling: %s\n", nt->peerName,
+    d_printf(1, "%s spooling: %s\n", nt->peerName.c_str(),
              nt->noBacklog ? "disabled" : "enabled");
 
-    d_printf(1, "%s tape backlog limit: [%ld %ld]\n", nt->peerName,
+    d_printf(1, "%s tape backlog limit: [%ld %ld]\n", nt->peerName.c_str(),
              nt->outputLowLimit, nt->outputHighLimit);
 
     prepareFiles(nt);
@@ -505,11 +489,11 @@ printTapeInfo(Tape tape, FILE *fp, unsigned int indentAmt)
         return;
     }
 
-    fprintf(fp, "%s    master-file : %s\n", indent, tape->handFilename);
-    fprintf(fp, "%s    input-file : %s\n", indent, tape->inputFilename);
-    fprintf(fp, "%s    output-file : %s\n", indent, tape->outputFilename);
-    fprintf(fp, "%s    lock-file : %s\n", indent, tape->lockFilename);
-    fprintf(fp, "%s    peerName : %s\n", indent, tape->peerName);
+    fprintf(fp, "%s    master-file : %s\n", indent, tape->handFilename.c_str());
+    fprintf(fp, "%s    input-file : %s\n", indent, tape->inputFilename.c_str());
+    fprintf(fp, "%s    output-file : %s\n", indent, tape->outputFilename.c_str());
+    fprintf(fp, "%s    lock-file : %s\n", indent, tape->lockFilename.c_str());
+    fprintf(fp, "%s    peerName : %s\n", indent, tape->peerName.c_str());
     fprintf(fp, "%s    input-FILE : %p\n", indent, (void *) tape->inFp);
     fprintf(fp, "%s    output-FILE : %p\n", indent, (void *) tape->outFp);
     fprintf(fp, "%s    output-limit : %ld\n", indent, tape->outputLowLimit);
@@ -547,11 +531,11 @@ delTape(Tape tape)
         return;
 
     if (tape->outFp != NULL && fclose(tape->outFp) != 0)
-        syswarn("ME ioerr fclose %s", tape->outputFilename);
+        syswarn("ME ioerr fclose %s", tape->outputFilename.c_str());
 
-    if (stat(tape->outputFilename, &st) == 0 && st.st_size == 0) {
-        d_printf(1, "removing empty output tape: %s\n", tape->outputFilename);
-        unlink(tape->outputFilename);
+    if (stat(tape->outputFilename.c_str(), &st) == 0 && st.st_size == 0) {
+        d_printf(1, "removing empty output tape: %s\n", tape->outputFilename.c_str());
+        unlink(tape->outputFilename.c_str());
     }
 
     tape->outFp = NULL;
@@ -562,17 +546,11 @@ delTape(Tape tape)
         fclose(tape->inFp);
     }
 
-    unlockFile(tape->lockFilename);
-
-    freeCharP(tape->handFilename);
-    freeCharP(tape->inputFilename);
-    freeCharP(tape->outputFilename);
-    freeCharP(tape->lockFilename);
-    freeCharP(tape->peerName);
+    unlockFile(tape->lockFilename.c_str());
 
     removeTapeGlobally(tape);
 
-    free(tape);
+    delete tape;
 }
 
 
@@ -609,16 +587,16 @@ tapeTakeArticle(Tape tape, Article article)
         fflush(tape->outFp);
 
         if (fstat(fileno(tape->outFp), &sb) != 0)
-            syswarn("ME oserr fstat %s", tape->outputFilename);
+            syswarn("ME oserr fstat %s", tape->outputFilename.c_str());
         else if (sb.st_size != tape->outputSize)
             syslog(LOG_ERR, "fstat and ftello do not agree: %ld %ld for %s\n",
-                   (long) sb.st_size, tape->outputSize, tape->outputFilename);
+                   (long) sb.st_size, tape->outputSize, tape->outputFilename.c_str());
     }
 
     if (tape->outputHighLimit > 0
         && tape->outputSize >= tape->outputHighLimit) {
         long oldSize = tape->outputSize;
-        shrinkfile(tape->outFp, tape->outputLowLimit, tape->outputFilename,
+        shrinkfile(tape->outFp, tape->outputLowLimit, tape->outputFilename.c_str(),
                    "a+");
         tape->outputSize = ftello(tape->outFp);
         tape->lossage += oldSize - tape->outputSize;
@@ -647,19 +625,19 @@ getArticle(Tape tape)
 
         if (fgets(line, sizeof(line), tape->inFp) == NULL) {
             if (ferror(tape->inFp))
-                syswarn("ME ioerr on tape file %s", tape->inputFilename);
+                syswarn("ME ioerr on tape file %s", tape->inputFilename.c_str());
             else if (!feof(tape->inFp))
-                syswarn("ME oserr fgets %s", tape->inputFilename);
+                syswarn("ME oserr fgets %s", tape->inputFilename.c_str());
 
             if (fclose(tape->inFp) != 0)
-                syswarn("ME ioerr fclose %s", tape->inputFilename);
+                syswarn("ME ioerr fclose %s", tape->inputFilename.c_str());
 
-            d_printf(1, "No more articles on tape %s\n", tape->inputFilename);
+            d_printf(1, "No more articles on tape %s\n", tape->inputFilename.c_str());
 
             tape->inFp = NULL;
             tape->scribbled = false;
 
-            unlink(tape->inputFilename);
+            unlink(tape->inputFilename.c_str());
 
             if ((now - tape->lastRotated) > rotatePeriod)
                 prepareFiles(tape); /* rotate files to try next. */
@@ -704,7 +682,7 @@ getArticle(Tape tape)
                     p--;
                 if (*msgid != '<' || *p != '>') {
                     warn("ME tape invalid messageID in %s: %s",
-                         tape->inputFilename, msgid);
+                         tape->inputFilename.c_str(), msgid);
                     msgid = NULL;
                 }
             }
@@ -725,13 +703,13 @@ getArticle(Tape tape)
         else if (tape->inFp != NULL) {
             /* last article read was the end of the tape. */
             if (fclose(tape->inFp) != 0)
-                syswarn("ME ioerr fclose %s", tape->inputFilename);
+                syswarn("ME ioerr fclose %s", tape->inputFilename.c_str());
 
             tape->inFp = NULL;
             tape->scribbled = false;
 
             /* toss out the old input file and prepare the new one */
-            unlink(tape->inputFilename);
+            unlink(tape->inputFilename.c_str());
 
             if (now - tape->lastRotated > rotatePeriod)
                 prepareFiles(tape);
@@ -740,9 +718,9 @@ getArticle(Tape tape)
 #endif
 
     if (art == NULL)
-        d_printf(2, "%s All out of articles in the backlog\n", tape->peerName);
+        d_printf(2, "%s All out of articles in the backlog\n", tape->peerName.c_str());
     else
-        d_printf(2, "%s Peeled article %s from backlog\n", tape->peerName,
+        d_printf(2, "%s Peeled article %s from backlog\n", tape->peerName.c_str(),
                  artMsgId(art));
 
     return art;
@@ -864,12 +842,12 @@ checkpointTape(Tape tape)
 
     if (!tape->changed) /* haven't read since last checkpoint */
     {
-        d_printf(1, "Not checkpointing unchanged tape: %s\n", tape->peerName);
+        d_printf(1, "Not checkpointing unchanged tape: %s\n", tape->peerName.c_str());
         return;
     }
 
     if ((tape->tellpos = ftello(tape->inFp)) < 0) {
-        syswarn("ME oserr ftello %s", tape->inputFilename);
+        syswarn("ME oserr ftello %s", tape->inputFilename.c_str());
         return;
     }
 
@@ -906,7 +884,7 @@ checkpointTape(Tape tape)
         fprintf(tape->inFp, "%ld", tape->tellpos);
 
         if (fseeko(tape->inFp, tape->tellpos, SEEK_SET) != 0)
-            syswarn("ME oserr fseeko(%s,%ld,SEEK_SET)", tape->inputFilename,
+            syswarn("ME oserr fseeko(%s,%ld,SEEK_SET)", tape->inputFilename.c_str(),
                     tape->tellpos);
     }
 
@@ -954,16 +932,16 @@ prepareFiles(Tape tape)
 
     /*  First time through, or something external has set checkNew */
     if (tape->lastRotated == 0 || tape->checkNew) {
-        newExists = fileExistsP(tape->handFilename);
+        newExists = fileExistsP(tape->handFilename.c_str());
         if (newExists)
-            notice("%s new hand-prepared backlog file", tape->peerName);
+            notice("%s new hand-prepared backlog file", tape->peerName.c_str());
     } else
         newExists = false;
 
     if (tape->lastRotated == 0) /* first time here */
     {
-        inpExists = fileExistsP(tape->inputFilename);
-        outExists = fileExistsP(tape->outputFilename);
+        inpExists = fileExistsP(tape->inputFilename.c_str());
+        outExists = fileExistsP(tape->outputFilename.c_str());
     } else {
         inpExists =
             (tape->inFp != NULL) ? true : false; /* can this ever be true?? */
@@ -974,11 +952,11 @@ prepareFiles(Tape tape)
 
     /* move the hand-dropped file to the input file if needed. */
     if (newExists && !inpExists) {
-        if (rename(tape->handFilename, tape->inputFilename) != 0)
-            syswarn("ME oserr rename %s, %s", tape->handFilename,
-                    tape->inputFilename);
+        if (rename(tape->handFilename.c_str(), tape->inputFilename.c_str()) != 0)
+            syswarn("ME oserr rename %s, %s", tape->handFilename.c_str(),
+                    tape->inputFilename.c_str());
         else {
-            notice("%s grabbing external tape file", tape->peerName);
+            notice("%s grabbing external tape file", tape->peerName.c_str());
             inpExists = true;
         }
     }
@@ -991,9 +969,9 @@ prepareFiles(Tape tape)
             tape->outFp = NULL;
         }
 
-        if (rename(tape->outputFilename, tape->inputFilename) != 0)
-            syswarn("ME oserr rename %s, %s", tape->outputFilename,
-                    tape->inputFilename);
+        if (rename(tape->outputFilename.c_str(), tape->inputFilename.c_str()) != 0)
+            syswarn("ME oserr rename %s, %s", tape->outputFilename.c_str(),
+                    tape->inputFilename.c_str());
         else
             inpExists = true;
     }
@@ -1003,17 +981,17 @@ prepareFiles(Tape tape)
         int c;
         long flength;
 
-        if ((tape->inFp = fopen(tape->inputFilename, "r+")) == NULL)
-            syswarn("ME fopen %s", tape->inputFilename);
+        if ((tape->inFp = fopen(tape->inputFilename.c_str(), "r+")) == NULL)
+            syswarn("ME fopen %s", tape->inputFilename.c_str());
         else {
             char buffer[64];
 
             if (fgets(buffer, sizeof(buffer) - 1, tape->inFp) == NULL) {
                 if (feof(tape->inFp)) {
-                    d_printf(1, "Empty input file: %s\n", tape->inputFilename);
-                    unlink(tape->inputFilename);
+                    d_printf(1, "Empty input file: %s\n", tape->inputFilename.c_str());
+                    unlink(tape->inputFilename.c_str());
                 } else
-                    syswarn("ME oserr fgets %s", tape->inputFilename);
+                    syswarn("ME oserr fgets %s", tape->inputFilename.c_str());
 
                 fclose(tape->inFp);
                 tape->inFp = NULL;
@@ -1034,21 +1012,21 @@ prepareFiles(Tape tape)
 
                 if ((flength = fileLength(fileno(tape->inFp)))
                     < tape->tellpos) {
-                    warn("ME tape short: %s %ld %ld", tape->inputFilename,
+                    warn("ME tape short: %s %ld %ld", tape->inputFilename.c_str(),
                          flength, tape->tellpos);
                     tape->tellpos = 0;
                 } else if (tape->tellpos == 0)
                     rewind(tape->inFp);
                 else if (fseeko(tape->inFp, tape->tellpos - 1, SEEK_SET) != 0)
                     syswarn("ME oserr fseeko(%s,%ld,SEEK_SET)",
-                            tape->inputFilename, tape->tellpos);
+                            tape->inputFilename.c_str(), tape->tellpos);
                 else if ((c = fgetc(tape->inFp)) != '\n') {
                     while (c != EOF && c != '\n')
                         c = fgetc(tape->inFp);
 
                     if (c == EOF) {
                         fclose(tape->inFp);
-                        unlink(tape->inputFilename);
+                        unlink(tape->inputFilename.c_str());
                         tape->inFp = NULL;
                         tape->scribbled = false;
                         prepareFiles(tape);
@@ -1060,7 +1038,7 @@ prepareFiles(Tape tape)
 
                         warn("ME internal checkpoint line boundary missed:"
                              " %s %ld vs. %ld",
-                             tape->inputFilename, tape->tellpos, oldPos);
+                             tape->inputFilename.c_str(), tape->tellpos, oldPos);
                     }
                 }
             }
@@ -1072,8 +1050,8 @@ prepareFiles(Tape tape)
 
     /* now open up the output file. */
     if (tape->outFp == NULL) {
-        if ((tape->outFp = fopen(tape->outputFilename, "a+")) == NULL) {
-            syswarn("ME tape open failed (a+) %s", tape->outputFilename);
+        if ((tape->outFp = fopen(tape->outputFilename.c_str(), "a+")) == NULL) {
+            syswarn("ME tape open failed (a+) %s", tape->outputFilename.c_str());
             return;
         }
         fseeko(tape->outFp, 0, SEEK_END);
@@ -1141,18 +1119,18 @@ flushTape(Tape tape)
 
         fflush(tape->outFp);
         if (fstat(fileno(tape->outFp), &buf) != 0 && !logged) {
-            syslog(LOG_ERR, "fstat failed on %s", tape->outputFilename);
+            syslog(LOG_ERR, "fstat failed on %s", tape->outputFilename.c_str());
             logged = true;
         } else if (buf.st_size != tape->outputSize) {
             warn("ME fstat and ftello do not agree for %s",
-                 tape->outputFilename);
+                 tape->outputFilename.c_str());
             logged = true;
         }
     }
 
     if (tape->outputHighLimit > 0
         && tape->outputSize > tape->outputHighLimit) {
-        shrinkfile(tape->outFp, tape->outputLowLimit, tape->outputFilename,
+        shrinkfile(tape->outFp, tape->outputLowLimit, tape->outputFilename.c_str(),
                    "a+");
         tape->outputSize = ftello(tape->outFp);
     }

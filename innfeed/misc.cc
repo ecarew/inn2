@@ -565,7 +565,7 @@ addPointerFreedOnExit(char *pointerToFree)
 
 /* borrows heavily from the shrinkfile program by chongo. */
 bool
-shrinkfile(FILE *fp, long size, char *name, const char *mode)
+shrinkfile(FILE *fp, long size, const char *name, const char *mode)
 {
     long currlen = ftello(fp);
     char *tmpname;
