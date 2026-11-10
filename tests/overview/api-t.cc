@@ -6,7 +6,9 @@
 #include <fcntl.h>
 #include <sys/stat.h>
 
-#include "inn/hashtab.h"
+#include <string>
+#include <unordered_map>
+
 #include "inn/innconf.h"
 #include "inn/libinn.h"
 #include "inn/messages.h"
@@ -18,44 +20,13 @@
 /* Used as the artificial token for all articles inserted into overview. */
 static const TOKEN faketoken = {1, 1, ""};
 
+/* What a group should hold once the data is loaded. */
 struct group {
-    char *group;
     unsigned long count;
     unsigned long low;
     unsigned long high;
 };
-
-/* Used for walking the hash table and verifying all the group data. */
-struct verify {
-    struct overview *overview;
-    bool status;
-};
-
-static const void *
-group_key(const void *entry)
-{
-    const struct group *group = (const struct group *) entry;
-    return group->group;
-}
-
-static bool
-group_eq(const void *key, const void *entry)
-{
-    const char *first = key;
-    const char *second;
-
-    second = ((const struct group *) entry)->group;
-    return !strcmp(first, second);
-}
-
-static void
-group_del(void *entry)
-{
-    struct group *group = (struct group *) entry;
-
-    free(group->group);
-    free(group);
-}
+using group_map = std::unordered_map<std::string, group>;
 
 /* Build a stripped-down innconf struct that contains only those settings that
    the overview backend cares about.  (May still be missing additional bits
@@ -63,7 +34,7 @@ group_del(void *entry)
 static void
 fake_innconf(void)
 {
-    if (innconf != NULL) {
+    if (innconf != nullptr) {
         free(innconf->ovmethod);
         free(innconf->pathdb);
         free(innconf->pathetc);
@@ -79,7 +50,7 @@ fake_innconf(void)
     innconf->nfsreader = false;
     innconf->overcachesize = 20;
     innconf->ovflushcount = 50;
-    innconf->ovgrouppat = NULL;
+    innconf->ovgrouppat = nullptr;
     innconf->pathdb = xstrdup("ov-tmp");
     innconf->pathetc = xstrdup("etc");
     innconf->pathoverview = xstrdup("ov-tmp");
@@ -134,26 +105,25 @@ overview_data_parse(char *data, unsigned long *artnum)
     data[length - 1] = '\0';
 
     start = strchr(data, ':');
-    if (start == NULL)
+    if (start == nullptr)
         die("No colon found in input data");
     *start = '\0';
     start++;
-    *artnum = strtoul(start, NULL, 10);
+    *artnum = strtoul(start, nullptr, 10);
     if (*artnum == 0)
         die("Cannot parse article number in input data");
     return start;
 }
 
 /* Load an empty overview database from a file, in the process populating a
-   hash table with each group, the high water mark, and the count of messages
-   that should be in the group.  Returns the hash table on success and dies on
+   map with each group, the high water mark, and the count of messages
+   that should be in the group.  Returns the map on success and dies on
    failure.  Takes the name of the data file to load and the overview
    struct. */
-static struct hash *
+static group_map
 overview_load(const char *data, struct overview *overview)
 {
-    struct hash *groups;
-    struct group *group;
+    group_map groups;
     FILE *overdata;
     char buffer[4096];
     char *start;
@@ -163,43 +133,35 @@ overview_load(const char *data, struct overview *overview)
 
     /* Run through the overview data.  Each time we see a group, we update our
        stored information about that group, which we'll use for verification
-       later.  We store that in a local hash table. */
-    groups = hash_create(32, hash_string, group_key, group_eq, group_del);
-    if (groups == NULL)
-        die("Cannot create a hash table");
+       later.  We store that in a local map. */
     overdata = fopen(data, "r");
-    if (overdata == NULL)
+    if (overdata == nullptr)
         sysdie("Cannot open %s for reading", data);
-    while (fgets(buffer, sizeof(buffer), overdata) != NULL) {
+    while (fgets(buffer, sizeof(buffer), overdata) != nullptr) {
         start = overview_data_parse(buffer, &artnum);
 
         /* The overview API adds the article number, so strip that out before
            storing the data (overview_data_parse leaves it in because we want
            it in for data validation). */
         start = strchr(start, '\t');
-        if (start == NULL)
+        if (start == nullptr)
             die("No tab found after number in input data");
         *start = '\0';
         start++;
 
         /* See if we've already seen this group.  If not, create it in the
-           overview and the hash table; otherwise, update our local hash table
-           entry. */
-        group = hash_lookup(groups, buffer);
-        if (group == NULL) {
-            group = xmalloc(sizeof(struct group));
-            group->group = xstrdup(buffer);
-            group->count = 1;
-            group->low = artnum;
-            group->high = artnum;
-            if (!hash_insert(groups, group->group, group))
-                die("Cannot insert %s into hash table", group->group);
-            if (!overview_group_add(overview, group->group, &stats))
-                die("Cannot insert group %s into overview", group->group);
+           overview and the map; otherwise, update our local map entry. */
+        auto found = groups.find(buffer);
+        if (found == groups.end()) {
+            groups.emplace(buffer, group{1, artnum, artnum});
+            if (!overview_group_add(overview, buffer, &stats))
+                die("Cannot insert group %s into overview", buffer);
         } else {
-            group->count++;
-            group->low = (artnum < group->low) ? artnum : group->low;
-            group->high = (artnum > group->high) ? artnum : group->high;
+            group &g = found->second;
+
+            g.count++;
+            g.low = (artnum < g.low) ? artnum : g.low;
+            g.high = (artnum > g.high) ? artnum : g.high;
         }
 
         /* Do the actual insert of the data.  Note that we set the arrival
@@ -211,8 +173,8 @@ overview_load(const char *data, struct overview *overview)
         article.token = faketoken;
         article.arrived = artnum * 10;
         article.expires = (artnum % 5 == 0) ? artnum * 100 : artnum;
-        if (!overview_add(overview, group->group, &article))
-            die("Cannot insert %s:%lu into overview", group->group, artnum);
+        if (!overview_add(overview, buffer, &article))
+            die("Cannot insert %s:%lu into overview", buffer, artnum);
     }
     fclose(overdata);
     return groups;
@@ -220,42 +182,43 @@ overview_load(const char *data, struct overview *overview)
 
 /* Verify that all of the group data looks correct; this is low mark, high
    mark, and article count.  Returns true if all the data is right, false
-   otherwise.  This function is meant to be called as a hash traversal
-   function, which means that it will be called for each element in our local
-   hash table of groups with the group struct as the first argument and a
-   pointer to a struct verify as the second argument. */
-static void
-overview_verify_groups(void *data, void *cookie)
+   otherwise. */
+static bool
+overview_verify_groups(const group_map &groups, struct overview *overview)
 {
-    struct group *group = (struct group *) data;
-    struct verify *verify = cookie;
-    struct overview_group stats;
+    bool status = true;
 
-    if (!overview_group(verify->overview, group->group, &stats)) {
-        warn("Unable to get data for %s", group->group);
-        verify->status = false;
-        return;
+    for (const auto &entry : groups) {
+        const char *name = entry.first.c_str();
+        const group &g = entry.second;
+        struct overview_group stats;
+
+        if (!overview_group(overview, name, &stats)) {
+            warn("Unable to get data for %s", name);
+            status = false;
+            continue;
+        }
+        if (stats.low != g.low) {
+            warn("Low article wrong for %s: %lu != %lu", name, stats.low,
+                 g.low);
+            status = false;
+        }
+        if (stats.high != g.high) {
+            warn("High article wrong for %s: %lu != %lu", name, stats.high,
+                 g.high);
+            status = false;
+        }
+        if (stats.count != g.count) {
+            warn("Article count wrong for %s: %lu != %lu", name, stats.count,
+                 g.count);
+            status = false;
+        }
+        if (stats.flag != NF_FLAG_OK) {
+            warn("Flag wrong for %s: %c != %c", name, stats.flag, NF_FLAG_OK);
+            status = false;
+        }
     }
-    if (stats.low != group->low) {
-        warn("Low article wrong for %s: %lu != %lu", group->group, stats.low,
-             group->low);
-        verify->status = false;
-    }
-    if (stats.high != group->high) {
-        warn("High article wrong for %s: %lu != %lu", group->group, stats.high,
-             group->high);
-        verify->status = false;
-    }
-    if (stats.count != group->count) {
-        warn("Article count wrong for %s: %lu != %lu", group->group,
-             stats.count, group->count);
-        verify->status = false;
-    }
-    if (stats.flag != NF_FLAG_OK) {
-        warn("Flag wrong for %s: %c != %c", group->group, stats.flag,
-             NF_FLAG_OK);
-        verify->status = false;
-    }
+    return status;
 }
 
 /* Verify the components of the overview data for a particular entry. */
@@ -323,14 +286,14 @@ overview_verify_data(const char *data, struct overview *overview)
     char *start;
     unsigned long artnum;
     TOKEN token;
-    void *search;
+    struct ov_search *search;
     struct overview_data article;
     bool status = true;
 
     overdata = fopen(data, "r");
-    if (overdata == NULL)
+    if (overdata == nullptr)
         sysdie("Cannot open %s for reading", data);
-    while (fgets(buffer, sizeof(buffer), overdata) != NULL) {
+    while (fgets(buffer, sizeof(buffer), overdata) != nullptr) {
         start = overview_data_parse(buffer, &artnum);
 
         /* Now check that the overview data is correct for that group. */
@@ -346,7 +309,7 @@ overview_verify_data(const char *data, struct overview *overview)
 
         /* Do the same thing, except use search. */
         search = overview_search_open(overview, buffer, artnum, artnum);
-        if (search == NULL) {
+        if (search == nullptr) {
             warn("Unable to open search for %s:%lu", buffer, artnum);
             status = false;
             continue;
@@ -384,21 +347,21 @@ overview_verify_search(const char *data, struct overview *overview)
     char *group, *line;
     FILE *overdata;
     char buffer[4096];
-    void *search;
+    struct ov_search *search;
     struct overview_data article;
     bool status = true;
 
     overdata = fopen(data, "r");
-    if (overdata == NULL)
+    if (overdata == nullptr)
         sysdie("Cannot open %s for reading", data);
     expected = vector_new();
-    if (fgets(buffer, sizeof(buffer), overdata) == NULL) {
+    if (fgets(buffer, sizeof(buffer), overdata) == nullptr) {
         fclose(overdata);
         die("Unexpected end of file in %s", data);
     }
     overview_data_parse(buffer, &artnum);
     group = xstrdup(buffer);
-    while (fgets(buffer, sizeof(buffer), overdata) != NULL) {
+    while (fgets(buffer, sizeof(buffer), overdata) != nullptr) {
         line = overview_data_parse(buffer, &artnum);
         if (strcmp(group, buffer) != 0)
             continue;
@@ -409,7 +372,7 @@ overview_verify_search(const char *data, struct overview *overview)
         last = artnum;
     }
     search = overview_search_open(overview, group, start, end);
-    if (search == NULL) {
+    if (search == nullptr) {
         warn("Unable to open search for %s:%lu", buffer, start);
         free(group);
         vector_free(expected);
@@ -450,26 +413,26 @@ overview_verify_full_search(const char *data, struct overview *overview)
     unsigned long end = 0;
     struct vector *expected;
     char *line;
-    char *group = NULL;
+    char *group = nullptr;
     FILE *overdata;
     char buffer[4096];
-    void *search;
+    struct ov_search *search;
     struct overview_data article;
     bool status = true;
 
     overdata = fopen(data, "r");
-    if (overdata == NULL)
+    if (overdata == nullptr)
         sysdie("Cannot open %s for reading", data);
     expected = vector_new();
-    while (fgets(buffer, sizeof(buffer), overdata) != NULL) {
+    while (fgets(buffer, sizeof(buffer), overdata) != nullptr) {
         line = overview_data_parse(buffer, &artnum);
-        if (group == NULL)
+        if (group == nullptr)
             group = xstrdup(buffer);
         vector_add(expected, line);
         end = artnum;
     }
     search = overview_search_open(overview, group, 1, end + 1);
-    if (search == NULL) {
+    if (search == nullptr) {
         warn("Unable to open full search for %s", group);
         free(group);
         vector_free(expected);
@@ -505,49 +468,40 @@ overview_verify_full_search(const char *data, struct overview *overview)
 static int
 overview_tests(int n)
 {
-    struct hash *groups;
+    group_map groups;
     struct overview *overview;
-    struct verify verify;
-    void *search;
+    struct ov_search *search;
     struct overview_data data;
     TOKEN token;
 
     overview = overview_init();
-    if (overview == NULL)
+    if (overview == nullptr)
         die("Opening the overview database failed, cannot continue");
     ok(n++, true);
 
     groups = overview_load("overview/basic", overview);
     ok(n++, true);
-    verify.status = true;
-    verify.overview = overview;
-    hash_traverse(groups, overview_verify_groups, &verify);
-    ok(n++, verify.status);
+    ok(n++, overview_verify_groups(groups, overview));
     ok(n++, overview_verify_data("overview/basic", overview));
     ok(n++, overview_verify_search("overview/basic", overview));
-    hash_free(groups);
     overview_close(overview);
     ok(n++, true);
 
     overview = overview_init();
-    if (overview == NULL)
+    if (overview == nullptr)
         die("Opening the overview database failed, cannot continue");
     ok(n++, true);
 
     groups = overview_load("overview/reversed", overview);
     ok(n++, true);
-    verify.status = true;
-    verify.overview = overview;
-    hash_traverse(groups, overview_verify_groups, &verify);
-    ok(n++, verify.status);
+    ok(n++, overview_verify_groups(groups, overview));
     ok(n++, overview_verify_data("overview/basic", overview));
     ok(n++, overview_verify_search("overview/basic", overview));
-    hash_free(groups);
     overview_close(overview);
     ok(n++, true);
 
     overview = overview_init();
-    if (overview == NULL)
+    if (overview == nullptr)
         die("Opening the overview database failed, cannot continue");
     ok(n++, true);
 
@@ -562,25 +516,23 @@ overview_tests(int n)
         ok(n++, overview_cancel(overview, "example.test", 7498));
         ok(n++, !overview_token(overview, "example.test", 7498, &token));
         search = overview_search_open(overview, "example.test", 7498, 7499);
-        ok(n++, search != NULL);
+        ok(n++, search != nullptr);
         ok(n++, overview_search(overview, search, &data));
         ok_int(n++, 7499, data.number);
         ok(n++, !overview_search(overview, search, &data));
         overview_search_close(overview, search);
     }
-    hash_free(groups);
     overview_close(overview);
     ok(n++, true);
 
     overview = overview_init();
-    if (overview == NULL)
+    if (overview == nullptr)
         die("Opening the overview database failed, cannot continue");
     ok(n++, true);
 
     groups = overview_load("overview/bogus", overview);
     ok(n++, true);
     ok(n++, overview_verify_data("overview/bogus", overview));
-    hash_free(groups);
     overview_close(overview);
     if (system("/bin/rm -rf ov-tmp") < 0)
         sysdie("Cannot rm ov-tmp");
@@ -595,12 +547,11 @@ overview_tests(int n)
 static int
 overview_mmap_tests(int n)
 {
-    struct hash *groups;
+    group_map groups;
     struct overview *overview;
-    struct verify verify;
 
     overview = overview_init();
-    if (overview == NULL)
+    if (overview == nullptr)
         die("Opening the overview database failed, cannot continue");
     ok(n++, true);
 
@@ -609,21 +560,17 @@ overview_mmap_tests(int n)
     overview_close(overview);
     innconf->tradindexedmmap = false;
     overview = overview_open(OV_READ);
-    if (overview == NULL)
+    if (overview == nullptr)
         die("Opening the overview database failed, cannot continue");
-    verify.status = true;
-    verify.overview = overview;
-    hash_traverse(groups, overview_verify_groups, &verify);
-    ok(n++, verify.status);
+    ok(n++, overview_verify_groups(groups, overview));
     ok(n++, overview_verify_data("overview/basic", overview));
     ok(n++, overview_verify_search("overview/basic", overview));
-    hash_free(groups);
     overview_close(overview);
     ok(n++, true);
 
     innconf->tradindexedmmap = true;
     overview = overview_init();
-    if (overview == NULL)
+    if (overview == nullptr)
         die("Opening the overview database failed, cannot continue");
     ok(n++, true);
 
@@ -632,21 +579,17 @@ overview_mmap_tests(int n)
     overview_close(overview);
     innconf->tradindexedmmap = false;
     overview = overview_open(OV_READ);
-    if (overview == NULL)
+    if (overview == nullptr)
         die("Opening the overview database failed, cannot continue");
-    verify.status = true;
-    verify.overview = overview;
-    hash_traverse(groups, overview_verify_groups, &verify);
-    ok(n++, verify.status);
+    ok(n++, overview_verify_groups(groups, overview));
     ok(n++, overview_verify_data("overview/basic", overview));
     ok(n++, overview_verify_search("overview/basic", overview));
-    hash_free(groups);
     overview_close(overview);
     ok(n++, true);
 
     innconf->tradindexedmmap = true;
     overview = overview_init();
-    if (overview == NULL)
+    if (overview == nullptr)
         die("Opening the overview database failed, cannot continue");
     ok(n++, true);
 
@@ -655,17 +598,16 @@ overview_mmap_tests(int n)
     overview_close(overview);
     innconf->tradindexedmmap = false;
     overview = overview_open(OV_READ);
-    if (overview == NULL)
+    if (overview == nullptr)
         die("Opening the overview database failed, cannot continue");
     ok(n++, overview_verify_data("overview/high-numbered", overview));
     ok(n++, overview_verify_full_search("overview/high-numbered", overview));
-    hash_free(groups);
     overview_close(overview);
     ok(n++, true);
 
     innconf->tradindexedmmap = true;
     overview = overview_init();
-    if (overview == NULL)
+    if (overview == nullptr)
         die("Opening the overview database failed, cannot continue");
     ok(n++, true);
 
@@ -674,10 +616,9 @@ overview_mmap_tests(int n)
     overview_close(overview);
     innconf->tradindexedmmap = false;
     overview = overview_open(OV_READ);
-    if (overview == NULL)
+    if (overview == nullptr)
         die("Opening the overview database failed, cannot continue");
     ok(n++, overview_verify_data("overview/bogus", overview));
-    hash_free(groups);
     overview_close(overview);
     if (system("/bin/rm -rf ov-tmp") < 0)
         sysdie("Cannot rm ov-tmp");
