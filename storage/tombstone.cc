@@ -15,9 +15,9 @@
 #include <fcntl.h>
 #include <sys/stat.h>
 
+#include <string_view>
 #include <unordered_set>
 
-#include "inn/hashtab.h"
 #include "inn/libinn.h"
 #include "inn/messages.h"
 #include "inn/storage.h"
@@ -26,16 +26,17 @@
 
 /*
 **  The set.  TOKENs (1 type + 1 class + 16 token bytes) are hashed and
-**  compared as raw bytes: hash_lookup2 derives a stable value from the
-**  bytes and memcmp gives an exact match.
+**  compared as raw bytes: std::hash over a string_view of the bytes, and
+**  memcmp for an exact match.  The set lives only in memory, so the hash
+**  need not be stable across runs.
 */
 namespace {
 struct token_hash {
     size_t
     operator()(const TOKEN &t) const
     {
-        return hash_lookup2(reinterpret_cast<const char *>(&t), sizeof(TOKEN),
-                            0);
+        return std::hash<std::string_view>{}(std::string_view(
+            reinterpret_cast<const char *>(&t), sizeof(TOKEN)));
     }
 };
 
