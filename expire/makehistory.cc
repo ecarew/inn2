@@ -7,6 +7,8 @@
 #include <assert.h>
 #include <errno.h>
 #include <sys/wait.h>
+
+#include <string>
 #include <syslog.h>
 #include <time.h>
 
@@ -78,8 +80,19 @@ typedef struct _ARTOVERFIELD {
 #define DEFAULT_SEGSIZE 10000
 
 static bool NukeBadArts;
-static char *ActivePath = nullptr;
-static char *HistoryPath = nullptr;
+static std::string ActivePath;
+static std::string HistoryPath;
+
+/* concatpath into a std::string. */
+static std::string
+pathIn(const char *dir, const char *name)
+{
+    char *path = concatpath(dir, name);
+    std::string result(path);
+
+    free(path);
+    return result;
+}
 static struct history *History;
 static FILE *Overchan;
 static bool DoOverview;
@@ -856,8 +869,8 @@ OverAddAllNewsgroups()
     char *line;
     ARTNUM hi, lo;
 
-    if ((qp = QIOopen(ActivePath)) == nullptr)
-        sysdie("cannot open %s", ActivePath);
+    if ((qp = QIOopen(ActivePath.c_str())) == nullptr)
+        sysdie("cannot open %s", ActivePath.c_str());
     for (count = 1; (line = QIOread(qp)) != nullptr; count++) {
         if ((p = strchr(line, ' ')) == nullptr) {
             warn("bad active line %d: %.40s", count, line);
@@ -883,7 +896,7 @@ OverAddAllNewsgroups()
     if (QIOtoolong(qp))
         die("active file line %d is too long", count);
     if (QIOerror(qp))
-        sysdie("cannot read %s around line %d", ActivePath, count);
+        sysdie("cannot read %s around line %d", ActivePath.c_str(), count);
     QIOclose(qp);
 }
 
@@ -897,8 +910,8 @@ main(int argc, char **argv)
     double load[1];
     int i;
     bool val;
-    char *HistoryDir;
-    char *RebuiltflagPath;
+    std::string HistoryDir;
+    std::string RebuiltflagPath;
     char *p;
     char *buff;
     size_t npairs = 0;
@@ -911,10 +924,10 @@ main(int argc, char **argv)
     /* Set defaults. */
     if (!innconf_read(nullptr))
         exit(1);
-    HistoryPath = concatpath(innconf->pathhistory, INN_PATH_HISTORY);
-    ActivePath = concatpath(innconf->pathdb, INN_PATH_ACTIVE);
+    HistoryPath = pathIn(innconf->pathhistory, INN_PATH_HISTORY);
+    ActivePath = pathIn(innconf->pathdb, INN_PATH_ACTIVE);
     TmpDir = innconf->pathtmp;
-    RebuiltflagPath = concatpath(innconf->pathrun, INN_PATH_REBUILDOVERVIEW);
+    RebuiltflagPath = pathIn(innconf->pathrun, INN_PATH_REBUILDOVERVIEW);
 
     OverTmpSegSize = DEFAULT_SEGSIZE;
     OverTmpSegCount = 0;
@@ -977,16 +990,15 @@ main(int argc, char **argv)
     }
 
     if (!NoHistory) {
-        if ((p = strrchr(HistoryPath, '/')) == nullptr) {
+        std::string::size_type slash = HistoryPath.rfind('/');
+
+        if (slash == std::string::npos) {
             /* Find the default history database directory. */
             HistoryDir = innconf->pathhistory;
-        } else {
-            *p = '\0';
-            HistoryDir = xstrdup(HistoryPath);
-            *p = '/';
-        }
-        if (chdir(HistoryDir) < 0)
-            sysdie("cannot chdir to %s", HistoryDir);
+        } else
+            HistoryDir = HistoryPath.substr(0, slash);
+        if (chdir(HistoryDir.c_str()) < 0)
+            sysdie("cannot chdir to %s", HistoryDir.c_str());
     }
 
     /* Change to the runasuser user and runasgroup group if necessary. */
@@ -1037,8 +1049,8 @@ main(int argc, char **argv)
         if (History == nullptr)
             sysdie("cannot create history handle");
         HISctl(History, HISCTLS_NPAIRS, &npairs);
-        if (!HISctl(History, HISCTLS_PATH, HistoryPath))
-            sysdie("cannot open %s", HistoryPath);
+        if (!HISctl(History, HISCTLS_PATH, HistoryPath.data()))
+            sysdie("cannot open %s", HistoryPath.c_str());
     }
 
     /*
@@ -1080,8 +1092,8 @@ main(int argc, char **argv)
                 wait(&status);
         }
         if (!WriteStdout) {
-            if ((F = fopen(RebuiltflagPath, "w")) == nullptr)
-                sysdie("cannot open %s", RebuiltflagPath);
+            if ((F = fopen(RebuiltflagPath.c_str(), "w")) == nullptr)
+                sysdie("cannot open %s", RebuiltflagPath.c_str());
             if (fprintf(F, "%lu\n", (unsigned long) time(nullptr)) == EOF
                 || ferror(F))
                 sysdie("cannot write rebuilt flag file");
