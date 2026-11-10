@@ -46,6 +46,16 @@ static const struct method methods[] = {
 /* CNFS cycbuff size in KB. */
 #define CYCBUFF_KB 4096
 
+/* CNFS's default block size, and the header it writes before each article;
+   these must match CNFS_DFL_BLOCKSIZE and CNFSARTHEADER in
+   storage/cnfs/cnfs-private.h, which is private. */
+#define CNFS_BLOCKSIZE 4096
+struct cnfs_artheader {
+    long size;
+    time_t arrived;
+    unsigned char storageclass;
+};
+
 static void
 write_file(const char *path, const char *contents)
 {
@@ -160,6 +170,116 @@ make_article(const char *group, const char *id, size_t bodysize,
     return data;
 }
 
+/*
+ * Build a wire-format article of exactly len bytes posted to group: the
+ * header fields, then body lines of 'x' padding it out, then ".\r\n".  Fill
+ * in an ARTHANDLE pointing at it.
+ */
+static char *
+make_exact_article(const char *group, const char *id, size_t len,
+                   ARTHANDLE *art)
+{
+    char *head, *data;
+    size_t headlen, i;
+
+    xasprintf(&head,
+                        "Path: test!not-for-mail\r\n"
+                        "From: tester@example.com\r\n"
+                        "Newsgroups: %s\r\n"
+                        "Subject: storage method test\r\n"
+                        "Message-ID: <%s@example.com>\r\n"
+                        "Date: Wed, 28 Oct 2026 12:00:00 +0000\r\n"
+                        "\r\n",
+                        group, id);
+    headlen = strlen(head);
+    if (len < headlen + 8)
+        bail("article of %lu bytes is too short", (unsigned long) len);
+    data = static_cast<char *>(xmalloc(len));
+    memcpy(data, head, headlen);
+    free(head);
+    /* Body: 'x' lines of up to 64 bytes each, ending in CRLF. */
+    for (i = headlen; i < len - 3; i++)
+        data[i] = 'x';
+    for (i = headlen + 62; i + 1 < len - 3; i += 64) {
+        data[i] = '\r';
+        data[i + 1] = '\n';
+    }
+    data[len - 5] = '\r';
+    data[len - 4] = '\n';
+    memcpy(data + len - 3, ".\r\n", 3);
+
+    memset(art, 0, sizeof(*art));
+    art->type = TOKEN_EMPTY;
+    art->data = data;
+    art->len = len;
+    art->iov = static_cast<struct iovec *>(xmalloc(sizeof(struct iovec)));
+    art->iov->iov_base = data;
+    art->iov->iov_len = len;
+    art->iovcnt = 1;
+    art->arrived = time(NULL);
+    art->expires = 0;
+    art->groups = strstr(data, "Newsgroups: ") + strlen("Newsgroups: ");
+    art->groupslen = strcspn(art->groups, "\r\n");
+    art->token = NULL;
+    return data;
+}
+
+/*
+ * Walking a CNFS buffer with SMnext must return every article, including
+ * ones whose header and data fill their blocks exactly.  INN reported such
+ * an article as broken (one block too far for its end) and then skipped the
+ * block after it, losing the next article too; makehistory dropped both,
+ * and makehistory -N cancelled them.  Two tests.
+ */
+static void
+test_cnfs_walk(void)
+{
+    const size_t hdr = sizeof(struct cnfs_artheader);
+    const size_t sizes[] = {
+        CNFS_BLOCKSIZE - hdr,     /* fills one block exactly */
+        500,                      /* right after the exact one */
+        2 * CNFS_BLOCKSIZE - hdr, /* fills two blocks exactly */
+        CNFS_BLOCKSIZE - hdr,
+        CNFS_BLOCKSIZE - hdr,     /* two exact ones in a row */
+        700,
+    };
+    const size_t n = ARRAY_SIZE(sizes);
+    TOKEN tokens[ARRAY_SIZE(sizes)];
+    bool found[ARRAY_SIZE(sizes)] = {false};
+    bool stored = true, all = true;
+    ARTHANDLE art, *walk = nullptr;
+    size_t i;
+
+    for (i = 0; i < n; i++) {
+        char id[32];
+        char *data;
+
+        snprintf(id, sizeof(id), "walk%lu", (unsigned long) i);
+        data = make_exact_article("test.cnfs", id, sizes[i], &art);
+        tokens[i] = SMstore(art);
+        if (tokens[i].type != TOKEN_CNFS)
+            stored = false;
+        free(data);
+        free(art.iov);
+    }
+    ok(stored, "cnfs walk: articles filling whole blocks are stored");
+
+    while ((walk = SMnext(walk, RETR_HEAD)) != nullptr) {
+        if (walk->len == 0 || walk->token == nullptr)
+            continue;
+        for (i = 0; i < n; i++)
+            if (memcmp(walk->token, &tokens[i], sizeof(TOKEN)) == 0)
+                found[i] = true;
+    }
+    for (i = 0; i < n; i++)
+        if (!found[i]) {
+            diag("SMnext did not return article %lu (%lu bytes)",
+                 (unsigned long) i, (unsigned long) sizes[i]);
+            all = false;
+        }
+    ok(all, "cnfs walk: SMnext returns every article");
+}
+
 /* Retrieve token in full and check it matches data/len.  Two tests. */
 static void
 check_retrieve(const char *name, const char *what, TOKEN token,
@@ -238,7 +358,7 @@ main(void)
     bool value = true;
     size_t i;
 
-    plan(3 * 11 + 4);
+    plan(3 * 11 + 4 + 2);
 
     tmp = test_tmpdir();
     xasprintf(&cmd, "rm -rf %s/etc %s/spool %s/db", tmp, tmp, tmp);
@@ -253,6 +373,7 @@ main(void)
 
     for (i = 0; i < ARRAY_SIZE(methods); i++)
         test_method(&methods[i]);
+    test_cnfs_walk();
 
     /* trash discards everything. */
     data = make_article("test.trash", "trash", 300, &art);

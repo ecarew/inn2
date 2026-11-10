@@ -1927,10 +1927,14 @@ cnfs_next(ARTHANDLE *article, const RETRTYPE amount)
             CNFSshutdowncycbuff(cycbuff);
         return art;
     }
-    /* check the bitmap to ensure cah.size is not broken */
+    /* Check the bitmap to ensure cah.size is not broken: the article ends at
+       the block boundary at or after its last byte.  An article that fills
+       its blocks exactly ends right there; adding a block regardless (as
+       INN did) took the next article's first block for part of this one,
+       found its bitmap bit set, and reported a sound article as broken. */
     blockfudge = (sizeof(cah) + plusoffset + ntohl(cah.size)) % cycbuff->blksz;
     limit = privp->offset + sizeof(cah) + plusoffset + ntohl(cah.size)
-            - blockfudge + cycbuff->blksz;
+            - blockfudge + (blockfudge != 0 ? cycbuff->blksz : 0);
     if (offset < cycbuff->free) {
         for (middle = offset + cycbuff->blksz;
              (middle < cycbuff->free) && (middle < limit);
@@ -1979,7 +1983,9 @@ cnfs_next(ARTHANDLE *article, const RETRTYPE amount)
     }
 
     privp->offset += (off_t) ntohl(cah.size) + sizeof(cah) + plusoffset;
-    tonextblock = cycbuff->blksz - (privp->offset & (cycbuff->blksz - 1));
+    /* On to the next block boundary, unless the article ended on one. */
+    tonextblock = (cycbuff->blksz - (privp->offset & (cycbuff->blksz - 1)))
+                  & (cycbuff->blksz - 1);
     privp->offset += (off_t) tonextblock;
     art->arrived = ntohl(cah.arrived);
     /* Generate a token relative to the previous cycle number when offset is
