@@ -9,6 +9,8 @@
 #include "innfeed.h"
 #include "portable/socket.h"
 
+#include <string>
+
 #include <assert.h>
 #include <ctype.h>
 #include <errno.h>
@@ -68,8 +70,24 @@ const char *deliver_rcpt_to = "+%s";
 char *deliver_to_header = NULL;
 
 /* privates */
-static char *logFile;
-static char *newsspool;
+static std::string logFile;
+static std::string newsspool;
+
+/* The storage behind InputFile and pidFile when they come from the
+   config file; they are const char * because other files read them. */
+static std::string inputFileName;
+static std::string pidFileName;
+
+/* concatpath into a std::string. */
+static std::string
+pathIn(const char *dir, const char *name)
+{
+    char *path = concatpath(dir, name);
+    std::string result(path);
+
+    free(path);
+    return result;
+}
 
 static void sigemt(int sig);
 static void sigalrm(int sig);
@@ -352,10 +370,10 @@ main(int argc, char **argv)
         loggingLevel = 1;
     free(debugFile);
 
-    if (logFile == NULL && !isatty(fileno(stderr)))
-        logFile = concatpath(innconf->pathlog, LOG_FILE);
+    if (logFile.empty() && !isatty(fileno(stderr)))
+        logFile = pathIn(innconf->pathlog, LOG_FILE);
 
-    if (logFile)
+    if (!logFile.empty())
         openLogFile();
 
     openfds = 4; /* stdin, stdout, stderr and syslog */
@@ -404,8 +422,8 @@ main(int argc, char **argv)
         openfds++;
     }
 
-    if (chdir(newsspool) != 0)
-        sysdie("ME fatal chdir %s", newsspool);
+    if (chdir(newsspool.c_str()) != 0)
+        sysdie("ME fatal chdir %s", newsspool.c_str());
 
     /* hook up the endpoint to the source of new article information (usually
        innd). */
@@ -592,7 +610,7 @@ sighup(int sig UNUSED)
 
     configHosts(talkToSelf);
 
-    notice("ME reloading log file %s", logFile);
+    notice("ME reloading log file %s", logFile.c_str());
     openLogFile();
 }
 
@@ -642,16 +660,16 @@ openLogFile(void)
 {
     FILE *fpr;
 
-    if (logFile) {
-        fpr = freopen(logFile, "a", stdout);
+    if (!logFile.empty()) {
+        fpr = freopen(logFile.c_str(), "a", stdout);
         if (fpr != stdout)
-            logAndExit(1, "freopen (%s, \"a\", stdout): %s", logFile,
-                       strerror(errno));
+            logAndExit(1, "freopen (%s, \"a\", stdout): %s",
+                       logFile.c_str(), strerror(errno));
 
-        fpr = freopen(logFile, "a", stderr);
+        fpr = freopen(logFile.c_str(), "a", stderr);
         if (fpr != stderr)
-            logAndExit(1, "freopen (%s, \"a\", stderr): %s", logFile,
-                       strerror(errno));
+            logAndExit(1, "freopen (%s, \"a\", stderr): %s",
+                       logFile.c_str(), strerror(errno));
 
 #if defined(HAVE_SETBUFFER)
         setbuffer(stdout, NULL, 0);
@@ -734,42 +752,44 @@ static int
 mainConfigLoadCbk(FILE *fp)
 {
     char *p;
+    std::string value;
     long ival;
     int bval;
 
-    if (getString(topScope, "news-spool", &p, NO_INHERIT)) {
-        if (!isDirectory(p) && isDirectory(innconf->patharticles)) {
+    if (getString(topScope, "news-spool", value, NO_INHERIT)) {
+        if (!isDirectory(value.c_str())
+            && isDirectory(innconf->patharticles)) {
             logOrPrint(LOG_WARNING, fp,
                        "ME config: definition of news-spool (%s) is a"
                        " non-existent directory. Using %s",
-                       p, innconf->patharticles);
-            p = xstrdup(innconf->patharticles);
-        } else if (!isDirectory(p))
-            logAndExit(1, "Bad spool directories: %s, %s\n", p,
+                       value.c_str(), innconf->patharticles);
+            value = innconf->patharticles;
+        } else if (!isDirectory(value.c_str()))
+            logAndExit(1, "Bad spool directories: %s, %s\n", value.c_str(),
                        innconf->patharticles);
     } else if (!isDirectory(innconf->patharticles))
         logAndExit(1,
                    "ME config: no definition of news-spool, and %s is no good",
                    innconf->patharticles);
     else
-        p = xstrdup(innconf->patharticles);
-    newsspool = p;
+        value = innconf->patharticles;
+    newsspool = value;
 
     /***************************************************/
 
-    if (getString(topScope, "input-file", &p, NO_INHERIT)) {
-        if (*p != '\0')
-            InputFile = concatpath(getTapeDirectory(), p);
+    if (getString(topScope, "input-file", value, NO_INHERIT)) {
+        if (!value.empty())
+            inputFileName = pathIn(getTapeDirectory(), value.c_str());
         else
-            InputFile = "";
-        free(p);
+            inputFileName.clear();
+        InputFile = inputFileName.c_str();
     }
 
-    if (getString(topScope, "pid-file", &p, NO_INHERIT)) {
-        pidFile = concatpath(innconf->pathrun, p);
-        free(p);
-    } else
-        pidFile = concatpath(innconf->pathrun, PID_FILE);
+    if (getString(topScope, "pid-file", value, NO_INHERIT))
+        pidFileName = pathIn(innconf->pathrun, value.c_str());
+    else
+        pidFileName = pathIn(innconf->pathrun, PID_FILE);
+    pidFile = pidFileName.c_str();
 
     if (getInteger(topScope, "debug-level", &ival, NO_INHERIT))
         loggingLevel = (unsigned int) ival;
@@ -780,10 +800,8 @@ mainConfigLoadCbk(FILE *fp)
     if (getBool(topScope, "use-mmap", &bval, NO_INHERIT))
         useMMap = (bval ? true : false);
 
-    if (getString(topScope, "log-file", &p, NO_INHERIT)) {
-        logFile = concatpath(innconf->pathlog, p);
-        free(p);
-    }
+    if (getString(topScope, "log-file", value, NO_INHERIT))
+        logFile = pathIn(innconf->pathlog, value.c_str());
 
     if (getString(topScope, "log-time-format", &p, NO_INHERIT)) {
         free(timeToStringFormat);
@@ -891,13 +909,11 @@ static void
 mainCleanup(void)
 {
     free((void *) configFile);
-    free((void *) pidFile);
-    free(logFile);
-    free(newsspool);
     configFile = NULL;
     pidFile = NULL;
-    logFile = NULL;
-    newsspool = NULL;
+    pidFileName.clear();
+    logFile.clear();
+    newsspool.clear();
 }
 
 
@@ -916,10 +932,10 @@ mainLogStatus(FILE *fp)
     if (InputFile != NULL)
         fprintf(fp, "   (%s)", (*InputFile == '\0' ? "stdin" : InputFile));
     fprintf(fp, "\n");
-    fprintf(fp, "    News spool: %s\n", newsspool);
+    fprintf(fp, "    News spool: %s\n", newsspool.c_str());
     fprintf(fp, "      Pid file: %s\n", pidFile);
     fprintf(fp, "      Log file: %s\n",
-            (logFile == NULL ? "(none)" : logFile));
+            (logFile.empty() ? "(none)" : logFile.c_str()));
     fprintf(fp, "   Debug level: %-5u        Debug shrinking: %s\n",
             loggingLevel, boolToString(debugShrinking));
     fprintf(fp, "     Fast exit: %-5s            stdio-fdmax: %u\n",
