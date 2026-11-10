@@ -65,8 +65,10 @@
 #include <errno.h>
 #include <fcntl.h>
 
+#include <string_view>
+#include <unordered_map>
+
 #include "inn/confparse.h"
-#include "inn/hashtab.h"
 #include "inn/libinn.h"
 #include "inn/messages.h"
 #include "inn/vector.h"
@@ -128,7 +130,7 @@ enum value_type {
 };
 
 /* Each setting is represented by one of these structs, stored in the params
-   hash of a config group.  Since all of a config_group must be in the same
+   map of a config group.  Since all of a config_group must be in the same
    file (either group->file for regular groups or group->included for groups
    whose definition is in an included file), we don't have to stash a file
    name here for error reporting but can instead get that from the enclosing
@@ -162,7 +164,8 @@ struct config_group {
     char *file;        /* File in which the group starts. */
     unsigned int line; /* Line number where the group starts. */
     char *included;    /* For group <file>, the included file. */
-    struct hash *params;
+    /* Keyed by each parameter's own key string, which the parameter owns. */
+    std::unordered_map<std::string_view, struct config_parameter *> *params;
 
     struct config_group *parent;
     struct config_group *child;
@@ -170,13 +173,10 @@ struct config_group {
 };
 
 
-/* Parameter handling, used by the hash table stored in a config_group. */
-static const void *parameter_key(const void *p);
-static bool parameter_equal(const void *k, const void *p);
-static void parameter_free(void *p);
+/* Parameter handling. */
+static void parameter_free(struct config_parameter *param);
 
 /* Hash traversal function to collect parameters into a vector. */
-static void parameter_collect(void *, void *);
 
 /* Group handling. */
 static struct config_group *group_new(const char *file, unsigned int line,
@@ -240,40 +240,11 @@ static void error_unexpected_token(struct config_file *,
 
 
 /*
-**  Return the key from a parameter struct, used by the hash table.
-*/
-static const void *
-parameter_key(const void *p)
-{
-    const struct config_parameter *param =
-        static_cast<const struct config_parameter *>(p);
-
-    return param->key;
-}
-
-
-/*
-**  Check to see if a provided key matches the key of a parameter struct,
-**  used by the hash table.
-*/
-static bool
-parameter_equal(const void *k, const void *p)
-{
-    const char *key = static_cast<const char *>(k);
-    const struct config_parameter *param =
-        static_cast<const struct config_parameter *>(p);
-
-    return strcmp(key, param->key) == 0;
-}
-
-
-/*
-**  Free a parameter, used by the hash table.
+**  Free a parameter.
 */
 static void
-parameter_free(void *p)
+parameter_free(struct config_parameter *param)
 {
-    struct config_parameter *param = static_cast<struct config_parameter *>(p);
 
     free(param->key);
     if (param->raw_value != nullptr)
@@ -920,7 +891,7 @@ parse_list(struct config_group *group, struct config_file *file, char *key)
         param->type = VALUE_LIST;
         param->value.list = vector;
         param->line = file->line;
-        if (!hash_insert(group->params, key, param)) {
+        if (!group->params->emplace(key, param).second) {
             warn("%s:%u: duplicate parameter %s", file->filename, file->line,
                  key);
             vector_free(vector);
@@ -979,7 +950,7 @@ parse_parameter(struct config_group *group, struct config_file *file,
             param->raw_value = value;
             param->type = VALUE_UNKNOWN;
             param->line = line;
-            if (!hash_insert(group->params, key, param)) {
+            if (!group->params->emplace(key, param).second) {
                 warn("%s:%u: duplicate parameter %s", file->filename, line,
                      key);
                 free(param->raw_value);
@@ -1202,8 +1173,8 @@ group_new(const char *file, unsigned int line, char *type, char *tag)
     group->file = xstrdup(file);
     group->included = nullptr;
     group->line = line;
-    group->params = hash_create(4, hash_string, parameter_key, parameter_equal,
-                                parameter_free);
+    group->params =
+        new std::unordered_map<std::string_view, struct config_parameter *>;
     group->parent = nullptr;
     group->child = nullptr;
     group->next = nullptr;
@@ -1223,7 +1194,9 @@ group_free(struct config_group *group)
     free(group->file);
     if (group->included != nullptr)
         free(group->included);
-    hash_free(group->params);
+    for (auto &entry : *group->params)
+        parameter_free(entry.second);
+    delete group->params;
     free(group);
 }
 
@@ -1582,11 +1555,11 @@ group_parameter_get(struct config_group *group, const char *key, void *result,
     struct config_group *current = group;
 
     while (current != nullptr) {
-        struct config_parameter *param;
+        auto found = current->params->find(key);
 
-        param = static_cast<struct config_parameter *>(
-            hash_lookup(current->params, key));
-        if (param != nullptr) {
+        if (found != current->params->end()) {
+            struct config_parameter *param = found->second;
+
             if (param->type == VALUE_INVALID)
                 return false;
             else
@@ -1648,27 +1621,6 @@ config_param_list(struct config_group *group, const char *key,
 
 
 /*
-**  A hash traversal function to add all parameter keys to the vector provided
-**  as the second argument.  Currently this does a simple linear search to see
-**  if this parameter was already set, which makes the config_params function
-**  overall O(n^2).  So far, this isn't a problem.
-*/
-static void
-parameter_collect(void *element, void *cookie)
-{
-    struct config_parameter *param =
-        static_cast<struct config_parameter *>(element);
-    struct vector *params = static_cast<struct vector *>(cookie);
-    size_t i;
-
-    for (i = 0; i < params->count; i++)
-        if (strcmp(params->strings[i], param->key) == 0)
-            return;
-    vector_add(params, param->key);
-}
-
-
-/*
 **  Returns a newly allocated vector of all of the config parameters in a
 **  group, including the inherited ones (not implemented yet).
 */
@@ -1676,13 +1628,22 @@ struct vector *
 config_params(struct config_group *group)
 {
     struct vector *params;
-    size_t size;
+    size_t i;
 
+    /* A simple linear search drops keys already set, which makes this
+       O(n^2).  So far, this isn't a problem. */
     params = vector_new();
     for (; group != nullptr; group = group->parent) {
-        size = hash_count(group->params);
-        vector_resize(params, params->allocated + size);
-        hash_traverse(group->params, parameter_collect, params);
+        vector_resize(params, params->allocated + group->params->size());
+        for (auto &entry : *group->params) {
+            const char *key = entry.second->key;
+
+            for (i = 0; i < params->count; i++)
+                if (strcmp(params->strings[i], key) == 0)
+                    break;
+            if (i == params->count)
+                vector_add(params, key);
+        }
     }
     return params;
 }
@@ -1746,8 +1707,8 @@ config_error_param(struct config_group *group, const char *key,
     xvasprintf(&message, fmt, args);
     va_end(args);
 
-    param = static_cast<struct config_parameter *>(
-        hash_lookup(group->params, key));
+    auto found = group->params->find(key);
+    param = found != group->params->end() ? found->second : nullptr;
     if (param == nullptr)
         warn("%s", message);
     else {
