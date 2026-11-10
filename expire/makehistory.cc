@@ -195,12 +195,12 @@ FlushOverTmpFile()
             warn("cannot open overview");
             _exit(1);
         }
-        if (!OVctl(OVSORT, (void *) &sorttype)) {
+        if (!OVgetsort(&sorttype)) {
             warn("cannot obtain overview sorting information");
             OVclose();
             _exit(1);
         }
-        if (!OVctl(OVCUTOFFLOW, (void *) &Cutofflow)) {
+        if (!OVsetcutofflow(Cutofflow)) {
             warn("cannot obtain overview cutoff information");
             OVclose();
             _exit(1);
@@ -300,8 +300,7 @@ FlushOverTmpFile()
         }
         token = TextToToken(q);
         if (OVadd(token, r, strlen(r), arrived, expires) == OVADDFAILED) {
-            if (OVctl(OVSPACE, (void *) &f)
-                && (int) (f + 0.01f) == OV_NOSPACE) {
+            if (OVgetspace(&f) && (int) (f + 0.01f) == OV_NOSPACE) {
                 warn("no space left for overview");
                 OVclose();
                 if (Fork)
@@ -368,8 +367,7 @@ WriteOverLine(TOKEN *token, const char *xrefs, int xrefslen, char *overdata,
             fputc('\n', Overchan);
         } else if (OVadd(*token, overdata, overlen, arrived, expires)
                    == OVADDFAILED) {
-            if (OVctl(OVSPACE, (void *) &f)
-                && (int) (f + 0.01f) == OV_NOSPACE) {
+            if (OVgetspace(&f) && (int) (f + 0.01f) == OV_NOSPACE) {
                 warn("no space left for overview");
                 OVclose();
                 exit(1);
@@ -1004,10 +1002,10 @@ main(int argc, char **argv)
         /* Init the overview setup. */
         if (!OVopen(OV_WRITE))
             sysdie("cannot open overview");
-        if (!OVctl(OVSORT, (void *) &sorttype))
+        if (!OVgetsort(&sorttype))
             die("cannot obtain overview sort information");
         if (!Fork) {
-            if (!OVctl(OVCUTOFFLOW, (void *) &Cutofflow))
+            if (!OVsetcutofflow(Cutofflow))
                 die("cannot obtain overview cutoff information");
             OverAddAllNewsgroups();
         } else {
