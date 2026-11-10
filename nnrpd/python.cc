@@ -56,7 +56,9 @@ using Py_ssize_t = int;
 #        define PYBUFF_FROMMEMORY(str, len) PyBuffer_FromMemory((str), (len))
 #    endif
 
-#    include "inn/hashtab.h"
+#    include <string>
+#    include <unordered_map>
+
 #    include "inn/innconf.h"
 #    include "nnrpd.h"
 
@@ -101,10 +103,8 @@ static PyObject **PYauthitem = NULL;
 static PyObject *PY_set_auth_hook(PyObject *dummy, PyObject *args);
 void PY_load_python(void);
 PyObject *PY_setup(int type, int method, char *file);
-static const void *file_key(const void *p);
-static bool file_equal(const void *k, const void *p);
-static void file_free(void *p);
-static void file_trav(void *data, void *null);
+static void file_free(struct PyFile *fp);
+static void file_trav(struct PyFile *fp);
 
 static bool PythonLoaded = false;
 
@@ -115,8 +115,8 @@ typedef struct PyFile {
     PyObject *procs[PYTHONtypes_max][PYTHONmethods_max];
 } PyFile;
 
-/*  Hash for storing files. */
-static struct hash *files;
+/*  Loaded module files, by name. */
+static std::unordered_map<std::string, PyFile *> files;
 
 /*  For passing the dynamic module filename from perm.c. */
 static char *dynamic_file;
@@ -535,11 +535,11 @@ PY_dynamic(char *User, char *NewsGroup, int PostFlag, char **reply_message)
 void
 PY_close_python(void)
 {
-    if (files != NULL) {
-        hash_traverse(files, file_trav, NULL);
-        hash_free(files);
-        files = NULL;
-    }
+    for (auto &entry : files)
+        file_trav(entry.second);
+    for (auto &entry : files)
+        file_free(entry.second);
+    files.clear();
     if (dynamic_file != NULL) {
         free(dynamic_file);
         dynamic_file = NULL;
@@ -551,9 +551,8 @@ PY_close_python(void)
 **  Traversal function for PY_close_python.
 */
 void
-file_trav(void *data, void *null UNUSED)
+file_trav(PyFile *fp)
 {
-    PyFile *fp = static_cast<PyFile *>(data);
     int j;
     PyObject *result, *func;
 
@@ -723,8 +722,6 @@ PY_load_python(void)
         PYauthinfo = PyDict_New();
         PYauthitem = xcalloc(_PY_MAX_AUTH_ITEM, sizeof(PyObject *));
 
-        /* Create hash to store file attributes. */
-        files = hash_create(4, hash_string, file_key, file_equal, file_free);
 
         PythonLoaded = true;
 
@@ -826,7 +823,9 @@ PY_setup(int type, int method, char *file)
     PyObject *result;
 
     /* Check to see if this file is in files. */
-    if ((fp = static_cast<PyFile *>(hash_lookup(files, file))) == NULL) {
+    auto found = files.find(file);
+    fp = found != files.end() ? found->second : NULL;
+    if (fp == NULL) {
         fp = xmalloc(sizeof(PyFile));
         fp->file = xstrdup(file);
 
@@ -848,7 +847,7 @@ PY_setup(int type, int method, char *file)
             /* Set up pointers to known Python methods. */
             PYdefmethods(fp, type);
         }
-        hash_insert(files, file, fp);
+        files.emplace(file, fp);
 
         if ((!fp->loaded[type]) && (fp->procs[type][PYTHONinit] != NULL)) {
             result = PyObject_CallFunction(fp->procs[type][PYTHONinit], NULL);
@@ -863,38 +862,11 @@ PY_setup(int type, int method, char *file)
 
 
 /*
-**  Return the key (filename) from a file struct, used by the hash table.
-*/
-static const void *
-file_key(const void *p)
-{
-    const struct PyFile *f = static_cast<const struct PyFile *>(p);
-
-    return f->file;
-}
-
-
-/*
-**  Check to see if a provided key matches the key of a PyFile struct,
-**  used by the hash table.
-*/
-static bool
-file_equal(const void *k, const void *p)
-{
-    const char *key = static_cast<const char *>(k);
-    const struct PyFile *f = static_cast<const struct PyFile *>(p);
-
-    return strcmp(key, f->file) == 0;
-}
-
-
-/*
-**  Free a file, used by the hash table.
+**  Free a file.
 */
 static void
-file_free(void *p)
+file_free(PyFile *fp)
 {
-    struct PyFile *fp = static_cast<struct PyFile *>(p);
     int i, j;
 
     free(fp->file);
