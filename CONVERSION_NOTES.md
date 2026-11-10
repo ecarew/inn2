@@ -202,6 +202,14 @@ the Linux checks.
   the map holds one entry keyed by the 16-byte hash.  W5 expireover and W6
   makehistory wall times fell 36% and 39%, but the baseline's runs spread
   51-64% with CPU unchanged, so those are noise.
+- **On CNFS** (one 1 GB buffer; the harness needed fixing first,
+  1f85c58bb): W2, W3, W5 and W6 unchanged; W4 again nnrpd peak RSS
+  46.2 → 11.7 MB and user CPU −31%.  W1 first showed −6% over 5
+  repetitions with a 14-24% spread; 15 paired repetitions of W1 alone
+  gave 20,588 vs 20,623 articles/s (paired difference +34 ± 912, the
+  refactored build faster in 7 of 15), so no difference.  makehistory
+  rebuilds 39,978 of the 40,000 articles' history lines on CNFS, the same
+  22 missing in both builds: an inherited behavior, not yet investigated.
 - **Conclusion:** breaking the C API cost nothing measurable in the server
   paths, removed about 1,700 lines and the last `void *` container and
   selector interfaces, and cut nnrpd's memory sharply.
