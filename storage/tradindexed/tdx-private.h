@@ -13,6 +13,7 @@
 
 #include "config.h"
 #include <stdio.h>
+#include <string.h>
 #include <sys/types.h>
 
 #include "inn/libinn.h"
@@ -21,6 +22,27 @@
 
 /* Forward declarations to avoid unnecessary includes. */
 struct history;
+
+/* Hash and equality for HASH keys in standard containers: the hash is as
+   much of the group hash as fits in a size_t. */
+struct tdx_hash_hasher {
+    size_t
+    operator()(const HASH &hash) const
+    {
+        size_t bucket;
+
+        memcpy(&bucket, &hash, sizeof(bucket));
+        return bucket;
+    }
+};
+
+struct tdx_hash_equal {
+    bool
+    operator()(const HASH &a, const HASH &b) const
+    {
+        return memcmp(&a, &b, sizeof(HASH)) == 0;
+    }
+};
 
 /* Opaque data structure used by the cache. */
 struct cache;

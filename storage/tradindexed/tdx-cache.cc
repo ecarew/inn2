@@ -11,108 +11,45 @@
 
 #include <time.h>
 
-#include "inn/hashtab.h"
+#include <unordered_map>
+
 #include "inn/libinn.h"
 #include "inn/messages.h"
 #include "inn/storage.h"
 #include "tdx-private.h"
 
+namespace {
+/* A cache entry, holding a group_data struct and the time it was last used,
+   which helps choose what to drop from the cache. */
+struct cache_entry {
+    struct group_data *data;
+    time_t lastused;
+};
+
+using entry_map = std::unordered_map<HASH, cache_entry, tdx_hash_hasher,
+                                     tdx_hash_equal>;
+
+
+/*
+**  Release a cache entry's hold on its group data.
+*/
+void
+entry_release(const cache_entry &entry)
+{
+    entry.data->refcount--;
+    if (entry.data->refcount == 0)
+        tdx_data_close(entry.data);
+}
+} // namespace
+
 /* Returned to callers as an opaque data type, this struct holds all of the
    information about the cache. */
 struct cache {
-    struct hash *hashtable;
-    unsigned int count;
+    entry_map entries;
     unsigned int max;
     unsigned long queries;
     unsigned long hits;
 };
-
-/* A cache entry, holding a group_data struct and some additional information
-   used to do cache lookups and to choose what to drop from the cache. */
-struct cache_entry {
-    struct group_data *data;
-    HASH hash;
-    time_t lastused;
-};
-
-
-/*
-**  The hash function for a cache_entry.  Just return as much of the group
-**  hash as can fit in an unsigned long.
-*/
-static unsigned long
-entry_hash(const void *key)
-{
-    const HASH *hash = static_cast<const HASH *>(key);
-    unsigned long bucket;
-
-    memcpy(&bucket, hash, sizeof(bucket));
-    return bucket;
-}
-
-
-/*
-**  Given a cache_entry, return its key.
-*/
-static const void *
-entry_key(const void *data)
-{
-    const struct cache_entry *entry = (const struct cache_entry *) data;
-
-    return &entry->hash;
-}
-
-
-/*
-**  Check to see if two entries are equal.
-*/
-static bool
-entry_equal(const void *key, const void *data)
-{
-    const HASH *hash = (const HASH *) key;
-    const struct cache_entry *entry = (const struct cache_entry *) data;
-
-    return (memcmp(hash, &entry->hash, sizeof(HASH)) == 0);
-}
-
-
-/*
-**  Free a cache entry.
-*/
-static void
-entry_delete(void *data)
-{
-    struct cache_entry *entry = (struct cache_entry *) data;
-
-    entry->data->refcount--;
-    if (entry->data->refcount == 0)
-        tdx_data_close(entry->data);
-    free(entry);
-}
-
-
-/*
-**  Called by hash_traverse, this function finds the oldest entry with the
-**  smallest refcount and stores it in the provided pointer so that it can be
-**  freed.  This is used when the cache is full to drop the least useful
-**  entry.
-*/
-static void
-entry_find_oldest(void *data, void *cookie)
-{
-    struct cache_entry *entry = (struct cache_entry *) data;
-    struct cache_entry **oldest = (struct cache_entry **) cookie;
-
-    if (*oldest == nullptr) {
-        *oldest = entry;
-        return;
-    }
-    if (entry->data->refcount > (*oldest)->data->refcount)
-        return;
-    if (entry->lastused > (*oldest)->lastused)
-        return;
-    *oldest = static_cast<struct cache_entry *>(data);
-}
 
 
 /*
@@ -121,15 +58,12 @@ entry_find_oldest(void *data, void *cookie)
 struct cache *
 tdx_cache_create(unsigned int size)
 {
-    struct cache *cache;
+    auto *cache = new struct cache;
 
-    cache = xmalloc(sizeof(struct cache));
-    cache->count = 0;
     cache->max = size;
     cache->queries = 0;
     cache->hits = 0;
-    cache->hashtable = hash_create(size * 4 / 3, entry_hash, entry_key,
-                                   entry_equal, entry_delete);
+    cache->entries.reserve(size);
     return cache;
 }
 
@@ -140,53 +74,51 @@ tdx_cache_create(unsigned int size)
 struct group_data *
 tdx_cache_lookup(struct cache *cache, HASH hash)
 {
-    struct cache_entry *entry;
-
     cache->queries++;
-    entry = static_cast<struct cache_entry *>(
-        hash_lookup(cache->hashtable, &hash));
-    if (entry != nullptr) {
-        cache->hits++;
-        entry->lastused = time(nullptr);
-    }
-    return (entry == nullptr) ? nullptr : entry->data;
+    auto found = cache->entries.find(hash);
+    if (found == cache->entries.end())
+        return nullptr;
+    cache->hits++;
+    found->second.lastused = time(nullptr);
+    return found->second.data;
 }
 
 
 /*
 **  Insert a new entry, clearing out the oldest entry if the cache is
-**  currently full.
+**  currently full.  The entry dropped is the oldest of those with the
+**  smallest refcount.
 */
 void
 tdx_cache_insert(struct cache *cache, HASH hash, struct group_data *data)
 {
-    struct cache_entry *entry;
+    if (cache->entries.size() >= cache->max) {
+        auto oldest = cache->entries.end();
 
-    if (cache->count == cache->max) {
-        struct cache_entry *oldest = nullptr;
-
-        hash_traverse(cache->hashtable, entry_find_oldest, &oldest);
-        if (oldest == nullptr) {
+        for (auto it = cache->entries.begin(); it != cache->entries.end();
+             ++it) {
+            if (oldest == cache->entries.end()) {
+                oldest = it;
+                continue;
+            }
+            if (it->second.data->refcount > oldest->second.data->refcount)
+                continue;
+            if (it->second.lastused > oldest->second.lastused)
+                continue;
+            oldest = it;
+        }
+        if (oldest == cache->entries.end()) {
             warn("tradindexed: unable to find oldest cache entry");
             return;
-        } else {
-            if (!hash_delete(cache->hashtable, &oldest->hash)) {
-                warn("tradindexed: cannot delete oldest cache entry");
-                return;
-            }
         }
-        cache->count--;
+        entry_release(oldest->second);
+        cache->entries.erase(oldest);
     }
-    entry = xmalloc(sizeof(struct cache_entry));
-    entry->data = data;
-    entry->hash = hash;
-    entry->lastused = time(nullptr);
-    if (!hash_insert(cache->hashtable, &entry->hash, entry)) {
+    if (!cache->entries.emplace(hash, cache_entry{data, time(nullptr)})
+             .second) {
         warn("tradindexed: duplicate cache entry for %s", HashToText(hash));
-        free(entry);
     } else {
-        entry->data->refcount++;
-        cache->count++;
+        data->refcount++;
     }
 }
 
@@ -197,11 +129,14 @@ tdx_cache_insert(struct cache *cache, HASH hash, struct group_data *data)
 void
 tdx_cache_delete(struct cache *cache, HASH hash)
 {
-    if (!hash_delete(cache->hashtable, &hash)) {
+    auto found = cache->entries.find(hash);
+
+    if (found == cache->entries.end()) {
         warn("tradindexed: unable to remove cache entry for %s",
              HashToText(hash));
     } else {
-        cache->count--;
+        entry_release(found->second);
+        cache->entries.erase(found);
     }
 }
 
@@ -212,6 +147,7 @@ tdx_cache_delete(struct cache *cache, HASH hash)
 void
 tdx_cache_free(struct cache *cache)
 {
-    hash_free(cache->hashtable);
-    free(cache);
+    for (auto &entry : cache->entries)
+        entry_release(entry.second);
+    delete cache;
 }
