@@ -17,7 +17,9 @@
 #include <sys/stat.h>
 #include <sys/wait.h>
 
-#include "inn/hashtab.h"
+#include <string>
+#include <unordered_map>
+
 #include "inn/innconf.h"
 #include "inn/libinn.h"
 #include "inn/messages.h"
@@ -44,38 +46,13 @@
 /* Used as the artificial token for all articles inserted into overview. */
 static const TOKEN faketoken = {1, 1, ""};
 
+/* What a group should hold once the data is loaded. */
 struct group {
-    char *group;
     unsigned long count;
     unsigned long low;
     unsigned long high;
 };
-
-static const void *
-group_key(const void *entry)
-{
-    const struct group *group = (const struct group *) entry;
-    return group->group;
-}
-
-static bool
-group_eq(const void *key, const void *entry)
-{
-    const char *first = static_cast<const char *>(key);
-    const char *second;
-
-    second = ((const struct group *) entry)->group;
-    return !strcmp(first, second);
-}
-
-static void
-group_del(void *entry)
-{
-    struct group *group = (struct group *) entry;
-
-    free(group->group);
-    free(group);
-}
+using group_map = std::unordered_map<std::string, group>;
 
 /* Build a stripped-down innconf struct that contains only those settings that
    the tradindexed overview method cares about. */
@@ -163,14 +140,13 @@ overview_data_parse(char *data, unsigned long *artnum)
 }
 
 /* Load an empty overview database from a file, in the process populating a
-   hash table with each group, the high water mark, and the count of messages
-   that should be in the group.  Returns the hash table on success and dies on
-   failure.  Takes the name of the data file to load. */
-static struct hash *
+   map with each group, the high water mark, and the count of messages that
+   should be in the group.  Returns the map on success and dies on failure.
+   Takes the name of the data file to load. */
+static group_map
 overview_load(const char *data)
 {
-    struct hash *groups;
-    struct group *group;
+    group_map groups;
     FILE *overview;
     char buffer[4096];
     char flag[] = NF_FLAG_OK_STRING;
@@ -179,10 +155,7 @@ overview_load(const char *data)
 
     /* Run through the overview data.  Each time we see a group, we update our
        stored information about that group, which we'll use for verification
-       later.  We store that in a local hash table. */
-    groups = hash_create(32, hash_string, group_key, group_eq, group_del);
-    if (groups == nullptr)
-        die("Cannot create a hash table");
+       later.  We store that in a local map. */
     overview = fopen(data, "r");
     if (overview == nullptr)
         sysdie("Cannot open %s for reading", data);
@@ -190,32 +163,27 @@ overview_load(const char *data)
         start = overview_data_parse(buffer, &artnum);
 
         /* See if we've already seen this group.  If not, create it in the
-           overview and the hash table; otherwise, update our local hash table
-           entry. */
-        group = static_cast<struct group *>(hash_lookup(groups, buffer));
-        if (group == nullptr) {
-            group = xmalloc(sizeof(struct group));
-            group->group = xstrdup(buffer);
-            group->count = 1;
-            group->low = artnum;
-            group->high = artnum;
-            if (!hash_insert(groups, group->group, group))
-                die("Cannot insert %s into hash table", group->group);
-            if (!OVgroupadd(group->group, 0, 0, flag))
-                die("Cannot insert group %s into overview", group->group);
+           overview and the map; otherwise, update our local map entry. */
+        auto found = groups.find(buffer);
+        if (found == groups.end()) {
+            found = groups.emplace(buffer, group{1, artnum, artnum}).first;
+            if (!OVgroupadd(buffer, 0, 0, flag))
+                die("Cannot insert group %s into overview", buffer);
         } else {
-            group->count++;
-            group->low = (artnum < group->low) ? artnum : group->low;
-            group->high = (artnum > group->high) ? artnum : group->high;
+            group &g = found->second;
+
+            g.count++;
+            g.low = (artnum < g.low) ? artnum : g.low;
+            g.high = (artnum > g.high) ? artnum : g.high;
         }
 
         /* Do the actual insert of the data.  Note that we set the arrival
            time and expires time in a deterministic fashion so that we can
            check later if that data is being stored properly. */
-        if (!OV_ADD(OVTYPE, group->group, artnum, faketoken, start,
+        if (!OV_ADD(OVTYPE, buffer, artnum, faketoken, start,
                     strlen(start), artnum * 10,
                     (artnum % 5 == 0) ? artnum * 100 : artnum))
-            die("Cannot insert %s:%lu into overview", group->group, artnum);
+            die("Cannot insert %s:%lu into overview", buffer, artnum);
     }
     fclose(overview);
     return groups;
@@ -223,42 +191,45 @@ overview_load(const char *data)
 
 /* Verify that all of the group data looks correct; this is low mark, high
    mark, and article count.  Returns true if all the data is right, false
-   otherwise.  This function is meant to be called as a hash traversal
-   function, which means that it will be called for each element in our local
-   hash table of groups with the group struct as the first argument and a
-   pointer to a status as the second argument. */
-static void
-overview_verify_groups(void *data, void *cookie)
+   otherwise. */
+static bool
+overview_verify_groups(const group_map &groups)
 {
-    struct group *group = (struct group *) data;
-    bool *status = (bool *) cookie;
-    int low, high, count, flag;
+    bool status = true;
 
-    if (!OVgroupstats(group->group, &low, &high, &count, &flag)) {
-        warn("Unable to get data for %s", group->group);
-        *status = false;
-        return;
+    for (const auto &entry : groups) {
+        std::string namecopy = entry.first; /* OVgroupstats takes char * */
+        char *name = namecopy.data();
+        const group *g = &entry.second;
+        int low, high, count, flag;
+
+        if (!OVgroupstats(name, &low, &high, &count, &flag)) {
+            warn("Unable to get data for %s", name);
+            status = false;
+            continue;
+        }
+        if ((unsigned long) low != g->low) {
+            warn("Low article wrong for %s: %lu != %lu", name,
+                 (unsigned long) low, g->low);
+            status = false;
+        }
+        if ((unsigned long) high != g->high) {
+            warn("High article wrong for %s: %lu != %lu", name,
+                 (unsigned long) high, g->high);
+            status = false;
+        }
+        if ((unsigned long) count != g->count) {
+            warn("Article count wrong for %s: %lu != %lu", name,
+                 (unsigned long) count, g->count);
+            status = false;
+        }
+        if (flag != NF_FLAG_OK) {
+            warn("Flag wrong for %s: %c != %c", name, (char) flag,
+                 NF_FLAG_OK);
+            status = false;
+        }
     }
-    if ((unsigned long) low != group->low) {
-        warn("Low article wrong for %s: %lu != %lu", group->group,
-             (unsigned long) low, group->low);
-        *status = false;
-    }
-    if ((unsigned long) high != group->high) {
-        warn("High article wrong for %s: %lu != %lu", group->group,
-             (unsigned long) high, group->high);
-        *status = false;
-    }
-    if ((unsigned long) count != group->count) {
-        warn("Article count wrong for %s: %lu != %lu", group->group,
-             (unsigned long) count, group->count);
-        *status = false;
-    }
-    if (flag != NF_FLAG_OK) {
-        warn("Flag wrong for %s: %c != %c", group->group, (char) flag,
-             NF_FLAG_OK);
-        *status = false;
-    }
+    return status;
 }
 
 /* Verify the components of the overview data for a particular entry. */
@@ -564,7 +535,7 @@ overview_verify_readonly_remap(void)
 int
 main(void)
 {
-    struct hash *groups;
+    group_map groups;
     bool status;
     int fd;
     char trailing = 0;
@@ -592,12 +563,9 @@ main(void)
 
     groups = overview_load("overview/basic");
     ok(2, true);
-    status = true;
-    hash_traverse(groups, overview_verify_groups, &status);
-    ok(3, status);
+    ok(3, overview_verify_groups(groups));
     ok(4, overview_verify_data("overview/basic"));
     ok(5, overview_verify_search("overview/basic"));
-    hash_free(groups);
     OVclose();
     ok(6, true);
 
@@ -607,12 +575,9 @@ main(void)
 
     groups = overview_load("overview/reversed");
     ok(8, true);
-    status = true;
-    hash_traverse(groups, overview_verify_groups, &status);
-    ok(9, status);
+    ok(9, overview_verify_groups(groups));
     ok(10, overview_verify_data("overview/basic"));
     ok(11, overview_verify_search("overview/basic"));
-    hash_free(groups);
     OVclose();
     ok(12, true);
 
@@ -624,7 +589,6 @@ main(void)
     ok(14, true);
     ok(15, overview_verify_data("overview/high-numbered"));
     ok(16, overview_verify_full_search("overview/high-numbered"));
-    hash_free(groups);
     OVclose();
     ok(17, true);
 
@@ -635,7 +599,6 @@ main(void)
     groups = overview_load("overview/bogus");
     ok(19, true);
     ok(20, overview_verify_data("overview/bogus"));
-    hash_free(groups);
     OVclose();
 
     if (strcmp(innconf->ovmethod, "buffindexed") == 0) {
