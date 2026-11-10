@@ -14,6 +14,7 @@
 #include <errno.h>
 #include <stdlib.h>
 #include <string.h>
+#include <string>
 #include <syslog.h>
 
 #include "inn/libinn.h"
@@ -51,9 +52,8 @@
 # define YY_USER_INIT yy_flex_debug = (getenv("YYDEBUG") == NULL ? 0 : 1)
 #endif
 
-static char *strPtr = 0;
-static int strPtrLen = 0;
-static int strIdx = 0;
+/* The quoted string being read. */
+static std::string strBuf;
 static int sawBsl;
 int lineCount = 0;
 static int current;
@@ -61,19 +61,13 @@ static int current;
 static void
 strAppend(int ch)
 {
-    if (strIdx == strPtrLen) {
-        if (strPtr == 0)
-            strPtr = xmalloc(strPtrLen = 50);
-        else
-            strPtr = xrealloc(strPtr, strPtrLen += 10);
-    }
-    strPtr[strIdx++] = ch;
+    strBuf.push_back((char) ch);
 }
 
 #define MAX_INCLUDE_DEPTH 11
 static struct includeFile {
     YY_BUFFER_STATE state;
-    char *name;
+    std::string name;
 } include_stack[MAX_INCLUDE_DEPTH];
 
 static int include_stack_ptr = 0;
@@ -106,7 +100,7 @@ ID	[a-zA-Z][-a-zA-Z0-9._/]+
         int i;
         fprintf(stderr, "Includes nested too deeply:\n");
         for (i = 1; i <= include_stack_ptr; i++)
-            fprintf(stderr, "\t%s\n", include_stack[i].name);
+            fprintf(stderr, "\t%s\n", include_stack[i].name.c_str());
 
         syslog(LOG_ERR, "includes nested to deeply");
         exit(1);
@@ -121,7 +115,7 @@ ID	[a-zA-Z][-a-zA-Z0-9._/]+
     } else {
         d_printf(1, "Including (%d) from %s\n", include_stack_ptr + 1, yytext);
         include_stack[include_stack_ptr].state = YY_CURRENT_BUFFER;
-        include_stack[++include_stack_ptr].name = xstrdup(yytext);
+        include_stack[++include_stack_ptr].name = yytext;
         yy_switch_to_buffer(yy_create_buffer(yyin, YY_BUF_SIZE));
     }
 
@@ -132,7 +126,7 @@ ID	[a-zA-Z][-a-zA-Z0-9._/]+
     if (include_stack_ptr <= 0)
         yyterminate();
     else {
-        free(include_stack[include_stack_ptr].name);
+        include_stack[include_stack_ptr].name.clear();
         yy_delete_buffer(YY_CURRENT_BUFFER);
         yy_switch_to_buffer(include_stack[--include_stack_ptr].state);
     }
@@ -171,7 +165,8 @@ ID	[a-zA-Z][-a-zA-Z0-9._/]+
 \"[^\"]*	{{
     size_t i;
 
-    for (i = 1, strIdx = 0, sawBsl = 0;; i++) {
+    strBuf.clear();
+    for (i = 1, sawBsl = 0;; i++) {
         /* Cast yyleng to size_t because it used to be an int
          * in flex versions anterior or equal to 2.5.35.
          * Do not use yyget_leng() here because old flex versions
@@ -203,10 +198,8 @@ ID	[a-zA-Z][-a-zA-Z0-9._/]+
                     strAppend(current);
                     sawBsl = 0;
                 } else {
-                    strAppend('\0');
-                    yylval.string = strPtr;
-                    strPtr = 0;
-                    strPtrLen = strIdx = 0;
+                    yylval.string = configToken(std::move(strBuf));
+                    strBuf.clear();
                     return (XSTRING);
                 }
                 break;
@@ -239,6 +232,9 @@ ID	[a-zA-Z][-a-zA-Z0-9._/]+
                 break;
             }
         } else {
+            /* end of file inside the string: hand over what was read */
+            yylval.string = configToken(std::move(strBuf));
+            strBuf.clear();
             return (XSTRING);
         }
     }
@@ -255,7 +251,7 @@ ID	[a-zA-Z][-a-zA-Z0-9._/]+
 }
 
 [^#:\'\" \t\n]+	{
-    yylval.name = xstrdup(yytext);
+    yylval.name = configToken(yytext);
     if (strcasecmp(yylval.name, "false") == 0
         || strcasecmp(yylval.name, "no") == 0
         || strcasecmp(yylval.name, "off") == 0)

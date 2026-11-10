@@ -2708,7 +2708,7 @@ getHostInfo(void)
 
         s = v->v.scope_val;
 
-        p = hostDetails(s, v->name, false, NULL);
+        p = hostDetails(s, v->name.data(), false, NULL);
 
         break;
     }

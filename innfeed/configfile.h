@@ -9,8 +9,9 @@
 
 #include "portable/macros.h"
 #include <cstdio>
-
-BEGIN_DECLS
+#include <string>
+#include <string_view>
+#include <vector>
 
 /* A function called after the configuration is (re)loaded.  Its argument is
    where to report problems: stderr when only checking the configuration
@@ -26,51 +27,53 @@ typedef enum {
     scopeval
 } tag;
 
-typedef struct _scope {
-    struct _value *me;
-    char *scope_type;
-    int value_count;
-    int value_idx;
-    struct _value **values;
-    struct _scope *parent;
-} scope;
+struct value;
 
-typedef struct _value {
-    char *name;
-    struct _scope *myscope;
-    tag type;
+/* A scope: the top level, or a peer or group block.  Owns its values. */
+struct scope {
+    value *me = nullptr;        /* the value that names this scope */
+    std::string scope_type;     /* "peer", "group" or "" (lower case) */
+    std::vector<value *> values;
+    scope *parent = nullptr;
+};
+
+/* A named setting.  The type says which member holds it: string_val for a
+   string, the union for the other types. */
+struct value {
+    std::string name;
+    scope *myscope = nullptr;
+    tag type = intval;
     union {
-        char *charp_val;
         char char_val;
         double real_val;
         int bool_val;
         long int_val;
-        struct _scope *scope_val;
-    } v;
-} value;
+        scope *scope_val;
+    } v{};
+    std::string string_val;
+};
 
 /* Variables to export. */
 extern scope *topScope;
-extern char *errbuff;
+extern std::string errbuff;
 extern int lineCount;
-
-int isWord(scope *s, const char *name, int inherit);
-int isName(scope *s, const char *name, int inherit);
 
 int getReal(scope *s, const char *name, double *rval, int inherit);
 int getInteger(scope *s, const char *name, long *rval, int inherit);
 int getBool(scope *s, const char *name, int *rval, int inherit);
+bool getString(scope *s, const char *name, std::string &rval, int inherit);
+/* TRANSITIONAL: the old form, a copy the caller frees; removed once the
+   callers take a std::string. */
 int getString(scope *s, const char *name, char **rval, int inherit);
-int getWord(scope *s, const char *name, char **rval, int inherit);
 
 void freeScopeTree(scope *s);
-char *addInteger(scope *s, const char *name, long val);
-char *addChar(scope *s, const char *name, char val);
-char *addBoolean(scope *s, const char *name, int val);
-char *addName(scope *s, const char *name, char *val);
-char *addWord(scope *s, const char *name, char *val);
-char *addReal(scope *s, const char *name, double val);
-char *addString(scope *s, const char *name, const char *val);
+std::string addInteger(scope *s, const char *name, long val);
+std::string addChar(scope *s, const char *name, char val);
+std::string addBoolean(scope *s, const char *name, int val);
+std::string addReal(scope *s, const char *name, double val);
+std::string addString(scope *s, const char *name, std::string_view val);
+/* Set name's string value in s, or add it if s does not have it. */
+void setString(scope *s, const char *name, std::string_view val);
 scope *findScope(scope *s, const char *name, int mustExist);
 value *findValue(scope *s, const char *name, int inherit);
 value *findPeer(const char *name);
@@ -80,6 +83,10 @@ void configRemoveLoadCallback(ConfigLoadCbk func);
 int readConfig(const char *file, FILE *errorDest, int justCheck, int dump);
 int buildPeerTable(FILE *fp, scope *currScope);
 void configCleanup(void);
+
+/* For the lexer: keep a token's text for the rest of the parse and return a
+   pointer to it, as yacc's value stack holds only plain pointers. */
+const char *configToken(std::string text);
 
 #define ARTICLE_TIMEOUT     "article-timeout"
 #define BACKLOG_LIMIT       "backlog-limit"
@@ -94,13 +101,10 @@ void configCleanup(void);
 #define STREAMING           "streaming"
 #define DROP_DEFERRED       "drop-deferred"
 
-#define ISPEER(V) \
-    (ISSCOPE(V) && strcmp((V)->v.scope_val->scope_type, "peer") == 0)
+#define ISPEER(V)  (ISSCOPE(V) && (V)->v.scope_val->scope_type == "peer")
 #define ISSCOPE(V) (V->type == scopeval)
 
 #define INHERIT    1
 #define NO_INHERIT 0
-
-END_DECLS
 
 #endif /* CONFIGFILE_H */

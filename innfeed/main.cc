@@ -834,30 +834,14 @@ mainOptionsProcess(FILE *fp UNUSED)
 {
     value *v;
 
-    if (bopt != NULL) {
-        if ((v = findValue(topScope, "backlog-directory", NO_INHERIT))
-            != NULL) {
-            free(v->v.charp_val);
-            v->v.charp_val = xstrdup(bopt);
-        } else
-            addString(topScope, "backlog-directory", xstrdup(bopt));
-    }
+    if (bopt != NULL)
+        setString(topScope, "backlog-directory", bopt);
 
-    if (aopt != NULL) {
-        if ((v = findValue(topScope, "news-spool", NO_INHERIT)) != NULL) {
-            free(v->v.charp_val);
-            v->v.charp_val = xstrdup(aopt);
-        } else
-            addString(topScope, "news-spool", xstrdup(aopt));
-    }
+    if (aopt != NULL)
+        setString(topScope, "news-spool", aopt);
 
-    if (sopt != NULL) {
-        if ((v = findValue(topScope, "status-file", NO_INHERIT)) != NULL) {
-            free(v->v.charp_val);
-            v->v.charp_val = xstrdup(sopt);
-        } else
-            addString(topScope, "status-file", xstrdup(sopt));
-    }
+    if (sopt != NULL)
+        setString(topScope, "status-file", sopt);
 
     if (Dopt) {
         if ((v = findValue(topScope, "debug-level", NO_INHERIT)) != NULL)
@@ -883,13 +867,8 @@ mainOptionsProcess(FILE *fp UNUSED)
             addBoolean(topScope, "use-mmap", 0);
     }
 
-    if (popt != NULL) {
-        if ((v = findValue(topScope, "pid-file", NO_INHERIT)) != NULL) {
-            free(v->v.charp_val);
-            v->v.charp_val = xstrdup(popt);
-        } else
-            addString(topScope, "pid-file", xstrdup(popt));
-    }
+    if (popt != NULL)
+        setString(topScope, "pid-file", popt);
 
     if (Zopt) {
         if ((v = findValue(topScope, "connection-stats", NO_INHERIT)) != NULL)
@@ -898,21 +877,11 @@ mainOptionsProcess(FILE *fp UNUSED)
             addBoolean(topScope, "connection-stats", 1);
     }
 
-    if (lopt != NULL) {
-        if ((v = findValue(topScope, "log-file", NO_INHERIT)) != NULL) {
-            free(v->v.charp_val);
-            v->v.charp_val = xstrdup(lopt);
-        } else
-            addString(topScope, "log-file", xstrdup(lopt));
-    }
+    if (lopt != NULL)
+        setString(topScope, "log-file", lopt);
 
-    if (InputFile != NULL) {
-        if ((v = findValue(topScope, "input-file", NO_INHERIT)) != NULL) {
-            free(v->v.charp_val);
-            v->v.charp_val = xstrdup(InputFile);
-        } else
-            addString(topScope, "input-file", xstrdup(InputFile));
-    }
+    if (InputFile != NULL)
+        setString(topScope, "input-file", InputFile);
 
     return 1;
 }
