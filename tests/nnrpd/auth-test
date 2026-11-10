@@ -63,6 +63,13 @@ if ($arg eq 'okay') {
     exit 1;
 
 } elsif ($arg eq 'signal') {
+    # An ignored or blocked SIGHUP survives exec, so a test run started
+    # with one (nohup, some job runners) would see this exit 0 instead.
+    # Make sure the signal kills us.
+    require POSIX;
+    $SIG{HUP} = 'DEFAULT';
+    POSIX::sigprocmask(POSIX::SIG_UNBLOCK(),
+                       POSIX::SigSet->new(POSIX::SIGHUP()));
     kill('HUP', $$);
 
 } elsif ($arg eq 'newline') {
