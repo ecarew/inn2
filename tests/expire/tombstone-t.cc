@@ -10,7 +10,8 @@
 #include <fcntl.h>
 #include <sys/stat.h>
 
-#include "inn/hashtab.h"
+#include <vector>
+
 #include "inn/libinn.h"
 #include "inn/messages.h"
 #include "inn/storage.h"
@@ -19,13 +20,13 @@
 
 
 static TOKEN
-make_token(unsigned char type, unsigned char class, unsigned long n)
+make_token(unsigned char type, unsigned char storageclass, unsigned long n)
 {
     TOKEN t;
 
     memset(&t, 0, sizeof(t));
     t.type = type;
-    t.class = class;
+    t.class_ = storageclass;
     t.token[0] = (n >> 24) & 0xff;
     t.token[1] = (n >> 16) & 0xff;
     t.token[2] = (n >> 8) & 0xff;
@@ -50,7 +51,7 @@ write_tombstone_file(const char *prefix, const TOKEN *tokens, size_t ntokens,
     if (fd < 0)
         sysbail("can't create %s", tmpl);
     f = fdopen(fd, "w");
-    if (f == NULL)
+    if (f == nullptr)
         sysbail("can't fdopen %s", tmpl);
     for (i = 0; i < ntokens; i++)
         fprintf(f, "%s\n", TokenToText(tokens[i]));
@@ -68,7 +69,7 @@ main(void)
     char *text;
     char *path;
     char *path2;
-    struct hash *h;
+    struct tombstone_set *h;
     unsigned long count;
     TOKEN parsed;
     char *roundtrip;
@@ -87,26 +88,18 @@ main(void)
     free(text);
     free(roundtrip);
 
-    /* tombstone_hash_create gives us a hash that handles TOKEN keys. */
+    /* tombstone_set_create gives us a set of TOKENs. */
     t2 = make_token(3, 0, 1);
     t3 = make_token(3, 0, 2);
     t_other = make_token(3, 0, 99);
-    h = tombstone_hash_create(4);
-    {
-        TOKEN *p = xmalloc(sizeof(TOKEN));
-        *p = t2;
-        ok(4, hash_insert(h, p, p));
-    }
-    {
-        TOKEN *p = xmalloc(sizeof(TOKEN));
-        *p = t3;
-        ok(5, hash_insert(h, p, p));
-    }
+    h = tombstone_set_create(4);
+    ok(4, tombstone_add(h, &t2));
+    ok(5, tombstone_add(h, &t3));
     ok(6, tombstone_present(h, &t2));
     ok(7, tombstone_present(h, &t3));
     ok(8, !tombstone_present(h, &t_other));
-    ok(9, hash_count(h) == 2);
-    hash_free(h);
+    ok(9, tombstone_count(h) == 2);
+    tombstone_set_free(h);
 
     /* tombstone_read parses a single file with mixed valid/invalid
      * lines, skips malformed entries, and silently ignores comment
@@ -123,20 +116,20 @@ main(void)
             "\r\n",                   /* CRLF blank */
         };
         path = write_tombstone_file("tombstone-read", tokens, 4, extras, 5);
-        h = tombstone_hash_create(4);
-        count = tombstone_read(h, path, NULL);
+        h = tombstone_set_create(4);
+        count = tombstone_read(h, path, nullptr);
         /* Three unique tokens (t1 dedup'd) plus one valid duplicate
          * line counted but not inserted -> count returned is 4
          * (lines processed) but hash has 3 unique.  Comment and
          * blank lines are skipped silently and not counted. */
-        ok(10, h != NULL);
+        ok(10, h != nullptr);
         ok(11, count == 4);
-        ok(12, hash_count(h) == 3);
+        ok(12, tombstone_count(h) == 3);
         ok(13, tombstone_present(h, &t1));
         ok(14, tombstone_present(h, &t2));
         ok(15, tombstone_present(h, &t3));
         ok(16, !tombstone_present(h, &t_other));
-        hash_free(h);
+        tombstone_set_free(h);
         unlink(path);
         free(path);
     }
@@ -149,16 +142,16 @@ main(void)
         TOKEN expireover_tokens[] = {t1, t2};
         TOKEN cancels_tokens[] = {t2, t3, t4};
         path = write_tombstone_file("tombstone-expireover", expireover_tokens,
-                                    2, NULL, 0);
+                                    2, nullptr, 0);
         path2 = write_tombstone_file("tombstone-cancels", cancels_tokens, 3,
-                                     NULL, 0);
-        h = tombstone_hash_create(4);
-        tombstone_read(h, path, NULL);
-        tombstone_read(h, path2, NULL);
-        ok(17, hash_count(h) == 4); /* t1, t2, t3, t4 */
+                                     nullptr, 0);
+        h = tombstone_set_create(4);
+        tombstone_read(h, path, nullptr);
+        tombstone_read(h, path2, nullptr);
+        ok(17, tombstone_count(h) == 4); /* t1, t2, t3, t4 */
         ok(18, tombstone_present(h, &t1) && tombstone_present(h, &t2)
                    && tombstone_present(h, &t3) && tombstone_present(h, &t4));
-        hash_free(h);
+        tombstone_set_free(h);
         unlink(path);
         unlink(path2);
         free(path);
@@ -173,10 +166,10 @@ main(void)
         char *snapshot;
         struct stat sb;
 
-        path = write_tombstone_file("tombstone-rename", tokens, 2, NULL, 0);
+        path = write_tombstone_file("tombstone-rename", tokens, 2, nullptr, 0);
         snapshot = tombstone_rename_for_processing(path);
-        ok(19, snapshot != NULL);
-        if (snapshot != NULL) {
+        ok(19, snapshot != nullptr);
+        if (snapshot != nullptr) {
             /* Original path no longer exists; snapshot does. */
             ok(20, stat(path, &sb) < 0 && errno == ENOENT
                        && stat(snapshot, &sb) == 0);
@@ -205,11 +198,11 @@ main(void)
         unlink(tmpl); /* mkstemp creates it; we want absent */
         path = xstrdup(tmpl);
         tombstone_ensure_header(path);
-        h = tombstone_hash_create(4);
-        count = tombstone_read(h, path, NULL);
+        h = tombstone_set_create(4);
+        count = tombstone_read(h, path, nullptr);
         ok(21, stat(path, &sb) == 0 && sb.st_size > 0 && count == 0
-                   && hash_count(h) == 0);
-        hash_free(h);
+                   && tombstone_count(h) == 0);
+        tombstone_set_free(h);
         unlink(path);
         free(path);
     }
@@ -220,13 +213,13 @@ main(void)
     {
         TOKEN raced[] = {t1, t2};
 
-        path = write_tombstone_file("tombstone-prepend", raced, 2, NULL, 0);
+        path = write_tombstone_file("tombstone-prepend", raced, 2, nullptr, 0);
         tombstone_ensure_header(path);
-        h = tombstone_hash_create(4);
-        count = tombstone_read(h, path, NULL);
-        ok(22, count == 2 && hash_count(h) == 2 && tombstone_present(h, &t1)
+        h = tombstone_set_create(4);
+        count = tombstone_read(h, path, nullptr);
+        ok(22, count == 2 && tombstone_count(h) == 2 && tombstone_present(h, &t1)
                    && tombstone_present(h, &t2));
-        hash_free(h);
+        tombstone_set_free(h);
         unlink(path);
         free(path);
     }
@@ -264,25 +257,24 @@ main(void)
      * partial trailing chunk). */
     {
         size_t nbig = 3000;
-        TOKEN *big = xmalloc(nbig * sizeof(TOKEN));
+        std::vector<TOKEN> big(nbig);
         size_t i;
         bool all_present;
 
         for (i = 0; i < nbig; i++)
             big[i] = make_token(3, 0, 0x10000 + i);
         path =
-            write_tombstone_file("tombstone-multichunk", big, nbig, NULL, 0);
+            write_tombstone_file("tombstone-multichunk", big.data(), nbig, nullptr, 0);
         tombstone_ensure_header(path);
-        h = tombstone_hash_create(nbig * 2);
-        count = tombstone_read(h, path, NULL);
-        all_present = (count == nbig && hash_count(h) == nbig);
+        h = tombstone_set_create(nbig * 2);
+        count = tombstone_read(h, path, nullptr);
+        all_present = (count == nbig && tombstone_count(h) == nbig);
         for (i = 0; i < nbig && all_present; i++)
             all_present = tombstone_present(h, &big[i]);
         ok(24, all_present);
-        hash_free(h);
+        tombstone_set_free(h);
         unlink(path);
         free(path);
-        free(big);
     }
 
     /* Crash-recovery tolerance: simulate a file in a post-crash
@@ -301,11 +293,11 @@ main(void)
 
         path = write_tombstone_file("tombstone-corrupt", valid, 3, garbled, 2);
         tombstone_ensure_header(path);
-        h = tombstone_hash_create(4);
-        count = tombstone_read(h, path, NULL);
-        ok(25, hash_count(h) == 3 && tombstone_present(h, &t1)
+        h = tombstone_set_create(4);
+        count = tombstone_read(h, path, nullptr);
+        ok(25, tombstone_count(h) == 3 && tombstone_present(h, &t1)
                    && tombstone_present(h, &t2) && tombstone_present(h, &t3));
-        hash_free(h);
+        tombstone_set_free(h);
         unlink(path);
         free(path);
     }

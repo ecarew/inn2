@@ -279,7 +279,7 @@ ARTclose(void)
 **  change.  Memory cost is ~50 bytes per cancel; typical sites have
 **  hundreds of entries.  Falls through to SMretrieve on load failure.
 */
-static struct hash *nnrpd_tombstone = nullptr;
+static struct tombstone_set *nnrpd_tombstone = nullptr;
 static char *nnrpd_tombstone_path = nullptr;
 static time_t nnrpd_tombstone_mtime = 0;
 static off_t nnrpd_tombstone_size = 0;
@@ -325,7 +325,7 @@ nnrpd_tombstone_refresh()
      * and fall through to the slow path. */
     if (stat(nnrpd_tombstone_path, &sb) < 0) {
         if (nnrpd_tombstone != nullptr) {
-            hash_free(nnrpd_tombstone);
+            tombstone_set_free(nnrpd_tombstone);
             nnrpd_tombstone = nullptr;
             nnrpd_tombstone_mtime = 0;
             nnrpd_tombstone_size = 0;
@@ -340,8 +340,8 @@ nnrpd_tombstone_refresh()
 
     /* (Re)load. */
     if (nnrpd_tombstone != nullptr)
-        hash_free(nnrpd_tombstone);
-    nnrpd_tombstone = tombstone_hash_create(initial_buckets);
+        tombstone_set_free(nnrpd_tombstone);
+    nnrpd_tombstone = tombstone_set_create(initial_buckets);
     tombstone_read(nnrpd_tombstone, nnrpd_tombstone_path, &read_error);
     if (read_error) {
         /* Partial parse; do not advance the freshness key so the

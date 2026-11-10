@@ -19,7 +19,6 @@
 #ifndef INN_TOMBSTONE_H
 #define INN_TOMBSTONE_H
 
-#include "inn/hashtab.h"
 #include "inn/portable-macros.h"
 #include "inn/portable-stdbool.h"
 #include "inn/storage.h"
@@ -34,14 +33,18 @@
 BEGIN_DECLS
 
 /*
-**  Create a hashset suited to holding TOKEN keys (each entry is a
-**  TOKEN allocated by the caller; the hashset owns and frees them).
-**  size is the initial bucket hint; the hash auto-expands.
+**  A set of TOKENs (a std::unordered_set inside; opaque to callers).
+**  size is the initial bucket hint; the set grows as needed.
+**  tombstone_add returns false if the token was already present.
 */
-struct hash *tombstone_hash_create(size_t size);
+struct tombstone_set;
+struct tombstone_set *tombstone_set_create(size_t size);
+void tombstone_set_free(struct tombstone_set *set);
+bool tombstone_add(struct tombstone_set *set, const TOKEN *token);
+size_t tombstone_count(const struct tombstone_set *set);
 
 /*
-**  Read tombstone entries from path into the hashset.  Each non-blank
+**  Read tombstone entries from path into the set.  Each non-blank
 **  line is parsed with TextToToken and inserted; malformed lines are
 **  skipped with a warning.  Duplicates are dropped silently.  Returns
 **  the number of valid entries seen, or 0 if the file does not exist
@@ -54,7 +57,7 @@ struct hash *tombstone_hash_create(size_t size);
 **  authoritative.  ENOENT does not set the flag because an absent
 **  file is a successful "no entries" read.
 */
-unsigned long tombstone_read(struct hash *h, const char *path,
+unsigned long tombstone_read(struct tombstone_set *set, const char *path,
                              bool *out_error);
 
 /*
@@ -71,9 +74,9 @@ unsigned long tombstone_read(struct hash *h, const char *path,
 char *tombstone_rename_for_processing(const char *path);
 
 /*
-**  Look up a TOKEN in the hashset.  Returns true if present.
+**  Look up a TOKEN in the set.  Returns true if present.
 */
-bool tombstone_present(struct hash *h, const TOKEN *token);
+bool tombstone_present(const struct tombstone_set *set, const TOKEN *token);
 
 /*
 **  Ensure path exists and starts with TOMBSTONE_HEADER under an

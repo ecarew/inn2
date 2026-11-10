@@ -10,7 +10,6 @@
 #include <syslog.h>
 #include <time.h>
 
-#include "inn/hashtab.h"
 #include "inn/history.h"
 #include "inn/innconf.h"
 #include "inn/inndcomm.h"
@@ -413,7 +412,7 @@ EXPremove(const TOKEN *token)
 **  paths (caller frees and unlinks after a successful run); both are
 **  NULL when consuming is false.
 */
-static struct hash *
+static struct tombstone_set *
 EXPloadtombstone(bool consuming, char **out_expireover_path,
                  char **out_cancels_snapshot)
 {
@@ -421,7 +420,7 @@ EXPloadtombstone(bool consuming, char **out_expireover_path,
     char *cancels_path = nullptr;
     char *cancels_snapshot = nullptr;
     char *leftover = nullptr;
-    struct hash *h = nullptr;
+    struct tombstone_set *h = nullptr;
     struct stat sb;
     unsigned long n_expireover = 0;
     unsigned long n_cancels = 0;
@@ -456,7 +455,7 @@ EXPloadtombstone(bool consuming, char **out_expireover_path,
 
     /* Initial size: tokens are typically ~38 bytes per line; we let the
        hash expand if we underestimate.  4096 covers the common case. */
-    h = tombstone_hash_create(4096);
+    h = tombstone_set_create(4096);
 
     /* Recover a leftover .processing from a previous run that crashed
        between rename and unlink. */
@@ -480,7 +479,7 @@ EXPloadtombstone(bool consuming, char **out_expireover_path,
 
     if (EXPverbose)
         printf("Loaded %lu + %lu + %lu tombstone entries (%lu unique)\n",
-               n_expireover, n_cancels, n_leftover, hash_count(h));
+               n_expireover, n_cancels, n_leftover, tombstone_count(h));
 
     /* Reconcile the leftover with the active snapshot.  Only relevant
        on a real consuming run; dry-run leaves the leftover where it
@@ -525,7 +524,7 @@ EXPloadtombstone(bool consuming, char **out_expireover_path,
        NULL; use the cancels_present probe instead. */
     if (!expireover_present && !leftover_present && !cancels_present
         && cancels_snapshot == nullptr) {
-        hash_free(h);
+        tombstone_set_free(h);
         free(expireover_path);
         free(cancels_path);
         return nullptr;
@@ -548,7 +547,7 @@ static bool
 EXPdoline(void *cookie, time_t arrived, time_t posted, time_t expires,
           TOKEN *token)
 {
-    struct hash *tombstone = (struct hash *) cookie;
+    auto *tombstone = static_cast<struct tombstone_set *>(cookie);
     time_t when;
     bool HasSelfexpire = false;
     bool Selfexpired = false;
@@ -562,7 +561,7 @@ EXPdoline(void *cookie, time_t arrived, time_t posted, time_t expires,
        EXPunlinked too so the news.daily summary's "Articles dropped"
        count matches the slow path's accounting (EXPremove also bumps
        it). */
-    if (tombstone != nullptr && hash_lookup(tombstone, token) != nullptr) {
+    if (tombstone_present(tombstone, token)) {
         EXPprocessed++;
         if (EXPverbose > 3)
             printf("%s (tombstoned by expireover)\n", TokenToText(*token));
@@ -967,7 +966,7 @@ main(int ac, char *av[])
         bool consuming = Writing && !EXPtracing && NHistory == nullptr;
         char *expireover_path = nullptr;
         char *cancels_snapshot = nullptr;
-        struct hash *tombstone = nullptr;
+        struct tombstone_set *tombstone = nullptr;
 
         if (innconf->expiretombstone && innconf->groupbaseexpiry)
             tombstone = EXPloadtombstone(consuming, &expireover_path,
@@ -977,8 +976,7 @@ main(int ac, char *av[])
                         EXPremember, EXPdoline)
               == false;
 
-        if (tombstone != nullptr)
-            hash_free(tombstone);
+        tombstone_set_free(tombstone);
 
         /* On a successful real run, unlink both consumed snapshots
            and seed header-only successors.  Dry-run / tracing /

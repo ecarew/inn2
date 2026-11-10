@@ -13,7 +13,7 @@
  *   N_SELFEXP_ALIVE    self-expiring, simulated alive    -> keep
  *
  * The slow path mirrors EXPdoline's behaviour for backends where
- * SMprobe(SELFEXPIRE) is true: even with a tombstone hashset present,
+ * SMselfexpire() is true: even with a tombstone hashset present,
  * we still consult the simulated SMretrieve because articles can vanish
  * via wrap-around without going through SMcancel.
  *
@@ -25,7 +25,6 @@
 #include <errno.h>
 #include <sys/stat.h>
 
-#include "inn/hashtab.h"
 #include "inn/history.h"
 #include "inn/libinn.h"
 #include "inn/messages.h"
@@ -44,10 +43,10 @@
 
 /* Cookie threading two hashsets through HISexpire's callback: the
  * tombstone (real EXPdoline checks this first) and a "gone" set used to
- * simulate SMretrieve(RETR_STAT) == NULL for self-expiring backends. */
+ * simulate SMretrieve(RETR_STAT) == nullptr for self-expiring backends. */
 struct expire_cookie {
-    struct hash *tombstone;
-    struct hash *gone;
+    struct tombstone_set *tombstone;
+    struct tombstone_set *gone;
 };
 
 
@@ -62,10 +61,10 @@ static bool
 test_expire_cb(void *cookie, time_t arrived UNUSED, time_t posted UNUSED,
                time_t expires UNUSED, TOKEN *token)
 {
-    struct expire_cookie *c = cookie;
+    auto *c = static_cast<struct expire_cookie *>(cookie);
 
     /* Fast path: tombstone hit -> drop, no further checks. */
-    if (c->tombstone != NULL && tombstone_present(c->tombstone, token))
+    if (c->tombstone != nullptr && tombstone_present(c->tombstone, token))
         return false;
 
     /* Self-expiring backend (gap G).  Even with a tombstone in hand, we
@@ -93,7 +92,7 @@ make_token(unsigned char type, unsigned long n)
 
     memset(&t, 0, sizeof(t));
     t.type = type;
-    t.class = 0;
+    t.class_ = 0;
     t.token[0] = (n >> 24) & 0xff;
     t.token[1] = (n >> 16) & 0xff;
     t.token[2] = (n >> 8) & 0xff;
@@ -121,9 +120,9 @@ count_history_lines(const char *path)
     unsigned long n = 0;
 
     f = fopen(path, "r");
-    if (f == NULL)
+    if (f == nullptr)
         return 0;
-    while (fgets(line, sizeof(line), f) != NULL) {
+    while (fgets(line, sizeof(line), f) != nullptr) {
         if (line[0] != '\n' && line[0] != '\0')
             n++;
     }
@@ -132,15 +131,6 @@ count_history_lines(const char *path)
 }
 
 
-/* Helper: insert a TOKEN copy into a hashset. */
-static void
-hash_add_token(struct hash *h, const TOKEN *token)
-{
-    TOKEN *p = xmalloc(sizeof(TOKEN));
-    *p = *token;
-    if (!hash_insert(h, p, p))
-        free(p);
-}
 
 
 int
@@ -160,7 +150,7 @@ main(void)
     test_init(9);
 
     strlcpy(tmpdir, "tombstone-hisexp-XXXXXX", sizeof(tmpdir));
-    if (mkdtemp(tmpdir) == NULL)
+    if (mkdtemp(tmpdir) == nullptr)
         sysbail("can't create temp directory");
     snprintf(histpath, sizeof(histpath), "%s/history", tmpdir);
 
@@ -185,7 +175,7 @@ main(void)
 
     /* Populate a fresh history database with all N_TOTAL entries. */
     h = HISopen(histpath, "hisv6", HIS_CREAT | HIS_RDWR);
-    if (h == NULL)
+    if (h == nullptr)
         bail("can't create history at %s", histpath);
     for (i = 0; i < N_TOTAL; i++) {
         char *msgid = make_msgid(i);
@@ -199,28 +189,28 @@ main(void)
     ok(1, stat(histpath, &sb) == 0 && sb.st_size > 0);
 
     /* Build the tombstone hashset (only the N_TOMBSTONED slice). */
-    cookie.tombstone = tombstone_hash_create(8);
+    cookie.tombstone = tombstone_set_create(8);
     for (i = N_KEPT; i < N_KEPT + N_TOMBSTONED; i++)
-        hash_add_token(cookie.tombstone, &tokens[i]);
-    ok(2, hash_count(cookie.tombstone) == N_TOMBSTONED);
+        tombstone_add(cookie.tombstone, &tokens[i]);
+    ok(2, tombstone_count(cookie.tombstone) == N_TOMBSTONED);
 
     /* Build the "gone" hashset for self-expiring backends (only the
      * N_SELFEXP_GONE slice; selfexpire-alive tokens are NOT added). */
-    cookie.gone = tombstone_hash_create(8);
+    cookie.gone = tombstone_set_create(8);
     base = N_KEPT + N_TOMBSTONED;
     for (i = 0; i < N_SELFEXP_GONE; i++)
-        hash_add_token(cookie.gone, &tokens[base + i]);
-    ok(3, hash_count(cookie.gone) == N_SELFEXP_GONE);
+        tombstone_add(cookie.gone, &tokens[base + i]);
+    ok(3, tombstone_count(cookie.gone) == N_SELFEXP_GONE);
 
     /* Reopen read-only and run HISexpire with our SELFEXPIRE-aware
      * callback. */
     h = HISopen(histpath, "hisv6", HIS_RDONLY);
-    if (h == NULL)
+    if (h == nullptr)
         bail("can't reopen history at %s", histpath);
     snprintf(newhistpath, sizeof(newhistpath), "%s/history.new", tmpdir);
     /* High threshold so dropped entries do not survive as remember-only
      * records; we want a clean count of survivors. */
-    expire_ok = HISexpire(h, newhistpath, NULL, true, &cookie,
+    expire_ok = HISexpire(h, newhistpath, nullptr, true, &cookie,
                           (time_t) 2000000000, test_expire_cb);
     ok(4, expire_ok);
     HISclose(h);
@@ -248,32 +238,32 @@ main(void)
 
         snprintf(actual, sizeof(actual), "%s.n", newhistpath);
         hnew = HISopen(actual, "hisv6", HIS_RDONLY);
-        if (hnew == NULL)
+        if (hnew == nullptr)
             bail("can't open new history %s", actual);
 
         for (i = 0; i < N_KEPT; i++) {
             char *msgid = make_msgid(i);
-            if (HISlookup(hnew, msgid, NULL, NULL, NULL, &found))
+            if (HISlookup(hnew, msgid, nullptr, nullptr, nullptr, &found))
                 kept_present++;
             free(msgid);
         }
         for (i = N_KEPT; i < N_KEPT + N_TOMBSTONED; i++) {
             char *msgid = make_msgid(i);
-            if (HISlookup(hnew, msgid, NULL, NULL, NULL, &found))
+            if (HISlookup(hnew, msgid, nullptr, nullptr, nullptr, &found))
                 tomb_present++;
             free(msgid);
         }
         base = N_KEPT + N_TOMBSTONED;
         for (i = 0; i < N_SELFEXP_GONE; i++) {
             char *msgid = make_msgid(base + i);
-            if (HISlookup(hnew, msgid, NULL, NULL, NULL, &found))
+            if (HISlookup(hnew, msgid, nullptr, nullptr, nullptr, &found))
                 gone_present++;
             free(msgid);
         }
         base += N_SELFEXP_GONE;
         for (i = 0; i < N_SELFEXP_ALIVE; i++) {
             char *msgid = make_msgid(base + i);
-            if (HISlookup(hnew, msgid, NULL, NULL, NULL, &found))
+            if (HISlookup(hnew, msgid, nullptr, nullptr, nullptr, &found))
                 alive_present++;
             free(msgid);
         }
@@ -285,8 +275,8 @@ main(void)
         HISclose(hnew);
     }
 
-    hash_free(cookie.tombstone);
-    hash_free(cookie.gone);
+    tombstone_set_free(cookie.tombstone);
+    tombstone_set_free(cookie.gone);
 
     /* Cleanup. */
     {

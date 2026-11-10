@@ -4,7 +4,7 @@
 **  See include/inn/tombstone.h for the API and inn.conf manual page
 **  under "expiretombstone" for the file semantics.  Shared between
 **  the expire binary and the test suite so both exercise identical
-**  parsing, hashing, and atomic-snapshot logic.
+**  parsing, set, and atomic-snapshot logic.
 **
 **  Written by Kevin Bowling in 2026.
 */
@@ -15,6 +15,8 @@
 #include <fcntl.h>
 #include <sys/stat.h>
 
+#include <unordered_set>
+
 #include "inn/hashtab.h"
 #include "inn/libinn.h"
 #include "inn/messages.h"
@@ -23,40 +25,67 @@
 
 
 /*
-**  Hashset glue.  Keys are 18-byte TOKEN structs (1 type + 1 class +
-**  16 token bytes) hashed and compared as raw bytes.  hash_lookup2
-**  derives a stable unsigned long from the bytes; tombstone_equal
-**  uses memcmp for an exact match.
+**  The set.  TOKENs (1 type + 1 class + 16 token bytes) are hashed and
+**  compared as raw bytes: hash_lookup2 derives a stable value from the
+**  bytes and memcmp gives an exact match.
 */
+namespace {
+struct token_hash {
+    size_t
+    operator()(const TOKEN &t) const
+    {
+        return hash_lookup2(reinterpret_cast<const char *>(&t), sizeof(TOKEN),
+                            0);
+    }
+};
 
-static unsigned long
-ts_hash(const void *p)
+struct token_equal {
+    bool
+    operator()(const TOKEN &a, const TOKEN &b) const
+    {
+        return memcmp(&a, &b, sizeof(TOKEN)) == 0;
+    }
+};
+} // namespace
+
+struct tombstone_set {
+    std::unordered_set<TOKEN, token_hash, token_equal> tokens;
+};
+
+
+struct tombstone_set *
+tombstone_set_create(size_t size)
 {
-    return hash_lookup2((const char *) p, sizeof(TOKEN), 0);
+    auto *set = new tombstone_set;
+
+    set->tokens.reserve(size);
+    return set;
 }
 
-static const void *
-ts_key(const void *p)
-{
-    return p;
-}
 
-static bool
-ts_equal(const void *a, const void *b)
+void
+tombstone_set_free(struct tombstone_set *set)
 {
-    return memcmp(a, b, sizeof(TOKEN)) == 0;
+    delete set;
 }
 
 
-struct hash *
-tombstone_hash_create(size_t size)
+bool
+tombstone_add(struct tombstone_set *set, const TOKEN *token)
 {
-    return hash_create(size, ts_hash, ts_key, ts_equal, free);
+    return set->tokens.insert(*token).second;
+}
+
+
+size_t
+tombstone_count(const struct tombstone_set *set)
+{
+    return set->tokens.size();
 }
 
 
 unsigned long
-tombstone_read(struct hash *h, const char *path, bool *out_error)
+tombstone_read(struct tombstone_set *set, const char *path, bool *out_error)
 {
     FILE *f;
     char line[SMBUF];
@@ -65,7 +94,7 @@ tombstone_read(struct hash *h, const char *path, bool *out_error)
 
     if (out_error != nullptr)
         *out_error = false;
-    if (h == nullptr || path == nullptr)
+    if (set == nullptr || path == nullptr)
         return 0;
 
     f = fopen(path, "r");
@@ -79,7 +108,6 @@ tombstone_read(struct hash *h, const char *path, bool *out_error)
     }
     while (fgets(line, sizeof(line), f) != nullptr) {
         TOKEN t;
-        TOKEN *entry;
 
         len = strlen(line);
         while (len > 0 && (line[len - 1] == '\n' || line[len - 1] == '\r'))
@@ -96,13 +124,8 @@ tombstone_read(struct hash *h, const char *path, bool *out_error)
             continue;
         }
         t = TextToToken(line);
-        entry = xmalloc(sizeof(TOKEN));
-        *entry = t;
-        if (!hash_insert(h, entry, entry)) {
-            /* Already present (duplicate cancel), free the redundant
-             * allocation; the existing entry stays. */
-            free(entry);
-        }
+        /* A duplicate cancel is dropped; the existing entry stays. */
+        tombstone_add(set, &t);
         count++;
     }
     if (ferror(f)) {
@@ -149,11 +172,11 @@ tombstone_rename_for_processing(const char *path)
 
 
 bool
-tombstone_present(struct hash *h, const TOKEN *token)
+tombstone_present(const struct tombstone_set *set, const TOKEN *token)
 {
-    if (h == nullptr || token == nullptr)
+    if (set == nullptr || token == nullptr)
         return false;
-    return hash_lookup(h, token) != nullptr;
+    return set->tokens.count(*token) != 0;
 }
 
 
