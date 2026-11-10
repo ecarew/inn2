@@ -12,6 +12,8 @@
 #include <stdarg.h>
 #include <sys/types.h>
 
+#include <string>
+
 BEGIN_DECLS
 
 /* These typedefs are all here because C is too stupid to let me multiply
@@ -49,7 +51,7 @@ extern unsigned int loggingLevel; /* if loggingLevel is 0,
                                      d_printf is a no-op */
 
 /* used by timeToString with strftime(3) */
-extern char *timeToStringFormat;
+extern std::string timeToStringFormat; /* log-time-format; empty: default */
 
 /* the current count of file desccriptors */
 extern unsigned int openfds;

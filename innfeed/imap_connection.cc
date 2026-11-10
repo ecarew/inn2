@@ -29,6 +29,8 @@
 #include "portable/system.h"
 
 #include "portable/socket.h"
+
+#include <string>
 #include <ctype.h>
 #include <errno.h>
 #include <netdb.h>
@@ -47,6 +49,14 @@
 #include "endpoint.h"
 #include "host.h"
 #include "innfeed.h"
+
+/* A deliver-* setting for the SASL callbacks, which take NULL for "not
+   set". */
+static const char *
+unlessEmpty(const std::string &s)
+{
+    return s.empty() ? NULL : s.c_str();
+}
 
 #ifdef HAVE_SASL
 #    include <sasl/sasl.h>
@@ -1292,7 +1302,7 @@ show_stats(connection_t *cxn)
 static int
 getsimple(void *context UNUSED, int id, const char **result, unsigned *len)
 {
-    char *authid;
+    const char *authid;
 
     if (!result)
         return SASL_BADPARAM;
@@ -1300,17 +1310,17 @@ getsimple(void *context UNUSED, int id, const char **result, unsigned *len)
 
     switch (id) {
     case SASL_CB_GETREALM:
-        *result = deliver_realm;
+        *result = unlessEmpty(deliver_realm);
         if (len)
-            *len = deliver_realm ? strlen(deliver_realm) : 0;
+            *len = deliver_realm.size();
         break;
     case SASL_CB_USER:
-        *result = deliver_username;
+        *result = unlessEmpty(deliver_username);
         if (len)
-            *len = deliver_username ? strlen(deliver_username) : 0;
+            *len = deliver_username.size();
         break;
     case SASL_CB_AUTHNAME:
-        authid = deliver_authname;
+        authid = unlessEmpty(deliver_authname);
         *result = authid;
         if (len)
             *len = authid ? strlen(authid) : 0;
@@ -1336,17 +1346,17 @@ getsecret(sasl_conn_t *conn, void *context UNUSED, int id,
     if (!conn || !psecret || id != SASL_CB_PASS)
         return SASL_BADPARAM;
 
-    if (deliver_password == NULL) {
+    if (deliver_password.empty()) {
         d_printf(0, "SASL requested a password but I don't have one\n");
         return SASL_FAIL;
     }
 
-    passlen = strlen(deliver_password);
+    passlen = deliver_password.size();
     *psecret = xmalloc(sizeof(sasl_secret_t) + passlen + 1);
     if (!*psecret)
         return SASL_FAIL;
 
-    strlcpy((char *) (*psecret)->data, deliver_password, passlen + 1);
+    strlcpy((char *) (*psecret)->data, deliver_password.c_str(), passlen + 1);
     (*psecret)->len = passlen;
 
     return SASL_OK;
@@ -2603,7 +2613,7 @@ imap_sendAuthenticate(connection_t *cxn)
             return RET_FAIL;
         }
 
-        if (deliver_authname == NULL) {
+        if (deliver_authname.empty()) {
             d_printf(
                 0,
                 "%s:%u:IMAP Unable to log in because can't find a authname\n",
@@ -2611,7 +2621,7 @@ imap_sendAuthenticate(connection_t *cxn)
             return RET_FAIL;
         }
 
-        if (deliver_password == NULL) {
+        if (deliver_password.empty()) {
             d_printf(
                 0,
                 "%s:%u:IMAP Unable to log in because can't find a password\n",
@@ -2621,8 +2631,8 @@ imap_sendAuthenticate(connection_t *cxn)
 
         imap_GetTag(cxn);
 
-        p = concat(cxn->imap_currentTag, " LOGIN ", deliver_authname, " \"",
-                   deliver_password, "\"\r\n", (char *) 0);
+        p = concat(cxn->imap_currentTag, " LOGIN ", deliver_authname.c_str(),
+                   " \"", deliver_password.c_str(), "\"\r\n", (char *) 0);
 
         result = WriteToWire_imapstr(cxn, p, strlen(p));
         if (result != RET_OK)
@@ -3730,7 +3740,7 @@ addrcpt(const char *newrcpt, int newrcptlen, char **out, int *outalloc)
 {
     int size = strlen(*out);
     int fsize = size;
-    int newsize = size + 9 + strlen(deliver_rcpt_to) + newrcptlen + 3;
+    int newsize = size + 9 + deliver_rcpt_to.size() + newrcptlen + 3;
     int rc;
     char *rcpt;
 
@@ -3750,7 +3760,7 @@ addrcpt(const char *newrcpt, int newrcptlen, char **out, int *outalloc)
 #if __GNUC__ > 4 || defined(__llvm__) || defined(__clang__)
 #    pragma GCC diagnostic ignored "-Wformat-nonliteral"
 #endif
-    rc = snprintf((*out) + size, newsize - size, deliver_rcpt_to, rcpt);
+    rc = snprintf((*out) + size, newsize - size, deliver_rcpt_to.c_str(), rcpt);
 #if __GNUC__ > 4 || defined(__llvm__) || defined(__clang__)
 #    pragma GCC diagnostic warning "-Wformat-nonliteral"
 #endif
@@ -3822,7 +3832,7 @@ addto(const char *newrcpt, int newrcptlen, const char *sep, char **out,
 {
     int size = strlen(*out);
     int newsize =
-        size + strlen(sep) + 1 + strlen(deliver_to_header) + newrcptlen + 1;
+        size + strlen(sep) + 1 + deliver_to_header.size() + newrcptlen + 1;
     int rc;
     char *rcpt;
 
@@ -3848,7 +3858,7 @@ addto(const char *newrcpt, int newrcptlen, const char *sep, char **out,
 #if __GNUC__ > 4 || defined(__llvm__) || defined(__clang__)
 #    pragma GCC diagnostic ignored "-Wformat-nonliteral"
 #endif
-    rc = snprintf((*out) + size, newsize - size, deliver_to_header, rcpt);
+    rc = snprintf((*out) + size, newsize - size, deliver_to_header.c_str(), rcpt);
 #if __GNUC__ > 4 || defined(__llvm__) || defined(__clang__)
 #    pragma GCC diagnostic warning "-Wformat-nonliteral"
 #endif
@@ -4142,7 +4152,7 @@ retry:
     }
 
     /* prepend To header field to article */
-    if (deliver_to_header) {
+    if (!deliver_to_header.empty()) {
         char *to_list, *to_list_end;
         int i, len;
         size_t to_list_len;

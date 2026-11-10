@@ -14,6 +14,8 @@
 #include "inn/timer.h"
 #include "portable/stdbool.h"
 
+#include <string>
+
 BEGIN_DECLS
 
 /**********************************************************************/
@@ -202,12 +204,13 @@ typedef enum {
 /* Variables to export. */
 extern char *configFile;
 extern char *dflTapeDir;
-extern char *deliver_authname;
-extern char *deliver_password;
-extern char *deliver_realm;
-extern const char *deliver_rcpt_to;
-extern char *deliver_to_header;
-extern char *deliver_username;
+/* The deliver-* settings for imapfeed; empty when not set. */
+extern std::string deliver_authname;
+extern std::string deliver_password;
+extern std::string deliver_realm;
+extern std::string deliver_rcpt_to;
+extern std::string deliver_to_header;
+extern std::string deliver_username;
 extern const char *InputFile;
 extern const char *pidFile;
 extern bool RollInputFile;

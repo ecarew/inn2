@@ -62,12 +62,12 @@ bool useMMap = true; /* Even if !HAVE_MMAP.  Only used when innfeed is given
 void (*gPrintInfo)(void);
 char *dflTapeDir;
 /* these are used by imapfeed */
-char *deliver_username = NULL;
-char *deliver_authname = NULL;
-char *deliver_password = NULL;
-char *deliver_realm = NULL;
-const char *deliver_rcpt_to = "+%s";
-char *deliver_to_header = NULL;
+std::string deliver_username;
+std::string deliver_authname;
+std::string deliver_password;
+std::string deliver_realm;
+std::string deliver_rcpt_to = "+%s";
+std::string deliver_to_header;
 
 /* privates */
 static std::string logFile;
@@ -751,7 +751,6 @@ gprintinfo(void)
 static int
 mainConfigLoadCbk(FILE *fp)
 {
-    char *p;
     std::string value;
     long ival;
     int bval;
@@ -803,41 +802,15 @@ mainConfigLoadCbk(FILE *fp)
     if (getString(topScope, "log-file", value, NO_INHERIT))
         logFile = pathIn(innconf->pathlog, value.c_str());
 
-    if (getString(topScope, "log-time-format", &p, NO_INHERIT)) {
-        free(timeToStringFormat);
-        timeToStringFormat = p;
-    }
+    getString(topScope, "log-time-format", timeToStringFormat, NO_INHERIT);
 
     /* For imap/lmtp delivering */
-    if (getString(topScope, "deliver-username", &p, NO_INHERIT)) {
-        deliver_username = p;
-        /* don't need to free */
-    }
-
-    if (getString(topScope, "deliver-authname", &p, NO_INHERIT)) {
-        deliver_authname = p;
-        /* don't need to free */
-    }
-
-    if (getString(topScope, "deliver-password", &p, NO_INHERIT)) {
-        deliver_password = p;
-        /* don't need to free */
-    }
-
-    if (getString(topScope, "deliver-realm", &p, NO_INHERIT)) {
-        deliver_realm = p;
-        /* don't need to free */
-    }
-
-    if (getString(topScope, "deliver-rcpt-to", &p, NO_INHERIT)) {
-        deliver_rcpt_to = p;
-        /* don't need to free */
-    }
-
-    if (getString(topScope, "deliver-to-header", &p, NO_INHERIT)) {
-        deliver_to_header = p;
-        /* don't need to free */
-    }
+    getString(topScope, "deliver-username", deliver_username, NO_INHERIT);
+    getString(topScope, "deliver-authname", deliver_authname, NO_INHERIT);
+    getString(topScope, "deliver-password", deliver_password, NO_INHERIT);
+    getString(topScope, "deliver-realm", deliver_realm, NO_INHERIT);
+    getString(topScope, "deliver-rcpt-to", deliver_rcpt_to, NO_INHERIT);
+    getString(topScope, "deliver-to-header", deliver_to_header, NO_INHERIT);
 
     return 1;
 }

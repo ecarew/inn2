@@ -38,7 +38,7 @@
 unsigned int openfds;
 unsigned int loggingLevel;
 char **PointersFreedOnExit;
-char *timeToStringFormat = 0;
+std::string timeToStringFormat;
 
 
 /* Log a message to stderr, called from warn or die.  Mostly the same as the
@@ -531,7 +531,9 @@ timeToString(time_t t, char *buffer, size_t size)
 #    pragma GCC diagnostic ignored "-Wformat-nonliteral"
 #endif
     strftime(buffer, size,
-             timeToStringFormat == 0 ? defaultFormat : timeToStringFormat, tm);
+             timeToStringFormat.empty() ? defaultFormat
+                                          : timeToStringFormat.c_str(),
+             tm);
 #if __GNUC__ > 4
 #    pragma GCC diagnostic warning "-Wformat-nonliteral"
 #endif
