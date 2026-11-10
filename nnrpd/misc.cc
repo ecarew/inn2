@@ -556,7 +556,6 @@ void
 CMDstarttls(int ac UNUSED, char *av[] UNUSED)
 {
     int result;
-    bool boolval;
 
     if (encryption_layer_on) {
         Reply("%d Already using a security layer\r\n", NNTP_ERR_ACCESS);
@@ -591,7 +590,7 @@ CMDstarttls(int ac UNUSED, char *av[] UNUSED)
     if (GRPcur) {
         ARTclose();
         GRPreport();
-        OVctl(OVCACHEFREE, &boolval);
+        OVcachefree();
         free(GRPcur);
         GRPcur = NULL;
         if (ARTcount) {
