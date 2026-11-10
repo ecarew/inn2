@@ -327,7 +327,7 @@ tests=(
     lib/buffer lib/canlock:::@lib/CMakeFiles/inn_canlock.dir/canlock.cc.o lib/concat lib/conffile lib/confparse lib/date
     lib/daemon:::lib/daemon lib/dispatch lib/fdflag
     lib/getaddrinfo:::lib/getaddrinfo lib/getnameinfo:::lib/getnameinfo
-    lib/hash lib/hashtab lib/headers lib/hex lib/hissqlite
+    lib/hash lib/headers lib/hex lib/hissqlite
     lib/hissqlite-convert lib/inet_aton:::lib/inet_aton
     lib/inet_ntoa:::lib/inet_ntoa lib/inet_ntop:::lib/inet_ntop lib/innconf
     lib/list lib/md5 lib/messageid lib/messages lib/mkstemp:::lib/mkstemp

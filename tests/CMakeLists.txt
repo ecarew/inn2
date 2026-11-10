@@ -123,7 +123,7 @@ foreach(h write read)
 endforeach()
 
 foreach(t artnumber bloom bloom-hiswalk buffer concat conffile
-          confparse date dispatch fdflag hash hashtab headers hex hissqlite
+          confparse date dispatch fdflag hash headers hex hissqlite
           hissqlite-convert innconf list logging md5 messageid messages nativemat
           newsuser network/addr-ipv4 network/addr-ipv6 network/client network/server
           qio readin reservedfd tst uwildmat vector wire)

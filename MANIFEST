@@ -446,7 +446,6 @@ include/inn/confparse.h               Header file for configuration parser
 include/inn/dbz.h                     Header file for DBZ
 include/inn/dispatch.h                Header file for command dispatching
 include/inn/fdflag.h                  Header file for file descriptor flags
-include/inn/hashtab.h                 Header file for generic hash table
 include/inn/history.h                 Header file for the history API
 include/inn/innconf.h                 Header file for the innconf struct
 include/inn/inndcomm.h                Header file for control channel commands
@@ -573,7 +572,6 @@ lib/getmodaddr.c                      Get a moderator's address
 lib/getnameinfo.c                     getnameinfo replacement
 lib/getpagesize.c                     getpagesize replacement
 lib/hash.c                            Create hash from a message-ID
-lib/hashtab.c                         Generic hash table
 lib/headers.c                         Functions for headers
 lib/hex.c                             Convert to and from hex strings
 lib/inet_aton.c                       inet_aton replacement
@@ -991,7 +989,6 @@ tests/lib/fdflag-t.c                  Tests for lib/fdflag.c
 tests/lib/getaddrinfo-t.c             Tests for lib/getaddrinfo.c
 tests/lib/getnameinfo-t.c             Tests for lib/getnameinfo.c
 tests/lib/hash-t.c                    Tests for lib/hash.c
-tests/lib/hashtab-t.c                 Tests for lib/hashtab.c
 tests/lib/headers-t.c                 Tests for lib/headers.c
 tests/lib/hex-t.c                     Tests for lib/hex.c
 tests/lib/hissqlite-convert-t.c       Tests for the hissqlite-convert tool
