@@ -24,7 +24,12 @@ bool ovsqlite_search(struct ov_search *handle, ARTNUM *artnum, char **data,
 void ovsqlite_closesearch(struct ov_search *handle);
 bool ovsqlite_getartinfo(const char *group, ARTNUM artnum, TOKEN *token);
 bool ovsqlite_expiregroup(const char *group, int *lo, struct history *h);
-bool ovsqlite_ctl(OVCTLTYPE type, void *val);
+bool ovsqlite_space(float *percent);
+bool ovsqlite_sort(OVSORTTYPE *sort);
+bool ovsqlite_cutofflow(bool cutofflow);
+bool ovsqlite_staticsearch(bool *staticsearch);
+bool ovsqlite_cachekeep(bool keep);
+bool ovsqlite_cachefree(void);
 void ovsqlite_close(void);
 
 END_DECLS

@@ -23,17 +23,6 @@ BEGIN_DECLS
 #define OV_READ  1
 #define OV_WRITE 2
 
-typedef enum {
-    OVSPACE,
-    OVSORT,
-    OVCUTOFFLOW,
-    OVGROUPBASEDEXPIRE,
-    OVSTATICSEARCH,
-    OVSTATALL,
-    OVCACHEKEEP,
-    OVCACHEFREE,
-    OVTOKENCACHE
-} OVCTLTYPE;
 #define OV_NOSPACE 100
 typedef enum {
     OVNEWSGROUP,
@@ -78,10 +67,9 @@ bool OVsearch(struct ov_search *handle, ARTNUM *artnum, char **data, int *len,
 void OVclosesearch(struct ov_search *handle);
 bool OVgetartinfo(char *group, ARTNUM artnum, TOKEN *token);
 bool OVexpiregroup(char *group, int *lo, struct history *h);
-bool OVctl(OVCTLTYPE type, void *val);
 
-/* Typed forms of OVctl, one function per selector (CONVERSION_NOTES,
-   "Typed containers and storage controls"). */
+/* Overview settings and parameters, one function each (they replace
+   OVctl: CONVERSION_NOTES, "Typed containers and storage controls"). */
 bool OVgetspace(float *percent);
 bool OVgetsort(OVSORTTYPE *sort);
 bool OVsetcutofflow(bool cutofflow);

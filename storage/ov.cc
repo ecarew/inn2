@@ -377,112 +377,129 @@ OVexpiregroup(char *group, int *lo, struct history *h)
 }
 
 bool
-OVctl(OVCTLTYPE type, void *val)
+OVgetspace(float *percent)
 {
     if (!ov.open) {
         /* must be opened */
         warn("ovopen must be called first");
         return false;
     }
-    switch (type) {
-    case OVGROUPBASEDEXPIRE:
-        if (!innconf->groupbaseexpiry) {
-            warn("OVGROUPBASEDEXPIRE is not allowed if groupbaseexpiry is"
-                 " false");
-            return false;
-        }
-        if (((OVGE *) val)->delayrm) {
-            if ((((OVGE *) val)->filename == nullptr)
-                || (strlen(((OVGE *) val)->filename) == 0)) {
-                warn("file name must be specified");
-                return false;
-            }
-            if ((EXPunlinkfile = fopen(((OVGE *) val)->filename, "w"))
-                == nullptr) {
-                syswarn("fopen: %s failed", ((OVGE *) val)->filename);
-                return false;
-            }
-        }
-        OVdelayrm = ((OVGE *) val)->delayrm;
-        OVusepost = ((OVGE *) val)->usepost;
-        OVrealnow = ((OVGE *) val)->now;
-        OVnow = ((OVGE *) val)->now + (time_t) ((OVGE *) val)->timewarp;
-        OVquiet = ((OVGE *) val)->quiet;
-        OVkeep = ((OVGE *) val)->keep;
-        OVearliest = ((OVGE *) val)->earliest;
-        OVignoreselfexpire = ((OVGE *) val)->ignoreselfexpire;
-        return true;
-    case OVSTATALL:
-        OVstatall = *(bool *) val;
-        return true;
-    case OVTOKENCACHE:
-        OVtokencache = *(struct bloom_filter **) val;
-        return true;
-    default:
-        return ((*ov.ctl)(type, val));
-    }
-}
-
-bool
-OVgetspace(float *percent)
-{
-    return OVctl(OVSPACE, percent);
+    return (*ov.space)(percent);
 }
 
 bool
 OVgetsort(OVSORTTYPE *sort)
 {
-    return OVctl(OVSORT, sort);
+    if (!ov.open) {
+        /* must be opened */
+        warn("ovopen must be called first");
+        return false;
+    }
+    return (*ov.sort)(sort);
 }
 
 bool
 OVsetcutofflow(bool cutofflow)
 {
-    return OVctl(OVCUTOFFLOW, &cutofflow);
+    if (!ov.open) {
+        /* must be opened */
+        warn("ovopen must be called first");
+        return false;
+    }
+    return (*ov.cutofflow)(cutofflow);
 }
 
 bool
 OVsetgroupbasedexpire(OVGE *ovge)
 {
-    return OVctl(OVGROUPBASEDEXPIRE, ovge);
+    if (!ov.open) {
+        /* must be opened */
+        warn("ovopen must be called first");
+        return false;
+    }
+    if (!innconf->groupbaseexpiry) {
+        warn("group based expire is not allowed if groupbaseexpiry is"
+             " false");
+        return false;
+    }
+    if (ovge->delayrm) {
+        if ((ovge->filename == nullptr)
+            || (strlen(ovge->filename) == 0)) {
+            warn("file name must be specified");
+            return false;
+        }
+        if ((EXPunlinkfile = fopen(ovge->filename, "w"))
+            == nullptr) {
+            syswarn("fopen: %s failed", ovge->filename);
+            return false;
+        }
+    }
+    OVdelayrm = ovge->delayrm;
+    OVusepost = ovge->usepost;
+    OVrealnow = ovge->now;
+    OVnow = ovge->now + (time_t) ovge->timewarp;
+    OVquiet = ovge->quiet;
+    OVkeep = ovge->keep;
+    OVearliest = ovge->earliest;
+    OVignoreselfexpire = ovge->ignoreselfexpire;
+    return true;
 }
 
-/* The methods report an int; the caller gets a bool. */
 bool
 OVgetstaticsearch(bool *staticsearch)
 {
-    int value = 0;
-
-    if (!OVctl(OVSTATICSEARCH, &value))
+    if (!ov.open) {
+        /* must be opened */
+        warn("ovopen must be called first");
         return false;
-    *staticsearch = value != 0;
-    return true;
+    }
+    return (*ov.staticsearch)(staticsearch);
 }
 
 bool
 OVsetstatall(bool statall)
 {
-    return OVctl(OVSTATALL, &statall);
+    if (!ov.open) {
+        /* must be opened */
+        warn("ovopen must be called first");
+        return false;
+    }
+    OVstatall = statall;
+    return true;
 }
 
 bool
 OVsetcachekeep(bool keep)
 {
-    return OVctl(OVCACHEKEEP, &keep);
+    if (!ov.open) {
+        /* must be opened */
+        warn("ovopen must be called first");
+        return false;
+    }
+    return (*ov.cachekeep)(keep);
 }
 
 bool
 OVcachefree(void)
 {
-    bool freed = false;
-
-    return OVctl(OVCACHEFREE, &freed);
+    if (!ov.open) {
+        /* must be opened */
+        warn("ovopen must be called first");
+        return false;
+    }
+    return (*ov.cachefree)();
 }
 
 bool
 OVsettokencache(struct bloom_filter *bloom)
 {
-    return OVctl(OVTOKENCACHE, &bloom);
+    if (!ov.open) {
+        /* must be opened */
+        warn("ovopen must be called first");
+        return false;
+    }
+    OVtokencache = bloom;
+    return true;
 }
 
 void

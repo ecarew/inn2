@@ -1180,7 +1180,7 @@ CMDover(int ac, char *av[])
     if (PERMaccessconf->nnrpdoverstats)
         gettimeofday(&stv, nullptr);
 
-    /* If OVSTATICSEARCH is true, then the data returned by OVsearch is only
+    /* If OVgetstaticsearch reports true, then the data returned by OVsearch is only
        valid until the next call to OVsearch.  In this case, we must use
        SendIOb because it copies the data. */
     OVgetstaticsearch(&useIOb);

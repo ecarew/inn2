@@ -30,7 +30,7 @@ sub outpath { my ($file) = @_; defined($out) ? "$out/$file" : $file }
 # Overview API functions.
 @OVERVIEW = qw(
     open groupstats groupadd groupdel add cancel opensearch search
-    closesearch getartinfo expiregroup ctl close
+    closesearch getartinfo expiregroup space sort cutofflow staticsearch cachekeep cachefree close
 );
 
 my (%filelistix, @filelistnames, $filelistparam);

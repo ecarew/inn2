@@ -375,14 +375,14 @@ overview_expire(struct overview *overview, const char *group, ARTNUM *low,
 void
 overview_config_get(struct overview *overview, struct overview_config *config)
 {
-    int i;
-    OVSORTTYPE sort;
+    bool persistent = false;
+    OVSORTTYPE sort = OVNOSORT;
 
     config->mode = overview->mode;
-    overview->method->ctl(OVSORT, &sort);
+    overview->method->sort(&sort);
     config->sorted = (sort == OVNEWSGROUP);
-    overview->method->ctl(OVSTATICSEARCH, &i);
-    config->persistent = i;
+    overview->method->staticsearch(&persistent);
+    config->persistent = persistent;
     config->cutoff = overview->cutoff;
 }
 
@@ -396,7 +396,7 @@ bool
 overview_config_set(struct overview *overview, struct overview_config *config)
 {
     overview->cutoff = config->cutoff;
-    return overview->method->ctl(OVCUTOFFLOW, &overview->cutoff);
+    return overview->method->cutofflow(overview->cutoff);
 }
 
 
@@ -409,7 +409,7 @@ overview_free_space(struct overview *overview)
 {
     float space;
 
-    if (overview->method->ctl(OVSPACE, &space))
+    if (overview->method->space(&space))
         return space;
     else
         return -1.0f;

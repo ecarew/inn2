@@ -194,7 +194,37 @@ ovdb_expiregroup(const char *group UNUSED, int *lo UNUSED,
 }
 
 bool
-ovdb_ctl(OVCTLTYPE type UNUSED, void *val UNUSED)
+ovdb_space(float *percent UNUSED)
+{
+    return false;
+}
+
+bool
+ovdb_sort(OVSORTTYPE *sort UNUSED)
+{
+    return false;
+}
+
+bool
+ovdb_cutofflow(bool cutofflow UNUSED)
+{
+    return false;
+}
+
+bool
+ovdb_staticsearch(bool *staticsearch UNUSED)
+{
+    return false;
+}
+
+bool
+ovdb_cachekeep(bool keep UNUSED)
+{
+    return false;
+}
+
+bool
+ovdb_cachefree(void)
 {
     return false;
 }
@@ -3083,37 +3113,43 @@ ovdb_expiregroup(const char *group, int *lo, struct history *h)
 }
 
 bool
-ovdb_ctl(OVCTLTYPE type, void *val)
+ovdb_space(float *percent)
 {
-    int *i;
-    float *f;
-    OVSORTTYPE *sorttype;
-    bool *boolval;
+    *percent = -1.0f;
+    return true;
+}
 
-    switch (type) {
-    case OVSPACE:
-        f = (float *) val;
-        *f = -1.0f;
-        return true;
-    case OVSORT:
-        sorttype = (OVSORTTYPE *) val;
-        *sorttype = OVNEWSGROUP;
-        return true;
-    case OVCUTOFFLOW:
-        Cutofflow = *(bool *) val;
-        return true;
-    case OVSTATICSEARCH:
-        i = (int *) val;
-        *i = true;
-        return true;
-    case OVCACHEKEEP:
-    case OVCACHEFREE:
-        boolval = (bool *) val;
-        *boolval = false;
-        return true;
-    default:
-        return false;
-    }
+bool
+ovdb_sort(OVSORTTYPE *sort)
+{
+    *sort = OVNEWSGROUP;
+    return true;
+}
+
+bool
+ovdb_cutofflow(bool cutofflow)
+{
+    Cutofflow = cutofflow;
+    return true;
+}
+
+bool
+ovdb_staticsearch(bool *staticsearch)
+{
+    *staticsearch = true;
+    return true;
+}
+
+bool
+ovdb_cachekeep(bool keep UNUSED)
+{
+    return true;
+}
+
+bool
+ovdb_cachefree(void)
+{
+    return true;
 }
 
 void

@@ -44,7 +44,12 @@ typedef struct overview_method {
     void (*closesearch)(struct ov_search *handle);
     bool (*getartinfo)(const char *group, ARTNUM artnum, TOKEN *token);
     bool (*expiregroup)(const char *group, int *lo, struct history *h);
-    bool (*ctl)(OVCTLTYPE type, void *val);
+    bool (*space)(float *percent);
+    bool (*sort)(OVSORTTYPE *sort);
+    bool (*cutofflow)(bool cutofflow);
+    bool (*staticsearch)(bool *staticsearch);
+    bool (*cachekeep)(bool keep);
+    bool (*cachefree)(void);
     void (*close)(void);
 } OV_METHOD;
 
@@ -64,9 +69,9 @@ extern FILE *EXPunlinkfile;
  * consumes the log to drop history entries for those articles without
  * doing per-article SMretrieve(RETR_STAT) calls.  Set by expireover (and
  * by fastrm when called via expirerm in delayrm mode).  Internal --
- * managed via direct extern access by expireover/fastrm, not via OVctl,
+ * managed via direct extern access by expireover/fastrm, not via a setter,
  * because the file lifecycle (atomic .NEW -> final rename on success)
- * does not fit the per-call OVctl pattern. */
+ * does not fit a per-call setter. */
 extern FILE *OVtombstonefile;
 
 extern bool OVignoreselfexpire;

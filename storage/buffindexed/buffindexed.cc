@@ -2683,66 +2683,75 @@ buffindexed_expiregroup(const char *group, int *lo, struct history *h)
 }
 
 bool
-buffindexed_ctl(OVCTLTYPE type, void *val)
+buffindexed_space(float *percent)
 {
-    int total, used, *i, j;
-    float *f;
-    OVBUFF *ovbuff = ovbufftab;
-    OVSORTTYPE *sorttype;
-    bool *boolval;
-    GROUPDATABLOCK *gdb;
+    int total, used;
+    OVBUFF *ovbuff;
 
-    switch (type) {
-    case OVSPACE:
-        for (total = used = 0; ovbuff != (OVBUFF *) nullptr;
-             ovbuff = ovbuff->next) {
-            ovlock(ovbuff, INN_LOCK_READ);
-            ovreadhead(ovbuff);
-            total += ovbuff->totalblk;
-            used += ovbuff->usedblk;
-            ovlock(ovbuff, INN_LOCK_UNLOCK);
-        }
-        f = (float *) val;
-        *f = ((float) used / (float) total) * 100;
-        return true;
-    case OVSORT:
-        sorttype = (OVSORTTYPE *) val;
-        *sorttype = OVNOSORT;
-        return true;
-    case OVCUTOFFLOW:
-        Cutofflow = *(bool *) val;
-        return true;
-    case OVSTATICSEARCH:
-        i = (int *) val;
-        *i = true;
-        for (j = 0; j < GROUPDATAHASHSIZE; j++) {
-            for (gdb = groupdatablock[j]; gdb != nullptr; gdb = gdb->next) {
-                if (gdb->mmapped) {
-                    *i = false;
-                    return true;
-                }
-            }
-        }
-        return true;
-    case OVCACHEKEEP:
-        Cache = *(bool *) val;
-        return true;
-    case OVCACHEFREE:
-        boolval = (bool *) val;
-        *boolval = true;
-        if (Gib != nullptr) {
-            free(Gib);
-            Gib = nullptr;
-            if (Cachesearch != nullptr) {
-                free(Cachesearch->group);
-                free(Cachesearch);
-                Cachesearch = nullptr;
-            }
-        }
-        return true;
-    default:
-        return false;
+    for (total = used = 0, ovbuff = ovbufftab; ovbuff != (OVBUFF *) nullptr;
+         ovbuff = ovbuff->next) {
+        ovlock(ovbuff, INN_LOCK_READ);
+        ovreadhead(ovbuff);
+        total += ovbuff->totalblk;
+        used += ovbuff->usedblk;
+        ovlock(ovbuff, INN_LOCK_UNLOCK);
     }
+    *percent = ((float) used / (float) total) * 100;
+    return true;
+}
+
+bool
+buffindexed_sort(OVSORTTYPE *sort)
+{
+    *sort = OVNOSORT;
+    return true;
+}
+
+bool
+buffindexed_cutofflow(bool cutofflow)
+{
+    Cutofflow = cutofflow;
+    return true;
+}
+
+bool
+buffindexed_staticsearch(bool *staticsearch)
+{
+    GROUPDATABLOCK *gdb;
+    int j;
+
+    *staticsearch = true;
+    for (j = 0; j < GROUPDATAHASHSIZE; j++) {
+        for (gdb = groupdatablock[j]; gdb != nullptr; gdb = gdb->next) {
+            if (gdb->mmapped) {
+                *staticsearch = false;
+                return true;
+            }
+        }
+    }
+    return true;
+}
+
+bool
+buffindexed_cachekeep(bool keep)
+{
+    Cache = keep;
+    return true;
+}
+
+bool
+buffindexed_cachefree(void)
+{
+    if (Gib != nullptr) {
+        free(Gib);
+        Gib = nullptr;
+        if (Cachesearch != nullptr) {
+            free(Cachesearch->group);
+            free(Cachesearch);
+            Cachesearch = nullptr;
+        }
+    }
+    return true;
 }
 
 void

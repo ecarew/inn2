@@ -34,7 +34,12 @@ bool tradindexed_search(struct ov_search *handle, ARTNUM *artnum, char **data,
 void tradindexed_closesearch(struct ov_search *handle);
 bool tradindexed_getartinfo(const char *group, ARTNUM artnum, TOKEN *token);
 bool tradindexed_expiregroup(const char *group, int *low, struct history *);
-bool tradindexed_ctl(OVCTLTYPE type, void *val);
+bool tradindexed_space(float *percent);
+bool tradindexed_sort(OVSORTTYPE *sort);
+bool tradindexed_cutofflow(bool cutofflow);
+bool tradindexed_staticsearch(bool *staticsearch);
+bool tradindexed_cachekeep(bool keep);
+bool tradindexed_cachefree(void);
 void tradindexed_close(void);
 
 END_DECLS

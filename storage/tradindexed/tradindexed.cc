@@ -373,47 +373,70 @@ tradindexed_expiregroup(const char *group, int *low, struct history *history)
 
 
 /*
-**  Set various options or query various parameters for the overview method.
-**  The interface is, at present, not particularly sane.
+**  Settings and parameters of the overview method, one function each.
 */
 bool
-tradindexed_ctl(OVCTLTYPE type, void *val)
+tradindexed_space(float *percent)
 {
-    int *i;
-    float *f;
-    bool *b;
-    OVSORTTYPE *sort;
-
     if (tradindexed == nullptr) {
         warn("tradindexed: overview method not initialized");
         return false;
     }
+    *percent = -1.0f;
+    return true;
+}
 
-    switch (type) {
-    case OVSPACE:
-        f = (float *) val;
-        *f = -1.0f;
-        return true;
-    case OVSORT:
-        sort = (OVSORTTYPE *) val;
-        *sort = OVNEWSGROUP;
-        return true;
-    case OVCUTOFFLOW:
-        b = (bool *) val;
-        tradindexed->cutoff = *b;
-        return true;
-    case OVSTATICSEARCH:
-        i = (int *) val;
-        *i = false;
-        return true;
-    case OVCACHEKEEP:
-    case OVCACHEFREE:
-        b = (bool *) val;
-        *b = false;
-        return true;
-    default:
+bool
+tradindexed_sort(OVSORTTYPE *sort)
+{
+    if (tradindexed == nullptr) {
+        warn("tradindexed: overview method not initialized");
         return false;
     }
+    *sort = OVNEWSGROUP;
+    return true;
+}
+
+bool
+tradindexed_cutofflow(bool cutofflow)
+{
+    if (tradindexed == nullptr) {
+        warn("tradindexed: overview method not initialized");
+        return false;
+    }
+    tradindexed->cutoff = cutofflow;
+    return true;
+}
+
+bool
+tradindexed_staticsearch(bool *staticsearch)
+{
+    if (tradindexed == nullptr) {
+        warn("tradindexed: overview method not initialized");
+        return false;
+    }
+    *staticsearch = false;
+    return true;
+}
+
+bool
+tradindexed_cachekeep(bool keep UNUSED)
+{
+    if (tradindexed == nullptr) {
+        warn("tradindexed: overview method not initialized");
+        return false;
+    }
+    return true;
+}
+
+bool
+tradindexed_cachefree(void)
+{
+    if (tradindexed == nullptr) {
+        warn("tradindexed: overview method not initialized");
+        return false;
+    }
+    return true;
 }
 
 

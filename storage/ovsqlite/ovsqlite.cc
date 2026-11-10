@@ -1637,33 +1637,68 @@ set_cutofflow(uint8_t cutofflow)
 }
 
 bool
-ovsqlite_ctl(OVCTLTYPE type, void *val)
+ovsqlite_space(float *percent)
 {
     if (!direct_reader && sock == -1) {
         warn("ovsqlite: not connected to server");
         return false;
     }
-    switch (type) {
-    case OVSPACE:
-        *(float *) val = -1.0f;
-        return true;
-    case OVSORT:
-        *(OVSORTTYPE *) val = OVNEWSGROUP;
-        return true;
-    case OVCUTOFFLOW:
-        if (direct_reader)
-            return true; /* no-op for readers */
-        return set_cutofflow(*(bool *) val);
-    case OVSTATICSEARCH:
-        *(int *) val = true;
-        return true;
-    case OVCACHEKEEP:
-    case OVCACHEFREE:
-        *(bool *) val = false;
-        return true;
-    default:
+    *percent = -1.0f;
+    return true;
+}
+
+bool
+ovsqlite_sort(OVSORTTYPE *sort)
+{
+    if (!direct_reader && sock == -1) {
+        warn("ovsqlite: not connected to server");
         return false;
     }
+    *sort = OVNEWSGROUP;
+    return true;
+}
+
+bool
+ovsqlite_cutofflow(bool cutofflow)
+{
+    if (!direct_reader && sock == -1) {
+        warn("ovsqlite: not connected to server");
+        return false;
+    }
+    if (direct_reader)
+        return true; /* no-op for readers */
+    return set_cutofflow(cutofflow);
+}
+
+bool
+ovsqlite_staticsearch(bool *staticsearch)
+{
+    if (!direct_reader && sock == -1) {
+        warn("ovsqlite: not connected to server");
+        return false;
+    }
+    *staticsearch = true;
+    return true;
+}
+
+bool
+ovsqlite_cachekeep(bool keep UNUSED)
+{
+    if (!direct_reader && sock == -1) {
+        warn("ovsqlite: not connected to server");
+        return false;
+    }
+    return true;
+}
+
+bool
+ovsqlite_cachefree(void)
+{
+    if (!direct_reader && sock == -1) {
+        warn("ovsqlite: not connected to server");
+        return false;
+    }
+    return true;
 }
 
 void
@@ -1762,7 +1797,37 @@ ovsqlite_expiregroup(const char *group UNUSED, int *lo UNUSED,
 }
 
 bool
-ovsqlite_ctl(OVCTLTYPE type UNUSED, void *val UNUSED)
+ovsqlite_space(float *percent UNUSED)
+{
+    return false;
+}
+
+bool
+ovsqlite_sort(OVSORTTYPE *sort UNUSED)
+{
+    return false;
+}
+
+bool
+ovsqlite_cutofflow(bool cutofflow UNUSED)
+{
+    return false;
+}
+
+bool
+ovsqlite_staticsearch(bool *staticsearch UNUSED)
+{
+    return false;
+}
+
+bool
+ovsqlite_cachekeep(bool keep UNUSED)
+{
+    return false;
+}
+
+bool
+ovsqlite_cachefree(void)
 {
     return false;
 }

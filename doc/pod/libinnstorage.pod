@@ -99,18 +99,6 @@ libinnstorage - Routines for managing INN storage
     #define OV_NOSPACE ...
 
     typedef enum {
-        OVSPACE,
-        OVSORT,
-        OVCUTOFFLOW,
-        OVGROUPBASEDEXPIRE,
-        OVSTATICSEARCH,
-        OVSTATALL,
-        OVCACHEKEEP,
-        OVCACHEFREE,
-        OVTOKENCACHE
-    } OVCTLTYPE;
-
-    typedef enum {
         OVNEWSGROUP,
         OVARRIVED,
         OVNOSORT
@@ -124,7 +112,23 @@ libinnstorage - Routines for managing INN storage
 
     bool OVopen(int mode);
 
-    bool OVctl(OVCTLTYPE type, void *val);
+    bool OVgetspace(float *percent);
+
+    bool OVgetsort(OVSORTTYPE *sort);
+
+    bool OVsetcutofflow(bool cutofflow);
+
+    bool OVsetgroupbasedexpire(OVGE *ovge);
+
+    bool OVgetstaticsearch(bool *staticsearch);
+
+    bool OVsetstatall(bool statall);
+
+    bool OVsetcachekeep(bool keep);
+
+    bool OVcachefree(void);
+
+    bool OVsettokencache(struct bloom_filter *bloom);
 
     bool OVgroupstats(char *group, int *lo, int *hi, int *count,
                       int *flag);
@@ -339,45 +343,48 @@ Allow write open for the overview method.
 This function should be called prior to all other OV functions which begin
 with C<OV>.
 
-The B<OVctl> function probes or sets some parameters for the overview method.
-I<type> is one of the following:
+These functions probe or set parameters of the overview method.  Each
+returns true on success, or false if the overview method is not open or
+the setting is refused.  (In INN, all of them were B<OVctl> with a
+selector and a pointer to the value; INN++ replaced it with one typed
+function per selector.)
 
 =over 4
 
-=item C<OVGROUPBASEDEXPIRE>
+=item B<OVsetgroupbasedexpire>
 
-Setup how group-based expiry is done.
+Set up how group-based expiry is done.
 
-=item C<OVCUTOFFLOW>
+=item B<OVsetcutofflow>
 
 Do not add overview data if the data is under the lowest article.
 
-=item C<OVSORT>
+=item B<OVgetsort>
 
 Probe which key is suitable for the overview method.
 
-=item C<OVSPACE>
+=item B<OVgetspace>
 
 Probe the overview space usage.
 
-=item C<OVSTATALL>
+=item B<OVsetstatall>
 
 Stat all the articles when B<OVexpiregroup> is called.
 
-=item C<OVSTATICSEARCH>
+=item B<OVgetstaticsearch>
 
-Setup if results of B<OVsearch> are stored in a static buffer and must be
-copied before the next call to B<OVsearch>.
+Probe whether results of B<OVsearch> are stored in a static buffer and
+must be copied before the next call to B<OVsearch>.
 
-=item C<OVCACHEKEEP>
+=item B<OVsetcachekeep>
 
-Setup whether the cache should be kept.
+Set whether the cache should be kept.
 
-=item C<OVCACHEFREE>
+=item B<OVcachefree>
 
 Free the cache.
 
-=item C<OVTOKENCACHE>
+=item B<OVsettokencache>
 
 Pass the Bloom filter to B<OVhisthasmsgid>.
 
@@ -399,11 +406,11 @@ specified with token.
 
 The B<OVopensearch> function requests the overview method prepare overview
 data retrieval.  The request range is determined by I<low> and I<high>.
-The setting of B<OVSTATICSEARCH> determines how search result data
+The result of B<OVgetstaticsearch> determines how search result data
 must be handled.  (Note that with some storage methods, each call to
 B<OVopensearch> may cause internal storage to be remapped.  Therefore,
 multiple simultaneous searches may require data to be copied in between
-B<OVsearch> calls even if B<OVSTATICSEARCH> is false.)
+B<OVsearch> calls even if B<OVgetstaticsearch> reports false.)
 
 The B<OVsearch> function retrieves information, article number, overview
 data, or arrival time for the next article in the range opened by

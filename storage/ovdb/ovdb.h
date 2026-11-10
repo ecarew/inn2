@@ -21,7 +21,12 @@ bool ovdb_search(struct ov_search *handle, ARTNUM *artnum, char **data,
 void ovdb_closesearch(struct ov_search *handle);
 bool ovdb_getartinfo(const char *group, ARTNUM artnum, TOKEN *token);
 bool ovdb_expiregroup(const char *group, int *lo, struct history *h);
-bool ovdb_ctl(OVCTLTYPE type, void *val);
+bool ovdb_space(float *percent);
+bool ovdb_sort(OVSORTTYPE *sort);
+bool ovdb_cutofflow(bool cutofflow);
+bool ovdb_staticsearch(bool *staticsearch);
+bool ovdb_cachekeep(bool keep);
+bool ovdb_cachefree(void);
 void ovdb_close(void);
 
 END_DECLS
