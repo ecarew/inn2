@@ -119,18 +119,6 @@ getString(scope *s, const char *name, std::string &rval, int inherit)
 }
 
 int
-getString(scope *s, const char *name, char **rval, int inherit)
-{
-    std::string value;
-
-    if (!getString(s, name, value, inherit))
-        return 0;
-    *rval = xstrdup(value.c_str());
-    return 1;
-}
-
-
-int
 getReal(scope *s, const char *name, double *rval, int inherit)
 {
     value *v = findValue(s, name, inherit);

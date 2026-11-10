@@ -62,10 +62,6 @@ int getReal(scope *s, const char *name, double *rval, int inherit);
 int getInteger(scope *s, const char *name, long *rval, int inherit);
 int getBool(scope *s, const char *name, int *rval, int inherit);
 bool getString(scope *s, const char *name, std::string &rval, int inherit);
-/* TRANSITIONAL: the old form, a copy the caller frees; removed once the
-   callers take a std::string. */
-int getString(scope *s, const char *name, char **rval, int inherit);
-
 void freeScopeTree(scope *s);
 std::string addInteger(scope *s, const char *name, long val);
 std::string addChar(scope *s, const char *name, char val);
