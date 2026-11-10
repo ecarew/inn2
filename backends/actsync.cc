@@ -76,7 +76,9 @@
 #include <sys/wait.h>
 #include <tuple>
 
-#include "inn/hashtab.h"
+#include <string>
+#include <unordered_set>
+
 #include "inn/innconf.h"
 #include "inn/libinn.h"
 #include "inn/messages.h"
@@ -333,7 +335,8 @@ static int mark_eq_probs(struct grp *, int grplen, int hostid, char *host1,
                          char *host2);
 static int exec_cmd(int mode, const char *cmd, char *grp, char *type,
                     const char *who);
-static int new_top_hier(char *name, struct hash *existing_hier);
+static int new_top_hier(char *name,
+                        const std::unordered_set<std::string> &existing_hier);
 static const void *string_key(const void *entry);
 static bool string_equal(const void *key, const void *entry);
 
@@ -1798,7 +1801,8 @@ output_grps(struct grp *grp, int grplen)
     int top_ignore;    /* number of groups ignored because of no top level */
     int restore;       /* host1 groups restored due to -o a1 */
     double host1_same; /* % of host1 that is the same */
-    struct hash *existing_hier; /* hash of existing hierarchies for -T */
+    std::unordered_set<std::string>
+        existing_hier; /* existing hierarchies, -T */
     char *p, *q;
     int i;
 
@@ -1835,17 +1839,13 @@ output_grps(struct grp *grp, int grplen)
      * If -T, ignore new top level groups from host2
      */
     if (no_new_hier) {
-        existing_hier =
-            hash_create(32, hash_string, string_key, string_equal, free);
         for (i = 0; i < grplen; ++i) {
             if (grp[i].hostid == HOSTID2)
                 continue;
-            p = xstrdup(grp[i].name);
-            q = strchr(p, '.');
-            if (q != nullptr)
-                *q = '\0';
-            if (!hash_insert(existing_hier, p, p))
-                free(p);
+            q = strchr(grp[i].name, '.');
+            existing_hier.emplace(grp[i].name, q != nullptr
+                                                   ? q - grp[i].name
+                                                   : strlen(grp[i].name));
         }
         top_ignore = 0;
         for (i = 0; i < grplen; ++i) {
@@ -1861,7 +1861,7 @@ output_grps(struct grp *grp, int grplen)
                 ++top_ignore;
             }
         }
-        hash_free(existing_hier);
+        existing_hier.clear();
         if (D_SUMMARY)
             warn("STATUS: ignored %d new newsgroups due to new hierarchy",
                  top_ignore);
@@ -2650,7 +2650,7 @@ exec_cmd(int mode, const char *cmd, char *grp, char *type, const char *who)
  *    true    hierarchy does not exist, name represents a new hierarchy
  */
 static int
-new_top_hier(char *name, struct hash *existing_hier)
+new_top_hier(char *name, const std::unordered_set<std::string> &existing_hier)
 {
     int result; /* return result */
     char *dot;
@@ -2666,7 +2666,7 @@ new_top_hier(char *name, struct hash *existing_hier)
     /*
      * determine if we can find this top level hierarchy directory
      */
-    result = (hash_lookup(existing_hier, name) == nullptr);
+    result = (existing_hier.count(name) == 0);
 
     /* restore name */
     if (dot != nullptr) {
