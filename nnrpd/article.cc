@@ -1102,7 +1102,8 @@ CMDover(int ac, char *av[])
     struct ov_search *handle;
     char *data, *r;
     const char *p, *q;
-    int len, useIOb = 0;
+    int len;
+    bool useIOb = false;
     TOKEN token;
     struct cvector *vector = nullptr;
     bool xover, mid;
@@ -1182,7 +1183,7 @@ CMDover(int ac, char *av[])
     /* If OVSTATICSEARCH is true, then the data returned by OVsearch is only
        valid until the next call to OVsearch.  In this case, we must use
        SendIOb because it copies the data. */
-    OVctl(OVSTATICSEARCH, &useIOb);
+    OVgetstaticsearch(&useIOb);
 
     HasNotReplied = true;
     while (OVsearch(handle, &artnum, &data, &len, &token, nullptr)) {
