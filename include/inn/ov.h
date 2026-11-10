@@ -16,6 +16,7 @@
 /* A search in progress (opaque): OVopensearch and overview_search_open
    return one, and the search and close functions take it back. */
 struct ov_search;
+struct bloom_filter; /* inn/bloom.h */
 
 BEGIN_DECLS
 
@@ -78,6 +79,18 @@ void OVclosesearch(struct ov_search *handle);
 bool OVgetartinfo(char *group, ARTNUM artnum, TOKEN *token);
 bool OVexpiregroup(char *group, int *lo, struct history *h);
 bool OVctl(OVCTLTYPE type, void *val);
+
+/* Typed forms of OVctl, one function per selector (CONVERSION_NOTES,
+   "Typed containers and storage controls"). */
+bool OVgetspace(float *percent);
+bool OVgetsort(OVSORTTYPE *sort);
+bool OVsetcutofflow(bool cutofflow);
+bool OVsetgroupbasedexpire(OVGE *ovge);
+bool OVgetstaticsearch(bool *staticsearch);
+bool OVsetstatall(bool statall);
+bool OVsetcachekeep(bool keep);
+bool OVcachefree(void);
+bool OVsettokencache(struct bloom_filter *bloom);
 void OVclose(void);
 
 END_DECLS

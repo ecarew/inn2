@@ -423,6 +423,68 @@ OVctl(OVCTLTYPE type, void *val)
     }
 }
 
+bool
+OVgetspace(float *percent)
+{
+    return OVctl(OVSPACE, percent);
+}
+
+bool
+OVgetsort(OVSORTTYPE *sort)
+{
+    return OVctl(OVSORT, sort);
+}
+
+bool
+OVsetcutofflow(bool cutofflow)
+{
+    return OVctl(OVCUTOFFLOW, &cutofflow);
+}
+
+bool
+OVsetgroupbasedexpire(OVGE *ovge)
+{
+    return OVctl(OVGROUPBASEDEXPIRE, ovge);
+}
+
+/* The methods report an int; the caller gets a bool. */
+bool
+OVgetstaticsearch(bool *staticsearch)
+{
+    int value = 0;
+
+    if (!OVctl(OVSTATICSEARCH, &value))
+        return false;
+    *staticsearch = value != 0;
+    return true;
+}
+
+bool
+OVsetstatall(bool statall)
+{
+    return OVctl(OVSTATALL, &statall);
+}
+
+bool
+OVsetcachekeep(bool keep)
+{
+    return OVctl(OVCACHEKEEP, &keep);
+}
+
+bool
+OVcachefree(void)
+{
+    bool freed = false;
+
+    return OVctl(OVCACHEFREE, &freed);
+}
+
+bool
+OVsettokencache(struct bloom_filter *bloom)
+{
+    return OVctl(OVTOKENCACHE, &bloom);
+}
+
 void
 OVclose(void)
 {
