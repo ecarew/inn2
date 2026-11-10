@@ -208,11 +208,29 @@ the Linux checks.
   repetitions with a 14-24% spread; 15 paired repetitions of W1 alone
   gave 20,588 vs 20,623 articles/s (paired difference +34 ± 912, the
   refactored build faster in 7 of 15), so no difference.  makehistory
-  rebuilds 39,978 of the 40,000 articles' history lines on CNFS, the same
-  22 missing in both builds: an inherited behavior, not yet investigated.
+  rebuilt 39,978 of the 40,000 articles' history lines on CNFS, the same
+  22 missing in both builds.  That was an inherited CNFS bug, now fixed
+  (7eebdaf96): the 22 were 4,072-byte articles, which with CNFS's 24-byte
+  header fill one 4,096-byte block exactly, and two off-by-one roundings
+  in cnfs_next made SMnext report such an article as broken and skip the
+  one after it.  makehistory dropped them silently (makehistory -N would
+  have cancelled them); it now rebuilds all 40,000.
 - **Conclusion:** breaking the C API cost nothing measurable in the server
   paths, removed about 1,700 lines and the last `void *` container and
   selector interfaces, and cut nnrpd's memory sharply.
+- **Where the gains came from:** not from removing `void *` as such.  A
+  `void *` and a typed pointer are the same size and the casts between
+  them compile to nothing, so typing the interfaces changed neither speed
+  nor memory; the selector `switch` that the typed functions dropped ran a
+  few times per program, not per article.  The memory and CPU saving is
+  one data structure: nnrpd's Message-ID cache, a ternary search trie
+  keyed by 32 characters of hex (a node per character, node lines
+  preallocated at a tenth of msgidcachesize) replaced by a
+  `std::unordered_map` with one entry per article keyed by the 16-byte
+  hash.  The API break made that change cheap, since it already touched
+  every container user; the other containers (confparse, tdx-cache,
+  tdx-group, actsync, the tombstone set) went from one hash table to
+  another, or are off the hot paths, and held level.
 
 ### Names that are C++ keywords
 
