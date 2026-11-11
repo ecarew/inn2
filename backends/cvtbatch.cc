@@ -20,8 +20,9 @@ main(int ac, char *av[])
     QIOSTATE *qp;
     char *line;
     const char *text;
-    char *format;
+    const char *format = "nm";
     char *p, *q;
+    const char *f;
     const char *r;
     bool Dirty;
     TOKEN token;
@@ -35,16 +36,15 @@ main(int ac, char *av[])
         exit(1);
 
     /* Parse JCL. */
-    format = xstrdup("nm");
     while ((i = getopt(ac, av, "w:")) != EOF)
         switch (i) {
         default:
             die("usage error");
             /* NOTREACHED */
         case 'w':
-            free(format);
-            for (p = format = optarg; *p; p++) {
-                switch (*p) {
+            format = optarg;
+            for (const char *f = format; *f; f++) {
+                switch (*f) {
                 case FEED_BYTESIZE:
                 case FEED_TIMERECEIVED:
                 case FEED_FULLNAME:
@@ -52,7 +52,7 @@ main(int ac, char *av[])
                 case FEED_NAME:
                     continue;
                 }
-                warn("ignoring %c in -w flag", *p);
+                warn("ignoring %c in -w flag", *f);
             }
         }
     ac -= optind;
@@ -98,8 +98,8 @@ main(int ac, char *av[])
         q[r - text] = '\0';
 
         /* Write the desired info. */
-        for (Dirty = false, p = format; *p; p++) {
-            switch (*p) {
+        for (Dirty = false, f = format; *f; f++) {
+            switch (*f) {
             default:
                 continue;
             case FEED_BYTESIZE:
