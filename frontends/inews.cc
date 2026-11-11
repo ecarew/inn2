@@ -16,6 +16,7 @@
 #endif
 #include <time.h>
 
+#include <optional>
 #include <string>
 
 #include "inn/innconf.h"
@@ -46,7 +47,10 @@ typedef struct _HEADER {
     bool CanSet;
     HEADERTYPE Type;
     int Size;
-    char *Value;
+    /* The field body, owned here.  Set but empty (a body of only white
+       space) counts as present for the duplicate check and is dropped
+       when the bodies are trimmed. */
+    std::optional<std::string> Value;
 } HEADER;
 
 static bool Dump;
@@ -66,50 +70,50 @@ static void Usage() __attribute__((__noreturn__));
 /* clang-format off */
 static HEADER Table[] = {
     /* Name,           CanSet,  Type, Size, Value */
-    {"Path",             true,   HTstd, 0, nullptr},
+    {"Path",             true,   HTstd, 0, {}},
 #define _path          0
-    {"From",             true,   HTstd, 0, nullptr},
+    {"From",             true,   HTstd, 0, {}},
 #define _from          1
-    {"Newsgroups",       true,   HTreq, 0, nullptr},
+    {"Newsgroups",       true,   HTreq, 0, {}},
 #define _newsgroups    2
-    {"Subject",          true,   HTreq, 0, nullptr},
+    {"Subject",          true,   HTreq, 0, {}},
 #define _subject       3
-    {"Control",          true,   HTstd, 0, nullptr},
+    {"Control",          true,   HTstd, 0, {}},
 #define _control       4
-    {"Supersedes",       true,   HTstd, 0, nullptr},
+    {"Supersedes",       true,   HTstd, 0, {}},
 #define _supersedes    5
-    {"Followup-To",      true,   HTstd, 0, nullptr},
+    {"Followup-To",      true,   HTstd, 0, {}},
 #define _followupto    6
-    {"Date",             true,   HTstd, 0, nullptr},
+    {"Date",             true,   HTstd, 0, {}},
 #define _date          7
-    {"Organization",     true,   HTstd, 0, nullptr},
+    {"Organization",     true,   HTstd, 0, {}},
 #define _organization  8
-    {"Lines",            true,   HTstd, 0, nullptr},
+    {"Lines",            true,   HTstd, 0, {}},
 #define _lines         9
-    {"Sender",           true,   HTstd, 0, nullptr},
+    {"Sender",           true,   HTstd, 0, {}},
 #define _sender       10
-    {"Approved",         true,   HTstd, 0, nullptr},
+    {"Approved",         true,   HTstd, 0, {}},
 #define _approved     11
-    {"Distribution",     true,   HTstd, 0, nullptr},
+    {"Distribution",     true,   HTstd, 0, {}},
 #define _distribution 12
-    {"Expires",          true,   HTstd, 0, nullptr},
+    {"Expires",          true,   HTstd, 0, {}},
 #define _expires      13
-    {"Message-ID",       true,   HTstd, 0, nullptr},
+    {"Message-ID",       true,   HTstd, 0, {}},
 #define _messageid    14
-    {"References",       true,   HTstd, 0, nullptr},
+    {"References",       true,   HTstd, 0, {}},
 #define _references   15
-    {"Reply-To",         true,   HTstd, 0, nullptr},
+    {"Reply-To",         true,   HTstd, 0, {}},
 #define _replyto      16
-    {"Also-Control",     true,   HTstd, 0, nullptr},
+    {"Also-Control",     true,   HTstd, 0, {}},
 #define _alsocontrol  17
-    {"Xref",             false,  HTstd, 0, nullptr},
-    {"Summary",          true,   HTstd, 0, nullptr},
-    {"Keywords",         true,   HTstd, 0, nullptr},
-    {"Date-Received",    false,  HTobs, 0, nullptr},
-    {"Received",         false,  HTobs, 0, nullptr},
-    {"Posted",           false,  HTobs, 0, nullptr},
-    {"Posting-Version",  false,  HTobs, 0, nullptr},
-    {"Relay-Version",    false,  HTobs, 0, nullptr},
+    {"Xref",             false,  HTstd, 0, {}},
+    {"Summary",          true,   HTstd, 0, {}},
+    {"Keywords",         true,   HTstd, 0, {}},
+    {"Date-Received",    false,  HTobs, 0, {}},
+    {"Received",         false,  HTobs, 0, {}},
+    {"Posted",           false,  HTobs, 0, {}},
+    {"Posting-Version",  false,  HTobs, 0, {}},
+    {"Relay-Version",    false,  HTobs, 0, {}},
 };
 /* clang-format on */
 
@@ -227,6 +231,8 @@ StripOffHeaders(char *article)
     char *p;
     char *q;
     HEADER *hp;
+    HEADER *matched;
+    char *body;
     char c;
 
     /* Set up the other header fields list. */
@@ -253,6 +259,8 @@ StripOffHeaders(char *article)
 
         /* See if it's a known header field name. */
         c = islower((unsigned char) *p) ? toupper((unsigned char) *p) : *p;
+        matched = nullptr;
+        body = nullptr;
         for (hp = Table; hp < ARRAY_END(Table); hp++)
             if (c == hp->Name[0] && p[hp->Size] == ':'
                 && ISWHITE(p[hp->Size + 1])
@@ -263,7 +271,8 @@ StripOffHeaders(char *article)
                     die("duplicate header field: %s", hp->Name);
                 for (q = &p[hp->Size + 1]; ISWHITE(*q); q++)
                     continue;
-                hp->Value = q;
+                matched = hp;
+                body = q;
                 break;
             }
 
@@ -280,6 +289,8 @@ StripOffHeaders(char *article)
         /* Get start of next header field; if it's a blank line, we hit
          * the end. */
         p = NextHeader(p);
+        if (matched != nullptr)
+            matched->Value = body; /* NextHeader ended it */
         if (*p == '\n')
             break;
     }
@@ -381,11 +392,10 @@ CheckControl(char *ctrl)
 **  into the login name, with perhaps an initial capital.  (Everyone seems
 **  to hate that, but everyone also supports it.)
 */
-static char *
-FormatUserName(struct passwd *pwp, char *node)
+static std::string
+FormatUserName(struct passwd *pwp, const char *node)
 {
     char outbuff[SMBUF];
-    char *buff;
     char *out;
     char *p;
 #ifdef DO_MUNGE_GECOS
@@ -437,12 +447,10 @@ FormatUserName(struct passwd *pwp, char *node)
 #endif /* !defined(DONT_MUNGE_GETENV) */
 
     out = TrimSpaces(outbuff);
+    std::string name = std::string(pwp->pw_name) + "@" + node;
     if (out[0])
-        buff =
-            concat(pwp->pw_name, "@", node, " (", out, ")", (char *) nullptr);
-    else
-        buff = concat(pwp->pw_name, "@", node, (char *) nullptr);
-    return buff;
+        name = name + " (" + out + ")";
+    return name;
 }
 
 
@@ -472,9 +480,7 @@ static void
 ProcessHeaders(bool AddOrg, bool AddSender, struct passwd *pwp)
 {
     static char PATHFLUFF[] = PATHMASTER;
-    /* Owners of the field bodies generated here; the table points into
-       them for the rest of the run. */
-    static std::string sender, date, messageid, organization;
+    std::string sender;
     HEADER *hp;
     char *p;
     char buff[SMBUF];
@@ -485,60 +491,63 @@ ProcessHeaders(bool AddOrg, bool AddSender, struct passwd *pwp)
         if (!hp->CanSet && hp->Value)
             die("cannot set system header field %s", hp->Name);
         if (hp->Value) {
-            hp->Value = TrimSpaces(hp->Value);
-            if (*hp->Value == '\0')
-                hp->Value = nullptr;
+            std::string &v = *hp->Value;
+            size_t first = v.find_first_not_of(" \t");
+            size_t last = v.find_last_not_of(" \t\n\r\f\v");
+            if (first == std::string::npos || last == std::string::npos
+                || last < first)
+                hp->Value.reset();
+            else
+                v = v.substr(first, last - first + 1);
         }
     }
 
     /* Set From or Sender. */
     if ((p = innconf->fromhost) == nullptr)
         sysdie("cannot get hostname");
-    if (HDR(_from) == nullptr)
+    if (!HDR(_from))
         HDR(_from) = FormatUserName(pwp, p);
     else if (AddSender) {
         sender = std::string(pwp->pw_name) + "%" + p;
-        strlcpy(from, HDR(_from), SMBUF);
+        strlcpy(from, HDR(_from)->c_str(), SMBUF);
         HeaderCleanFrom(from);
         if (sender != from)
-            HDR(_sender) = sender.data();
+            HDR(_sender) = sender;
     }
 
-    if (HDR(_date) == nullptr) {
+    if (!HDR(_date)) {
         /* Set Date. */
         if (!makedate(-1, true, buff, sizeof(buff)))
             die("cannot generate Date header field body");
-        date = buff;
-        HDR(_date) = date.data();
+        HDR(_date) = buff;
     }
 
     /* Newsgroups are checked later. */
 
     /* Set Subject; Control overrides the subject. */
     if (HDR(_control)) {
-        CheckControl(HDR(_control));
+        CheckControl(HDR(_control)->data());
     } else {
-        p = HDR(_subject);
-        if (p == nullptr)
+        if (!HDR(_subject))
             die("required Subject header field is missing or empty");
         else if (HDR(_alsocontrol))
-            CheckControl(HDR(_alsocontrol));
+            CheckControl(HDR(_alsocontrol)->data());
     }
 
     /* Set Message-ID */
-    if (HDR(_messageid) == nullptr) {
+    if (!HDR(_messageid)) {
         if ((p = GenerateMessageID(nullptr)) == nullptr)
             die("cannot generate Message-ID header field body");
-        messageid = p;
-        HDR(_messageid) = messageid.data();
-    } else if ((p = strchr(HDR(_messageid), '@')) == nullptr
-               || strchr(++p, '@') != nullptr) {
+        HDR(_messageid) = p;
+    } else if (size_t at = HDR(_messageid)->find('@');
+               at == std::string::npos
+               || HDR(_messageid)->find('@', at + 1) != std::string::npos) {
         die("Message-ID must have exactly one @");
     }
 
     /* Set Path */
-    if (HDR(_path) == nullptr) {
-        HDR(_path) = concat(Exclusions, PATHFLUFF, (char *) nullptr);
+    if (!HDR(_path)) {
+        HDR(_path) = std::string(Exclusions) + PATHFLUFF;
     }
 
     /* Reply-To; left alone. */
@@ -546,23 +555,23 @@ ProcessHeaders(bool AddOrg, bool AddSender, struct passwd *pwp)
     /* Followup-To; checked with Newsgroups. */
 
     /* Check Expires. */
-    if (HDR(_expires) && parsedate_rfc5322_lax(HDR(_expires)) == -1)
-        die("cannot parse \"%s\" as an expiration date", HDR(_expires));
+    if (HDR(_expires) && parsedate_rfc5322_lax(HDR(_expires)->c_str()) == -1)
+        die("cannot parse \"%s\" as an expiration date",
+            HDR(_expires)->c_str());
 
     /* References; left alone. */
     /* Control; checked above. */
 
     /* Distribution. */
-    if ((p = HDR(_distribution)) != nullptr) {
-        std::string dist(p); /* CheckDistribution cuts it up with strtok */
+    if (HDR(_distribution)) {
+        std::string dist(*HDR(_distribution)); /* cut up by strtok */
         CheckDistribution(dist.data());
     }
 
     /* Set Organization. */
-    if (AddOrg && HDR(_organization) == nullptr
+    if (AddOrg && !HDR(_organization)
         && (p = innconf->organization) != nullptr) {
-        organization = p;
-        HDR(_organization) = organization.data();
+        HDR(_organization) = p;
     }
 
     /* Keywords; left alone. */
@@ -572,7 +581,7 @@ ProcessHeaders(bool AddOrg, bool AddSender, struct passwd *pwp)
 
     /* Now make sure everything is there. */
     for (hp = Table; hp < ARRAY_END(Table); hp++)
-        if (hp->Type == HTreq && hp->Value == nullptr)
+        if (hp->Type == HTreq && !hp->Value)
             die("required header field %s is missing or empty", hp->Name);
 }
 
@@ -742,7 +751,7 @@ Spoolit(char *article, size_t Length, char *deadfile)
     /* Write the headers and a blank line. */
     for (hp = Table; hp < ARRAY_END(Table); hp++)
         if (hp->Value)
-            fprintf(F, "%s: %s\n", hp->Name, hp->Value);
+            fprintf(F, "%s: %s\n", hp->Name, hp->Value->c_str());
     for (i = 0; i < OtherCount; i++)
         fprintf(F, "%s\n", OtherHeaders[i]);
     fprintf(F, "\n");
@@ -972,7 +981,7 @@ main(int ac, char *av[])
             innconf->localmaxartsize);
 
     /* Do final checks. */
-    if (i == 0 && HDR(_control) == nullptr) {
+    if (i == 0 && !HDR(_control)) {
         if (DiscardEmpty)
             exit(0);
         else
@@ -983,7 +992,7 @@ main(int ac, char *av[])
         /* Write the headers and a blank line. */
         for (hp = Table; hp < ARRAY_END(Table); hp++)
             if (hp->Value)
-                printf("%s: %s\n", hp->Name, hp->Value);
+                printf("%s: %s\n", hp->Name, hp->Value->c_str());
         for (i = 0; i < OtherCount; i++)
             printf("%s\n", OtherHeaders[i]);
         printf("\n");
@@ -1018,7 +1027,7 @@ main(int ac, char *av[])
     /* Write the headers, a blank line, then the article. */
     for (hp = Table; hp < ARRAY_END(Table); hp++)
         if (hp->Value)
-            fprintf(ToServer, "%s: %s\r\n", hp->Name, hp->Value);
+            fprintf(ToServer, "%s: %s\r\n", hp->Name, hp->Value->c_str());
     for (i = 0; i < OtherCount; i++)
         fprintf(ToServer, "%s\r\n", OtherHeaders[i]);
     fprintf(ToServer, "\r\n");
