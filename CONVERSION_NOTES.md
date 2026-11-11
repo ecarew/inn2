@@ -806,7 +806,12 @@ the per-article loop):
    behavior, left as is).  HashFeedMatch's `else continue;` does not
    advance to the next entry, so an unknown hash type would loop for ever;
    unreachable today (the parser makes only the two known types), listed as
-   a refactoring candidate.
+   a refactoring candidate.  Fixed 2026-11-10 (`7a6d5c713`): the loop
+   advances in its header, and the type is `enum class HashFeedType`
+   switched on with no default, so a new type is a -Wswitch warning.  The
+   list itself stays a linked list: SITE is xcalloc'd, xrealloc'd and
+   reset by assignment from SITEnull, so it cannot hold a std::vector
+   until the sites table is reworked.
 3. Done 2026-10-30: `struct ArticleState` in innd/article.h (C++ only;
    not copyable; `clear()` empty so far), reached from `ARTDATA::State`,
    an incomplete type to C.  CHANcreate keeps a slot's existing one across

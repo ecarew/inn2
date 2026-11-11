@@ -200,8 +200,9 @@ from `cmake-build`; record method and raw numbers so rounds compare.
   `const_cast` for `replic`.
 - A feed's `R` field copies a folded Xref with its CRLF, splitting the
   feed file entry over two lines (upstream behavior; ask before changing).
-- innd/art.cc `HashFeedMatch`: `else continue;` does not advance `hf`, so an
-  unknown hash type would loop for ever (unreachable today).
+- ~~innd/art.cc `HashFeedMatch` `else continue;` loop~~ done 2026-11-10
+  (7a6d5c713): always advances; the type is `enum class HashFeedType`
+  with a default-less switch.
 - Retire ovdb and Berkeley DB, after a one-way ovdb → ovsqlite converter
   with no Berkeley DB dependency (CONVERSION_NOTES.md, "Retiring ovdb").
 - lib fallbacks vs the C++ standard library and Boost; pread/pwrite in
