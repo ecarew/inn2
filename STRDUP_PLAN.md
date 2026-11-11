@@ -136,7 +136,14 @@ Shared infrastructure comes last.
 ## Open questions for the architect
 
 1. May `struct innconf` change its public layout (phase 5)?
-2. In kind 1 fields, should "unset" become `std::optional<std::string>`
-   wherever `nullptr` and `""` mean different things today? The
-   alternative is to keep a `const char *` view for those fields.
-3. Should phase 1 go out as one push, or one push per program?
+
+Answered 2026-11-10:
+
+2. **"Unset" versus empty.** An empty `std::string` stands for "unset"
+   wherever an empty value is never valid. That covers nearly every field.
+   Where C code needs `nullptr` as a signal, the boundary passes
+   `s.empty() ? nullptr : s.c_str()`. `std::optional<std::string>` is used
+   only where empty and unset can be shown to behave differently today.
+   Each such field is named in its commit message, and any doubtful case
+   goes to the architect first.
+3. **Pushes.** Phase 1 goes out as one push.
