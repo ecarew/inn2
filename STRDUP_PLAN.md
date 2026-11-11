@@ -1,0 +1,142 @@
+# Plan: converting strdup to std::string
+
+Status: draft for the architect's approval, 2026-11-10.
+
+## Goal
+
+Replace hand-managed string copies (`xstrdup`, `strdup`, `xstrndup`,
+`strndup` and their matching `free`) with `std::string` that owns its
+memory, so string ownership is visible in the types instead of resting on
+a convention. This is the same conversion already done for innfeed's
+configuration and tapes (`7a411a42f..2c698a877`) and for makehistory
+(`f0a0b5ca0`), which took both programs to zero leaks.
+
+## Where the calls are
+
+There are 314 calls in production code (tests and `support/` excluded),
+counted by grep on 2026-11-10:
+
+| Area | Calls | Main files |
+|---|---|---|
+| nnrpd | 119 | perm.cc 89, post.cc 8, nnrpd.cc 8, group.cc 6 |
+| lib | 46 | innconf.cc 11, confparse.cc 10, vector.cc 8 |
+| innd | 37 | rc.cc 15, cc.cc 8, newsfeeds.cc 4 |
+| storage | 27 | tradspool.cc 7, interface.cc 5 |
+| authprogs | 19 | libinnauth.cc 7, radius.cc 6, ckpasswd.cc 6 |
+| backends | 17 | buffchan.cc 5, actsync.cc 5 |
+| expire | 16 | makehistory.cc 9, expire.cc 3 |
+| frontends | 14 | inews.cc 5, sys2nf.cc 3 |
+| innfeed | 13 | imap_connection.cc 8 |
+| history, include, control | 6 | |
+
+## The four kinds of call
+
+Every call falls into one of these kinds. Each kind has its own fix and
+its own risk.
+
+1. **Struct fields that own a copy.** For example the `nnrpd/perm.cc`
+   access and auth groups (`ret->name = xstrdup(orig->name)`), the peer
+   entries in `innd/rc.cc`, and the fields of `SITE`.
+   - **Fix:** the field becomes `std::string`, and the struct moves from
+     `xmalloc` to `new`/`delete`, or to a value held in a container. The
+     hand-written copy functions (`copy_accessgroup` and the like) become
+     the struct's default copy.
+   - **Watch for:** a `nullptr` field means "not set" in some places. Use
+     an empty string when empty and unset mean the same thing; otherwise
+     use `std::optional<std::string>`. Decide field by field, and write
+     the decision in the commit message.
+2. **Temporary local copies:** strings copied so they can be cut up in
+   place and freed at the end of the function. For example
+   `innd/rc.cc:262` and `RCCommaSplit(xstrdup(...))`.
+   - **Fix:** a local `std::string`, or `std::string_view` when the code
+     only reads, with the splitting done on views.
+   - **Watch for:** early returns that skip the `free` today. These are
+     leaks the conversion fixes, and the commit message should say so.
+3. **Values that cross a C interface.** Strings handed to or taken from
+   libraries (SASL, Perl, Python, Kerberos, `getaddrinfo`), and strings
+   whose `char *` result callers `free()`.
+   - **Fix:** keep `char *` exactly at that boundary, and convert the
+     owner on our side.
+   - **Watch for:** functions whose callers free what they return, such
+     as `vector_join`, which returns `xstrdup("")`. Each one changes
+     together with all of its callers, in one commit.
+4. **Shared infrastructure.** `lib/innconf.cc` (`struct innconf` has 56
+   `char *` fields, read across every program), `lib/confparse.cc`, and
+   `lib/vector.cc` (`struct vector` holds `char **`).
+   - **Fix:** this is the riskiest kind, because every program reads these
+     structs. `innconf` is best converted one field at a time, behind
+     accessors where needed. `struct vector` should not be converted in
+     place: its callers move to `std::vector<std::string>` one by one,
+     like the hashtab/tst/list replacement, and it is deleted once none
+     are left.
+   - **Needs the architect's decision:** whether `struct innconf` may
+     change its public layout. That breaks the C API the same way the
+     SMsetup/OVctl change did.
+
+## Order
+
+Small, self-contained programs come first, to settle the patterns.
+Shared infrastructure comes last.
+
+| Phase | Scope | Why at this point |
+|---|---|---|
+| 1 | The rest of expire (makehistory's remaining 9, expire.cc), backends, frontends, authprogs, and the rest of innfeed | Standalone programs, few calls each, quick to test. These settle the patterns before the larger phases. |
+| 2 | innd: rc.cc, cc.cc, newsfeeds.cc, and the `char **` fields of `SITE` | `SITE` is now in a vector, so it can hold strings. The live innd suite covers this code well. |
+| 3 | nnrpd: perm.cc first, then post.cc, nnrpd.cc, group.cc | The most calls. perm.cc is almost entirely kind 1, so it is mechanical but large. Its copy and free functions get deleted. |
+| 4 | storage | Per-method code with a lot of handle plumbing. Measure before and after, as was done for the typed storage controls. |
+| 5 | lib: confparse.cc, vector.cc callers, innconf.cc | Touches every program. Needs the architect's decision on `innconf` first. |
+
+## How each step is done
+
+- One file per commit, unless a function that returns an owned string
+  changes together with its callers.
+- Each commit message says which kind each change is, how `nullptr` was
+  handled, and any leak fixed along the way.
+- The `unlessEmpty()` and `pathIn()` helpers from the innfeed work cover
+  the common cases where an empty string means "use the default" and
+  where a path is joined onto a directory.
+- Functions that take `const char *` and only read their argument keep
+  their signature. Callers pass `.c_str()`. Signatures change only where
+  ownership crosses the call.
+
+## How each phase is tested
+
+- **Every commit:** the verify suite, run through `commit-verified.sh`,
+  with the tests listed in a `Tested:` trailer.
+- **The affected program's live suite:** `support/live-innd.sh` for innd
+  and nnrpd. For innfeed and the backends, the backlog checks used for
+  the tape work.
+- **A macOS `leaks` pass on the matching workloads** (W1, W3, W6).
+  - The expected result: the leak count stays the same or falls.
+  - The known libperl leak in innd (1 leak, 1536 B) is ignored. It is out
+    of scope by the architect's decision.
+- **The Linux checks** (`support/docker-linux-checks.sh -c`) at the end of
+  each phase, before the phase is pushed.
+- **Phases 3 and 4:** also a performance comparison against the frozen
+  baseline (`support/perf/run-compare.sh`). No regression in throughput
+  or peak RSS is allowed.
+
+## When it is done
+
+- No `xstrdup`, `strdup`, `xstrndup` or `strndup` is left outside the C
+  boundaries of kind 3, and each one that remains has a comment saying
+  why.
+- Leak counts on W1, W3 and W6 are no higher than now.
+- CONVERSION_NOTES records each phase with its commits and measurements.
+- `xstrdup` and `xstrndup` leave `include/inn/xmalloc.h` once nothing
+  calls them. Whether to remove them is the architect's call at that
+  point.
+
+## Out of scope
+
+- `malloc`, `calloc` and `realloc` of things other than strings, `struct
+  buffer`, and `unique_ptr` for owned handles. These are follow-up plans.
+- innd's libperl leak.
+
+## Open questions for the architect
+
+1. May `struct innconf` change its public layout (phase 5)?
+2. In kind 1 fields, should "unset" become `std::optional<std::string>`
+   wherever `nullptr` and `""` mean different things today? The
+   alternative is to keep a `const char *` view for those fields.
+3. Should phase 1 go out as one push, or one push per program?
