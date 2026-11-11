@@ -4,6 +4,11 @@
 #  message (CLAUDE.md, "Testing before commit").
 #
 #  Usage: support/cxx-tools/commit-verified.sh <subject> <body-file> [path...]
+#         support/cxx-tools/commit-verified.sh - <message-file> [path...]
+#
+#  With "-" as the subject, the message file's first line is the subject
+#  and everything after the blank line that follows it is the body, so no
+#  part of the message passes through the shell's quoting.
 #
 #  Stages the given paths (plus all modified tracked files with -u if none are
 #  given), refuses if any change is left unstaged (restoring the index as it
@@ -21,7 +26,15 @@ root=$(cd "$tools/../.." && pwd)
 cd "$root" || exit 1
 subject=$1 body=$2
 shift 2 2>/dev/null
-[ -n "$subject" ] && [ -f "$body" ] || { sed -n '4,16p' "$0"; exit 2; }
+[ -n "$subject" ] && [ -f "$body" ] || { sed -n '4,21p' "$0"; exit 2; }
+if [ "$subject" = - ]; then
+    subject=$(head -n 1 "$body")
+    [ -n "$subject" ] && [ -z "$(sed -n 2p "$body")" ] || {
+        echo "$body: line 1 must be the subject and line 2 blank"; exit 2; }
+    msgbody=$(mktemp) || exit 1
+    tail -n +3 "$body" >"$msgbody"
+    body=$msgbody
+fi
 
 # If this run does not commit, put the index back as it was before it staged
 # anything, so a refused run leaves nothing staged for the next one.  What was
@@ -32,6 +45,7 @@ tmp=
 finish() {
     $committed || git read-tree "$index_before"
     [ -n "$tmp" ] && rm -rf "$tmp"
+    [ -n "${msgbody:-}" ] && rm -f "$msgbody"
 }
 trap finish EXIT
 
