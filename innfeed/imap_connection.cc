@@ -30,6 +30,7 @@
 
 #include "portable/socket.h"
 
+#include <optional>
 #include <string>
 #include <ctype.h>
 #include <errno.h>
@@ -96,7 +97,9 @@ typedef int (*sasl_callback_ft)(void);
 
 
 static char hostname[MAXHOSTNAMELEN];
-static char *mailfrom_name = NULL; /* default to no return path */
+/* The MAIL FROM address: unset until the first connection sets it to
+   news@<host>; set but empty means no return path. */
+static std::optional<std::string> mailfrom_name;
 
 #ifdef HAVE_SASL
 static int initialized_sasl =
@@ -185,7 +188,7 @@ typedef struct imap_capabilities_s {
     int imap4;         /* does server support imap4bis? */
     int logindisabled; /* does the server allow the login command? */
 
-    char *saslmechs; /* supported SASL mechanisms */
+    std::string saslmechs; /* supported SASL mechanisms; empty if none */
 
 } imap_capabilities_t;
 
@@ -195,7 +198,7 @@ typedef struct lmtp_capabilities_s {
     int EnhancedStatusCodes;
     int pipelining;
 
-    char *saslmechs;
+    std::string saslmechs; /* empty if none */
 
 } lmtp_capabilities_t;
 
@@ -257,7 +260,7 @@ typedef struct Q_s {
 typedef struct connection_s {
 
     /* common stuff */
-    char *ServerName;
+    std::string ServerName;
 
     char *lmtp_respBuffer; /* buffer all responses are read into */
     Buffer lmtp_rBuffer;   /* buffer all responses are read into */
@@ -1495,8 +1498,7 @@ ClearLMTPCapabilities(connection_t *cxn)
 {
     if (cxn->lmtp_capabilities == NULL)
         return;
-    free(cxn->lmtp_capabilities->saslmechs);
-    free(cxn->lmtp_capabilities);
+    delete cxn->lmtp_capabilities;
     cxn->lmtp_capabilities = NULL;
 }
 
@@ -1505,8 +1507,7 @@ ClearIMAPCapabilities(connection_t *cxn)
 {
     if (cxn->imap_capabilities == NULL)
         return;
-    free(cxn->imap_capabilities->saslmechs);
-    free(cxn->imap_capabilities);
+    delete cxn->imap_capabilities;
     cxn->imap_capabilities = NULL;
 }
 
@@ -1848,7 +1849,7 @@ imap_Connect(connection_t *cxn)
     ASSERT(cxn->imap_sleepTimerId == 0);
 
     /* Make the IMAP connection. */
-    result = SetupIMAPConnection(cxn, cxn->ServerName, IMAP_PORT);
+    result = SetupIMAPConnection(cxn, cxn->ServerName.data(), IMAP_PORT);
     if (result != RET_OK)
         return result;
 
@@ -1983,7 +1984,7 @@ lmtp_Connect(connection_t *cxn)
     ASSERT(cxn->lmtp_sleepTimerId == 0);
 
     /* make the LMTP connection */
-    result = SetupLMTPConnection(cxn, cxn->ServerName, LMTP_PORT);
+    result = SetupLMTPConnection(cxn, cxn->ServerName.data(), LMTP_PORT);
 
     if (result != RET_OK)
         return result;
@@ -2198,8 +2199,7 @@ lmtp_getcapabilities(connection_t *cxn)
     char *p;
 
     ClearLMTPCapabilities(cxn);
-    cxn->lmtp_capabilities = xcalloc(1, sizeof(lmtp_capabilities_t));
-    cxn->lmtp_capabilities->saslmechs = NULL;
+    cxn->lmtp_capabilities = new lmtp_capabilities_t{};
 
 #ifdef SMTPMODE
     p = concat("EHLO ", hostname, "\r\n", (char *) 0);
@@ -2233,7 +2233,7 @@ lmtp_authenticate(connection_t *cxn)
     sasl_interact_t *client_interact = NULL;
 
     saslresult = sasl_client_start(
-        cxn->saslconn_lmtp, cxn->lmtp_capabilities->saslmechs,
+        cxn->saslconn_lmtp, cxn->lmtp_capabilities->saslmechs.c_str(),
         &client_interact, &out, &outlen, &mechusing);
 
     if ((saslresult != SASL_OK) && (saslresult != SASL_CONTINUE)) {
@@ -2588,9 +2588,9 @@ imap_sendAuthenticate(connection_t *cxn)
 
     sasl_interact_t *client_interact = NULL;
 
-    if (cxn->imap_capabilities->saslmechs) {
+    if (!cxn->imap_capabilities->saslmechs.empty()) {
         saslresult = sasl_client_start(
-            cxn->imap_saslconn, cxn->imap_capabilities->saslmechs,
+            cxn->imap_saslconn, cxn->imap_capabilities->saslmechs.c_str(),
             &client_interact, NULL, NULL, &mechusing);
     }
 
@@ -2854,11 +2854,10 @@ imap_ParseCapability(char *string, imap_capabilities_t **caps)
 {
     char *str = string;
     char *start = str;
-    size_t mechlen;
 
     /* allocate the caps structure if it doesn't already exist */
     if ((*caps) == NULL)
-        (*caps) = xcalloc(1, sizeof(imap_capabilities_t));
+        (*caps) = new imap_capabilities_t{};
 
     while ((*str) != '\0') {
 
@@ -2876,23 +2875,17 @@ imap_ParseCapability(char *string, imap_capabilities_t **caps)
         } else if (strcasecmp(start, "LOGINDISABLED") == 0) {
             (*caps)->logindisabled = 1;
         } else if (strncasecmp(start, "AUTH=", 5) == 0) {
-            if ((*caps)->saslmechs == NULL) {
-                (*caps)->saslmechs = xstrdup(start + 5);
-            } else {
-                mechlen = strlen((*caps)->saslmechs) + 1;
-                mechlen += strlen(start + 5) + 1;
-                (*caps)->saslmechs = xrealloc((*caps)->saslmechs, mechlen);
-                strlcat((*caps)->saslmechs, " ", mechlen);
-                strlcat((*caps)->saslmechs, start + 5, mechlen);
-            }
+            if (!(*caps)->saslmechs.empty())
+                (*caps)->saslmechs += ' ';
+            (*caps)->saslmechs += start + 5;
         }
 
         start = str;
     }
 
-    if ((*caps)->saslmechs) {
+    if (!(*caps)->saslmechs.empty()) {
         d_printf(1, "?:?:IMAP parsed capabilities: saslmechs = %s\n",
-                 (*caps)->saslmechs);
+                 (*caps)->saslmechs.c_str());
     }
 
     return RET_OK;
@@ -3424,7 +3417,7 @@ reset:
                    == 0) {
             cxn->lmtp_capabilities->EnhancedStatusCodes = 1;
         } else if (strncasecmp(str + 4, "AUTH", 4) == 0) {
-            cxn->lmtp_capabilities->saslmechs = xstrdup(str + 4 + 5);
+            cxn->lmtp_capabilities->saslmechs = str + 4 + 5;
         } else if (strncasecmp(str + 4, "PIPELINING", strlen("PIPELINING"))
                    == 0) {
             cxn->lmtp_capabilities->pipelining = 1;
@@ -3445,7 +3438,7 @@ reset:
                 return;
             }
 #ifdef HAVE_SASL
-            if (cxn->lmtp_capabilities->saslmechs) {
+            if (!cxn->lmtp_capabilities->saslmechs.empty()) {
                 /* start the authentication */
                 result = lmtp_authenticate(cxn);
 
@@ -4135,11 +4128,11 @@ retry:
         ConvertRcptList(rcpt_list, rcpt_list_end, &cxn->current_rcpts_issued);
     cxn->current_rcpts_okayed = 0;
 
-    if (mailfrom_name == NULL)
-        mailfrom_name = xstrdup("");
+    if (!mailfrom_name)
+        mailfrom_name.emplace();
     p = concat("RSET\r\n"
                "MAIL FROM:<",
-               mailfrom_name, ">\r\n", rcpt_list, "DATA\r\n", (char *) 0);
+               mailfrom_name->c_str(), ">\r\n", rcpt_list, "DATA\r\n", (char *) 0);
     free(rcpt_list);
 
     cxn->lmtp_state = LMTP_WRITING_UPTODATA;
@@ -4305,8 +4298,6 @@ delConnection(Connection cxn)
     cxn->ident = 0;
     cxn->timeCon = 0;
 
-    free(cxn->ServerName);
-
     clearTimer(cxn->imap_readBlockedTimerId);
     clearTimer(cxn->imap_writeBlockedTimerId);
     clearTimer(cxn->lmtp_readBlockedTimerId);
@@ -4322,7 +4313,7 @@ delConnection(Connection cxn)
     free(cxn->imap_respBuffer);
     free(cxn->lmtp_respBuffer);
 
-    free(cxn);
+    delete cxn;
 
     if (shutDown) {
         /* exit program if that was the last connection for the last host */
@@ -4372,24 +4363,23 @@ newConnection(Host host, unsigned int ident, const char *ipname,
     /* check arguments */
 
     /* allocate connection structure */
-    cxn = xcalloc(1, sizeof(connection_t));
+    cxn = new connection_t{};
     cxn->sockfd_lmtp = -1;
     cxn->imap_sockfd = -1;
 
     cxn->ident = ident;
-    cxn->ServerName = xstrdup(ipname);
+    cxn->ServerName = ipname;
     cxn->myHost = host;
 
     /* setup mailfrom user */
     if (gethostname(hostname, MAXHOSTNAMELEN) != 0) {
         d_printf(0, "%s gethostname failed\n", ipname);
-        free(cxn->ServerName);
-        free(cxn);
+        delete cxn;
         return NULL;
     }
 
-    if (mailfrom_name == NULL)
-        mailfrom_name = concat("news@", hostname, (char *) 0);
+    if (!mailfrom_name)
+        mailfrom_name = std::string("news@") + hostname;
 
     cxn->next = gCxnList;
     gCxnList = cxn;
@@ -4543,7 +4533,7 @@ cxnTerminate(Connection cxn)
 void
 cxnNuke(Connection cxn)
 {
-    d_printf(0, "%s:%u Nuking connection\n", cxn->ServerName, cxn->ident);
+    d_printf(0, "%s:%u Nuking connection\n", cxn->ServerName.c_str(), cxn->ident);
 
     cxn->issue_quit = 4;
 
@@ -4750,8 +4740,8 @@ printCxnInfo(Connection cxn, FILE *fp, unsigned int indentAmt)
     fprintf(fp, "%s    state (lmtp) : %s\n", indent,
             lmtp_stateToString(cxn->lmtp_state));
     fprintf(fp, "%s    ident : %u\n", indent, cxn->ident);
-    fprintf(fp, "%s    ip-name (imap): %s\n", indent, cxn->ServerName);
-    fprintf(fp, "%s    ip-name (lmtp): %s\n", indent, cxn->ServerName);
+    fprintf(fp, "%s    ip-name (imap): %s\n", indent, cxn->ServerName.c_str());
+    fprintf(fp, "%s    ip-name (lmtp): %s\n", indent, cxn->ServerName.c_str());
     fprintf(fp, "%s    port-number (imap) : %d\n", indent, cxn->imap_port);
     fprintf(fp, "%s    port-number (lmtp) : %d\n", indent, cxn->lmtp_port);
 
