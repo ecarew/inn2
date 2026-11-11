@@ -26,6 +26,8 @@
 #endif
 
 #include <fcntl.h>
+#include <optional>
+#include <string>
 #include <grp.h>
 #include <pwd.h>
 
@@ -157,34 +159,33 @@ auth_pam(const char *username, char *password)
 /*
 **  Try to get a password out of a dbm file.  The dbm file should have the
 **  username for the key and the encrypted password as the value.  The
-**  encrypted password, if found, is returned as a newly allocated string;
-**  otherwise, NULL is returned.
+**  encrypted password, if found, is returned as a std::string;
+**  otherwise, std::nullopt is returned.
 */
 #if !(defined(HAVE_DBM) || defined(HAVE_BDB_NDBM))
-static char *
+static std::optional<std::string>
 password_dbm(char *user UNUSED, const char *file UNUSED)
 {
-    return NULL;
+    return std::nullopt;
 }
 #else
-static char *
+static std::optional<std::string>
 password_dbm(char *name, const char *file)
 {
     datum key, value;
     DBM *database;
-    char *password;
 
     database = dbm_open(file, O_RDONLY, 0600);
     if (database == nullptr)
-        return nullptr;
+        return std::nullopt;
     key.dptr = name;
     key.dsize = strlen(name);
     value = dbm_fetch(database, key);
     if (value.dptr == nullptr) {
         dbm_close(database);
-        return nullptr;
+        return std::nullopt;
     }
-    password = xstrndup(static_cast<const char *>(value.dptr), value.dsize);
+    std::string password(static_cast<const char *>(value.dptr), value.dsize);
     dbm_close(database);
     return password;
 }
@@ -193,50 +194,50 @@ password_dbm(char *name, const char *file)
 
 /*
 **  Try to get a password out of the system /etc/shadow file.  The encrypted
-**  password, if found, is returned as a newly allocated string; otherwise,
-**  NULL is returned.
+**  password, if found, is returned as a std::string; otherwise,
+**  nothing (std::nullopt) is returned.
 */
 #if !HAVE_GETSPNAM
-static char *
+static std::optional<std::string>
 password_shadow(const char *user UNUSED)
 {
-    return nullptr;
+    return std::nullopt;
 }
 #else
-static char *
+static std::optional<std::string>
 password_shadow(const char *user)
 {
     struct spwd *spwd;
 
     spwd = getspnam(user);
     if (spwd != NULL)
-        return xstrdup(spwd->sp_pwdp);
-    return NULL;
+        return std::string(spwd->sp_pwdp);
+    return std::nullopt;
 }
 #endif /* HAVE_GETSPNAM */
 
 
 /*
 **  Try to get a password out of a file.  The encrypted password, if found, is
-**  returned as a newly allocated string; otherwise, NULL is returned.
+**  returned as a std::string; otherwise, std::nullopt.
 */
-static char *
+static std::optional<std::string>
 password_file(const char *username, const char *file)
 {
     QIOSTATE *qp;
-    char *line, *password;
+    char *line;
     struct cvector *info = nullptr;
 
     qp = QIOopen(file);
     if (qp == nullptr)
-        return nullptr;
+        return std::nullopt;
     for (line = QIOread(qp); line != nullptr; line = QIOread(qp)) {
         if (*line == '#' || *line == '\n')
             continue;
         info = cvector_split(line, ':', info);
         if (info->count < 2 || strcmp(info->strings[0], username) != 0)
             continue;
-        password = xstrdup(info->strings[1]);
+        std::string password(info->strings[1]);
         QIOclose(qp);
         cvector_free(info);
         return password;
@@ -247,34 +248,33 @@ password_file(const char *username, const char *file)
         sysdie("error reading %s", file);
     QIOclose(qp);
     cvector_free(info);
-    return nullptr;
+    return std::nullopt;
 }
 
 
 /*
 **  Try to get a password out of the system password file.  The encrypted
-**  password, if found, is returned as a newly allocated string; otherwise,
-**  NULL is returned.
+**  password, if found, is returned as a std::string; otherwise,
+**  nothing (std::nullopt) is returned.
 */
-static char *
+static std::optional<std::string>
 password_system(const char *username)
 {
     struct passwd *pwd;
 
     pwd = getpwnam(username);
     if (pwd != nullptr)
-        return xstrdup(pwd->pw_passwd);
-    return nullptr;
+        return std::string(pwd->pw_passwd);
+    return std::nullopt;
 }
 
 
 /*
 **  Try to get the name of a user's primary group out of the system group
-**  file.  The group, if found, is returned as a newly allocated string;
-**  otherwise, NULL is returned.  If the username is not found, NULL is
-**  returned.
+**  file.  The group, if found, is returned; otherwise (or if the username
+**  is not found) the result is empty.
 */
-static char *
+static std::string
 group_system(const char *username)
 {
     struct passwd *pwd;
@@ -282,11 +282,11 @@ group_system(const char *username)
 
     pwd = getpwnam(username);
     if (pwd == nullptr)
-        return nullptr;
+        return {};
     gr = getgrgid(pwd->pw_gid);
     if (gr == nullptr)
-        return nullptr;
-    return xstrdup(gr->gr_name);
+        return {};
+    return gr->gr_name;
 }
 
 
@@ -297,10 +297,10 @@ static void
 output_user(const char *username, bool wantgroup)
 {
     if (wantgroup) {
-        char *group = group_system(username);
-        if (group == nullptr)
+        std::string group = group_system(username);
+        if (group.empty())
             die("group info for user %s not available", username);
-        printf("User:%s@%s\r\n", username, group);
+        printf("User:%s@%s\r\n", username, group.c_str());
     } else
         print_user(username);
 }
@@ -328,7 +328,7 @@ main(int argc, char *argv[])
     bool wantgroup = false;
     const char *filename = nullptr;
     struct auth_info *authinfo = nullptr;
-    char *password = nullptr;
+    std::optional<std::string> password;
 
     message_program_name = "ckpasswd";
 
@@ -398,7 +398,7 @@ main(int argc, char *argv[])
     switch (type) {
     case AUTH_SHADOW:
         password = password_shadow(authinfo->username);
-        if (password == nullptr)
+        if (!password)
             password = password_system(authinfo->username);
         break;
     case AUTH_FILE:
@@ -416,10 +416,10 @@ main(int argc, char *argv[])
         break;
     }
 
-    if (password == nullptr)
+    if (!password)
         die("user %s unknown", authinfo->username);
-    hash = crypt(authinfo->password, password);
-    if (hash == nullptr || strcmp(password, hash) != 0)
+    hash = crypt(authinfo->password, password->c_str());
+    if (hash == nullptr || *password != hash)
         die("invalid password for user %s", authinfo->username);
 
     /* The password matched. */
