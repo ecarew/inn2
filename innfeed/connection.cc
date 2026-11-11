@@ -135,7 +135,7 @@ struct connection_s {
 
     Buffer respBuffer; /* buffer all responses are read into */
 
-    char *ipName; /* the ip name (possibly quad) of the remote */
+    std::string ipName; /* the ip name (possibly quad) of the remote */
 
     unsigned int maxCheck; /* the max number of CHECKs to send */
     unsigned short port;   /* the port number to use */
@@ -396,7 +396,7 @@ newConnection(Host host, unsigned int id, const char *ipname,
     if (croak)
         return NULL;
 
-    cxn = xcalloc(1, sizeof(struct connection_s));
+    cxn = new connection_s{};
 
     cxn->myHost = host;
     cxn->myEp = NULL;
@@ -413,7 +413,7 @@ newConnection(Host host, unsigned int id, const char *ipname,
     cxn->respBuffer = newBuffer(BUFFER_SIZE);
     ASSERT(cxn->respBuffer != NULL);
 
-    cxn->ipName = xstrdup(ipname);
+    cxn->ipName = ipname;
     cxn->port = portNum;
 
     /* Time out the higher numbered connections faster */
@@ -1065,7 +1065,7 @@ printCxnInfo(Connection cxn, FILE *fp, unsigned int indentAmt)
     fprintf(fp, "%s    endpoint : %p\n", indent, (void *) cxn->myEp);
     fprintf(fp, "%s    state : %s\n", indent, stateToString(cxn->state));
     fprintf(fp, "%s    ident : %u\n", indent, cxn->ident);
-    fprintf(fp, "%s    ip-name : %s\n", indent, cxn->ipName);
+    fprintf(fp, "%s    ip-name : %s\n", indent, cxn->ipName.c_str());
     fprintf(fp, "%s    port-number : %u\n", indent, cxn->port);
     fprintf(fp, "%s    max-checks : %u\n", indent, cxn->maxCheck);
     fprintf(fp, "%s    does-streaming : %s\n", indent,
@@ -4050,14 +4050,13 @@ delConnection(Connection cxn)
     cxn->ident = 0;
     cxn->timeCon = 0;
 
-    free(cxn->ipName);
 
     clearTimer(cxn->artReceiptTimerId);
     clearTimer(cxn->readBlockedTimerId);
     clearTimer(cxn->writeBlockedTimerId);
     clearTimer(cxn->flushTimerId);
 
-    free(cxn);
+    delete cxn;
 
     if (shutDown) {
         /* exit program if that was the last connection for the last host */
