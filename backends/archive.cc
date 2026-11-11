@@ -5,6 +5,7 @@
 #include "portable/system.h"
 
 #include <errno.h>
+#include <string>
 #include <sys/stat.h>
 #include <time.h>
 
@@ -34,7 +35,7 @@ struct config {
 **  Try to make one directory.  Return false on error.
 */
 static bool
-MakeDir(char *Name)
+MakeDir(const char *Name)
 {
     struct stat Sb;
 
@@ -53,36 +54,23 @@ MakeDir(char *Name)
 static bool
 mkpath(const char *file)
 {
-    char *path, *delim;
-    bool status;
+    std::string path = file;
+    std::string::size_type slash = path.rfind('/');
 
-    path = xstrdup(file);
-    delim = strrchr(path, '/');
-    if (delim == nullptr) {
-        free(path);
+    if (slash == std::string::npos)
         return false;
-    }
-    *delim = '\0';
+    path.erase(slash);
 
     /* Optimize common case -- parent almost always exists. */
-    if (MakeDir(path)) {
-        free(path);
+    if (MakeDir(path.c_str()))
         return true;
-    }
 
     /* Try to make each of comp and comp/foo in turn. */
-    for (delim = path; *delim != '\0'; delim++)
-        if (*delim == '/' && delim != path) {
-            *delim = '\0';
-            if (!MakeDir(path)) {
-                free(path);
-                return false;
-            }
-            *delim = '/';
-        }
-    status = MakeDir(path);
-    free(path);
-    return status;
+    for (slash = path.find('/', 1); slash != std::string::npos;
+         slash = path.find('/', slash + 1))
+        if (!MakeDir(path.substr(0, slash).c_str()))
+            return false;
+    return MakeDir(path.c_str());
 }
 
 
@@ -271,7 +259,8 @@ build_path(const char *group, const char *number, struct config *config,
 static void
 process_article(ARTHANDLE *art, const char *token, struct config *config)
 {
-    char *start, *end, *xref, *delim, *p, *first;
+    char *start, *end, *delim;
+    std::string first; /* where the article went first; empty until then */
     const char *group;
     size_t i;
     struct cvector *groups;
@@ -290,21 +279,21 @@ process_article(ARTHANDLE *art, const char *token, struct config *config)
         warn("unterminated Xref header field in %s", token);
         return;
     }
-    xref = xstrndup(start, end - start);
-    for (p = xref; *p != '\0'; p++)
-        if (*p == '\r' || *p == '\n')
-            *p = ' ';
-    groups = cvector_split_space(xref, nullptr);
+    /* The cvector's strings point into xref, which must outlive it and
+       stays writable for the ':' cut below. */
+    std::string xref(start, end - start);
+    for (char &c : xref)
+        if (c == '\r' || c == '\n')
+            c = ' ';
+    groups = cvector_split_space(xref.data(), nullptr);
     if (groups->count < 2) {
         warn("bogus Xref header field in %s", token);
-        free(xref);
         cvector_free(groups);
         return;
     }
 
     /* Walk through each newsgroup, saving the article in the appropriate
        location. */
-    first = nullptr;
     for (i = 1; i < groups->count; i++) {
         group = groups->strings[i];
         /* The cvector's strings point into xref, our own writable copy. */
@@ -327,13 +316,13 @@ process_article(ARTHANDLE *art, const char *token, struct config *config)
         /* If this isn't the first group, and we're not saving by date, try to
            just link or symlink between the archive directories rather than
            writing out multiple copies. */
-        if (first == nullptr || config->concat) {
+        if (first.empty() || config->concat) {
             if (!write_article(art, path->data, config->concat))
                 continue;
             if (groups->count > 2)
-                first = xstrdup(path->data);
+                first = path->data;
         } else {
-            if (!link_article(first, path->data, art))
+            if (!link_article(first.c_str(), path->data, art))
                 continue;
         }
 
@@ -342,12 +331,9 @@ process_article(ARTHANDLE *art, const char *token, struct config *config)
             write_index(config->index, art,
                         path->data + strlen(config->root) + 1);
     }
-    free(xref);
     cvector_free(groups);
     if (path != nullptr)
         buffer_free(path);
-    if (first != nullptr)
-        free(first);
 }
 
 
