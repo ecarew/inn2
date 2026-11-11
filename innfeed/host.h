@@ -16,6 +16,8 @@
 #include "misc.h"
 #include <stdio.h>
 
+#include <string>
+
 BEGIN_DECLS
 
 /* Variables to export. */
@@ -144,8 +146,6 @@ void hostTakeBackArticle(Host host, Connection cxn, Article article);
    cxnQueueArticle() . */
 bool hostGimmeArticle(Host host, Connection cxn);
 
-/* get the name that INN uses for this host */
-const char *hostPeerName(Host host);
 
 /* Get the bindaddress. */
 const char *hostBindAddr(Host host);
@@ -192,5 +192,9 @@ int hostConfigLoadCbk(FILE *fp);
 void hostChkCxns(TimeoutId tid, Host host);
 
 END_DECLS
+
+/* C++ linkage: get the name that INN uses for this host.  The reference is
+   to the host's own string; callers pass c_str() only as an argument. */
+const std::string &hostPeerName(Host host);
 
 #endif /* HOST_H */

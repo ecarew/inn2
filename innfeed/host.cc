@@ -2291,12 +2291,12 @@ hostGimmeArticle(Host host, Connection cxn)
 /*
  * get the name that INN uses for this host
  */
-const char *
+const std::string &
 hostPeerName(Host host)
 {
     ASSERT(host != NULL);
 
-    return host->params->peerName.c_str();
+    return host->params->peerName;
 }
 
 /* A parameter for the callers, which take NULL for "not set". */

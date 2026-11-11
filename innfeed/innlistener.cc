@@ -240,7 +240,7 @@ listenerAddPeer(InnListener listener, Host hostObj)
 {
     unsigned int i;
 
-    d_printf(1, "Adding peer: %s\n", hostPeerName(hostObj));
+    d_printf(1, "Adding peer: %s\n", hostPeerName(hostObj).c_str());
 
     for (i = 0; i < listener->hostLen; i++) {
         if (listener->myHosts[i] == NULL) {
@@ -268,7 +268,7 @@ listenerHostGone(InnListener listener, Host host)
     unsigned int i;
     unsigned int someThere = 0;
 
-    d_printf(1, "Host is gone: %s\n", hostPeerName(host));
+    d_printf(1, "Host is gone: %s\n", hostPeerName(host).c_str());
 
     for (i = 0; i < listener->hostLen; i++)
         if (listener->myHosts[i] == host)
@@ -287,7 +287,7 @@ listenerHostIsIdle(InnListener listener, Host host)
     ASSERT(listener != NULL);
     ASSERT(host != NULL);
 
-    d_printf(1, "Host is idle: %s\n", hostPeerName(host));
+    d_printf(1, "Host is idle: %s\n", hostPeerName(host).c_str());
 
     if (!listener->dummyListener)
         return;
@@ -590,7 +590,7 @@ giveArticleToPeer(InnListener lis, Article article, const char *peerName)
 
     for (i = 0; i < lis->hostLen; i++)
         if (lis->myHosts[i] != NULL)
-            if (strcmp(peerName, hostPeerName(lis->myHosts[i])) == 0) {
+            if (strcmp(peerName, hostPeerName(lis->myHosts[i]).c_str()) == 0) {
                 d_printf(1, "Giving article to peer: %s\n", peerName);
                 hostSendArticle(lis->myHosts[i], artTakeRef(article));
                 break;
