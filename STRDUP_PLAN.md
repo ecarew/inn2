@@ -144,15 +144,19 @@ Pointers into string buffers that are stored, as of 2026-11-11:
 
 | Where | What is stored | Lifetime risk | Plan |
 |---|---|---|---|
-| innfeed/main.cc | globals `InputFile`, `pidFile` = `c_str()` of file-scope strings | dangles if the string is reassigned (config reload) | innfeed pass |
-| innfeed/tape.cc `getTapeDirectory` | returns `c_str()` of a static | callers may keep it across a change | innfeed pass |
-| innfeed/host.cc `hostPeerName`, `hostIpName`; imap_connection.cc `unlessEmpty` | return `c_str()` of host params; callers keep them in locals | host params are replaced on reload | innfeed pass |
-| innfeed/imap_connection.cc | `str = line.data()` cursor over the response line | local | innfeed pass |
 | innd/article.h `WordList` | `words_` point into `text_` | resizing `text_` would dangle them; `start()` clears `words_` first | innd pass |
 | innd/art.cc | `hp[].p`, `arth.path`, `arth.groups`, `p` cursors into the header cache and `xref`/`lines`/`keywords` | per article; the cache is not touched meanwhile | innd pass |
 | innd/keywords.cc | `text` cursor into `orig_text` | local | innd pass |
 | storage/tradindexed/tdx-group.cc | `name` points into a map entry's name | local; map unchanged meanwhile | storage pass |
 | contrib/respool.cc, contrib/expirectl.cc | local cursors into the article and line | local | contrib pass |
+
+Kept, with the architect's agreement (2026-11-11):
+
+| Where | What is stored | Why it stays |
+|---|---|---|
+| innfeed/imap_connection.cc `imap_readCB`, `lmtp_readCB` | `str = line.data()` cursor over the response line | local to the call; `line` is not changed while `str` is in use and `str` is reset after each `GetLine`; removing it means rewriting the IMAP and LMTP reply parsers and the `char *` helpers they call |
+| innfeed/imap_connection.cc `getsimple` (SASL callback) | `unlessEmpty` hands SASL `c_str()` of the `deliver_*` globals | the Cyrus SASL API takes a `const char *` result; the globals live for the process |
+| authprogs/ckpasswd.cc PAM conversation | `appdata` points at the password's buffer | the PAM API takes a `void *`; scoped to the `auth_pam` call |
 
 Each pass replaces the stored pointer with the string itself, an index or
 offset into it, or a copy (not a `std::string_view`, which is the same
@@ -168,6 +172,21 @@ Fixed:
   split into strings, 90e0f3bbd.
 - backends/archive.cc, a `cvector` into the Xref copy: split into a
   `std::vector<std::string>`, 7d323366a.
+- innfeed/article.cc, `fname` and `msgid` were `char *` copies; the
+  article holds strings and `artFileName`/`artMsgId` return references,
+  3dae6e35c.
+- innfeed/connection.cc `ipName`, imap_connection.cc `saslmechs`,
+  `ServerName`, `mailfrom_name`, misc.cc's d_printf host name: strings,
+  058e09c0e, 02ceb52a3, d8f249d75.
+- innfeed/main.cc globals `InputFile` and `pidFile` pointed at
+  `c_str()` of file-scope strings: `std::optional<std::string>` and
+  `std::string`, 92cf0cd94.
+- innfeed/host.cc `hostPeerName` returned `c_str()` of host params and
+  callers kept it: returns `const std::string &`, locals are copies,
+  939961c28.
+- innfeed/host.cc `hostBindAddr`, `hostBindAddr6`, `hostUsername`,
+  `hostPassword` and tape.cc `getTapeDirectory`: return `const
+  std::string &`, cc197fe6d.
 
 ## Out of scope
 
