@@ -16,6 +16,8 @@
 #endif
 #include <time.h>
 
+#include <string>
+
 #include "inn/innconf.h"
 #include "inn/libinn.h"
 #include "inn/messages.h"
@@ -470,7 +472,9 @@ static void
 ProcessHeaders(bool AddOrg, bool AddSender, struct passwd *pwp)
 {
     static char PATHFLUFF[] = PATHMASTER;
-    static char *sendbuff = nullptr;
+    /* Owners of the field bodies generated here; the table points into
+       them for the rest of the run. */
+    static std::string sender, date, messageid, organization;
     HEADER *hp;
     char *p;
     char buff[SMBUF];
@@ -493,20 +497,19 @@ ProcessHeaders(bool AddOrg, bool AddSender, struct passwd *pwp)
     if (HDR(_from) == nullptr)
         HDR(_from) = FormatUserName(pwp, p);
     else if (AddSender) {
-        if (sendbuff != nullptr)
-            free(sendbuff);
-        sendbuff = concat(pwp->pw_name, "%", p, (char *) nullptr);
+        sender = std::string(pwp->pw_name) + "%" + p;
         strlcpy(from, HDR(_from), SMBUF);
         HeaderCleanFrom(from);
-        if (strcmp(from, sendbuff) != 0)
-            HDR(_sender) = xstrdup(sendbuff);
+        if (sender != from)
+            HDR(_sender) = sender.data();
     }
 
     if (HDR(_date) == nullptr) {
         /* Set Date. */
         if (!makedate(-1, true, buff, sizeof(buff)))
             die("cannot generate Date header field body");
-        HDR(_date) = xstrdup(buff);
+        date = buff;
+        HDR(_date) = date.data();
     }
 
     /* Newsgroups are checked later. */
@@ -526,7 +529,8 @@ ProcessHeaders(bool AddOrg, bool AddSender, struct passwd *pwp)
     if (HDR(_messageid) == nullptr) {
         if ((p = GenerateMessageID(nullptr)) == nullptr)
             die("cannot generate Message-ID header field body");
-        HDR(_messageid) = xstrdup(p);
+        messageid = p;
+        HDR(_messageid) = messageid.data();
     } else if ((p = strchr(HDR(_messageid), '@')) == nullptr
                || strchr(++p, '@') != nullptr) {
         die("Message-ID must have exactly one @");
@@ -550,15 +554,15 @@ ProcessHeaders(bool AddOrg, bool AddSender, struct passwd *pwp)
 
     /* Distribution. */
     if ((p = HDR(_distribution)) != nullptr) {
-        p = xstrdup(p);
-        CheckDistribution(p);
-        free(p);
+        std::string dist(p); /* CheckDistribution cuts it up with strtok */
+        CheckDistribution(dist.data());
     }
 
     /* Set Organization. */
     if (AddOrg && HDR(_organization) == nullptr
         && (p = innconf->organization) != nullptr) {
-        HDR(_organization) = xstrdup(p);
+        organization = p;
+        HDR(_organization) = organization.data();
     }
 
     /* Keywords; left alone. */
