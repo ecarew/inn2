@@ -13,6 +13,7 @@
 #include <fcntl.h>
 #include <signal.h>
 #include <sys/stat.h>
+#include <string>
 #include <syslog.h>
 #include <time.h>
 
@@ -166,7 +167,7 @@ main(int argc, char *argv[])
     QIOSTATE *qp;
     bool value;
     OVGE ovge;
-    char *active_path = nullptr;
+    std::string active_path;
     char *lowmark_path = nullptr;
     char *path;
     char *tombstone_path = nullptr;
@@ -201,7 +202,11 @@ main(int argc, char *argv[])
             ovge.earliest = true;
             break;
         case 'f':
-            active_path = xstrdup(optarg);
+            /* Empty means "not given" below, so refuse it here; opening
+               "" failed anyway. */
+            if (*optarg == '\0')
+                die("-f needs a file name");
+            active_path = optarg;
             break;
         case 'k':
             ovge.keep = true;
@@ -262,20 +267,21 @@ main(int argc, char *argv[])
 
     /* Set up the path to the list of newsgroups we're going to use and open
        that file.  This could be stdin. */
-    if (active_path == nullptr) {
-        active_path = concatpath(innconf->pathdb, INN_PATH_ACTIVE);
+    if (active_path.empty()) {
+        char *path = concatpath(innconf->pathdb, INN_PATH_ACTIVE);
+        active_path = path;
+        free(path);
         purge_deleted = true;
     }
-    if (strcmp(active_path, "-") == 0) {
+    if (active_path == "-") {
         qp = QIOfdopen(fileno(stdin));
         if (qp == nullptr)
             sysdie("can't reopen stdin");
     } else {
-        qp = QIOopen(active_path);
+        qp = QIOopen(active_path.c_str());
         if (qp == nullptr)
-            sysdie("can't open active file (%s)", active_path);
+            sysdie("can't open active file (%s)", active_path.c_str());
     }
-    free(active_path);
 
     /* open up the history manager */
     path = concatpath(innconf->pathhistory, INN_PATH_HISTORY);
