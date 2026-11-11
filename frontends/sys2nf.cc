@@ -216,12 +216,6 @@ main(int ac, char *av[])
     FILE *out;
     std::vector<std::string> sites;
     size_t next = 0;
-    char *f2;
-    char *f3;
-    char *f4;
-    char *p;
-    char *q;
-    std::string site;
     char buff[256];
     char *act;
     const char *dir;
@@ -262,41 +256,47 @@ main(int ac, char *av[])
         exit(1);
     }
     for (;;) {
-        /* Get next non-comment ilne. */
+        /* Copy comment lines; stop at the next entry. */
         if (next == sites.size())
             break;
-        p = sites[next++].data();
-        for (F = fopen(TEMPFILE, "w"); p && *p == '#';
-             p = next < sites.size() ? sites[next++].data() : NULL)
-            fprintf(F, "%s\n", p);
-        if (p == NULL) {
+        F = fopen(TEMPFILE, "w");
+        while (next < sites.size() && sites[next][0] == '#')
+            fprintf(F, "%s\n", sites[next++].c_str());
+        if (next == sites.size()) {
             fclose(F);
             break;
         }
-        site = p; /* a copy to cut at the colons */
-        if ((f2 = strchr(site.data(), ':')) == NULL)
-            f2 = (char *) "HELP";
-        else
-            *f2++ = '\0';
-        if ((f3 = strchr(f2, ':')) == NULL)
-            f3 = (char *) "HELP";
-        else
-            *f3++ = '\0';
-        if ((f4 = strchr(f3, ':')) == NULL)
-            f4 = (char *) "HELP";
-        else
-            *f4++ = '\0';
+        const std::string &entry = sites[next++];
+
+        /* site:subscriptions:flags:command; the last takes the rest of the
+           line, colons and all, and each missing field is "HELP". */
+        std::vector<std::string> fields;
+        size_t pos = 0;
+        for (int k = 0; k < 3; k++) {
+            size_t colon = entry.find(':', pos);
+            if (colon == std::string::npos)
+                break;
+            fields.push_back(entry.substr(pos, colon - pos));
+            pos = colon + 1;
+        }
+        fields.push_back(entry.substr(pos));
+        while (fields.size() < 4)
+            fields.emplace_back("HELP");
+        const std::string &site = fields[0];
+        std::string subs = fields[1]; /* DoSub cuts it up with strtok */
+        const std::string &flags = fields[2];
+        const std::string &command = fields[3];
 
         /* Write the fields. */
         fprintf(F, "%s\\\n", site.c_str());
         fprintf(F, "\t:");
-        DoSub(F, f2);
+        DoSub(F, subs.data());
         fprintf(F, "\\\n");
-        if (strcmp(f3, "n") == 0)
+        if (flags == "n")
             fprintf(F, "\t:Tf,Wnm\\\n");
         else
-            fprintf(F, "\t:HELP%s\\\n", f3);
-        fprintf(F, "\t:%s\n", f4);
+            fprintf(F, "\t:HELP%s\\\n", flags.c_str());
+        fprintf(F, "\t:%s\n", command.c_str());
         if (ferror(F) != 0) {
             perror(TEMPFILE);
             fclose(F);
@@ -307,28 +307,27 @@ main(int ac, char *av[])
             exit(1);
         }
 
-        /* Find the sitename. */
-        for (q = p; *q && *q != '/' && *q != ':'; q++)
-            continue;
-        *q = '\0';
+        /* The site file is named for the site, up to a '/' or ':'. */
+        const std::string sitename =
+            entry.substr(0, entry.find_first_of("/:"));
 
         /* Append temp file to site file. */
         if ((F = fopen(TEMPFILE, "r")) == NULL) {
             perror(TEMPFILE);
             exit(1);
         }
-        if ((out = xfopena(p)) == NULL) {
-            perror(p);
+        if ((out = xfopena(sitename.c_str())) == NULL) {
+            perror(sitename.c_str());
             exit(1);
         }
         while ((j = fread(buff, 1, sizeof buff, F)) > 0)
             if (fwrite(buff, 1, j, out) != j) {
-                perror(p);
+                perror(sitename.c_str());
                 exit(1);
             }
         fclose(F);
         if (fclose(out) == EOF) {
-            perror(p);
+            perror(sitename.c_str());
             exit(1);
         }
 
