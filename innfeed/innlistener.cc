@@ -175,11 +175,11 @@ unlinkPidFile(void)
     FILE *fp;
     char buf[32];
 
-    if ((fp = fopen(pidFile, "r")) == NULL)
+    if ((fp = fopen(pidFile.c_str(), "r")) == NULL)
         return;
 
     if (fgets(buf, 32, fp) != NULL && atoi(buf) == getpid())
-        unlink(pidFile);
+        unlink(pidFile.c_str());
     fclose(fp);
 }
 
@@ -307,11 +307,11 @@ openInputFile(void)
     off_t offset;
     char buf[32], *p;
 
-    ASSERT(InputFile && *InputFile);
+    ASSERT(InputFile && !InputFile->empty());
 
-    fd = open(InputFile, O_RDWR);
+    fd = open(InputFile->c_str(), O_RDWR);
     if (fd < 0)
-        die("open %s: %s\n", InputFile, strerror(errno));
+        die("open %s: %s\n", InputFile->c_str(), strerror(errno));
 
     mainFd = getMainEndPointFd();
     if (fd != mainFd) {
@@ -322,7 +322,7 @@ openInputFile(void)
 
     i = read(mainFd, buf, sizeof(buf));
     if (i < 0)
-        die("read %s: %s\n", InputFile, strerror(errno));
+        die("read %s: %s\n", InputFile->c_str(), strerror(errno));
     else if (i > 0) {
         p = buf;
         buf[sizeof(buf) - 1] = '\0';
@@ -332,7 +332,7 @@ openInputFile(void)
         else
             lseek(mainFd, 0, SEEK_SET);
     }
-    syslog(LOG_NOTICE, "ME opened %s", InputFile);
+    syslog(LOG_NOTICE, "ME opened %s", InputFile->c_str());
 }
 
 
@@ -372,9 +372,9 @@ newArticleCommand(EndPoint ep, IoStatus i, Buffer *buffs, InnListener lis)
     bufferAddNullByte(buffs[0]);
 
     if (i == IoEOF) {
-        if (lis == mainListener && InputFile != NULL) {
+        if (lis == mainListener && InputFile) {
             if (RollInputFile) {
-                syslog(LOG_NOTICE, "ME reached EOF in %s", InputFile);
+                syslog(LOG_NOTICE, "ME reached EOF in %s", InputFile->c_str());
                 openInputFile();
                 RollInputFile = false;
                 readArray = makeBufferArray(bufferTakeRef(buffs[0]), NULL);
@@ -518,7 +518,7 @@ newArticleCommand(EndPoint ep, IoStatus i, Buffer *buffs, InnListener lis)
             cmd = next;
 
             /* write a checkpoint marker if we've done another large chunk */
-            if (InputFile && *InputFile && ++checkPointCounter == 1000) {
+            if (InputFile && !InputFile->empty() && ++checkPointCounter == 1000) {
                 /* adjust the seek pointer value by the current location
                    within the input buffer */
                 writeCheckPoint(blen - (cmd - bbase));

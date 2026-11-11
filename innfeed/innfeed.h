@@ -14,6 +14,7 @@
 #include "inn/timer.h"
 #include "portable/stdbool.h"
 
+#include <optional>
 #include <string>
 
 BEGIN_DECLS
@@ -211,8 +212,11 @@ extern std::string deliver_realm;
 extern std::string deliver_rcpt_to;
 extern std::string deliver_to_header;
 extern std::string deliver_username;
-extern const char *InputFile;
-extern const char *pidFile;
+/* The funnel file: unset in channel mode, empty when it is stdin, else
+   its path. */
+extern std::optional<std::string> InputFile;
+/* The pid file's path; empty until the config is read. */
+extern std::string pidFile;
 extern bool RollInputFile;
 extern bool sigFlag;
 extern bool talkToSelf;

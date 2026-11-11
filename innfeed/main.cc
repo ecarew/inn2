@@ -52,10 +52,10 @@
 /* exports */
 bool talkToSelf;
 bool sigFlag = false;
-const char *InputFile;
+std::optional<std::string> InputFile;
 char *configFile = NULL;
 bool RollInputFile = false;
-const char *pidFile = NULL;
+std::string pidFile;
 bool useMMap = true; /* Even if !HAVE_MMAP.  Only used when innfeed is given
                       * file names to send instead of storage API tokens,
                       * which is a fairly rare use case. */
@@ -73,10 +73,6 @@ std::string deliver_to_header;
 static std::string logFile;
 static std::string newsspool;
 
-/* The storage behind InputFile and pidFile when they come from the
-   config file; they are const char * because other files read them. */
-static std::string inputFileName;
-static std::string pidFileName;
 
 /* concatpath into a std::string. */
 static std::string
@@ -318,7 +314,7 @@ main(int argc, char **argv)
         if (fstat(0, &buf) < 0)
             logAndExit(1, "ME oserr fstat stdin: %s", strerror(errno));
         else if (S_ISREG(buf.st_mode))
-            InputFile = "";
+            InputFile = std::string();
     }
 
     /*
@@ -448,7 +444,7 @@ main(int argc, char **argv)
 
     configHosts(talkToSelf);
 
-    if (InputFile && *InputFile) {
+    if (InputFile && !InputFile->empty()) {
         openInputFile();
     }
 
@@ -623,11 +619,11 @@ sigemt(int sig UNUSED)
 static void
 sigalrm(int sig UNUSED)
 {
-    if (InputFile == NULL)
+    if (!InputFile)
         warn("ME signal SIGALRM in non-funnel-file mode ignored");
     else {
         RollInputFile = true;
-        syslog(LOG_NOTICE, "ME preparing to roll %s", InputFile);
+        syslog(LOG_NOTICE, "ME preparing to roll %s", InputFile->c_str());
     }
 }
 
@@ -687,22 +683,22 @@ writePidFile(void)
     FILE *F;
     int pid;
 
-    if (pidFile == NULL)
+    if (pidFile.empty())
         logAndExit(1, "NULL pidFile\n");
 
     /* Record our PID. */
     pid = getpid();
-    if ((F = fopen(pidFile, "w")) == NULL) {
-        syslog(LOG_ERR, "ME cant fopen %s %m", pidFile);
+    if ((F = fopen(pidFile.c_str(), "w")) == NULL) {
+        syslog(LOG_ERR, "ME cant fopen %s %m", pidFile.c_str());
     } else {
         if (fprintf(F, "%ld\n", (long) pid) == EOF || ferror(F)) {
-            syslog(LOG_ERR, "ME cant fprintf %s %m", pidFile);
+            syslog(LOG_ERR, "ME cant fprintf %s %m", pidFile.c_str());
         }
         if (fclose(F) == EOF) {
-            syslog(LOG_ERR, "ME cant fclose %s %m", pidFile);
+            syslog(LOG_ERR, "ME cant fclose %s %m", pidFile.c_str());
         }
-        if (chmod(pidFile, 0664) < 0) {
-            syslog(LOG_ERR, "ME cant chmod %s %m", pidFile);
+        if (chmod(pidFile.c_str(), 0664) < 0) {
+            syslog(LOG_ERR, "ME cant chmod %s %m", pidFile.c_str());
         }
     }
 }
@@ -778,17 +774,15 @@ mainConfigLoadCbk(FILE *fp)
 
     if (getString(topScope, "input-file", value, NO_INHERIT)) {
         if (!value.empty())
-            inputFileName = pathIn(getTapeDirectory(), value.c_str());
+            InputFile = pathIn(getTapeDirectory(), value.c_str());
         else
-            inputFileName.clear();
-        InputFile = inputFileName.c_str();
+            InputFile = std::string();
     }
 
     if (getString(topScope, "pid-file", value, NO_INHERIT))
-        pidFileName = pathIn(innconf->pathrun, value.c_str());
+        pidFile = pathIn(innconf->pathrun, value.c_str());
     else
-        pidFileName = pathIn(innconf->pathrun, PID_FILE);
-    pidFile = pidFileName.c_str();
+        pidFile = pathIn(innconf->pathrun, PID_FILE);
 
     if (getInteger(topScope, "debug-level", &ival, NO_INHERIT))
         loggingLevel = (unsigned int) ival;
@@ -871,8 +865,8 @@ mainOptionsProcess(FILE *fp UNUSED)
     if (lopt != NULL)
         setString(topScope, "log-file", lopt);
 
-    if (InputFile != NULL)
-        setString(topScope, "input-file", InputFile);
+    if (InputFile)
+        setString(topScope, "input-file", InputFile->c_str());
 
     return 1;
 }
@@ -883,8 +877,7 @@ mainCleanup(void)
 {
     free((void *) configFile);
     configFile = NULL;
-    pidFile = NULL;
-    pidFileName.clear();
+    pidFile.clear();
     logFile.clear();
     newsspool.clear();
 }
@@ -896,17 +889,18 @@ mainLogStatus(FILE *fp)
     fprintf(fp, "%sGlobal configuration parameters:%s\n",
             genHtml ? "<strong>" : "", genHtml ? "</strong>" : "");
     fprintf(fp, "          Mode: ");
-    if (InputFile != NULL)
+    if (InputFile)
         fprintf(fp, "Funnel file");
     else if (talkToSelf)
         fprintf(fp, "Batch");
     else
         fprintf(fp, "Channel");
-    if (InputFile != NULL)
-        fprintf(fp, "   (%s)", (*InputFile == '\0' ? "stdin" : InputFile));
+    if (InputFile)
+        fprintf(fp, "   (%s)",
+                InputFile->empty() ? "stdin" : InputFile->c_str());
     fprintf(fp, "\n");
     fprintf(fp, "    News spool: %s\n", newsspool.c_str());
-    fprintf(fp, "      Pid file: %s\n", pidFile);
+    fprintf(fp, "      Pid file: %s\n", pidFile.c_str());
     fprintf(fp, "      Log file: %s\n",
             (logFile.empty() ? "(none)" : logFile.c_str()));
     fprintf(fp, "   Debug level: %-5u        Debug shrinking: %s\n",

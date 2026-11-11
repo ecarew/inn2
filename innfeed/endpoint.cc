@@ -351,7 +351,7 @@ prepareRead(EndPoint endp, Buffer *buffers, EndpRWCB func, void *clientData,
     endp->inClientData = clientData;
 
     FD_SET(endp->myFd, &rdSet);
-    if (InputFile == NULL)
+    if (!InputFile)
         FD_SET(endp->myFd, &exSet);
 
     return 1;
@@ -636,7 +636,7 @@ Run(void)
                             else
                                 freeBufferArray(buff);
                         } else {
-                            if (InputFile == NULL)
+                            if (!InputFile)
                                 FD_SET(ep->myFd, &exSet);
                         }
                     } else if (FD_ISSET(fd, &rdSet))
