@@ -4,6 +4,8 @@
 
 #include "portable/system.h"
 
+#include <string>
+
 #include <ctype.h>
 #include <errno.h>
 #include <fcntl.h>
@@ -43,18 +45,19 @@ typedef struct _auth_req {
     int datalen;
 } auth_req;
 
+/* Empty strings are unset (a configured value is never empty). */
 typedef struct _rad_config_t {
-    char *secret; /* pseudo encryption thingy secret that radius uses */
+    std::string secret; /* pseudo encryption thingy secret that radius uses */
 
-    char *radhost; /* parameters for talking to the remote radius sever */
-    int radport;
-    char *lochost;
-    int locport;
+    std::string radhost; /* parameters for talking to the remote radius sever */
+    int radport = 0;
+    std::string lochost;
+    int locport = 0;
 
-    char *prefix, *suffix; /* futz with the username, if necessary */
-    int ignore_source;
+    std::string prefix, suffix; /* futz with the username, if necessary */
+    int ignore_source = 0;
 
-    struct _rad_config_t *next; /* point to any additional servers */
+    struct _rad_config_t *next = nullptr; /* point to any additional servers */
 } rad_config_t;
 
 typedef struct _sending_t {
@@ -94,12 +97,7 @@ static CONFTOKEN radtoks[] = {
 static rad_config_t *
 get_radconf()
 {
-    rad_config_t *conf;
-
-    conf = xcalloc(1, sizeof(rad_config_t));
-    conf->next = nullptr;
-
-    return conf;
+    return new rad_config_t{};
 }
 
 static int
@@ -145,14 +143,14 @@ read_config(char *authfile, rad_config_t *radconf)
                 /* what are we setting? */
                 switch (type) {
                 case RADsecret:
-                    if (radconfig->secret)
+                    if (!radconfig->secret.empty())
                         continue;
-                    radconfig->secret = xstrdup(iter);
+                    radconfig->secret = iter;
                     break;
                 case RADhost:
-                    if (radconfig->radhost)
+                    if (!radconfig->radhost.empty())
                         continue;
-                    radconfig->radhost = xstrdup(iter);
+                    radconfig->radhost = iter;
                     break;
                 case RADport:
                     if (radconfig->radport)
@@ -160,9 +158,9 @@ read_config(char *authfile, rad_config_t *radconf)
                     radconfig->radport = atoi(iter);
                     break;
                 case RADlochost:
-                    if (radconfig->lochost)
+                    if (!radconfig->lochost.empty())
                         continue;
-                    radconfig->lochost = xstrdup(iter);
+                    radconfig->lochost = iter;
                     break;
                 case RADlocport:
                     if (radconfig->locport)
@@ -170,14 +168,14 @@ read_config(char *authfile, rad_config_t *radconf)
                     radconfig->locport = atoi(iter);
                     break;
                 case RADprefix:
-                    if (radconfig->prefix)
+                    if (!radconfig->prefix.empty())
                         continue;
-                    radconfig->prefix = xstrdup(iter);
+                    radconfig->prefix = iter;
                     break;
                 case RADsuffix:
-                    if (radconfig->suffix)
+                    if (!radconfig->suffix.empty())
                         continue;
-                    radconfig->suffix = xstrdup(iter);
+                    radconfig->suffix = iter;
                     break;
                 case RADsource:
                     if (strcasecmp(iter, "true") == 0
@@ -202,9 +200,9 @@ read_config(char *authfile, rad_config_t *radconf)
 
     CONFfclose(file);
 
-    if (!radconf->radhost)
+    if (radconf->radhost.empty())
         die("no radius host specified");
-    else if (!radconf->secret)
+    else if (radconf->secret.empty())
         die("no shared secret with radius host specified");
 
     return (0);
@@ -290,26 +288,28 @@ rad_auth(rad_config_t *radconfig, const char *uname, const char *pass)
         memset(&sreq->sinr, '\0', sizeof(sreq->sinr));
         sinl.sin_family = AF_INET;
         sreq->sinr.sin_family = AF_INET;
-        if (config->lochost == nullptr) {
+        if (config->lochost.empty()) {
             if (gethostname(hostname, sizeof(hostname)) != 0) {
                 syswarn("cannot get local hostname");
                 return (-2);
             }
-            config->lochost = xstrdup(hostname);
+            config->lochost = hostname;
         }
-        if (config->lochost) {
-            if (inet_aton(config->lochost, &sinl.sin_addr) != 1) {
-                if ((hent = gethostbyname(config->lochost)) == nullptr) {
-                    warn("cannot gethostbyname lochost %s", config->lochost);
+        if (!config->lochost.empty()) {
+            if (inet_aton(config->lochost.c_str(), &sinl.sin_addr) != 1) {
+                if ((hent = gethostbyname(config->lochost.c_str())) == nullptr) {
+                    warn("cannot gethostbyname lochost %s",
+                         config->lochost.c_str());
                     return (-2);
                 }
                 memcpy(&sinl.sin_addr.s_addr, hent->h_addr,
                        sizeof(struct in_addr));
             }
         }
-        if (inet_aton(config->radhost, &sreq->sinr.sin_addr) != 1) {
-            if ((hent = gethostbyname(config->radhost)) == nullptr) {
-                warn("cannot gethostbyname radhost %s", config->radhost);
+        if (inet_aton(config->radhost.c_str(), &sreq->sinr.sin_addr) != 1) {
+            if ((hent = gethostbyname(config->radhost.c_str())) == nullptr) {
+                warn("cannot gethostbyname radhost %s",
+                     config->radhost.c_str());
                 return (-2);
             }
             memcpy(&sreq->sinr.sin_addr.s_addr, hent->h_addr_list[0],
@@ -327,9 +327,9 @@ rad_auth(rad_config_t *radconfig, const char *uname, const char *pass)
         /* build the visible part of the auth vector randomly */
         for (i = 0; i < AUTH_VECTOR_LEN; i++)
             req.vector[i] = random() % 256;
-        strlcpy((char *) secbuf, config->secret, sizeof(secbuf));
-        memcpy(secbuf + strlen(config->secret), req.vector, AUTH_VECTOR_LEN);
-        md5_hash(secbuf, strlen(config->secret) + AUTH_VECTOR_LEN, digest);
+        strlcpy((char *) secbuf, config->secret.c_str(), sizeof(secbuf));
+        memcpy(secbuf + config->secret.size(), req.vector, AUTH_VECTOR_LEN);
+        md5_hash(secbuf, config->secret.size() + AUTH_VECTOR_LEN, digest);
         /* fill in the auth_req data */
         req.code = PW_AUTHENTICATION_REQUEST;
         req.id = 0;
@@ -338,16 +338,16 @@ rad_auth(rad_config_t *radconfig, const char *uname, const char *pass)
         req.data[0] = PW_USER_NAME;
         req.data[1] = 2;
         req.data[2] = '\0';
-        if (config->prefix) {
-            req.data[1] += strlen(config->prefix);
-            strlcat((char *) &req.data[2], config->prefix,
+        if (!config->prefix.empty()) {
+            req.data[1] += config->prefix.size();
+            strlcat((char *) &req.data[2], config->prefix.c_str(),
                     sizeof(req.data) - 2);
         }
         req.data[1] += strlen(uname);
         strlcat((char *) &req.data[2], uname, sizeof(req.data) - 2);
-        if (!strchr(uname, '@') && config->suffix) {
-            req.data[1] += strlen(config->suffix);
-            strlcat((char *) &req.data[2], config->suffix,
+        if (!strchr(uname, '@') && !config->suffix.empty()) {
+            req.data[1] += config->suffix.size();
+            strlcat((char *) &req.data[2], config->suffix.c_str(),
                     sizeof(req.data) - 2);
         }
         req.datalen = req.data[1];
@@ -401,10 +401,10 @@ rad_auth(rad_config_t *radconfig, const char *uname, const char *pass)
                 req.data[passstart + 2 + i + j] ^= digest[j];
             if (jlen == sizeof(HASH)) {
                 /* Recalculate the digest from the HASHed previous */
-                strlcpy((char *) secbuf, config->secret, sizeof(secbuf));
-                memcpy(secbuf + strlen(config->secret),
+                strlcpy((char *) secbuf, config->secret.c_str(), sizeof(secbuf));
+                memcpy(secbuf + config->secret.size(),
                        &req.data[passstart + 2 + i], sizeof(HASH));
-                md5_hash(secbuf, strlen(config->secret) + sizeof(HASH),
+                md5_hash(secbuf, config->secret.size() + sizeof(HASH),
                          digest);
             }
         }
@@ -492,13 +492,13 @@ rad_auth(rad_config_t *radconfig, const char *uname, const char *pass)
                 continue;
             }
             /* verify the checksum */
-            memcpy(((char *) &req) + sreq->reqlen, config->secret,
-                   strlen(config->secret));
+            memcpy(((char *) &req) + sreq->reqlen, config->secret.c_str(),
+                   config->secret.size());
             memcpy(secbuf, req.vector, sizeof(req.vector));
             memcpy(req.vector, secbuf + sizeof(req.vector),
                    sizeof(req.vector));
             md5_hash((unsigned char *) &req,
-                     strlen(config->secret) + sreq->reqlen, digest);
+                     config->secret.size() + sreq->reqlen, digest);
             if (memcmp(digest, secbuf, sizeof(HASH)) != 0) {
                 warn("checksum didn't match");
                 continue;
@@ -531,7 +531,7 @@ main(int argc, char *argv[])
     if (!innconf_read(nullptr))
         exit(1);
 
-    memset(&radconfig, '\0', sizeof(rad_config_t));
+    radconfig = rad_config_t{};
     haveother = havefile = 0;
 
     while ((opt = getopt(argc, argv, "f:h")) != -1) {
@@ -542,7 +542,7 @@ main(int argc, char *argv[])
             if (!havefile) {
                 /* override the standard config completely if the user
                  * specifies an alternate config file */
-                memset(&radconfig, '\0', sizeof(rad_config_t));
+                radconfig = rad_config_t{};
                 havefile = 1;
             }
             read_config(optarg, &radconfig);
