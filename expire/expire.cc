@@ -8,6 +8,7 @@
 #include <errno.h>
 #include <sys/stat.h>
 #include <syslog.h>
+#include <string>
 #include <time.h>
 
 #include "inn/history.h"
@@ -39,7 +40,8 @@ static bool EXPusepost;
 static bool Ignoreselfexpire = false;
 static FILE *EXPunlinkfile;
 static EXPIRECLASS EXPclasses[NUM_STORAGE_CLASSES + 1];
-static char *EXPreason;
+/* Why innd is paused; empty when expire is not talking to innd. */
+static std::string EXPreason;
 static time_t EXPremember;
 static time_t Now;
 static time_t RealNow;
@@ -645,7 +647,7 @@ CleanupAndExit(bool Server, bool Paused, int x)
 
     if (Server) {
         ICCreserve("");
-        if (Paused && ICCgo(EXPreason) != 0) {
+        if (Paused && ICCgo(EXPreason.c_str()) != 0) {
             syswarn("cannot unpause server");
             x = 1;
         }
@@ -680,9 +682,6 @@ CleanupAndExit(bool Server, bool Paused, int x)
 
     SMshutdown();
     HISclose(History);
-    if (EXPreason != nullptr)
-        free(EXPreason);
-
     if (NHistory != nullptr)
         free(NHistory);
     closelog();
@@ -704,12 +703,10 @@ int
 main(int ac, char *av[])
 {
     int i;
-    char *p;
     FILE *F;
     char *HistoryText;
     const char *NHistoryPath = nullptr;
     const char *NHistoryText = nullptr;
-    char *EXPhistdir;
     char buff[SMBUF];
     bool Server;
     bool Bad;
@@ -750,11 +747,9 @@ main(int ac, char *av[])
     umask(NEWSUMASK);
 
     /* find the default history database directory */
-    EXPhistdir = xstrdup(HistoryText);
-    p = strrchr(EXPhistdir, '/');
-    if (p != nullptr) {
-        *p = '\0';
-    }
+    std::string EXPhistdir = HistoryText;
+    if (auto slash = EXPhistdir.rfind('/'); slash != std::string::npos)
+        EXPhistdir.erase(slash);
 
     /* Parse JCL. */
     while ((i = getopt(ac, av, "d:f:g:h:iNnpr:s:tv:w:xz:")) != EOF)
@@ -787,8 +782,7 @@ main(int ac, char *av[])
             EXPusepost = true;
             break;
         case 'r':
-            free(EXPreason);
-            EXPreason = xstrdup(optarg);
+            EXPreason = optarg;
             break;
         case 's':
             Size = atoi(optarg);
@@ -855,14 +849,10 @@ main(int ac, char *av[])
 
     /* Set up the link, reserve the lock. */
     if (Server) {
-        if (EXPreason == nullptr) {
-            snprintf(buff, sizeof(buff), "Expiring process %ld",
-                     (long) getpid());
-            EXPreason = xstrdup(buff);
-        }
+        if (EXPreason.empty())
+            EXPreason = "Expiring process " + std::to_string(getpid());
     } else {
-        free(EXPreason);
-        EXPreason = nullptr;
+        EXPreason.clear();
     }
 
     if (Server) {
@@ -871,7 +861,7 @@ main(int ac, char *av[])
             syswarn("cannot open channel to server");
             CleanupAndExit(false, false, 1);
         }
-        if (ICCreserve((char *) EXPreason) != 0) {
+        if (ICCreserve(EXPreason.c_str()) != 0) {
             warn("cannot reserve server");
             CleanupAndExit(false, false, 1);
         }
@@ -950,8 +940,8 @@ main(int ac, char *av[])
         warn("cannot initialize storage manager: %s", SMerrorstr);
         CleanupAndExit(Server, false, 1);
     }
-    if (chdir(EXPhistdir) < 0) {
-        syswarn("cannot chdir to %s", EXPhistdir);
+    if (chdir(EXPhistdir.c_str()) < 0) {
+        syswarn("cannot chdir to %s", EXPhistdir.c_str());
         CleanupAndExit(Server, false, 1);
     }
 
@@ -972,7 +962,10 @@ main(int ac, char *av[])
             tombstone = EXPloadtombstone(consuming, &expireover_path,
                                          &cancels_snapshot);
 
-        Bad = HISexpire(History, NHistory, EXPreason, Writing, tombstone,
+        /* hisv6 pauses innd only when given a reason. */
+        Bad = HISexpire(History, NHistory,
+                        EXPreason.empty() ? nullptr : EXPreason.c_str(),
+                        Writing, tombstone,
                         EXPremember, EXPdoline)
               == false;
 
