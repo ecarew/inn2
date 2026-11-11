@@ -752,7 +752,7 @@ tapesSetCheckNew(void)
 
 
 /* Get the pathname of the directory tapes are stored in. */
-const char *
+const std::string &
 getTapeDirectory(void)
 {
 #if defined(INNFEED_DEBUG)
@@ -761,7 +761,7 @@ getTapeDirectory(void)
 #endif
     ASSERT(!tapeDirectory.empty());
 
-    return tapeDirectory.c_str();
+    return tapeDirectory;
 }
 
 

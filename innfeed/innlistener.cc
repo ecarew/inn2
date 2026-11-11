@@ -669,12 +669,12 @@ void
 openDroppedArticleFile(void)
 {
     pid_t myPid = getpid();
-    const char *tapeDir = getTapeDirectory();
 
     if (dropArtFile != NULL)
         free(dropArtFile);
 
-    xasprintf(&dropArtFile, "%s/innfeed-dropped.%c%06d", tapeDir,
+    xasprintf(&dropArtFile, "%s/innfeed-dropped.%c%06d",
+              getTapeDirectory().c_str(),
               droppedFileCount + 'A', (int) myPid);
 
     if ((droppedFp = fopen(dropArtFile, "w")) == NULL) {

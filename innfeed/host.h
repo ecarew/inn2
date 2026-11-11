@@ -148,12 +148,10 @@ bool hostGimmeArticle(Host host, Connection cxn);
 
 
 /* Get the bindaddress. */
-const char *hostBindAddr(Host host);
-const char *hostBindAddr6(Host host);
+
 
 /* get the username and password for authentication */
-const char *hostUsername(Host host);
-const char *hostPassword(Host host);
+
 
 /* if VAL is true then each time the host logs its stats all its
    connections will too. */
@@ -196,5 +194,12 @@ END_DECLS
 /* C++ linkage: get the name that INN uses for this host.  The reference is
    to the host's own string; callers pass c_str() only as an argument. */
 const std::string &hostPeerName(Host host);
+
+/* The host's bind addresses (IPv4, IPv6) and AUTHINFO user name and
+   password; empty when not configured. */
+const std::string &hostBindAddr(Host host);
+const std::string &hostBindAddr6(Host host);
+const std::string &hostUsername(Host host);
+const std::string &hostPassword(Host host);
 
 #endif /* HOST_H */

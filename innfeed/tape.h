@@ -19,6 +19,8 @@
 #include "misc.h"
 #include <stdio.h>
 
+#include <string>
+
 BEGIN_DECLS
 
 /* Variable to export. */
@@ -56,7 +58,7 @@ void tapeFlush(Tape tape);
 void checkPointTapes(void);
 
 /* get the name of the directory tapes are being stored in. */
-const char *getTapeDirectory(void);
+
 
 /* set the size limit of the output tapes. Default is zero which is no
    limit. */
@@ -68,5 +70,8 @@ void tapeLogGlobalStatus(FILE *fp);
 void tapeLogStatus(Tape tape, FILE *fp);
 
 END_DECLS
+
+/* C++ linkage: the pathname of the directory tapes are stored in. */
+const std::string &getTapeDirectory(void);
 
 #endif /* TAPE_H */

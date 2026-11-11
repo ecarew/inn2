@@ -2299,51 +2299,44 @@ hostPeerName(Host host)
     return host->params->peerName;
 }
 
-/* A parameter for the callers, which take NULL for "not set". */
-static const char *
-unlessEmpty(const std::string &s)
-{
-    return s.empty() ? NULL : s.c_str();
-}
-
 /*
  * Get the IPv4 bindAddr.
  */
-const char *
+const std::string &
 hostBindAddr(Host host)
 {
     ASSERT(host != NULL);
 
-    return unlessEmpty(host->params->bindAddr);
+    return host->params->bindAddr;
 }
 
 /*
  * Get the IPv6 bindAddr6.
  */
-const char *
+const std::string &
 hostBindAddr6(Host host)
 {
     ASSERT(host != NULL);
 
-    return unlessEmpty(host->params->bindAddr6);
+    return host->params->bindAddr6;
 }
 
 /*
  * get the username and password for authentication
  */
-const char *
+const std::string &
 hostUsername(Host host)
 {
     ASSERT(host != NULL);
 
-    return unlessEmpty(host->params->username);
+    return host->params->username;
 }
-const char *
+const std::string &
 hostPassword(Host host)
 {
     ASSERT(host != NULL);
 
-    return unlessEmpty(host->params->password);
+    return host->params->password;
 }
 
 

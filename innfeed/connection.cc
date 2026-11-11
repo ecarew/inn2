@@ -472,7 +472,7 @@ cxnConnect(Connection cxn)
     struct sockaddr *cxnAddr;
     socklen_t len;
     int fd, rval;
-    const char *src;
+    std::string src; /* the address to bind to; empty for any */
     const std::string peerName = hostPeerName(cxn->myHost);
 
     ASSERT(cxn->myEp == NULL);
@@ -511,10 +511,11 @@ cxnConnect(Connection cxn)
         len = sizeof(struct sockaddr);
 #endif
     }
-    if (src && strcmp(src, "none") == 0)
-        src = NULL;
+    if (src == "none")
+        src.clear();
 
-    fd = network_client_create(cxnAddr->sa_family, SOCK_STREAM, src);
+    fd = network_client_create(cxnAddr->sa_family, SOCK_STREAM,
+                               src.empty() ? NULL : src.c_str());
     if (fd < 0) {
         syswarn("%s:%u cxnsleep can't create socket", peerName.c_str(), cxn->ident);
         d_printf(1, "Can't get a socket: %s\n", strerror(errno));
@@ -1347,8 +1348,8 @@ getBanner(EndPoint e, IoStatus i, Buffer *b, Connection cxn)
                the IPv4 addresses from the address list. */
             connectionIfIpv6DeleteIpv4Addr(cxn);
 
-            if (hostUsername(cxn->myHost) != NULL
-                && hostPassword(cxn->myHost) != NULL)
+            if (!hostUsername(cxn->myHost).empty()
+                && !hostPassword(cxn->myHost).empty())
                 issueAuthUser(e, cxn);
             else
                 issueModeStream(e, cxn);
@@ -1367,11 +1368,11 @@ issueAuthUser(EndPoint e, Connection cxn)
     char *t;
 
     /* 17 == strlen("AUTHINFO USER \r\n\0") */
-    lenBuff = (17 + strlen(hostUsername(cxn->myHost)));
+    lenBuff = 17 + hostUsername(cxn->myHost).size();
     authUserBuffer = newBuffer(lenBuff);
     t = static_cast<char *>(bufferBase(authUserBuffer));
 
-    sprintf(t, "AUTHINFO USER %s\r\n", hostUsername(cxn->myHost));
+    sprintf(t, "AUTHINFO USER %s\r\n", hostUsername(cxn->myHost).c_str());
     bufferSetDataSize(authUserBuffer, strlen(t));
 
     authUserCmdBuffers = makeBufferArray(authUserBuffer, NULL);
@@ -1403,11 +1404,11 @@ issueAuthPass(EndPoint e, Connection cxn)
     char *t;
 
     /* 17 == strlen("AUTHINFO PASS \r\n\0") */
-    lenBuff = (17 + strlen(hostPassword(cxn->myHost)));
+    lenBuff = 17 + hostPassword(cxn->myHost).size();
     authPassBuffer = newBuffer(lenBuff);
     t = static_cast<char *>(bufferBase(authPassBuffer));
 
-    sprintf(t, "AUTHINFO PASS %s\r\n", hostPassword(cxn->myHost));
+    sprintf(t, "AUTHINFO PASS %s\r\n", hostPassword(cxn->myHost).c_str());
     bufferSetDataSize(authPassBuffer, strlen(t));
 
     authPassCmdBuffers = makeBufferArray(authPassBuffer, NULL);

@@ -774,7 +774,7 @@ mainConfigLoadCbk(FILE *fp)
 
     if (getString(topScope, "input-file", value, NO_INHERIT)) {
         if (!value.empty())
-            InputFile = pathIn(getTapeDirectory(), value.c_str());
+            InputFile = pathIn(getTapeDirectory().c_str(), value.c_str());
         else
             InputFile = std::string();
     }
