@@ -469,7 +469,7 @@ SITEwritefromflags(SITE *sp, ARTDATA *Data)
                 buffer_append(bp, sp->FNLnames.data, sp->FNLnames.left);
             } else {
                 /* Not funnel; write names of all sites that got it. */
-                for (spx = Sites, i = nSites; --i >= 0; spx++)
+                for (spx = Sites.data(), i = nSites; --i >= 0; spx++)
                     if (spx->Sendit) {
                         if (Dirty)
                             buffer_append(bp, ITEMSEP, strlen(ITEMSEP));
@@ -656,7 +656,7 @@ SITEstartprocess(SITE *sp)
     if (i > 0) {
         sp->pid = i;
         sp->Spooling = false;
-        sp->Process = PROCwatch(i, sp - Sites);
+        sp->Process = PROCwatch(i, sp - Sites.data());
         close(pan[PIPE_READ]);
         sp->Channel = CHANcreate(
             pan[PIPE_WRITE], sp->Type == FTchannel ? CTprocess : CTexploder,
@@ -676,7 +676,7 @@ SITEstartprocess(SITE *sp)
     /* We'll try to restart the channel later. */
     syslog(L_ERROR, "%s cant spawn spooling %m", sp->Name);
     ip = xmalloc(sizeof(int));
-    *ip = sp - Sites;
+    *ip = sp - Sites.data();
     SCHANadd(sp->Channel, Now.tv_sec + innconf->chanretrytime, nullptr,
              SITEspoolwake, ip);
     return true;
@@ -711,12 +711,12 @@ SITEmovetohead(SITE *sp)
         SITEunlink(sp);
 
     if ((sp->Next = SITEhead) != NOSITE)
-        Sites[SITEhead].Prev = sp - Sites;
+        Sites[SITEhead].Prev = sp - Sites.data();
     sp->Prev = NOSITE;
 
-    SITEhead = sp - Sites;
+    SITEhead = sp - Sites.data();
     if (SITEtail == NOSITE)
-        SITEtail = sp - Sites;
+        SITEtail = sp - Sites.data();
 
     SITEcount++;
 }
@@ -821,7 +821,7 @@ SITEchanclose(CHANNEL *cp)
     SITE *sp;
     int *ip;
 
-    for (i = nSites, sp = Sites; --i >= 0; sp++)
+    for (i = nSites, sp = Sites.data(); --i >= 0; sp++)
         if (sp->Channel == cp) {
             /* Found the site that has this channel.  Start that
              * site spooling, copy any data that might be pending,
@@ -834,7 +834,7 @@ SITEchanclose(CHANNEL *cp)
             WCHANsetfrombuffer(sp->Channel, &cp->Out);
             WCHANadd(sp->Channel);
             ip = xmalloc(sizeof(int));
-            *ip = sp - Sites;
+            *ip = sp - Sites.data();
             SCHANadd(sp->Channel, Now.tv_sec + innconf->chanretrytime, nullptr,
                      SITEspoolwake, ip);
             break;
@@ -948,7 +948,7 @@ SITEflushall(const bool Restart)
     int i;
     SITE *sp;
 
-    for (i = nSites, sp = Sites; --i >= 0; sp++)
+    for (i = nSites, sp = Sites.data(); --i >= 0; sp++)
         if (sp->Name)
             SITEflush(sp, Restart);
 }
@@ -1029,7 +1029,7 @@ SITEfind(const char *p)
     int i;
     SITE *sp;
 
-    for (i = nSites, sp = Sites; --i >= 0; sp++)
+    for (i = nSites, sp = Sites.data(); --i >= 0; sp++)
         if (sp->Name && strcasecmp(p, sp->Name) == 0)
             return sp;
     return nullptr;
@@ -1125,12 +1125,12 @@ SITEfree(SITE *sp)
 
     /* If this site was a master, find a new one. */
     if (sp->IsMaster) {
-        for (newmaster = NOSITE, s = Sites, i = nSites; --i >= 0; s++)
+        for (newmaster = NOSITE, s = Sites.data(), i = nSites; --i >= 0; s++)
             if (&Sites[s->Master] == sp) {
                 if (newmaster == NOSITE) {
                     s->Master = NOSITE;
                     s->IsMaster = true;
-                    newmaster = s - Sites;
+                    newmaster = s - Sites.data();
                 } else
                     s->Master = newmaster;
             }

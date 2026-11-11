@@ -385,13 +385,13 @@ CCbegin(char *av[])
     else {
         /* Get space for the new site entry, and space for it in all
          * the groups. */
-        for (i = nSites, sp = Sites; --i >= 0; sp++)
+        for (i = nSites, sp = Sites.data(); --i >= 0; sp++)
             if (sp->Name == nullptr)
                 break;
         if (i < 0) {
-            nSites++;
-            Sites = xrealloc(Sites, nSites * sizeof(SITE));
-            sp = &Sites[nSites - 1];
+            Sites.emplace_back();
+            nSites = Sites.size();
+            sp = &Sites.back();
             sp->Next = sp->Prev = NOSITE;
             for (i = nGroups, ngp = Groups; --i >= 0; ngp++) {
                 ngp->Sites = xrealloc(ngp->Sites, nSites * sizeof(int));
@@ -578,7 +578,7 @@ CCdrop(char *av[])
     SITEdrop(sp);
 
     /* Loop over all groups, and if the site is in a group, clobber it. */
-    for (idx = sp - Sites, i = nGroups, ngp = Groups; --i >= 0; ngp++) {
+    for (idx = sp - Sites.data(), i = nGroups, ngp = Groups; --i >= 0; ngp++) {
         for (j = ngp->nSites, ip = ngp->Sites; --j >= 0; ip++)
             if (*ip == idx)
                 *ip = NOSITE;
@@ -610,7 +610,7 @@ CCfeedinfo(char *av[])
         while ((sp = SITEfindnext(p, sp)) != nullptr)
             SITEinfo(&CCreply, sp, true);
     } else
-        for (i = nSites, sp = Sites; --i >= 0; sp++)
+        for (i = nSites, sp = Sites.data(); --i >= 0; sp++)
             if (sp->Name)
                 SITEinfo(&CCreply, sp, false);
 
@@ -669,7 +669,7 @@ CCflush(char *av[])
     p = av[0];
     if (*p == '\0') {
         ICDwrite();
-        for (sp = Sites, i = nSites; --i >= 0; sp++)
+        for (sp = Sites.data(), i = nSites; --i >= 0; sp++)
             SITEflush(sp, true);
         syslog(L_NOTICE, "%s flush_all", LogName);
     } else {
@@ -701,7 +701,7 @@ CCflushlogs(char *unused[] UNUSED)
     ReopenLog(Errlog);
     /* Flush exploder and process channels so that they take into account
      * the new log files (for instance during log rotation). */
-    for (sp = Sites, i = nSites; --i >= 0; sp++) {
+    for (sp = Sites.data(), i = nSites; --i >= 0; sp++) {
         if (((cp = sp->Channel) != nullptr)
             && ((cp->Type == CTexploder) || (cp->Type == CTprocess))) {
             SITEflush(sp, true);

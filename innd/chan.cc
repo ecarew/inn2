@@ -500,7 +500,7 @@ CHANname(CHANNEL *cp)
         /* Find the site that has this channel. */
         site = "?";
         pid = 0;
-        for (i = nSites, sp = Sites; --i >= 0; sp++)
+        for (i = nSites, sp = Sites.data(); --i >= 0; sp++)
             if (sp->Channel == cp) {
                 site = sp->Name;
                 if (cp->Type != CTfile)

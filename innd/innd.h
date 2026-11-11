@@ -52,6 +52,7 @@
 #include "inn/timer.h"
 #include "inn/vector.h"
 #include <string_view>
+#include <vector>
 
 BEGIN_DECLS
 
@@ -738,7 +739,9 @@ EXTERN NEWSGROUP **GroupPointers;
 EXTERN NEWSGROUP *Groups;
 extern OPERATINGMODE Mode;
 EXTERN sig_atomic_t GotTerminate;
-EXTERN SITE *Sites;
+/* Indexed by SITEIDX; nSites mirrors Sites.size().  Nothing keeps a
+   SITE * across a call that can grow the table. */
+EXTERN std::vector<SITE> Sites;
 EXTERN SITE ME;
 EXTERN struct timeval TimeOut;
 EXTERN struct timeval Now; /* Reasonably accurate time */

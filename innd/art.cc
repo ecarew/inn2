@@ -1415,7 +1415,7 @@ ARTsendthegroup(char *name, char *fromgroup)
     int i;
     NEWSGROUP *ngp;
 
-    for (ngp = NGfind(fromgroup), sp = Sites, i = nSites; --i >= 0; sp++) {
+    for (ngp = NGfind(fromgroup), sp = Sites.data(), i = nSites; --i >= 0; sp++) {
         if (sp->Name != nullptr && SITEwantsgroup(sp, name)) {
             SITEmark(sp, ngp);
         }
@@ -1432,7 +1432,7 @@ ARTpoisongroup(char *name)
     SITE *sp;
     int i;
 
-    for (sp = Sites, i = nSites; --i >= 0; sp++) {
+    for (sp = Sites.data(), i = nSites; --i >= 0; sp++) {
         if (sp->Name != nullptr && (sp->PoisonEntry || ME.PoisonEntry)
             && SITEpoisongroup(sp, name))
             sp->Poison = true;
@@ -1706,7 +1706,7 @@ ARTpropagate(ARTDATA *data, const char **hops, int hopcount, char **list,
     Groupcount = data->Groupcount;
     Followcount = data->Followcount;
     Crosscount = Groupcount + Followcount * Followcount;
-    for (sp = Sites, i = nSites; --i >= 0; sp++) {
+    for (sp = Sites.data(), i = nSites; --i >= 0; sp++) {
         if ((sp->IgnoreControl && ControlStore)
             || (sp->NeedOverviewCreation && !OverviewCreated))
             sp->Sendit = false;
@@ -1839,7 +1839,7 @@ ARTpropagate(ARTDATA *data, const char **hops, int hopcount, char **list,
     }
 
     /* Handle funnel sites. */
-    for (sp = Sites, i = nSites; --i >= 0; sp++) {
+    for (sp = Sites.data(), i = nSites; --i >= 0; sp++) {
         if (sp->Sendit && sp->Funnel != NOSITE) {
             sp->Sendit = false;
             funnel = &Sites[sp->Funnel];
@@ -2189,7 +2189,7 @@ ARTpost(CHANNEL *cp)
         ARTparsedist("", 0, data->State->distribution);
     }
 
-    for (i = nSites, sp = Sites; --i >= 0; sp++) {
+    for (i = nSites, sp = Sites.data(); --i >= 0; sp++) {
         sp->Poison = false;
         sp->Sendit = false;
         sp->Seenit = false;
@@ -2296,7 +2296,7 @@ ARTpost(CHANNEL *cp)
             } else if (innconf->wanttrash && !innconf->verifygroups) {
                 /* Don't set Accepted in this case, because we may still end
                  * up filing the article in the junk group. */
-                for (ngpjunk = NGfind(ARTjnk), sp = Sites, i = nSites;
+                for (ngpjunk = NGfind(ARTjnk), sp = Sites.data(), i = nSites;
                      --i >= 0; sp++) {
                     if (sp->Name != nullptr && sp->FeedTrash
                         && SITEwantsgroup(sp, *groups)) {
@@ -2504,7 +2504,7 @@ ARTpost(CHANNEL *cp)
     *ngptr = nullptr;
 
     /* Loop over sites to find Poisons/ControlOnly and undo Sendit flags. */
-    for (i = nSites, sp = Sites; --i >= 0; sp++) {
+    for (i = nSites, sp = Sites.data(); --i >= 0; sp++) {
         if (sp->Poison || (sp->ControlOnly && !IsControl)
             || (sp->DontWantNonExist && NonExist))
             sp->Sendit = false;
@@ -2678,7 +2678,7 @@ ARTpost(CHANNEL *cp)
     /* And finally, send to everyone who should get it.
      * sp->Sendit is false for funnel sites: ARTpropagate()
      * transferred it to the corresponding funnel. */
-    for (sp = Sites, i = nSites; --i >= 0; sp++) {
+    for (sp = Sites.data(), i = nSites; --i >= 0; sp++) {
         if (sp->Sendit) {
             TMRstart(TMR_SITESEND);
             SITEsend(sp, data);

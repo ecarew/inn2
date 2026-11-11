@@ -798,7 +798,7 @@ SITEparseone(char *Entry, SITE *sp, char *subbed, char *poison)
 
     /* Now tell the groups this site gets that they should feed this site. */
     if (sp != &ME && subbed) {
-        isp = sp - Sites;
+        isp = sp - Sites.data();
         for (p = subbed, u = poison, ngp = Groups, i = nGroups; --i >= 0;
              ngp++) {
             if (*p++) {
@@ -830,7 +830,7 @@ SITEparseone(char *Entry, SITE *sp, char *subbed, char *poison)
         if (nsp->Master != NOSITE)
             nsp = &Sites[nsp->Master];
         if (nsp != sp) {
-            sp->Master = nsp - Sites;
+            sp->Master = nsp - Sites.data();
             nsp->IsMaster = true;
         }
     }
@@ -852,12 +852,12 @@ SITEfunnelpatch(void)
     bool result;
 
     /* Get worst-case length of all sitenames. */
-    for (length = 0, i = nSites, sp = Sites; --i >= 0; sp++)
+    for (length = 0, i = nSites, sp = Sites.data(); --i >= 0; sp++)
         if (sp->Name != nullptr)
             length += 1 + strlen(sp->Name);
 
     /* Loop over all funnel feeds. */
-    for (result = true, i = nSites, sp = Sites; --i >= 0; sp++) {
+    for (result = true, i = nSites, sp = Sites.data(); --i >= 0; sp++) {
         if (sp->Name == nullptr || sp->Type != FTfunnel)
             continue;
 
@@ -881,7 +881,7 @@ SITEfunnelpatch(void)
             continue;
         }
         buffer_resize(&funnel->FNLnames, length);
-        sp->Funnel = funnel - Sites;
+        sp->Funnel = funnel - Sites.data();
     }
 
     return result;
@@ -905,19 +905,19 @@ SITEparsefile(bool StartSite)
     int setuperrors;
 
     /* Free old sites info. */
-    if (Sites) {
-        for (i = nSites, sp = Sites; --i >= 0; sp++) {
+    if (!Sites.empty()) {
+        for (i = nSites, sp = Sites.data(); --i >= 0; sp++) {
             SITEflush(sp, false);
             SITEfree(sp);
         }
-        free(Sites);
+        Sites.clear();
         SITEfree(&ME);
     }
 
     /* Count the number of sites. */
     for (strings = SITEreadfile(false), nSites = 0; strings[nSites]; nSites++)
         continue;
-    Sites = xcalloc(nSites, sizeof(SITE));
+    Sites.assign(nSites, SITE{});
 
     /* Set up scratch subscription list. */
     subbed = xmalloc(nGroups);
@@ -927,7 +927,7 @@ SITEparsefile(bool StartSite)
         false;
 
     ME.Prev = 0; /* Used as a flag to ensure exactly one ME entry */
-    for (sp = Sites, errors = 0, setuperrors = 0, i = 0; i < nSites; i++) {
+    for (sp = Sites.data(), errors = 0, setuperrors = 0, i = 0; i < nSites; i++) {
         p = strings[i];
         if (p[0] == 'M' && p[1] == 'E'
             && ((p[2] == NF_FIELD_SEP) || (p[2] == NF_SUBFIELD_SEP))) {
@@ -970,7 +970,8 @@ SITEparsefile(bool StartSite)
     }
 
     /* Free our scratch array, set up the funnel links. */
-    nSites = sp - Sites;
+    nSites = sp - Sites.data();
+    Sites.resize(nSites);
     free(subbed);
     free(poison);
     free(strings);
