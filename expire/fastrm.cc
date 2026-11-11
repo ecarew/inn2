@@ -19,7 +19,11 @@
 #include <dirent.h>
 #include <errno.h>
 #include <sys/stat.h>
+#include <optional>
+#include <string>
+#include <string_view>
 #include <syslog.h>
+#include <vector>
 
 #include "inn/innconf.h"
 #include "inn/libinn.h"
@@ -32,12 +36,14 @@
 #define MAX_DIR_LEN 2048
 
 /* Data structure for a list of files in a single directory. */
-typedef struct filelist {
-    int count;
-    int size;
-    char *dir;
-    char **files;
-} filelist;
+struct filelist {
+    /* The directory part of the names.  std::nullopt when the names had no
+       '/' (relative to base_dir), "" when they were directly under the root
+       ("/name"): the two lead to different directories, so this is one of
+       the strdup plan's std::optional cases. */
+    std::optional<std::string> dir;
+    std::vector<std::string> files;
+};
 
 /* All relative paths are relative to this directory. */
 static char *base_dir = nullptr;
@@ -81,16 +87,9 @@ static bool sm_initialized = false;
 **  Create a new filelist.
 */
 static filelist *
-filelist_new(char *dir)
+filelist_new(std::optional<std::string> dir)
 {
-    filelist *list;
-
-    list = xmalloc(sizeof(filelist));
-    list->count = 0;
-    list->size = 0;
-    list->dir = dir;
-    list->files = nullptr;
-    return list;
+    return new filelist{std::move(dir), {}};
 }
 
 
@@ -98,54 +97,22 @@ filelist_new(char *dir)
 **  Insert a file name into a list of files (unsorted).
 */
 static void
-filelist_insert(filelist *list, char *name)
+filelist_insert(filelist *list, const char *name)
 {
-    if (list->count == list->size) {
-        size_t newsize;
-
-        if (list->size == 0)
-            newsize = 16;
-        else if (list->size > INT_MAX / 2)
-            die("file list grew too large");
-        else
-            newsize = (size_t) list->size * 2;
-        list->files = xreallocarray(list->files, newsize, sizeof(char *));
-        list->size = (int) newsize;
-    }
-    list->files[list->count++] = xstrdup(name);
+    /* Counts are passed around as int. */
+    if (list->files.size() >= INT_MAX)
+        die("file list grew too large");
+    list->files.emplace_back(name);
 }
 
 
 /*
 **  Find a file name in a sorted list of files.
 */
-static char *
-filelist_lookup(filelist *list, const char *name)
+static bool
+filelist_lookup(const filelist *list, std::string_view name)
 {
-    char **end = list->files + list->count;
-    char **p = std::lower_bound(list->files, end, name,
-                                [](const char *f, const char *n) {
-                                    return strcmp(f, n) < 0;
-                                });
-
-    return (p == end || strcmp(*p, name) != 0 ? nullptr : *p);
-}
-
-
-/*
-**  Empty a list of files, freeing all of the names but keeping the
-**  structure intact.
-*/
-static void
-filelist_empty(filelist *list)
-{
-    int i;
-
-    if (list->files == nullptr)
-        return;
-    for (i = 0; i < list->count; i++)
-        free(list->files[i]);
-    list->count = 0;
+    return std::binary_search(list->files.begin(), list->files.end(), name);
 }
 
 
@@ -155,12 +122,7 @@ filelist_empty(filelist *list)
 static void
 filelist_free(filelist *list)
 {
-    filelist_empty(list);
-    if (list->files != nullptr)
-        free(list->files);
-    if (list->dir != nullptr)
-        free(list->dir);
-    free(list);
+    delete list;
 }
 
 
@@ -237,7 +199,6 @@ process_line(QIOSTATE *qp, int *queued, int *deleted)
     static char *line = nullptr;
     filelist *list = nullptr;
     char *p;
-    char *dir = nullptr;
     int dlen = -1;
 
     *queued = 0;
@@ -266,17 +227,16 @@ process_line(QIOSTATE *qp, int *queued, int *deleted)
                 if (p != nullptr) {
                     *p++ = '\0';
                     dlen = strlen(line);
-                    dir = xstrdup(line);
+                    list = filelist_new(std::string(line, dlen));
                 } else {
                     dlen = -1;
-                    dir = nullptr;
+                    list = filelist_new(std::nullopt);
                 }
-                list = filelist_new(dir);
             } else {
                 if ((dlen < 0 && strchr(line, '/'))
                     || (dlen >= 0
                         && (line[dlen] != '/' || strchr(line + dlen + 1, '/')
-                            || strncmp(dir, line, dlen))))
+                            || list->dir->compare(0, dlen, line, dlen) != 0)))
                     return list;
             }
             filelist_insert(list, line + dlen + 1);
@@ -383,9 +343,10 @@ chdir_checked(const char *path, int filecount)
 **  removed; otherwise, return true.
 */
 static bool
-setup_dir(char *dir, int filecount)
+setup_dir(const char *dir, int filecount)
 {
-    char *p, *q, *absolute;
+    const char *p, *absolute;
+    char *q;
     char path[MAX_DIR_LEN];
     int base_depth, depth;
 
@@ -499,7 +460,7 @@ unlink_filelist(filelist *list, int filecount)
 
     /* If setup_dir returns false, the directory doesn't exist and we're
        already all done. */
-    if (!setup_dir(list->dir, filecount)) {
+    if (!setup_dir(list->dir ? list->dir->c_str() : nullptr, filecount)) {
         filelist_free(list);
         return;
     }
@@ -517,8 +478,8 @@ unlink_filelist(filelist *list, int filecount)
     /* If we're not sorting directories or if the number of files is under
        the threshold, just remove the files. */
     if (sort_threshold == 0 || filecount < sort_threshold) {
-        for (i = 0; i < list->count; i++) {
-            strlcpy(file, list->files[i], sizeof(prefix_dir) - prefix_len);
+        for (const std::string &name : list->files) {
+            strlcpy(file, name.c_str(), sizeof(prefix_dir) - prefix_len);
             unlink_file(prefix_dir);
         }
         filelist_free(list);
@@ -528,12 +489,9 @@ unlink_filelist(filelist *list, int filecount)
     /* We have enough files to remove in this directory that it's worth
        optimizing.  First, make sure the list of files is sorted.  It's not
        uncommon for the files to already be sorted, so check first. */
-    for (sorted = true, i = 1; sorted && i < list->count; i++)
-        sorted = (strcmp(list->files[i - 1], list->files[i]) <= 0);
+    sorted = std::is_sorted(list->files.begin(), list->files.end());
     if (!sorted)
-        std::sort(
-            list->files, list->files + list->count,
-            [](const char *a, const char *b) { return strcmp(a, b) < 0; });
+        std::sort(list->files.begin(), list->files.end());
 
     /* Now, begin doing our optimized unlinks.  The technique we use is to
        open the directory containing the files and read through it, checking
@@ -555,11 +513,11 @@ unlink_filelist(filelist *list, int filecount)
         return;
     }
     for (i = 0, entry = readdir(dir); entry != nullptr; entry = readdir(dir))
-        if (filelist_lookup(list, entry->d_name) != nullptr) {
+        if (filelist_lookup(list, entry->d_name)) {
             i++;
             strlcpy(file, entry->d_name, sizeof(prefix_dir) - prefix_len);
             unlink_file(prefix_dir);
-            if (i == list->count)
+            if ((size_t) i == list->files.size())
                 break;
         }
     closedir(dir);
