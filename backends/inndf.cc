@@ -47,6 +47,8 @@
 
 #include "portable/system.h"
 
+#include <string>
+
 #include "inn/innconf.h"
 #include "inn/libinn.h"
 #include "inn/messages.h"
@@ -229,7 +231,7 @@ main(int argc, char *argv[])
     struct overview *overview = nullptr;
     struct overview_group stats;
     float used;
-    char *file = nullptr;
+    std::string file; /* -f or -F; empty when neither */
     bool inode = false;
     bool ovcount = false;
     bool ovused = false;
@@ -252,16 +254,18 @@ main(int argc, char *argv[])
             ovused = true;
             break;
         case 'f':
-            if (file != nullptr)
+            if (!file.empty())
                 die("inndf: Only one of -f or -F may be given");
-            file = xstrdup(optarg);
+            if (*optarg == '\0')
+                die("inndf: -f needs a file name");
+            file = optarg;
             break;
         case 'F':
-            if (file != nullptr)
+            if (!file.empty())
                 die("inndf: Only one of -f or -F may be given");
             if (!innconf_read(nullptr))
                 exit(1);
-            file = concatpath(innconf->pathetc, INN_PATH_FILESYSTEMS);
+            file = std::string(innconf->pathetc) + "/" INN_PATH_FILESYSTEMS;
             use_filesystems = true;
             break;
         }
@@ -269,7 +273,7 @@ main(int argc, char *argv[])
     argc -= optind;
     argv += optind;
 
-    if (argc == 0 && !ovused && !ovcount && file == nullptr)
+    if (argc == 0 && !ovused && !ovcount && file.empty())
         die(usage);
 
     /* Set the program name now rather than earlier so that it doesn't get
@@ -280,17 +284,17 @@ main(int argc, char *argv[])
        one was given, just print out the number without the path or any
        explanatory text; this mode is used by e.g. innwatch.  Otherwise,
        format things nicely. */
-    if (argc == 1 && !ovused && !ovcount && file == nullptr) {
+    if (argc == 1 && !ovused && !ovcount && file.empty()) {
         printspace(argv[0], inode, false);
         printf("\n");
     } else {
         for (i = 0; i < argc; i++)
             printspace_formatted(argv[i], inode);
-        if (file != nullptr) {
-            qp = QIOopen(file);
+        if (!file.empty()) {
+            qp = QIOopen(file.c_str());
             if (qp == nullptr) {
                 if (!use_filesystems)
-                    sysdie("can't open %s", file);
+                    sysdie("can't open %s", file.c_str());
             } else {
                 line = readline(qp);
                 while (line != nullptr) {
@@ -299,7 +303,6 @@ main(int argc, char *argv[])
                 }
                 QIOclose(qp);
             }
-            free(file);
         }
     }
 
