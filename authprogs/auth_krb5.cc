@@ -213,8 +213,7 @@ cleanup:
 int
 main(int argc, char *argv[])
 {
-    struct auth_info *authinfo;
-    char *new_user;
+    std::optional<auth_info> authinfo;
 
     message_program_name = "auth_krb5";
 
@@ -225,26 +224,25 @@ main(int argc, char *argv[])
       is there to prevent authentication against another Kerberos realm; there
       should be a -r <realm> command line option to make this check unnecessary
       in the future. */
-    if (authinfo == nullptr)
+    if (!authinfo)
         die("no authentication information from nnrpd");
-    if (authinfo->username[0] == '\0')
+    if (authinfo->username.empty())
         die("null username");
-    if (strchr(authinfo->username, '@') != nullptr)
+    if (authinfo->username.find('@') != std::string::npos)
         die("username contains @, not allowed");
 
     /* May need to prepend instance name if -i option was given. */
     if (argc > 1) {
         if (argc == 3 && strcmp(argv[1], "-i") == 0) {
-            xasprintf(&new_user, "%s/%s", authinfo->username, argv[2]);
-            free(authinfo->username);
-            authinfo->username = new_user;
+            authinfo->username += std::string("/") + argv[2];
         } else {
             die("error parsing command-line options");
         }
     }
 
-    if (krb5_check_password(authinfo->username, authinfo->password)) {
-        print_user(authinfo->username);
+    if (krb5_check_password(authinfo->username.c_str(),
+                            authinfo->password.c_str())) {
+        print_user(authinfo->username.c_str());
         exit(0);
     } else {
         die("failure validating password");

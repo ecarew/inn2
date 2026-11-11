@@ -32,7 +32,7 @@ main(int argc, char *argv[])
 {
     struct servent *s;
     char buf[2048];
-    struct res_info *res;
+    std::optional<res_info> res;
     int sock;
     int opt;
     int truncate_domain = 0;
@@ -76,11 +76,12 @@ main(int argc, char *argv[])
 
     /* Read the connection info from stdin. */
     res = get_res_info(stdin);
-    if (res == nullptr)
+    if (!res)
         die("did not get client information from nnrpd");
 
     /* Connect back to the client system. */
-    sock = network_connect_host(res->clientip, identport, res->localip,
+    sock = network_connect_host(res->clientip.c_str(), identport,
+                                res->localip.c_str(),
                                 DEFAULT_TIMEOUT);
     if (sock < 0) {
         if (errno != ECONNREFUSED)
@@ -90,11 +91,12 @@ main(int argc, char *argv[])
     }
 
     /* send the request out */
-    snprintf(buf, sizeof(buf), "%s , %s\r\n", res->clientport, res->localport);
+    snprintf(buf, sizeof(buf), "%s , %s\r\n", res->clientport.c_str(),
+             res->localport.c_str());
     opt = xwrite(sock, buf, strlen(buf));
     if (opt < 0)
         sysdie("cannot write to ident server");
-    free_res_info(res);
+    res.reset();
 
     /* get the answer back */
     got = 0;

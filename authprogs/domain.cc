@@ -15,8 +15,7 @@
 int
 main(int argc, char *argv[])
 {
-    char *p, *host;
-    struct res_info *res;
+    std::optional<res_info> res;
 
     if (argc != 2)
         die("Usage: domain <domain>");
@@ -24,24 +23,25 @@ main(int argc, char *argv[])
 
     /* Read the connection information from stdin. */
     res = get_res_info(stdin);
-    if (res == nullptr)
+    if (!res)
         die("did not get ClientHost data from nnrpd");
-    host = res->clienthostname;
+    const std::string &host = res->clienthostname;
+    const char *domain = argv[1];
 
     /* Check the host against the provided domain.  Allow the domain to be
        specified both with and without a leading period; if without, make sure
        that there is a period right before where it matches in the host. */
-    p = strstr(host, argv[1]);
-    if (p == host)
-        die("host %s matches the domain exactly", host);
-    if (p == nullptr || (argv[1][0] != '.' && p != host && *(p - 1) != '.'))
-        die("host %s didn't match domain %s", host, argv[1]);
+    size_t at = host.find(domain);
+    if (at == 0)
+        die("host %s matches the domain exactly", host.c_str());
+    if (at == std::string::npos
+        || (domain[0] != '.' && at != 0 && host[at - 1] != '.'))
+        die("host %s didn't match domain %s", host.c_str(), domain);
 
     /* Peel off the portion of the host before where the provided domain
        matches and return it as the user. */
-    if (argv[1][0] != '.')
-        p--;
-    *p = '\0';
-    print_user(host);
+    if (domain[0] != '.')
+        at--;
+    print_user(host.substr(0, at).c_str());
     return 0;
 }

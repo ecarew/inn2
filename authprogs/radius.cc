@@ -237,7 +237,7 @@ req_copyfrom(sending_t *to, auth_req *from)
 }
 
 static int
-rad_auth(rad_config_t *radconfig, char *uname, char *pass)
+rad_auth(rad_config_t *radconfig, const char *uname, const char *pass)
 {
     auth_req req;
     int i, j, jlen, passstart;
@@ -521,7 +521,7 @@ main(int argc, char *argv[])
 {
     int opt;
     int havefile, haveother;
-    struct auth_info *authinfo;
+    std::optional<auth_info> authinfo;
     rad_config_t radconfig;
     int retval;
     char *radius_config;
@@ -562,16 +562,17 @@ main(int argc, char *argv[])
     }
 
     authinfo = get_auth_info(stdin);
-    if (authinfo == nullptr)
+    if (!authinfo)
         die("failed getting auth info");
-    if (authinfo->username[0] == '\0')
+    if (authinfo->username.empty())
         die("empty username");
 
     /* got username and password, check that they're valid */
 
-    retval = rad_auth(&radconfig, authinfo->username, authinfo->password);
+    retval = rad_auth(&radconfig, authinfo->username.c_str(),
+                      authinfo->password.c_str());
     if (retval == -1)
-        die("user %s password doesn't match", authinfo->username);
+        die("user %s password doesn't match", authinfo->username.c_str());
     else if (retval == -2)
         /* couldn't talk to the radius server..  output logged above. */
         exit(1);
@@ -579,6 +580,6 @@ main(int argc, char *argv[])
         die("unexpected return code from authentication function: %d", retval);
 
     /* radius password matches! */
-    print_user(authinfo->username);
+    print_user(authinfo->username.c_str());
     exit(0);
 }

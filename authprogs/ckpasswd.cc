@@ -327,7 +327,8 @@ main(int argc, char *argv[])
     enum authtype type = AUTH_NONE;
     bool wantgroup = false;
     const char *filename = nullptr;
-    struct auth_info *authinfo = nullptr;
+    std::optional<auth_info> authinfo;
+    bool have_user = false, have_pass = false;
     std::optional<std::string> password;
 
     message_program_name = "ckpasswd";
@@ -361,18 +362,16 @@ main(int argc, char *argv[])
             type = AUTH_SHADOW;
             break;
         case 'u':
-            if (authinfo == nullptr) {
-                authinfo = xmalloc(sizeof(struct auth_info));
-                authinfo->password = nullptr;
-            }
+            if (!authinfo)
+                authinfo.emplace();
             authinfo->username = optarg;
+            have_user = true;
             break;
         case 'p':
-            if (authinfo == nullptr) {
-                authinfo = xmalloc(sizeof(struct auth_info));
-                authinfo->username = nullptr;
-            }
+            if (!authinfo)
+                authinfo.emplace();
             authinfo->password = optarg;
+            have_pass = true;
             break;
         default:
             exit(1);
@@ -380,49 +379,50 @@ main(int argc, char *argv[])
     }
     if (argc != optind)
         die("extra arguments given");
-    if (authinfo != nullptr && authinfo->username == nullptr)
+    if (authinfo && !have_user)
         die("-u option is required if -p option is given");
-    if (authinfo != nullptr && authinfo->password == nullptr)
+    if (authinfo && !have_pass)
         die("-p option is required if -u option is given");
 
     /* Unless a username or password was given on the command line, assume
        we're being run by nnrpd. */
-    if (authinfo == nullptr)
+    if (!authinfo)
         authinfo = get_auth_info(stdin);
-    if (authinfo == nullptr)
+    if (!authinfo)
         die("no authentication information from nnrpd");
-    if (authinfo->username[0] == '\0')
+    if (authinfo->username.empty())
         die("null username");
 
     /* Run the appropriate authentication routines. */
     switch (type) {
     case AUTH_SHADOW:
-        password = password_shadow(authinfo->username);
+        password = password_shadow(authinfo->username.c_str());
         if (!password)
-            password = password_system(authinfo->username);
+            password = password_system(authinfo->username.c_str());
         break;
     case AUTH_FILE:
-        password = password_file(authinfo->username, filename);
+        password = password_file(authinfo->username.c_str(), filename);
         break;
     case AUTH_DBM:
-        password = password_dbm(authinfo->username, filename);
+        password = password_dbm(authinfo->username.data(), filename);
         break;
     case AUTH_NONE:
-        if (auth_pam(authinfo->username, authinfo->password)) {
-            output_user(authinfo->username, wantgroup);
+        /* PAM keeps the password pointer only until auth_pam returns. */
+        if (auth_pam(authinfo->username.c_str(), authinfo->password.data())) {
+            output_user(authinfo->username.c_str(), wantgroup);
             exit(0);
         }
-        password = password_system(authinfo->username);
+        password = password_system(authinfo->username.c_str());
         break;
     }
 
     if (!password)
-        die("user %s unknown", authinfo->username);
-    hash = crypt(authinfo->password, password->c_str());
+        die("user %s unknown", authinfo->username.c_str());
+    hash = crypt(authinfo->password.c_str(), password->c_str());
     if (hash == nullptr || *password != hash)
-        die("invalid password for user %s", authinfo->username);
+        die("invalid password for user %s", authinfo->username.c_str());
 
     /* The password matched. */
-    output_user(authinfo->username, wantgroup);
+    output_user(authinfo->username.c_str(), wantgroup);
     exit(0);
 }
