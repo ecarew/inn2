@@ -107,6 +107,8 @@ static int ARTfieldsize;
 static bool ReadOverviewfmt = false;
 
 static char *ACTIVE;
+/* The active file's contents; the Groups' names point into it. */
+static char *ActiveText;
 
 /* FIXME: The following variables are shared between this file and ov.c.
    This should be cleaned up with a better internal interface. */
@@ -686,7 +688,6 @@ static void
 OVfindheaderindex()
 {
     FILE *F;
-    char *active;
     char *path;
     int i;
 
@@ -694,12 +695,12 @@ OVfindheaderindex()
         return;
     if (innconf->groupbaseexpiry) {
         ACTIVE = concatpath(innconf->pathdb, INN_PATH_ACTIVE);
-        if ((active = ReadInFile(ACTIVE, (struct stat *) nullptr))
+        if ((ActiveText = ReadInFile(ACTIVE, (struct stat *) nullptr))
             == nullptr) {
             fprintf(stderr, "Can't read %s, %s\n", ACTIVE, strerror(errno));
             exit(1);
         }
-        BuildGroups(active);
+        BuildGroups(ActiveText);
         arts = xmalloc(nGroups * sizeof(char *));
         krps = xmalloc(nGroups * sizeof(enum KRP));
         path = concatpath(innconf->pathetc, INN_PATH_EXPIRECTL);
@@ -914,6 +915,8 @@ OVEXPcleanup(void)
         free(Groups);
         Groups = nullptr;
     }
+    free(ActiveText);
+    ActiveText = nullptr;
     for (i = 0, htp = NGHtable; i < NGH_SIZE; i++, htp++) {
         if (htp->Groups != nullptr) {
             free(htp->Groups);
