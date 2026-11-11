@@ -6,6 +6,8 @@
 
 #include <errno.h>
 
+#include <string>
+
 #include "inn/innconf.h"
 #include "inn/libinn.h"
 #include "inn/messages.h"
@@ -138,11 +140,10 @@ print_active(struct nntp *nntp, const char *types)
 
 /*
 **  Get the username and password for a remote site from the local password
-**  file.  username and password will be set to newly allocated strings on
-**  success.
+**  file.  username and password are set on success.
 */
 static bool
-get_authinfo(const char *server, char **username, char **password)
+get_authinfo(const char *server, std::string &username, std::string &password)
 {
     char *path, *line;
     QIOSTATE *passwords;
@@ -166,8 +167,8 @@ get_authinfo(const char *server, char **username, char **password)
             continue;
         if (strcasecmp(info->strings[0], server) != 0)
             continue;
-        *username = xstrdup(info->strings[1]);
-        *password = xstrdup(info->strings[2]);
+        username = info->strings[1];
+        password = info->strings[2];
         return true;
     }
     return false;
@@ -285,13 +286,11 @@ main(int argc, char *argv[])
 
     /* Authenticate if desired. */
     if (authinfo) {
-        char *username, *password;
+        std::string username, password;
 
-        if (get_authinfo(host, &username, &password)) {
-            if (!send_authinfo(nntp, username, password))
+        if (get_authinfo(host, username, password)) {
+            if (!send_authinfo(nntp, username.c_str(), password.c_str()))
                 warn("server %s did not accept authentication", host);
-            free(username);
-            free(password);
         } else
             warn("no authentication information found for %s", host);
     }
