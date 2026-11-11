@@ -10,6 +10,7 @@ OUTPUT_DIRECTORY       = build-doxygen
 # not tests/ (the test programs), cmake/ (feature checks) or the rest of
 # support/.
 INPUT                  = support/doxygen-mainpage.md \
+                         support/doxygen-buffchan.md \
                          include lib history storage innd nnrpd innfeed \
                          frontends backends expire control authprogs contrib
 FILE_PATTERNS          = *.cc *.c *.h
