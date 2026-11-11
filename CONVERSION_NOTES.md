@@ -808,10 +808,14 @@ the per-article loop):
    unreachable today (the parser makes only the two known types), listed as
    a refactoring candidate.  Fixed 2026-11-10 (`7a6d5c713`): the loop
    advances in its header, and the type is `enum class HashFeedType`
-   switched on with no default, so a new type is a -Wswitch warning.  The
-   list itself stays a linked list: SITE is xcalloc'd, xrealloc'd and
-   reset by assignment from SITEnull, so it cannot hold a std::vector
-   until the sites table is reworked.
+   switched on with no default, so a new type is a -Wswitch warning.  The sites
+   table was then reworked: f9ac29398 gives every SITE field a {}
+   default and drops SITEnull; a9dc95f35 makes Sites a
+   std::vector<SITE>, still addressed by SITEIDX index; 7ade0320d makes
+   the hashfeeds a std::vector<HashFeed>.  A vector rather than a
+   std::list because every site reference is an index (O(1) lookup per
+   article) and slots are reused, never erased; Next/Prev already thread
+   the active-site queue through it by index.
 3. Done 2026-10-30: `struct ArticleState` in innd/article.h (C++ only;
    not copyable; `clear()` empty so far), reached from `ARTDATA::State`,
    an incomplete type to C.  CHANcreate keeps a slot's existing one across
