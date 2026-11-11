@@ -725,7 +725,8 @@ dropArticle(const char *peerName, Article article)
     }
 
     droppedCount++;
-    fprintf(droppedFp, "%s %s %s\n", artFileName(article), artMsgId(article),
+    fprintf(droppedFp, "%s %s %s\n", artFileName(article).c_str(),
+            artMsgId(article).c_str(),
             peerName);
 }
 

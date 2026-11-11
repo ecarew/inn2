@@ -20,6 +20,8 @@
 #include "misc.h"
 #include <stdio.h>
 
+#include <string>
+
 BEGIN_DECLS
 
 
@@ -47,15 +49,9 @@ bool artContentsOk(Article article);
    kept (or passed off to someone else) */
 Article artTakeRef(Article article);
 
-/* return the pathname of the file the article is in. */
-const char *artFileName(Article article);
-
 /* return a list of buffers suitable for giving to an endpoint. The return
    value can (must) be given to freeBufferArray */
 Buffer *artGetNntpBuffers(Article article);
-
-/* return the message id stoed in the article object */
-const char *artMsgId(Article article);
 
 /* return size of the article */
 int artSize(Article article);
@@ -78,5 +74,14 @@ void artBitFiddleContents(bool val);
 void artSetMaxBytesInUse(unsigned int val);
 
 END_DECLS
+
+/* C++ linkage: these return references to the strings the article owns,
+   valid while the caller holds a reference to the article. */
+
+/* return the pathname of the file the article is in. */
+const std::string &artFileName(Article article);
+
+/* return the message id stored in the article object */
+const std::string &artMsgId(Article article);
 
 #endif /* ARTICLE_H */

@@ -2024,11 +2024,12 @@ hostArticleOffered(Host host, Connection cxn UNUSED)
 void
 hostArticleAccepted(Host host, Connection cxn, Article article)
 {
-    const char *filename = artFileName(article);
-    const char *msgid = artMsgId(article);
+    const std::string &filename = artFileName(article);
+    const std::string &msgid = artMsgId(article);
     double len = artSize(article);
 
-    d_printf(5, "Article %s (%s) was transferred\n", msgid, filename);
+    d_printf(5, "Article %s (%s) was transferred\n", msgid.c_str(),
+             filename.c_str());
 
     host->artsAccepted++;
     host->gArtsAccepted++;
@@ -2053,10 +2054,11 @@ hostArticleAccepted(Host host, Connection cxn, Article article)
 void
 hostArticleNotWanted(Host host, Connection cxn, Article article)
 {
-    const char *filename = artFileName(article);
-    const char *msgid = artMsgId(article);
+    const std::string &filename = artFileName(article);
+    const std::string &msgid = artMsgId(article);
 
-    d_printf(5, "Article %s (%s) was not wanted\n", msgid, filename);
+    d_printf(5, "Article %s (%s) was not wanted\n", msgid.c_str(),
+             filename.c_str());
 
     host->artsNotWanted++;
     host->gArtsNotWanted++;
@@ -2079,11 +2081,12 @@ hostArticleNotWanted(Host host, Connection cxn, Article article)
 void
 hostArticleRejected(Host host, Connection cxn, Article article)
 {
-    const char *filename = artFileName(article);
-    const char *msgid = artMsgId(article);
+    const std::string &filename = artFileName(article);
+    const std::string &msgid = artMsgId(article);
     double len = artSize(article);
 
-    d_printf(5, "Article %s (%s) was rejected\n", msgid, filename);
+    d_printf(5, "Article %s (%s) was rejected\n", msgid.c_str(),
+             filename.c_str());
 
     host->artsRejected++;
     host->gArtsRejected++;
@@ -2167,11 +2170,11 @@ hostTakeBackArticle(Host host, Connection cxn UNUSED, Article article)
 void
 hostArticleIsMissing(Host host, Connection cxn, Article article)
 {
-    const char *filename = artFileName(article);
-    const char *msgid = artMsgId(article);
+    const std::string &filename = artFileName(article);
+    const std::string &msgid = artMsgId(article);
 
-    d_printf(5, "%s article is missing %s %s\n", host->params->peerName.c_str(), msgid,
-             filename);
+    d_printf(5, "%s article is missing %s %s\n", host->params->peerName.c_str(), msgid.c_str(),
+             filename.c_str());
 
     host->artsMissing++;
     host->gArtsMissing++;

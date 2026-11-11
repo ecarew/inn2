@@ -930,7 +930,7 @@ cxnQueueArticle(Connection cxn, Article art)
 
     if (rval) {
         d_printf(5, "%s:%u accepting article %s\n", hostPeerName(cxn->myHost),
-                 cxn->ident, artMsgId(art));
+                 cxn->ident, artMsgId(art).c_str());
 
         cxn->artsTaken++;
     }
@@ -3563,7 +3563,6 @@ issueIHAVE(Connection cxn)
     Buffer ihaveBuff, *writeArr;
     ArtHolder artH;
     Article article;
-    const char *msgid;
     char *p;
     unsigned int tmp;
     size_t bufLen = 256;
@@ -3579,12 +3578,11 @@ issueIHAVE(Connection cxn)
 
     artH = cxn->checkHead;
     article = cxn->checkHead->article;
-    msgid = artMsgId(artH->article);
+    const std::string &msgid = artMsgId(artH->article);
 
-    ASSERT(msgid != NULL);
     ASSERT(article != NULL);
 
-    if ((tmp = (strlen(msgid) + 10)) > bufLen)
+    if ((tmp = (msgid.size() + 10)) > bufLen)
         bufLen = tmp;
 
     ihaveBuff = newBuffer(bufLen);
@@ -3592,11 +3590,11 @@ issueIHAVE(Connection cxn)
     ASSERT(ihaveBuff != NULL);
 
     p = static_cast<char *>(bufferBase(ihaveBuff));
-    sprintf(p, "IHAVE %s\r\n", msgid);
+    sprintf(p, "IHAVE %s\r\n", msgid.c_str());
     bufferSetDataSize(ihaveBuff, strlen(p));
 
     d_printf(5, "%s:%u Command IHAVE %s\n", hostPeerName(cxn->myHost),
-             cxn->ident, msgid);
+             cxn->ident, msgid.c_str());
 
     writeArr = makeBufferArray(ihaveBuff, NULL);
     if (!prepareWriteWithTimeout<commandWriteDone>(cxn->myEp, writeArr, cxn)) {
@@ -3765,12 +3763,7 @@ buildCheckBuffer(Connection cxn)
 
     p = cxn->checkHead;
     while (p != NULL) {
-        Article article = p->article;
-        const char *msgid;
-
-        msgid = artMsgId(article);
-
-        lenBuff += (8 + strlen(msgid)); /* 8 == strlen("CHECK \r\n") */
+        lenBuff += 8 + artMsgId(p->article).size(); /* "CHECK \r\n" */
         p = p->next;
     }
 
@@ -3787,9 +3780,7 @@ buildCheckBuffer(Connection cxn)
 
         p = cxn->checkHead;
         while (p != NULL) {
-            const char *msgid = artMsgId(p->article);
-
-            sprintf(t, "CHECK %s\r\n", msgid);
+            sprintf(t, "CHECK %s\r\n", artMsgId(p->article).c_str());
             d_printf(5, "%s:%u Command %s\n", peerName, cxn->ident, t);
 
             tlen += strlen(t);
@@ -3851,14 +3842,13 @@ buildTakethisBuffers(Connection cxn, Buffer checkBuffer)
         p = cxn->takeHead;
         while (p != NULL) {
             char *t;
-            const char *msgid;
             Article article;
             Buffer *articleBuffers;
             int i, nntpLen;
 
             article = p->article;
             nntpLen = artNntpBufferCount(article);
-            msgid = artMsgId(article);
+            const std::string &msgid = artMsgId(article);
 
             if (nntpLen == 0) { /* file no longer valid so drop from queue */
                 ArtHolder ta = p;
@@ -3879,11 +3869,11 @@ buildTakethisBuffers(Connection cxn, Buffer checkBuffer)
 
                 /* set up the buffer with the TAKETHIS command in it.
                    12 == strlen ("TAKETHIS \n\r") */
-                takeBuffLen = 12 + strlen(msgid);
+                takeBuffLen = 12 + msgid.size();
                 takeBuffer = newBuffer(takeBuffLen);
                 t = static_cast<char *>(bufferBase(takeBuffer));
 
-                sprintf(t, "TAKETHIS %s\r\n", msgid);
+                sprintf(t, "TAKETHIS %s\r\n", msgid.c_str());
                 bufferSetDataSize(takeBuffer, strlen(t));
 
                 d_printf(5, "%s:%u Command %s\n", peerName, cxn->ident, t);
@@ -4403,7 +4393,7 @@ static ArtHolder
 artHolderByMsgId(const char *msgid, ArtHolder head)
 {
     while (head != NULL) {
-        if (strcmp(msgid, artMsgId(head->article)) == 0)
+        if (artMsgId(head->article) == msgid)
             return head;
 
         head = head->next;

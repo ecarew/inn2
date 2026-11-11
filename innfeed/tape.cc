@@ -557,8 +557,6 @@ delTape(Tape tape)
 void
 tapeTakeArticle(Tape tape, Article article)
 {
-    const char *fname, *msgid;
-
     ASSERT(tape != NULL);
     ASSERT(article != NULL);
 
@@ -568,16 +566,16 @@ tapeTakeArticle(Tape tape, Article article)
         return;
     }
 
-    fname = artFileName(article);
-    msgid = artMsgId(article);
-    fprintf(tape->outFp, "%s %s\n", fname, msgid);
+    const std::string &fname = artFileName(article);
+    const std::string &msgid = artMsgId(article);
+    fprintf(tape->outFp, "%s %s\n", fname.c_str(), msgid.c_str());
     /* I'd rather know where I am each time, and I don't trust all
      * fprintf's to give me character counts.  Therefore, do not use:
      *   tape->outputSize += (return value of the previous fprintf call);
      * nor:
      *   tape->outputSize = ftello (tape->outFp);
      */
-    tape->outputSize += strlen(fname) + strlen(msgid) + 2; /* " " + "\n" */
+    tape->outputSize += fname.size() + msgid.size() + 2; /* " " + "\n" */
 
     delArticle(article);
 
@@ -721,7 +719,7 @@ getArticle(Tape tape)
         d_printf(2, "%s All out of articles in the backlog\n", tape->peerName.c_str());
     else
         d_printf(2, "%s Peeled article %s from backlog\n", tape->peerName.c_str(),
-                 artMsgId(art));
+                 artMsgId(art).c_str());
 
     return art;
 }
@@ -1098,8 +1096,8 @@ flushTape(Tape tape)
     elem = tape->head;
     while (elem != NULL) {
         tape->head = tape->head->next;
-        fprintf(tape->outFp, "%s %s\n", artFileName(elem->article),
-                artMsgId(elem->article));
+        fprintf(tape->outFp, "%s %s\n", artFileName(elem->article).c_str(),
+                artMsgId(elem->article).c_str());
 
         delArticle(elem->article);
 

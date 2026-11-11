@@ -51,14 +51,14 @@ typedef struct map_info_s *MapInfo;
 
 struct article_s {
     int refCount;        /* the reference count on this article */
-    char *fname;         /* the file name of the article */
-    char *msgid;         /* the msgid of the article (INN tells us) */
-    Buffer contents;     /* the buffer of the actual on disk stuff */
-    Buffer *nntpBuffers; /* list of buffers for transmission */
-    MapInfo mapInfo;     /* arthandle and mMapping */
-    bool loggedMissing;  /* true if article is missing and we logged */
-    bool articleOk;      /* true until we know otherwise. */
-    bool inWireFormat;   /* true if ->contents is \r\n/dot-escaped */
+    std::string fname;             /* the file name of the article */
+    std::string msgid;             /* the msgid of the article (INN tells us) */
+    Buffer contents = nullptr;     /* the buffer of the actual on disk stuff */
+    Buffer *nntpBuffers = nullptr; /* list of buffers for transmission */
+    MapInfo mapInfo = nullptr;     /* arthandle and mMapping */
+    bool loggedMissing = false;    /* true if article is missing and we logged */
+    bool articleOk = true;         /* true until we know otherwise. */
+    bool inWireFormat = false;     /* true if ->contents is \r\n/dot-escaped */
 };
 
 struct hash_entry_s {
@@ -204,17 +204,11 @@ newArticle(const char *filename, const char *msgid)
     /* now look for it in the hash table. We presume the disk file is still
        ok */
     if ((newArt = hashFindArticle(msgid)) == NULL) {
-        newArt = xcalloc(1, sizeof(struct article_s));
+        newArt = new article_s{};
 
-        newArt->fname = xstrdup(filename);
-        newArt->msgid = xstrdup(msgid);
-
-        newArt->contents = NULL;
-        newArt->mapInfo = NULL;
+        newArt->fname = filename;
+        newArt->msgid = msgid;
         newArt->refCount = 1;
-        newArt->loggedMissing = false;
-        newArt->articleOk = true;
-        newArt->inWireFormat = false;
 
         d_printf(3, "Adding a new article(%p): %s\n", (void *) newArt, msgid);
 
@@ -223,9 +217,9 @@ newArticle(const char *filename, const char *msgid)
 
         hashAddArticle(newArt);
     } else {
-        if (strcmp(filename, newArt->fname) != 0)
+        if (newArt->fname != filename)
             warn("ME two filenames for same article: %s, %s", filename,
-                 newArt->fname);
+                 newArt->fname.c_str());
 
         newArt->refCount++;
         d_printf(2, "Reusing existing article for %s\n", msgid);
@@ -251,7 +245,7 @@ delArticle(Article article)
         ASSERT(removed == true);
 
         d_printf(2, "Cleaning up article (%p): %s\n", (void *) article,
-                 article->msgid);
+                 article->msgid.c_str());
 
         if (article->contents != NULL) {
             if (article->mapInfo)
@@ -267,9 +261,7 @@ delArticle(Article article)
 
         articlesInUse--;
 
-        free(article->fname);
-        free(article->msgid);
-        free(article);
+        delete article;
     }
 
     VALIDATE_HASH_TABLE();
@@ -328,8 +320,8 @@ printArticleInfo(Article art, FILE *fp, unsigned int indentAmt)
     fprintf(fp, "%s    article ok : %s\n", indent,
             boolToString(art->articleOk));
     fprintf(fp, "%s    refcount : %d\n", indent, art->refCount);
-    fprintf(fp, "%s    filename : %s\n", indent, art->fname);
-    fprintf(fp, "%s    msgid : %s\n", indent, art->msgid);
+    fprintf(fp, "%s    filename : %s\n", indent, art->fname.c_str());
+    fprintf(fp, "%s    msgid : %s\n", indent, art->msgid.c_str());
 
     fprintf(fp, "%s    contents buffer : {\n", indent);
 #if defined(INNFEED_DEBUG)
@@ -380,13 +372,11 @@ artTakeRef(Article article)
 
 
 /* return the filename of the article */
-const char *
+const std::string &
 artFileName(Article article)
 {
-    if (article == NULL)
-        return NULL;
-    else
-        return article->fname;
+    ASSERT(article != NULL);
+    return article->fname;
 }
 
 
@@ -403,7 +393,7 @@ artGetNntpBuffers(Article article)
 
 
 /* return the message id of the article */
-const char *
+const std::string &
 artMsgId(Article article)
 {
     return article->msgid;
@@ -585,9 +575,9 @@ fillContents(Article article)
     if (avgCharsPerLine == 0)
         avgCharsPerLine = 75; /* roughly number of characters per line */
 
-    if (IsToken(article->fname)) {
+    if (IsToken(article->fname.c_str())) {
         opened =
-            ((arthandle = SMretrieve(TextToToken(article->fname), RETR_ALL))
+            ((arthandle = SMretrieve(TextToToken(article->fname.c_str()), RETR_ALL))
              != NULL)
                 ? true
                 : false;
@@ -595,7 +585,7 @@ fillContents(Article article)
             articlesize = arthandle->len;
         else {
             if (SMerrno != SMERR_NOENT && SMerrno != SMERR_UNINIT) {
-                syslog(LOG_ERR, "Could not retrieve %s: %s", article->fname,
+                syslog(LOG_ERR, "Could not retrieve %s: %s", article->fname.c_str(),
                        SMerrorstr);
                 article->articleOk = false;
                 TMRstop(TMR_READART);
@@ -606,24 +596,24 @@ fillContents(Article article)
         struct stat sb;
 
         opened =
-            ((fd = open(article->fname, O_RDONLY, 0)) >= 0) ? true : false;
+            ((fd = open(article->fname.c_str(), O_RDONLY, 0)) >= 0) ? true : false;
         arthandle = NULL;
         if (opened) {
             if (fstat(fd, &sb) < 0) {
                 article->articleOk = false;
-                syswarn("ME oserr fstat %s", article->fname);
+                syswarn("ME oserr fstat %s", article->fname.c_str());
                 TMRstop(TMR_READART);
                 return false;
             }
             if (!S_ISREG(sb.st_mode)) {
                 article->articleOk = false;
-                warn("ME article file-type: %s", article->fname);
+                warn("ME article file-type: %s", article->fname.c_str());
                 TMRstop(TMR_READART);
                 return false;
             }
             if (sb.st_size == 0) {
                 article->articleOk = false;
-                warn("ME article 0 bytes: %s", article->fname);
+                warn("ME article 0 bytes: %s", article->fname.c_str());
                 TMRstop(TMR_READART);
                 return false;
             }
@@ -636,8 +626,8 @@ fillContents(Article article)
         missingArticleCount++;
 
         if (logMissingArticles && !article->loggedMissing) {
-            notice("ME article missing: %s, %s", article->msgid,
-                   article->fname);
+            notice("ME article missing: %s, %s", article->msgid.c_str(),
+                   article->fname.c_str());
             article->loggedMissing = true;
         }
         TMRstop(TMR_READART);
@@ -655,7 +645,7 @@ fillContents(Article article)
         if (mMapping == MAP_FAILED) {
             /* don't know why, but revert to plain reading */
             mMapping = NULL;
-            syswarn("ME mmap failure %s (%s)", article->fname,
+            syswarn("ME mmap failure %s (%s)", article->fname.c_str(),
                     strerror(errno));
         } else {
             article->contents = newBufferByCharP(
@@ -670,7 +660,7 @@ fillContents(Article article)
                 article->articleOk = false;
                 delBuffer(article->contents);
                 article->contents = NULL;
-                warn("ME munged article %s", article->fname);
+                warn("ME munged article %s", article->fname.c_str());
             } else {
                 if (p > buffer && p[-1] == '\r') {
                     article->inWireFormat = true;
@@ -723,7 +713,7 @@ fillContents(Article article)
 
         while (amtToRead > 0) {
             if ((amt = read(fd, buffer + idx, amtToRead)) <= 0) {
-                syswarn("ME article read error: %s", article->fname);
+                syswarn("ME article read error: %s", article->fname.c_str());
                 bytesInUse -= articlesize;
                 byteTotal -= articlesize;
                 amtToRead = 0;
@@ -741,7 +731,7 @@ fillContents(Article article)
 
             if ((p = strchr(buffer, '\n')) == NULL) {
                 article->articleOk = false;
-                warn("ME munged article %s", article->fname);
+                warn("ME munged article %s", article->fname.c_str());
             } else if (p > buffer && p[-1] == '\r') {
                 article->inWireFormat = true;
             } else {
@@ -938,7 +928,7 @@ hashFindArticle(const char *msgid)
     HashEntry h;
 
     for (h = hashTable[TABLE_ENTRY(hash)]; h != NULL; h = h->next)
-        if (hash == h->hash && strcmp(msgid, h->article->msgid) == 0)
+        if (hash == h->hash && h->article->msgid == msgid)
             break;
 
     return (h == NULL ? NULL : h->article);
@@ -949,7 +939,7 @@ hashFindArticle(const char *msgid)
 static void
 hashAddArticle(Article article)
 {
-    unsigned int hash = hashString(article->msgid);
+    unsigned int hash = hashString(article->msgid.c_str());
     HashEntry h;
     HashEntry ne;
 
@@ -982,11 +972,11 @@ hashAddArticle(Article article)
 static bool
 hashRemoveArticle(Article article)
 {
-    unsigned int hash = hashString(article->msgid);
+    unsigned int hash = hashString(article->msgid.c_str());
     HashEntry h;
 
     for (h = hashTable[TABLE_ENTRY(hash)]; h != NULL; h = h->next)
-        if (hash == h->hash && strcmp(article->msgid, h->article->msgid) == 0)
+        if (hash == h->hash && article->msgid == h->article->msgid)
             break;
 
     if (h == NULL)
