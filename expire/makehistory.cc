@@ -10,6 +10,7 @@
 
 #include <string>
 #include <syslog.h>
+#include <vector>
 #include <time.h>
 
 #include "inn/buffer.h"
@@ -69,8 +70,7 @@ Usage: makehistory [-abFIOSx] [-f file] [-l count] [-L load] [-s size]\n\
 **  Information about the schema of the news overview files.
 */
 typedef struct _ARTOVERFIELD {
-    char *Headername;
-    int HeadernameLength;
+    std::string Headername;
     bool NeedHeadername;
     const char *Header;
     int HeaderLength;
@@ -114,7 +114,7 @@ static char INJECTIONDATE[] = "Injection-Date";
 static char LINES[] = "Lines";
 static char MESSAGEID[] = "Message-ID";
 static char XREF[] = "Xref";
-static ARTOVERFIELD *ARTfields; /* Overview fields for which overview data
+static std::vector<ARTOVERFIELD> ARTfields; /* Overview fields for which overview data
                                  * is generated. */
 static size_t ARTfieldsize;
 static ARTOVERFIELD *Bytesp = (ARTOVERFIELD *) nullptr;
@@ -124,7 +124,7 @@ static ARTOVERFIELD *InjectionDatep = (ARTOVERFIELD *) nullptr;
 static ARTOVERFIELD *Linesp = (ARTOVERFIELD *) nullptr;
 static ARTOVERFIELD *Msgidp = (ARTOVERFIELD *) nullptr;
 static ARTOVERFIELD *Xrefp = (ARTOVERFIELD *) nullptr;
-static ARTOVERFIELD *Missfields; /* Header fields not used in overview
+static std::vector<ARTOVERFIELD> Missfields; /* Header fields not used in overview
                                   * but that we need (e.g. Expires). */
 static size_t Missfieldsize = 0;
 
@@ -459,6 +459,13 @@ WriteOverLine(TOKEN *token, const char *xrefs, int xrefslen, char *overdata,
 static void
 ARTreadschema(bool Overview)
 {
+    /* The vectors are reserved before the first call, so the pointer
+       stays valid. */
+    auto addfield = [](std::vector<ARTOVERFIELD> &v, const char *name,
+                       bool need) {
+        v.push_back(ARTOVERFIELD{name, need, nullptr, 0, false});
+        return &v.back();
+    };
     const struct cvector *standardoverview;
     struct vector *extraoverview;
     ARTOVERFIELD *fp;
@@ -468,18 +475,12 @@ ARTreadschema(bool Overview)
         /* Count the number of overview fields and allocate ARTfields. */
         standardoverview = overview_fields();
         extraoverview = overview_extra_fields(true);
-        ARTfields =
-            xmalloc((standardoverview->count + extraoverview->count + 1)
-                    * sizeof(ARTOVERFIELD));
+        /* Reserved up front: Bytesp and the rest point into it. */
+        ARTfields.reserve(standardoverview->count + extraoverview->count);
 
         /* Parse each field. */
-        for (i = 0, fp = ARTfields; i < standardoverview->count; i++) {
-            fp->NeedHeadername = false;
-            fp->Headername = xstrdup(standardoverview->strings[i]);
-            fp->HeadernameLength = strlen(standardoverview->strings[i]);
-            fp->Header = (char *) nullptr;
-            fp->HasHeader = false;
-            fp->HeaderLength = 0;
+        for (i = 0; i < standardoverview->count; i++) {
+            fp = addfield(ARTfields, standardoverview->strings[i], false);
             /* We need to keep the value of fp for :bytes and :lines
              * because we will need them afterwards; we will then not
              * have to compare fp->Headername to both "Bytes" and "Lines"
@@ -497,15 +498,9 @@ ARTreadschema(bool Overview)
                             strlen(MESSAGEID))
                 == 0)
                 Msgidp = fp;
-            fp++;
         }
         for (i = 0; i < extraoverview->count; i++) {
-            fp->NeedHeadername = true;
-            fp->Headername = xstrdup(extraoverview->strings[i]);
-            fp->HeadernameLength = strlen(extraoverview->strings[i]);
-            fp->Header = (char *) nullptr;
-            fp->HasHeader = false;
-            fp->HeaderLength = 0;
+            fp = addfield(ARTfields, extraoverview->strings[i], true);
             if (strncasecmp(extraoverview->strings[i], XREF, strlen(XREF))
                 == 0)
                 Xrefp = fp;
@@ -517,10 +512,9 @@ ARTreadschema(bool Overview)
                             strlen(INJECTIONDATE))
                 == 0)
                 InjectionDatep = fp;
-            fp++;
         }
 
-        ARTfieldsize = fp - ARTfields;
+        ARTfieldsize = ARTfields.size();
         vector_free(extraoverview);
     }
     if (Bytesp == (ARTOVERFIELD *) nullptr)
@@ -539,70 +533,30 @@ ARTreadschema(bool Overview)
      * not set before), so the values do not matter much (especially for
      * NeedHeadername). */
     if (Missfieldsize > 0) {
-        Missfields = xmalloc(Missfieldsize * sizeof(ARTOVERFIELD));
-        fp = Missfields;
+        /* Reserved up front: Bytesp and the rest point into it.  Xref,
+           added below when Overview is set, was not counted in
+           Missfieldsize. */
+        Missfields.reserve(Missfieldsize + 1);
         if (Bytesp == (ARTOVERFIELD *) nullptr) {
-            fp->NeedHeadername = false;
-            fp->Headername = xstrdup(BYTES);
-            fp->HeadernameLength = strlen(BYTES);
-            fp->Header = (char *) nullptr;
-            fp->HasHeader = false;
-            fp->HeaderLength = 0;
-            Bytesp = fp++;
+            Bytesp = addfield(Missfields, BYTES, false);
         }
         if (Datep == (ARTOVERFIELD *) nullptr) {
-            fp->NeedHeadername = false;
-            fp->Headername = xstrdup(DATE);
-            fp->HeadernameLength = strlen(DATE);
-            fp->Header = (char *) nullptr;
-            fp->HasHeader = false;
-            fp->HeaderLength = 0;
-            Datep = fp++;
+            Datep = addfield(Missfields, DATE, false);
         }
         if (Expp == (ARTOVERFIELD *) nullptr) {
-            fp->NeedHeadername = true;
-            fp->Headername = xstrdup(EXPIRES);
-            fp->HeadernameLength = strlen(EXPIRES);
-            fp->Header = (char *) nullptr;
-            fp->HasHeader = false;
-            fp->HeaderLength = 0;
-            Expp = fp++;
+            Expp = addfield(Missfields, EXPIRES, true);
         }
         if (InjectionDatep == (ARTOVERFIELD *) nullptr) {
-            fp->NeedHeadername = true;
-            fp->Headername = xstrdup(INJECTIONDATE);
-            fp->HeadernameLength = strlen(INJECTIONDATE);
-            fp->Header = (char *) nullptr;
-            fp->HasHeader = false;
-            fp->HeaderLength = 0;
-            InjectionDatep = fp++;
+            InjectionDatep = addfield(Missfields, INJECTIONDATE, true);
         }
         if (Linesp == (ARTOVERFIELD *) nullptr) {
-            fp->NeedHeadername = false;
-            fp->Headername = xstrdup(LINES);
-            fp->HeadernameLength = strlen(LINES);
-            fp->Header = (char *) nullptr;
-            fp->HasHeader = false;
-            fp->HeaderLength = 0;
-            Linesp = fp++;
+            Linesp = addfield(Missfields, LINES, false);
         }
         if (Msgidp == (ARTOVERFIELD *) nullptr) {
-            fp->NeedHeadername = false;
-            fp->Headername = xstrdup(MESSAGEID);
-            fp->HeadernameLength = strlen(MESSAGEID);
-            fp->Header = (char *) nullptr;
-            fp->HasHeader = false;
-            fp->HeaderLength = 0;
-            Msgidp = fp++;
+            Msgidp = addfield(Missfields, MESSAGEID, false);
         }
         if (Overview && Xrefp == (ARTOVERFIELD *) nullptr) {
-            fp->NeedHeadername = true;
-            fp->Headername = xstrdup(XREF);
-            fp->HeadernameLength = strlen(XREF);
-            fp->Header = (char *) nullptr;
-            fp->HasHeader = false;
-            fp->HeaderLength = 0;
-            Xrefp = fp++;
+            Xrefp = addfield(Missfields, XREF, true);
         }
     }
 }
@@ -634,7 +588,7 @@ DoArt(ARTHANDLE *art)
     bool hasCounts = false;
 
     /* Set up place to store headers. */
-    for (fp = ARTfields, i = 0; i < ARTfieldsize; i++, fp++) {
+    for (fp = ARTfields.data(), i = 0; i < ARTfieldsize; i++, fp++) {
         if (fp->HeaderLength) {
             fp->Header = nullptr;
         }
@@ -642,7 +596,7 @@ DoArt(ARTHANDLE *art)
         fp->HasHeader = false;
     }
     if (Missfieldsize > 0) {
-        for (fp = Missfields, i = 0; i < Missfieldsize; i++, fp++) {
+        for (fp = Missfields.data(), i = 0; i < Missfields.size(); i++, fp++) {
             if (fp->HeaderLength) {
                 fp->Header = nullptr;
             }
@@ -650,9 +604,9 @@ DoArt(ARTHANDLE *art)
             fp->HasHeader = false;
         }
     }
-    for (fp = ARTfields, i = 0; i < ARTfieldsize; i++, fp++) {
+    for (fp = ARTfields.data(), i = 0; i < ARTfieldsize; i++, fp++) {
         fp->Header =
-            wire_findheader(art->data, art->len, fp->Headername, false);
+            wire_findheader(art->data, art->len, fp->Headername.c_str(), false);
 
         /* Someone managed to break their server so that they were appending
            multiple Xref header fields, and INN had a bug where it wouldn't
@@ -668,7 +622,7 @@ DoArt(ARTHANDLE *art)
                     break;
                 next++;
                 left = art->len - (next - art->data);
-                next = wire_findheader(next, left, fp->Headername, false);
+                next = wire_findheader(next, left, fp->Headername.c_str(), false);
                 if (next != nullptr)
                     fp->Header = next;
             }
@@ -726,9 +680,9 @@ DoArt(ARTHANDLE *art)
         }
     }
     if (Missfieldsize > 0) {
-        for (fp = Missfields, i = 0; i < Missfieldsize; i++, fp++) {
+        for (fp = Missfields.data(), i = 0; i < Missfields.size(); i++, fp++) {
             fp->Header =
-                wire_findheader(art->data, art->len, fp->Headername, false);
+                wire_findheader(art->data, art->len, fp->Headername.c_str(), false);
             if (fp->Header != nullptr) {
                 fp->HasHeader = true;
                 p = wire_endheader(fp->Header, art->data + art->len - 1);
@@ -815,15 +769,15 @@ DoArt(ARTHANDLE *art)
     }
 
     if (DoOverview && Xrefp->HeaderLength > 0) {
-        for (fp = ARTfields, j = 0; j < ARTfieldsize; j++, fp++) {
-            if (fp == ARTfields)
+        for (fp = ARTfields.data(), j = 0; j < ARTfieldsize; j++, fp++) {
+            if (fp == ARTfields.data())
                 buffer_set(&buffer, "", 0);
             else
                 buffer_append(&buffer, SEP, strlen(SEP));
             if (fp->HeaderLength == 0)
                 continue;
             if (fp->NeedHeadername) {
-                buffer_append(&buffer, fp->Headername, fp->HeadernameLength);
+                buffer_append(&buffer, fp->Headername.data(), fp->Headername.size());
                 buffer_append(&buffer, COLONSPACE, strlen(COLONSPACE));
             }
             i = buffer.left;
