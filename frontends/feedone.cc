@@ -7,6 +7,8 @@
 #include <errno.h>
 #include <time.h>
 
+#include <string>
+
 #include "inn/libinn.h"
 #include "inn/messages.h"
 #include "inn/nntp.h"
@@ -70,7 +72,7 @@ main(int ac, char *av[])
     int i;
     FILE *F;
     char buff[BUFSIZ];
-    char *mesgid = NULL;
+    std::string mesgid;
     char *p;
     char *q;
     bool PostMode;
@@ -89,14 +91,14 @@ main(int ac, char *av[])
             if (*optarg == '<')
                 mesgid = optarg;
             else
-                mesgid = concat("<", optarg, ">", (char *) 0);
+                mesgid = std::string("<") + optarg + ">";
             break;
         case 'p': /* Use POST, not IHAVE */
             PostMode = true;
             break;
         case 'r': /* Random Message-ID */
-            xasprintf(&mesgid, "<%ld@%lu>", (long) getpid(),
-                      (unsigned long) time(NULL));
+            mesgid = "<" + std::to_string((long) getpid()) + "@"
+                     + std::to_string((unsigned long) time(NULL)) + ">";
             break;
         case 't':
             Tracing = true;
@@ -112,17 +114,17 @@ main(int ac, char *av[])
         sysdie("cannot open input");
 
     /* Scan for the message-id. */
-    if (mesgid == NULL) {
+    if (mesgid.empty()) {
         while (fgets(buff, sizeof buff, F) != NULL)
             if (strncmp(buff, MESGIDHDR, strlen(MESGIDHDR)) == 0) {
                 if ((p = strchr(buff, '<')) == NULL
                     || (q = strchr(p, '>')) == NULL)
                     die("bad message ID line");
                 q[1] = '\0';
-                mesgid = xstrdup(p);
+                mesgid = p;
                 break;
             }
-        if (mesgid == NULL)
+        if (mesgid.empty())
             die("no message ID");
     }
 
@@ -140,7 +142,7 @@ main(int ac, char *av[])
         fprintf(ToServer, "post\r\n");
         i = NNTP_CONT_POST;
     } else {
-        fprintf(ToServer, "ihave %s\r\n", mesgid);
+        fprintf(ToServer, "ihave %s\r\n", mesgid.c_str());
         i = NNTP_CONT_IHAVE;
     }
     SafeFlush(ToServer);
@@ -154,7 +156,7 @@ main(int ac, char *av[])
     fseeko(F, 0, SEEK_SET);
     while (fgets(buff, sizeof buff, F) != NULL) {
         if (strncmp(buff, MESGIDHDR, strlen(MESGIDHDR)) == 0) {
-            fprintf(ToServer, "%s %s\r\n", MESGIDHDR, mesgid);
+            fprintf(ToServer, "%s %s\r\n", MESGIDHDR, mesgid.c_str());
             continue;
         }
         if ((p = strchr(buff, '\n')) != NULL)
