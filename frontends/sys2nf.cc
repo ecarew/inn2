@@ -12,15 +12,16 @@
 #include <errno.h>
 #include <sys/stat.h>
 
+#include <string>
+#include <vector>
+
 #include "inn/innconf.h"
 #include "inn/libinn.h"
 #include "inn/nntp.h"
 #include "inn/paths.h"
 
 #define TEMPFILE ":tmp"
-static char **Groups;
-
-char **ReadSys(const char *);
+static std::vector<std::string> Groups;
 
 /*
 **  Fill in the Groups array with the names of all active newsgroups.
@@ -40,16 +41,15 @@ ReadActive(char *act)
     }
     for (i = 0; fgets(buff, sizeof buff, F) != NULL; i++)
         continue;
-    Groups = xmalloc((i + 2) * sizeof(char *));
+    Groups.reserve(i);
 
     /* Fill in each word. */
     rewind(F);
-    for (i = 0; fgets(buff, sizeof buff, F) != NULL; i++) {
+    while (fgets(buff, sizeof buff, F) != NULL) {
         if ((p = strchr(buff, ' ')) != NULL)
             *p = '\0';
-        Groups[i] = xstrdup(buff);
+        Groups.emplace_back(buff);
     }
-    Groups[i] = NULL;
     fclose(F);
 }
 
@@ -58,7 +58,7 @@ ReadActive(char *act)
 **  Read in the sys file and turn it into an array of strings, one
 **  per continued line.
 */
-char **
+static std::vector<std::string>
 ReadSys(const char *sys)
 {
     char *p;
@@ -66,7 +66,7 @@ ReadSys(const char *sys)
     char *site;
     int i;
     char *data;
-    char **strings;
+    std::vector<std::string> strings;
 
     /* Read in the file, get rough count. */
     if ((data = ReadInFile(sys, (struct stat *) NULL)) == NULL) {
@@ -77,8 +77,8 @@ ReadSys(const char *sys)
         continue;
 
     /* Scan the file, glue all multi-line entries. */
-    for (strings = xmalloc((i + 2) * sizeof(char *)), i = 0, to = p = data;
-         *p;) {
+    strings.reserve(i + 1);
+    for (to = p = data; *p;) {
         for (site = to; *p;) {
             if (*p == '\n') {
                 p++;
@@ -94,9 +94,8 @@ ReadSys(const char *sys)
         *to++ = '\0';
         if (*site == '\0')
             continue;
-        strings[i++] = xstrdup(site);
+        strings.emplace_back(site);
     }
-    strings[i] = NULL;
     free(data);
     return strings;
 }
@@ -109,15 +108,15 @@ ReadSys(const char *sys)
 static bool
 GroupPrefix(const char *p)
 {
-    char **gp;
-    char *g;
     int count;
-    int i;
+    size_t i;
 
     if (strchr(p, '.') == NULL)
         return false;
-    for (i = strlen(p), count = 0, gp = Groups; (g = *gp++) != NULL;)
-        if (strcmp(p, g) == 0 || (strncmp(p, g, i) == 0 && g[i] == '.'))
+    i = strlen(p);
+    count = 0;
+    for (const std::string &g : Groups)
+        if (g == p || (g.compare(0, i, p) == 0 && g.size() > i && g[i] == '.'))
             count++;
     return count > 1;
 }
@@ -215,13 +214,14 @@ main(int ac, char *av[])
 {
     FILE *F;
     FILE *out;
-    char **sites;
+    std::vector<std::string> sites;
+    size_t next = 0;
     char *f2;
     char *f3;
     char *f4;
     char *p;
     char *q;
-    char *site;
+    std::string site;
     char buff[256];
     char *act;
     const char *dir;
@@ -263,16 +263,18 @@ main(int ac, char *av[])
     }
     for (;;) {
         /* Get next non-comment ilne. */
-        if ((p = *sites++) == NULL)
+        if (next == sites.size())
             break;
-        for (F = fopen(TEMPFILE, "w"); p && *p == '#'; p = *sites++)
+        p = sites[next++].data();
+        for (F = fopen(TEMPFILE, "w"); p && *p == '#';
+             p = next < sites.size() ? sites[next++].data() : NULL)
             fprintf(F, "%s\n", p);
         if (p == NULL) {
             fclose(F);
             break;
         }
-        site = xstrdup(p);
-        if ((f2 = strchr(site, ':')) == NULL)
+        site = p; /* a copy to cut at the colons */
+        if ((f2 = strchr(site.data(), ':')) == NULL)
             f2 = (char *) "HELP";
         else
             *f2++ = '\0';
@@ -286,7 +288,7 @@ main(int ac, char *av[])
             *f4++ = '\0';
 
         /* Write the fields. */
-        fprintf(F, "%s\\\n", site);
+        fprintf(F, "%s\\\n", site.c_str());
         fprintf(F, "\t:");
         DoSub(F, f2);
         fprintf(F, "\\\n");
@@ -304,8 +306,6 @@ main(int ac, char *av[])
             perror(TEMPFILE);
             exit(1);
         }
-
-        free(site);
 
         /* Find the sitename. */
         for (q = p; *q && *q != '/' && *q != ':'; q++)
