@@ -6,6 +6,7 @@
 
 #include <errno.h>
 #include <string>
+#include <vector>
 #include <sys/stat.h>
 #include <time.h>
 
@@ -17,7 +18,6 @@
 #include "inn/paths.h"
 #include "inn/qio.h"
 #include "inn/storage.h"
-#include "inn/vector.h"
 #include "inn/wire.h"
 
 
@@ -259,11 +259,9 @@ build_path(const char *group, const char *number, struct config *config,
 static void
 process_article(ARTHANDLE *art, const char *token, struct config *config)
 {
-    char *start, *end, *delim;
+    char *start, *end;
     std::string first; /* where the article went first; empty until then */
-    const char *group;
-    size_t i;
-    struct cvector *groups;
+    std::vector<std::string> groups;
     struct buffer *path = nullptr;
 
     /* Determine the groups from the Xref header field.  In groups will be the
@@ -279,39 +277,41 @@ process_article(ARTHANDLE *art, const char *token, struct config *config)
         warn("unterminated Xref header field in %s", token);
         return;
     }
-    /* The cvector's strings point into xref, which must outlive it and
-       stays writable for the ':' cut below. */
-    std::string xref(start, end - start);
-    for (char &c : xref)
-        if (c == '\r' || c == '\n')
-            c = ' ';
-    groups = cvector_split_space(xref.data(), nullptr);
-    if (groups->count < 2) {
+    /* Split the body on runs of white space, as cvector_split_space did
+       (a folded body's CR and LF count as white space). */
+    const std::string xref(start, end - start);
+    const char *const space = " \t\r\n";
+    for (size_t pos = xref.find_first_not_of(space);
+         pos != std::string::npos;) {
+        size_t stop = xref.find_first_of(space, pos);
+        groups.push_back(xref.substr(pos, stop - pos));
+        pos = xref.find_first_not_of(space, stop);
+    }
+    if (groups.size() < 2) {
         warn("bogus Xref header field in %s", token);
-        cvector_free(groups);
         return;
     }
 
     /* Walk through each newsgroup, saving the article in the appropriate
        location. */
-    for (i = 1; i < groups->count; i++) {
-        group = groups->strings[i];
-        /* The cvector's strings point into xref, our own writable copy. */
-        delim = const_cast<char *>(strchr(group, ':'));
-        if (delim == nullptr) {
-            warn("bogus Xref entry %s in %s", group, token);
+    for (size_t i = 1; i < groups.size(); i++) {
+        size_t colon = groups[i].find(':');
+        if (colon == std::string::npos) {
+            warn("bogus Xref entry %s in %s", groups[i].c_str(), token);
             continue;
         }
-        *delim = '\0';
+        const std::string group = groups[i].substr(0, colon);
+        const std::string number = groups[i].substr(colon + 1);
 
         /* Skip newsgroups that don't match our pattern, if provided. */
         if (config->pattern != nullptr) {
-            if (nativemat_poison(group, config->pattern) != NATIVEMAT_MATCH)
+            if (nativemat_poison(group.c_str(), config->pattern)
+                != NATIVEMAT_MATCH)
                 continue;
         }
 
         /* Get the path to which to write the article. */
-        path = build_path(group, delim + 1, config, path);
+        path = build_path(group.c_str(), number.c_str(), config, path);
 
         /* If this isn't the first group, and we're not saving by date, try to
            just link or symlink between the archive directories rather than
@@ -319,7 +319,7 @@ process_article(ARTHANDLE *art, const char *token, struct config *config)
         if (first.empty() || config->concat) {
             if (!write_article(art, path->data, config->concat))
                 continue;
-            if (groups->count > 2)
+            if (groups.size() > 2)
                 first = path->data;
         } else {
             if (!link_article(first.c_str(), path->data, art))
@@ -331,7 +331,6 @@ process_article(ARTHANDLE *art, const char *token, struct config *config)
             write_index(config->index, art,
                         path->data + strlen(config->root) + 1);
     }
-    cvector_free(groups);
     if (path != nullptr)
         buffer_free(path);
 }
