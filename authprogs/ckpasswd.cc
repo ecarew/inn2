@@ -123,7 +123,7 @@ pass_conv(int num_msg, PAM_CONST struct pam_message **msgm UNUSED,
 */
 #if !HAVE_PAM
 static bool
-auth_pam(char *username UNUSED, char *password UNUSED)
+auth_pam(const char *username UNUSED, char *password UNUSED)
 {
     return false;
 }
