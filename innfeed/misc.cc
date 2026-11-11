@@ -20,6 +20,9 @@
 #include <syslog.h>
 #include <time.h>
 
+#include <algorithm>
+#include <string>
+
 /* FIXME: Default to a max length of 256 characters for path names if the
    host headers doesn't give better information.  Should be replaced by the
    code from Stevens. */
@@ -88,9 +91,8 @@ void
 d_printf(unsigned int level, const char *fmt, ...)
 {
     static pid_t myPid;
-    static char *hostname;
+    static std::string hostname; /* short host name, found once */
     char timeString[30];
-    char *q;
     time_t now;
     struct tm *tm;
     va_list ap;
@@ -98,12 +100,11 @@ d_printf(unsigned int level, const char *fmt, ...)
     if (myPid == 0)
         myPid = getpid();
 
-    if (hostname == NULL) {
-        hostname = inn_getfqdn(innconf->domain);
-        if (hostname == NULL)
-            hostname = xstrdup("unknown");
-        if ((q = strchr(hostname, '.')) != NULL)
-            *q = '\0';
+    if (hostname.empty()) {
+        char *fqdn = inn_getfqdn(innconf->domain);
+        hostname = fqdn != NULL ? fqdn : "unknown";
+        free(fqdn);
+        hostname.erase(std::min(hostname.find('.'), hostname.size()));
     }
 
     if (loggingLevel < level)
@@ -114,7 +115,7 @@ d_printf(unsigned int level, const char *fmt, ...)
     strftime(timeString, sizeof(timeString), "%Y-%m-%d %T %z", tm);
 
     va_start(ap, fmt);
-    fprintf(stderr, "%s %s %s[%ld]: ", timeString, hostname,
+    fprintf(stderr, "%s %s %s[%ld]: ", timeString, hostname.c_str(),
             (message_program_name ? message_program_name : "UNKNOWN"),
             (long) myPid);
     vfprintf(stderr, fmt, ap);
