@@ -541,11 +541,13 @@ typedef enum _FEEDTYPE {
 /*
 **  Diablo-style hashed feeds or hashfeeds.
 */
-#define HASHFEED_QH  1
-#define HASHFEED_MD5 2
+enum class HashFeedType {
+    QH,  /* old-style Diablo quickhash, Q@x/z */
+    MD5, /* MD5 of the Message-ID, Qx/z */
+};
 
 typedef struct _HASHFEEDLIST {
-    int type;
+    HashFeedType type;
     unsigned int begin;
     unsigned int end;
     unsigned int mod;

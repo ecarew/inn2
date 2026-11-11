@@ -1669,17 +1669,21 @@ HashFeedMatch(HASHFEEDLIST *hf, char *MessageID)
     unsigned int qh = (unsigned int) -1;
     unsigned int h;
 
-    while (hf) {
-        if (hf->type == HASHFEED_MD5)
+    /* The switch has no default, so a new HashFeedType that is not handled
+       here is a -Wswitch warning rather than an entry skipped (or, as the
+       old else-continue did without advancing, a loop that never ends). */
+    for (; hf != nullptr; hf = hf->next) {
+        switch (hf->type) {
+        case HashFeedType::MD5:
             h = HashFeedMD5(MessageID, hf->offset);
-        else if (hf->type == HASHFEED_QH)
+            break;
+        case HashFeedType::QH:
             h = HashFeedQH(MessageID, &qh);
-        else
-            continue;
+            break;
+        }
 
         if ((h % hf->mod + 1) >= hf->begin && (h % hf->mod + 1) <= hf->end)
             return true;
-        hf = hf->next;
     }
 
     return false;

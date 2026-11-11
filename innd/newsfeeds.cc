@@ -635,9 +635,9 @@ SITEparseone(char *Entry, SITE *sp, char *subbed, char *poison)
             /* Check whether it is a quickhash or an MD5 hashfeed. */
             if (*p == '@') {
                 p++;
-                hf->type = HASHFEED_QH;
+                hf->type = HashFeedType::QH;
             } else {
-                hf->type = HASHFEED_MD5;
+                hf->type = HashFeedType::MD5;
             }
             /* Check the presence of a starting byte-offset for hashfeed. */
             if ((u = strchr(p, '_')) != nullptr) {
