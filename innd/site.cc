@@ -1058,7 +1058,6 @@ void
 SITEfree(SITE *sp)
 {
     SITE *s;
-    HASHFEEDLIST *hf, *hn;
     int newmaster;
     int i;
 
@@ -1115,13 +1114,7 @@ SITEfree(SITE *sp)
         sp->FNLnames.left = 0;
         sp->FNLnames.used = 0;
     }
-    if (sp->HashFeedList) {
-        for (hf = sp->HashFeedList; hf; hf = hn) {
-            hn = hf->next;
-            free(hf);
-        }
-        sp->HashFeedList = nullptr;
-    }
+    sp->HashFeeds.clear();
 
     /* If this site was a master, find a new one. */
     if (sp->IsMaster) {

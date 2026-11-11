@@ -547,14 +547,13 @@ enum class HashFeedType {
     MD5, /* MD5 of the Message-ID, Qx/z */
 };
 
-typedef struct _HASHFEEDLIST {
+struct HashFeed {
     HashFeedType type;
     unsigned int begin;
     unsigned int end;
     unsigned int mod;
     unsigned int offset;
-    struct _HASHFEEDLIST *next;
-} HASHFEEDLIST;
+};
 
 /*
 **  A site may reject something in its subscription list if it has
@@ -611,7 +610,7 @@ typedef struct _SITE {
     struct buffer Buffer{};
     bool Buffered{};
     char **Originator{};
-    HASHFEEDLIST *HashFeedList{};
+    std::vector<HashFeed> HashFeeds{};
     int Next{};
     int Prev{};
 } SITE;

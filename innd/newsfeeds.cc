@@ -455,7 +455,6 @@ SITEparseone(char *Entry, SITE *sp, char *subbed, char *poison)
     int isp;
     SITE *nsp;
     struct buffer b;
-    HASHFEEDLIST *hf;
 
     b = sp->Buffer;
     *sp = SITE{};
@@ -476,7 +475,6 @@ SITEparseone(char *Entry, SITE *sp, char *subbed, char *poison)
     sp->FeedwithoutOriginator = false;
     sp->DropFiltered = false;
     sp->FeedTrash = false;
-    sp->HashFeedList = nullptr;
 
     /* Nip off the first field, the site name. */
     if ((f2 = strchr(Entry, NF_FIELD_SEP)) == nullptr)
@@ -629,39 +627,37 @@ SITEparseone(char *Entry, SITE *sp, char *subbed, char *poison)
                 sp->Nice = atoi(p);
             break;
         case 'Q':
-            hf = xmalloc(sizeof(HASHFEEDLIST));
+        {
+            HashFeed hf{};
             p++;
             /* Check whether it is a quickhash or an MD5 hashfeed. */
             if (*p == '@') {
                 p++;
-                hf->type = HashFeedType::QH;
+                hf.type = HashFeedType::QH;
             } else {
-                hf->type = HashFeedType::MD5;
+                hf.type = HashFeedType::MD5;
             }
             /* Check the presence of a starting byte-offset for hashfeed. */
             if ((u = strchr(p, '_')) != nullptr) {
-                if (sscanf(u + 1, "%u", &hf->offset) != 1 || hf->offset > 12) {
-                    free(hf);
+                if (sscanf(u + 1, "%u", &hf.offset) != 1 || hf.offset > 12) {
                     return "invalid hash offset for Q param in field 3";
                 }
             } else {
-                hf->offset = 0;
+                hf.offset = 0;
             }
-            if (sscanf(p, "%u/%u", &hf->begin, &hf->mod) == 2) {
-                hf->end = hf->begin;
-            } else if (sscanf(p, "%u-%u/%u", &hf->begin, &hf->end, &hf->mod)
+            if (sscanf(p, "%u/%u", &hf.begin, &hf.mod) == 2) {
+                hf.end = hf.begin;
+            } else if (sscanf(p, "%u-%u/%u", &hf.begin, &hf.end, &hf.mod)
                        != 3) {
-                free(hf);
                 return "hash not in x/z or x-y/z format for Q param in field "
                        "3";
             }
-            if (hf->begin > hf->end || hf->end > hf->mod) {
-                free(hf);
+            if (hf.begin > hf.end || hf.end > hf.mod) {
                 return "incorrect hash values for Q param in field 3";
             }
-            hf->next = sp->HashFeedList;
-            sp->HashFeedList = hf;
+            sp->HashFeeds.push_back(hf);
             break;
+        }
         case 'S':
             if (*++p && isdigit((unsigned char) *p))
                 sp->StartSpooling = atol(p);

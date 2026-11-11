@@ -1660,29 +1660,28 @@ HashFeedQH(char *MessageID, unsigned int *tmp)
 }
 
 /*
-**  Return true if an element of the HASHFEEDLIST matches
-**  the hash of the Message-ID.
+**  Return true if one of a site's hashfeeds matches the hash of the
+**  Message-ID.
 */
 static bool
-HashFeedMatch(HASHFEEDLIST *hf, char *MessageID)
+HashFeedMatch(const std::vector<HashFeed> &feeds, char *MessageID)
 {
     unsigned int qh = (unsigned int) -1;
     unsigned int h;
 
     /* The switch has no default, so a new HashFeedType that is not handled
-       here is a -Wswitch warning rather than an entry skipped (or, as the
-       old else-continue did without advancing, a loop that never ends). */
-    for (; hf != nullptr; hf = hf->next) {
-        switch (hf->type) {
+       here is a -Wswitch warning rather than an entry skipped. */
+    for (const HashFeed &hf : feeds) {
+        switch (hf.type) {
         case HashFeedType::MD5:
-            h = HashFeedMD5(MessageID, hf->offset);
+            h = HashFeedMD5(MessageID, hf.offset);
             break;
         case HashFeedType::QH:
             h = HashFeedQH(MessageID, &qh);
             break;
         }
 
-        if ((h % hf->mod + 1) >= hf->begin && (h % hf->mod + 1) <= hf->end)
+        if ((h % hf.mod + 1) >= hf.begin && (h % hf.mod + 1) <= hf.end)
             return true;
     }
 
@@ -1792,8 +1791,8 @@ ARTpropagate(ARTDATA *data, const char **hops, int hopcount, char **list,
              * cross-posting. */
             continue;
 
-        if (sp->HashFeedList
-            && !HashFeedMatch(sp->HashFeedList, hc[HDR__MESSAGE_ID].data()))
+        if (!sp->HashFeeds.empty()
+            && !HashFeedMatch(sp->HashFeeds, hc[HDR__MESSAGE_ID].data()))
             /* Hashfeed doesn't match. */
             continue;
 
