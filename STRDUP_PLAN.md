@@ -48,8 +48,10 @@ its own risk.
 2. **Temporary local copies:** strings copied so they can be cut up in
    place and freed at the end of the function. For example
    `innd/rc.cc:262` and `RCCommaSplit(xstrdup(...))`.
-   - **Fix:** a local `std::string`, or `std::string_view` when the code
-     only reads, with the splitting done on views.
+   - **Fix:** a local `std::string`, split into further strings (or by
+     index) rather than cut in place. Not `std::string_view`: a view is a
+     pointer into another string's buffer, which the tracked list below
+     rules out.
    - **Watch for:** early returns that skip the `free` today. These are
      leaks the conversion fixes, and the commit message should say so.
 3. **Values that cross a C interface.** Strings handed to or taken from
@@ -126,6 +128,46 @@ Shared infrastructure comes last.
 - `xstrdup` and `xstrndup` leave `include/inn/xmalloc.h` once nothing
   calls them. Whether to remove them is the architect's call at that
   point.
+
+## Raw pointers to and into std::string (tracked)
+
+The architect asked (2026-11-11) that no raw pointer to a `std::string`
+object, or into its buffer through `data()`/`c_str()`, be left behind by
+the conversions. A pointer passed to a call that does not keep it
+(`printf`, `QIOopen(path.c_str())`, `chdir`) is not tracked. A pointer that
+is stored, in a variable, a struct or a table, is.
+
+Pointers to string objects (`std::string *`, `&s` kept): none in the
+tree (grep for `string *\*` and stored address-of, 2026-11-11).
+
+Pointers into string buffers that are stored, as of 2026-11-11:
+
+| Where | What is stored | Lifetime risk | Plan |
+|---|---|---|---|
+| innfeed/main.cc | globals `InputFile`, `pidFile` = `c_str()` of file-scope strings | dangles if the string is reassigned (config reload) | innfeed pass |
+| innfeed/tape.cc `getTapeDirectory` | returns `c_str()` of a static | callers may keep it across a change | innfeed pass |
+| innfeed/host.cc `hostPeerName`, `hostIpName`; imap_connection.cc `unlessEmpty` | return `c_str()` of host params; callers keep them in locals | host params are replaced on reload | innfeed pass |
+| innfeed/imap_connection.cc | `str = line.data()` cursor over the response line | local | innfeed pass |
+| innd/article.h `WordList` | `words_` point into `text_` | resizing `text_` would dangle them; `start()` clears `words_` first | innd pass |
+| innd/art.cc | `hp[].p`, `arth.path`, `arth.groups`, `p` cursors into the header cache and `xref`/`lines`/`keywords` | per article; the cache is not touched meanwhile | innd pass |
+| innd/keywords.cc | `text` cursor into `orig_text` | local | innd pass |
+| storage/tradindexed/tdx-group.cc | `name` points into a map entry's name | local; map unchanged meanwhile | storage pass |
+| contrib/respool.cc, contrib/expirectl.cc | local cursors into the article and line | local | contrib pass |
+
+Each pass replaces the stored pointer with the string itself, an index or
+offset into it, or a copy (not a `std::string_view`, which is the same
+pointer under another name). Rows leave this table when fixed, with the
+commit hash.
+
+Fixed:
+
+- frontends/inews.cc, the header table pointed into four static strings
+  (and into the article and optarg): the table owns `std::optional<
+  std::string>` bodies, 76475a79b.
+- frontends/sys2nf.cc, cursors into the entry strings: each entry is
+  split into strings, 90e0f3bbd.
+- backends/archive.cc, a `cvector` into the Xref copy: split into a
+  `std::vector<std::string>`, 7d323366a.
 
 ## Out of scope
 
