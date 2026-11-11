@@ -143,7 +143,13 @@ find_package(SQLite3 REQUIRED)
 # Boost is required, header-only libraries so far (CLAUDE.md, "Build
 # system"); code that uses it links Boost::headers.  CMake 4 has no
 # FindBoost module: this uses Boost's own BoostConfig.cmake.
-find_package(Boost 1.92 REQUIRED CONFIG)
+#
+# 1.92 is a minimum, not a pin: Boost 1.92 or any newer release is
+# accepted.  Boost's BoostConfigVersion.cmake rejects only versions less
+# than the one asked for, so no upper bound or exact match applies.
+set(INN_BOOST_MIN_VERSION 1.92)
+find_package(Boost ${INN_BOOST_MIN_VERSION} REQUIRED CONFIG)
+message(STATUS "Boost ${Boost_VERSION} (need ${INN_BOOST_MIN_VERSION} or newer)")
 
 # Optional-feature hooks consumed by innd/CMakeLists.txt and the others.
 # Perl and Python come from cmake/InnFilters.cmake (empty unless
