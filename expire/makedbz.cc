@@ -5,6 +5,7 @@
 #include "portable/system.h"
 
 #include <errno.h>
+#include <string>
 #include <syslog.h>
 
 #include "inn/dbz.h"
@@ -22,7 +23,7 @@
 #define HIS_FIELDSEP '\t'
 
 static char *TextFile = nullptr;
-static char *HistoryDir = nullptr;
+static std::string HistoryDir;
 static char *HISTORY = nullptr;
 
 static void Usage() __attribute__((__noreturn__));
@@ -97,8 +98,8 @@ Rebuild(off_t size, bool IgnoreOld, bool Overwrite)
     char temp[SMBUF];
     dbzoptions opt;
 
-    if (chdir(HistoryDir) < 0)
-        sysdie("cannot chdir to %s", HistoryDir);
+    if (chdir(HistoryDir.c_str()) < 0)
+        sysdie("cannot chdir to %s", HistoryDir.c_str());
 
     /* If we are ignoring the old database and the user didn't specify a table
        size, determine one ourselves from the size of the text history file.
@@ -280,13 +281,11 @@ main(int argc, char **argv)
         /* find the default history file directory */
         HistoryDir = innconf->pathhistory;
     } else {
-        *p = '\0';
-        HistoryDir = xstrdup(TextFile);
-        *p = '/';
+        HistoryDir.assign(TextFile, p - TextFile);
     }
 
-    if (chdir(HistoryDir) < 0)
-        sysdie("cannot chdir to %s", HistoryDir);
+    if (chdir(HistoryDir.c_str()) < 0)
+        sysdie("cannot chdir to %s", HistoryDir.c_str());
 
     /* Change to the runasuser user and runasgroup group if necessary. */
     ensure_news_user_grp(true, true);
