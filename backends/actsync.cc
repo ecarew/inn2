@@ -741,7 +741,7 @@ get_active(char *host, int hostid, int *len, struct grp *grp, int *errs)
     int namelen;                /* length of newsgroup name */
     int is_file;                /* 1 => host is actually a filename */
     int num_check;              /* true => check for all numeric components */
-    char *rhost;
+    std::string rhost;
     int rport;
     char *p;
     int i;
@@ -787,26 +787,23 @@ get_active(char *host, int hostid, int *len, struct grp *grp, int *errs)
         /* prepare remote host variables */
         if ((p = strchr(host, ':')) != nullptr) {
             rport = atoi(p + 1);
-            *p = '\0';
-            rhost = xstrdup(host);
-            *p = ':';
+            rhost.assign(host, p - host);
         } else {
-            rhost = xstrdup(host);
+            rhost = host;
             rport = NNTP_PORT;
         }
 
         /* open a connection to the server */
         buff[0] = '\0';
-        if (NNTPconnect(rhost, rport, &FromServer, &ToServer, buff,
+        if (NNTPconnect(rhost.c_str(), rport, &FromServer, &ToServer, buff,
                         sizeof(buff))
             < 0)
             die("cannot connect to server: %s",
                 buff[0] ? buff : strerror(errno));
 
-        if (A_flag && NNTPsendpassword(rhost, FromServer, ToServer) < 0)
+        if (A_flag && NNTPsendpassword(rhost.data(), FromServer, ToServer) < 0)
             die("cannot authenticate to server");
 
-        free(rhost);
 
         /* get the active data from the server */
         active = CAlistopen(FromServer, ToServer, nullptr);
