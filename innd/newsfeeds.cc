@@ -20,7 +20,6 @@ typedef struct _SITEVARIABLES {
 /* The character which introduces a variable assignment or reference. */
 #define VARIABLE_CHAR '$'
 
-static SITE SITEnull;
 static char *SITEfeedspath = nullptr;
 static SITEVARIABLES *SITEvariables = nullptr;
 
@@ -459,7 +458,7 @@ SITEparseone(char *Entry, SITE *sp, char *subbed, char *poison)
     HASHFEEDLIST *hf;
 
     b = sp->Buffer;
-    *sp = SITEnull;
+    *sp = SITE{};
     sp->Buffer = b;
     sp->Master = NOSITE;
     sp->Funnel = NOSITE;
