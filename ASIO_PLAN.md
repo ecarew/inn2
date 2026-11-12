@@ -142,6 +142,17 @@ Revised 2026-11-12, decided by the architect:
   transaction (`transtimelimit`).  The tests check that timer instead
   (`tests/overview/ovsqlite-server-t.cc`, 23 checks, committed before
   the conversion).
+- Performance bar, decided by the architect: Linux (production) must
+  show no slowdown; a macOS slowdown is accepted and recorded.  The
+  reactor ovsqlite-server, 32 clients x 5000 get_artinfo (its cheapest
+  request) plus 20,000 add_article, old and new alternated: Linux
+  reads +1.5%, writes +1%; macOS reads -7%, writes +6%.  The macOS cost
+  is Asio's kqueue reactor calling kevent() each time a read wait is
+  armed (epoll registers once).  Not cured by the unsafe concurrency
+  hint (~1%), a speculative next read (worse), or
+  BOOST_ASIO_DISABLE_KQUEUE (no better).  The proactor style
+  (`async_read` of the length, then the body, with no readiness wait
+  first) is the follow-up if the macOS figure ever matters.
 
 ### Phase 3: innfeed
 
