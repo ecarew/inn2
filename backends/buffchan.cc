@@ -2,8 +2,9 @@
 **  Buffered file exploder for innd.
 **
 **  One Boost.Asio io_context runs everything: the read of the funnel on
-**  standard input, a steady_timer per site for the -L and -C time limits,
-**  and the signals that end the program.  See support/doxygen-buffchan.md.
+**  standard input (inn::LineReader), a steady_timer per site for the -L
+**  and -C time limits, and the signals that end the program
+**  (inn::ExitSignals).  See support/doxygen-buffchan.md.
 */
 
 #include "portable/system.h"
@@ -14,19 +15,15 @@
 #include <cstdio>
 #include <cstring>
 #include <memory>
-#include <semaphore>
 #include <string>
 #include <sys/stat.h>
-#include <thread>
 #include <unordered_map>
-#include <vector>
 
+#include <boost/asio/error.hpp>
 #include <boost/asio/io_context.hpp>
-#include <boost/asio/posix/stream_descriptor.hpp>
-#include <boost/asio/post.hpp>
-#include <boost/asio/signal_set.hpp>
 #include <boost/asio/steady_timer.hpp>
 
+#include "inn/asio.h"
 #include "inn/innconf.h"
 #include "inn/libinn.h"
 #include "inn/messages.h"
@@ -403,150 +400,6 @@ finish()
 }
 
 
-/*
-**  The reader of standard input.  Splits what it reads into lines as QIO
-**  does: a line of QIO_BUFFERSIZE bytes or more, not counting its newline,
-**  is skipped with a warning, and a partial line at end of file is dropped.
-**
-**  A pipe or socket (innd's channel) is read asynchronously.  Some inputs
-**  cannot be waited on: epoll refuses regular files, and macOS's kqueue
-**  never reports end of file on a named FIFO or a terminal.  Those are read
-**  by a thread with blocking reads; it hands each chunk to the event loop
-**  and waits until the chunk is handled, so timers and signals keep running
-**  and a large file is never held in memory.
-*/
-class Reader {
-public:
-    explicit Reader(asio::io_context &io) : io_(io), in_(io)
-    {
-        if (waitable()) {
-            boost::system::error_code ec;
-            in_.assign(dup(STDIN_FILENO), ec);
-            async_ = !ec;
-        }
-    }
-
-    void start()
-    {
-        if (async_)
-            next();
-        else
-            thread_ = std::thread([this] { readLoop(); });
-    }
-
-    ~Reader()
-    {
-        if (thread_.joinable())
-            thread_.detach();
-    }
-
-private:
-    /* Whether the event loop can wait on standard input. */
-    static bool waitable()
-    {
-        struct stat st;
-        if (fstat(STDIN_FILENO, &st) < 0 || S_ISREG(st.st_mode))
-            return false;
-#if defined(__APPLE__)
-        /* A pipe has no links; a named FIFO has one. */
-        if ((S_ISFIFO(st.st_mode) && st.st_nlink > 0) || S_ISCHR(st.st_mode))
-            return false;
-#endif
-        return true;
-    }
-
-    void next()
-    {
-        in_.async_read_some(asio::buffer(chunk_),
-                            [this](const boost::system::error_code &ec,
-                                   std::size_t n) {
-                                if (got(ec, n))
-                                    next();
-                            });
-    }
-
-    /* The thread's loop, for input the event loop cannot wait on. */
-    void readLoop()
-    {
-        while (true) {
-            ssize_t n;
-            do
-                n = read(STDIN_FILENO, chunk_.data(), chunk_.size());
-            while (n < 0 && errno == EINTR);
-            boost::system::error_code ec;
-            if (n < 0)
-                ec.assign(errno, boost::system::system_category());
-            else if (n == 0)
-                ec = asio::error::eof;
-            /* The chunk is not touched again until the handler is done. */
-            asio::post(io_, [this, ec, n] {
-                more_ = got(ec, ec ? 0 : static_cast<std::size_t>(n));
-                done_.release();
-            });
-            done_.acquire();
-            if (!more_)
-                return;
-        }
-    }
-
-    /* Add text to the line being collected, unless it is already too
-       long. */
-    void collect(const char *text, std::size_t len)
-    {
-        if (long_)
-            return;
-        pending_.append(text, len);
-        if (pending_.size() >= QIO_BUFFERSIZE) {
-            long_ = true;
-            pending_.clear();
-        }
-    }
-
-    /* Handle a chunk of input, or the end of it.  Returns whether to read
-       more. */
-    bool got(const boost::system::error_code &ec, std::size_t n)
-    {
-        if (ec) {
-            if (ec != asio::error::eof) {
-                errno = ec.value();
-                syswarn("cannot read");
-            } else if (long_)
-                warn("long line");
-            finish();
-            return false;
-        }
-        const char *p = chunk_.data();
-        const char *end = p + n;
-        while (p < end) {
-            const char *nl =
-                static_cast<const char *>(memchr(p, '\n', end - p));
-            if (nl == nullptr) {
-                collect(p, end - p);
-                break;
-            }
-            collect(p, nl - p);
-            if (long_)
-                warn("long line");
-            else
-                handleLine(pending_);
-            long_ = false;
-            pending_.clear();
-            p = nl + 1;
-        }
-        return true;
-    }
-
-    asio::io_context &io_;
-    asio::posix::stream_descriptor in_;
-    bool async_ = false;
-    bool long_ = false;
-    std::string pending_;
-    std::vector<char> chunk_ = std::vector<char>(QIO_BUFFERSIZE);
-    std::thread thread_;
-    std::binary_semaphore done_{0}; /* the thread's chunk was handled */
-    bool more_ = true;              /* and whether to read more */
-};
-
 } // namespace
 
 
@@ -576,19 +429,11 @@ main(int ac, char *av[])
     asio::io_context io;
     IO = &io;
 
-    /* The first of these signals closes the files and ends the program.
-       Clearing the set gives them back their default action, so a second
-       one kills it at once. */
-    asio::signal_set signals(io, SIGHUP, SIGINT, SIGQUIT);
-    signals.add(SIGPIPE);
-    signals.add(SIGTERM);
-    signals.add(SIGALRM);
-    signals.async_wait([&](const boost::system::error_code &ec, int) {
-        if (ec)
-            return;
-        signals.clear();
-        finish();
-    });
+    /* The first of these signals closes the files and ends the program; a
+       second one kills it at once. */
+    inn::ExitSignals signals(
+        io, {SIGHUP, SIGINT, SIGQUIT, SIGPIPE, SIGTERM, SIGALRM},
+        [](int) { finish(); });
 
     /* Parse JCL. */
     while ((i = getopt(ac, av, "bc:C:d:f:l:L:m:p:rs:u")) != EOF)
@@ -655,9 +500,18 @@ main(int ac, char *av[])
     if (Directory && chdir(Directory) < 0)
         sysdie("cannot chdir to %s", Directory);
 
-    /* Read input until end of file or a signal. */
-    Reader reader(io);
-    reader.start();
+    /* Read input until end of file or a signal.  Lines follow QIO's rules
+       (include/inn/asio.h): a line of 32 KiB or more is skipped with a
+       warning, and a partial line at end of file is dropped. */
+    inn::LineReader reader(io, STDIN_FILENO);
+    reader.start(handleLine, [] { warn("long line"); },
+                 [](const boost::system::error_code &ec) {
+                     if (ec != boost::asio::error::eof) {
+                         errno = ec.value();
+                         syswarn("cannot read");
+                     }
+                     finish();
+                 });
     io.run();
     exit(0);
     /* NOTREACHED */

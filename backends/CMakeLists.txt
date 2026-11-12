@@ -5,7 +5,7 @@
 inn_program(actsync    SOURCES actsync.cc    INNONLY)
 inn_program(archive    SOURCES archive.cc)
 inn_program(batcher    SOURCES batcher.cc)
-inn_program(buffchan   SOURCES buffchan.cc   INNONLY LIBS Boost::headers Threads::Threads)
+inn_program(buffchan   SOURCES buffchan.cc   INNONLY LIBS inn_asio)
 inn_program(cvtbatch   SOURCES cvtbatch.cc)
 inn_program(innbind    SOURCES innbind.cc    INNONLY)
 inn_program(inndf      SOURCES inndf.cc)
