@@ -131,6 +131,18 @@ They are the smallest real servers and have tests
 - Perf: W2 and W5 use overview; plus a many-reader benchmark against the
   server directly.
 
+Revised 2026-11-12, decided by the architect:
+
+- ovdb_server is deferred.  The CMake build never enables Berkeley DB
+  (nothing finds the library, so HAVE_BDB is always off and
+  `frontends/ovdb_server.cc` builds as a stub), so a converted server
+  could be neither compiled nor tested.  It moves to the phase after
+  Berkeley DB detection is added to CMake, which is its own task.
+- ovsqlite-server has no idle timeout; its one timer commits the open
+  transaction (`transtimelimit`).  The tests check that timer instead
+  (`tests/overview/ovsqlite-server-t.cc`, 23 checks, committed before
+  the conversion).
+
 ### Phase 3: innfeed
 
 `endpoint.cc` is already an event-loop library behind a callback API,
