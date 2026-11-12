@@ -15,14 +15,15 @@
 
 #ifdef HAVE_SQLITE3
 
+#    include <chrono>
 #    include <errno.h>
 #    include <fcntl.h>
+#    include <memory>
+#    include <optional>
 #    include <signal.h>
 #    include <syslog.h>
-#    ifdef HAVE_SYS_SELECT_H
-#        include <sys/select.h>
-#    endif
 #    include <time.h>
+#    include <unordered_map>
 #    ifdef HAVE_SYS_TIME_H
 #        include <sys/time.h>
 #    endif
@@ -34,6 +35,11 @@
 #        include "portable/socket-unix.h"
 #    endif
 
+#    include <boost/asio/io_context.hpp>
+#    include <boost/asio/posix/stream_descriptor.hpp>
+#    include <boost/asio/steady_timer.hpp>
+
+#    include "inn/asio.h"
 #    include "inn/concat.h"
 #    include "inn/confparse.h"
 #    include "inn/fdflag.h"
@@ -93,15 +99,33 @@ enum {
 
 #    define INITIAL_CAPACITY 0x400
 
+namespace asio = boost::asio;
+
+/*
+ * A client.  Each is owned by a shared_ptr in clients, and each pending
+ * wait holds another, so a client deleted from inside its own handler (or
+ * with a wait pending) stays valid until that handler has returned;
+ * closed tells the handler it is gone.  want_read and want_write are what
+ * the select() loop's fd_sets held; read_armed and write_armed say a wait
+ * is pending.
+ */
 typedef struct client_t {
-    uint8_t flags;
-    bool cutofflow;
-    bool check_forgotten;
-    int sock;
-    uint32_t mode;
-    time_t expiration_start;
-    buffer_t *request;
-    buffer_t *response;
+    uint8_t flags = 0;
+    bool cutofflow = false;
+    bool check_forgotten = false;
+    int sock = -1;
+    uint32_t mode = 0;
+    time_t expiration_start = 0;
+    buffer_t *request = nullptr;
+    buffer_t *response = nullptr;
+
+    explicit client_t(asio::io_context &io) : stream(io)
+    {
+    }
+    asio::posix::stream_descriptor stream;
+    bool want_read = false, want_write = false;
+    bool read_armed = false, write_armed = false;
+    bool closed = false;
 } client_t;
 
 #    ifndef HAVE_UNIX_DOMAIN_SOCKETS
@@ -110,11 +134,14 @@ static ovsqlite_port port;
 
 static char *pidfile = nullptr;
 static int listensock = -1;
-static int maxsock = -1;
-static client_t *clients = nullptr;
-static size_t client_capacity, client_count;
-static fd_set read_fds, write_fds;
-static bool volatile terminating;
+
+/* The event loop, made after daemon() forks (kqueue does not survive a
+   fork), with the listener, the commit timer and the clients. */
+static std::optional<asio::io_context> io;
+static std::optional<asio::posix::stream_descriptor> listener;
+static std::optional<asio::steady_timer> commit_timer;
+static std::optional<inn::ExitSignals> signals;
+static std::unordered_map<client_t *, std::shared_ptr<client_t>> clients;
 
 static sqlite3 *connection;
 static sql_main_t sql_main;
@@ -130,7 +157,6 @@ static unsigned long wal_checkpoint_threshold = 1000;
 
 static bool in_transaction;
 static unsigned int transaction_rowcount;
-static struct timeval next_commit;
 static int wal_pages;
 
 
@@ -153,46 +179,6 @@ timeval_normalise(struct timeval *t)
     }
 }
 
-static struct timeval
-timeval_sum(struct timeval a, struct timeval b)
-{
-    struct timeval result;
-
-    timeval_normalise(&a);
-    timeval_normalise(&b);
-    result.tv_sec = a.tv_sec + b.tv_sec;
-    result.tv_usec = a.tv_usec + b.tv_usec;
-    timeval_normalise(&result);
-    return result;
-}
-
-static struct timeval
-timeval_difference(struct timeval a, struct timeval b)
-{
-    struct timeval result;
-
-    timeval_normalise(&a);
-    timeval_normalise(&b);
-    result.tv_sec = a.tv_sec - b.tv_sec;
-    result.tv_usec = a.tv_usec - b.tv_usec;
-    timeval_normalise(&result);
-    return result;
-}
-
-static void
-catcher(int sig UNUSED)
-{
-    terminating = true;
-}
-
-static void
-catch_signals()
-{
-    xsignal_norestart(SIGINT, catcher);
-    xsignal_norestart(SIGTERM, catcher);
-    xsignal_norestart(SIGHUP, catcher);
-    xsignal(SIGPIPE, SIG_IGN);
-}
 
 static void
 resetclear(sqlite3_stmt *stmt)
@@ -201,65 +187,92 @@ resetclear(sqlite3_stmt *stmt)
     sqlite3_clear_bindings(stmt);
 }
 
+static void handle_read(client_t *client);
+static void handle_write(client_t *client);
+static void after_event();
+
+/* Wait for the client to be readable or writable, if it wants that and no
+   wait is pending.  The handler runs the old loop's handle_read or
+   handle_write, then waits again while the client still wants it. */
+static void
+arm(client_t *client)
+{
+    auto self = clients.at(client);
+
+    if (client->want_read && !client->read_armed) {
+        client->read_armed = true;
+        client->stream.async_wait(
+            asio::posix::stream_descriptor::wait_read,
+            [self](const boost::system::error_code &ec) {
+                self->read_armed = false;
+                if (ec || self->closed || !self->want_read)
+                    return;
+                handle_read(self.get());
+                /* The socket is almost always writable: send the response
+                   now, and wait only for what does not fit. */
+                if (!self->closed && self->want_write)
+                    handle_write(self.get());
+                if (!self->closed)
+                    arm(self.get());
+                after_event();
+            });
+    }
+    if (client->want_write && !client->write_armed) {
+        client->write_armed = true;
+        client->stream.async_wait(
+            asio::posix::stream_descriptor::wait_write,
+            [self](const boost::system::error_code &ec) {
+                self->write_armed = false;
+                if (ec || self->closed || !self->want_write)
+                    return;
+                handle_write(self.get());
+                if (!self->closed)
+                    arm(self.get());
+                after_event();
+            });
+    }
+}
+
 static client_t *
 add_client(int sock)
 {
-    client_t *result;
+    auto client = std::make_shared<client_t>(*io);
+    client_t *result = client.get();
 
-    if (client_count >= client_capacity) {
-        size_t new_client_capacity;
-
-        new_client_capacity = (client_count + 1) * 3 / 2;
-        clients =
-            xreallocarray(clients, new_client_capacity, sizeof(client_t));
-        client_capacity = new_client_capacity;
-    }
-
-    result = clients + client_count;
-    memset(result, 0, sizeof(client_t));
+    /* Non-blocking, so the direct write in arm() never stalls the loop on a
+       client that is not reading; handle_read and handle_write already
+       stop at EAGAIN. */
+    fdflag_nonblocking(sock, true);
     result->sock = sock;
+    result->stream.assign(sock);
     result->flags = client_flag_init;
     result->request = buffer_new();
     buffer_resize(result->request, INITIAL_CAPACITY);
     result->response = buffer_new();
     buffer_resize(result->response, INITIAL_CAPACITY);
-
-    client_count++;
-    FD_SET(sock, &read_fds);
-    if (sock > maxsock)
-        maxsock = sock;
+    result->want_read = true;
+    clients.emplace(result, std::move(client));
+    arm(result);
     return result;
 }
 
+/* Close a client's connection and forget it.  A handler that holds it
+   sees closed and leaves it alone. */
 static void
 del_client(client_t *client)
 {
-    size_t ix;
-    int sock;
+    auto it = clients.find(client);
 
-    ix = client - clients;
-    if (ix >= client_count || client != clients + ix)
+    if (it == clients.end())
         return;
-    sock = client->sock;
-    FD_CLR(sock, &read_fds);
-    FD_CLR(sock, &write_fds);
-    close(sock);
-    buffer_free(client->request);
-    buffer_free(client->response);
-    if (ix + 1 < client_count)
-        *client = clients[client_count - 1];
-    client_count--;
-    if (sock == maxsock) {
-        int new_maxsock;
-
-        new_maxsock = listensock;
-        for (ix = 0; ix < client_count; ix++) {
-            sock = clients[ix].sock;
-            if (sock > new_maxsock)
-                new_maxsock = sock;
-        }
-        maxsock = new_maxsock;
-    }
+    auto self = it->second;
+    clients.erase(it);
+    self->closed = true;
+    boost::system::error_code ignored;
+    self->stream.close(ignored);
+    buffer_free(self->request);
+    buffer_free(self->response);
+    self->request = self->response = nullptr;
 }
 
 #    ifdef HAVE_UNIX_DOMAIN_SOCKETS
@@ -337,8 +350,6 @@ make_listener()
     if (listen(listensock, innconf->maxlisten) == -1)
         sysdie("cannot listen on socket");
     fdflag_nonblocking(listensock, true);
-    FD_SET(listensock, &read_fds);
-    maxsock = listensock;
 }
 
 static void
@@ -779,12 +790,13 @@ close_db()
 static void
 close_sockets()
 {
-    size_t ix;
-
-    close(listensock);
+    if (listener)
+        listener->close();
+    else
+        close(listensock);
     listensock = -1;
-    for (ix = client_count; ix-- > 0;)
-        del_client(clients + ix);
+    while (!clients.empty())
+        del_client(clients.begin()->first);
 }
 
 static unsigned int
@@ -818,7 +830,7 @@ static void
 finish_response(client_t *client)
 {
     *(uint32_t *) (void *) client->response->data = client->response->left;
-    FD_SET(client->sock, &write_fds);
+    client->want_write = true;
 }
 
 static void
@@ -828,26 +840,37 @@ simple_response(client_t *client, unsigned int code)
     finish_response(client);
     if (code >= response_fatal) {
         client->flags |= client_flag_term;
-        FD_CLR(client->sock, &read_fds);
+        client->want_read = false;
     }
 }
+
+static void commit_transaction();
 
 static void
 begin_transaction()
 {
-    struct timeval now;
     int status;
 
     if (in_transaction)
         return;
-    gettimeofday(&now, nullptr);
-    next_commit = timeval_sum(now, transaction_time_limit);
     status = sqlite3_step(sql_main.begin);
     if (status != SQLITE_DONE)
         die("failed to start database transaction: %s",
             sqlite3_errmsg(connection));
     sqlite3_reset(sql_main.begin);
     in_transaction = true;
+    /* Commit within transaction_time_limit even if no request follows.
+       Setting the expiry cancels a wait left from an earlier
+       transaction. */
+    commit_timer->expires_after(
+        std::chrono::seconds(transaction_time_limit.tv_sec)
+        + std::chrono::microseconds(transaction_time_limit.tv_usec));
+    commit_timer->async_wait([](const boost::system::error_code &ec) {
+        if (ec)
+            return;
+        commit_transaction();
+        after_event();
+    });
 }
 
 static void
@@ -864,6 +887,7 @@ commit_transaction()
     sqlite3_reset(sql_main.commit);
     transaction_rowcount = 0;
     in_transaction = false;
+    commit_timer->cancel();
 }
 
 static void
@@ -2118,8 +2142,8 @@ handle_write(client_t *client)
         del_client(client);
     } else {
         buffer_set(client->request, nullptr, 0);
-        FD_CLR(client->sock, &write_fds);
-        FD_SET(client->sock, &read_fds);
+        client->want_write = false;
+        client->want_read = true;
     }
 }
 
@@ -2175,7 +2199,7 @@ handle_read(client_t *client)
             break;
         buffer_resize(client->request, request_size);
     }
-    FD_CLR(client->sock, &read_fds);
+    client->want_read = false;
     code = start_request(client);
     if (code >= count_request_codes) {
         simple_response(client, response_bad_request);
@@ -2208,51 +2232,48 @@ handle_accept()
 }
 
 static void
+wait_accept()
+{
+    listener->async_wait(asio::posix::stream_descriptor::wait_read,
+                         [](const boost::system::error_code &ec) {
+                             if (ec)
+                                 return;
+                             handle_accept();
+                             wait_accept();
+                         });
+}
+
+/*
+ * What the select() loop did at the top of each pass, now after each
+ * event: commit once the row limit is reached, and checkpoint the WAL when
+ * no transaction is open.
+ */
+static void
+after_event()
+{
+    if (in_transaction) {
+        if (transaction_rowcount >= transaction_row_limit)
+            commit_transaction();
+    } else if (use_wal && wal_pages >= (int) wal_checkpoint_threshold) {
+        checkpoint_wal();
+    }
+}
+
+/*
+ * The event loop (ASIO_PLAN.md, phase 2): the listener and each client
+ * wait for readiness and run the same accept, read and write code as the
+ * select() loop did; the commit timer commits an open transaction after
+ * transaction_time_limit.  SIGINT, SIGTERM or SIGHUP (caught from startup,
+ * as catch_signals() did) stops the loop, or keeps it from starting; the
+ * open transaction is then committed.  A second signal kills at once.
+ */
+static void
 mainloop()
 {
-    while (!terminating) {
-        fd_set read_fds_out, write_fds_out;
-        int n;
-        struct timeval delta, *nap;
-        client_t *client;
-
-        if (in_transaction) {
-            struct timeval now;
-
-            gettimeofday(&now, nullptr);
-            delta = timeval_difference(next_commit, now);
-            if (delta.tv_sec < 0 || delta.tv_usec < 0
-                || transaction_rowcount >= transaction_row_limit) {
-                commit_transaction();
-                continue;
-            }
-            nap = &delta;
-        } else {
-            /* Idle: no active transaction.  Checkpoint WAL if needed. */
-            if (use_wal && wal_pages >= (int) wal_checkpoint_threshold)
-                checkpoint_wal();
-            nap = nullptr;
-        }
-        read_fds_out = read_fds;
-        write_fds_out = write_fds;
-        n = select(maxsock + 1, &read_fds_out, &write_fds_out, nullptr, nap);
-        if (n <= 0)
-            continue;
-        if (FD_ISSET(listensock, &read_fds_out)) {
-            n--;
-            handle_accept();
-        }
-        for (client = clients + client_count; n > 0 && client > clients;) {
-            client--;
-            if (FD_ISSET(client->sock, &read_fds_out)) {
-                n--;
-                handle_read(client);
-            } else if (FD_ISSET(client->sock, &write_fds_out)) {
-                n--;
-                handle_write(client);
-            }
-        }
-    }
+    listener.emplace(*io, listensock);
+    wait_accept();
+    after_event();
+    io->run();
     commit_transaction();
 }
 
@@ -2309,7 +2330,11 @@ main(int argc, char **argv)
             syswarn("cannot chdir to %s", innconf->pathtmp);
         }
     }
-    catch_signals();
+    xsignal(SIGPIPE, SIG_IGN);
+    io.emplace();
+    commit_timer.emplace(*io);
+    signals.emplace(*io, std::initializer_list<int>{SIGINT, SIGTERM, SIGHUP},
+                    [](int) { io->stop(); });
     make_pidfile();
     open_db();
     make_listener();

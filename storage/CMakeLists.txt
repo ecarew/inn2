@@ -53,7 +53,8 @@ inn_scripts(ovsqlite/ovsqlite-util)
 inn_program(tdx-util SOURCES tradindexed/tdx-util.cc)
 inn_program(ovsqlite-server
     SOURCES ovsqlite/ovsqlite-server.cc ${ovsqlite_server_sources}
-            ovsqlite/ovsqlite-private.cc)
+            ovsqlite/ovsqlite-private.cc
+    LIBS inn_asio)
 target_include_directories(ovsqlite-server PRIVATE
     ${CMAKE_CURRENT_BINARY_DIR}/ovsqlite)
 # buffindexed.cc again, with its BUFF_DEBUG main().
