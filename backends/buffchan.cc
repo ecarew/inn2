@@ -517,13 +517,14 @@ main(int ac, char *av[])
     /* Read input. */
     for (qp = QIOfdopen((int) fileno(stdin)); !GotInterrupt;) {
         if ((line = QIOread(qp)) == nullptr) {
-            if (QIOerror(qp)) {
-                syswarn("cannot read");
-                break;
-            }
+            /* QIOerror is also true for a long line, so test that first. */
             if (QIOtoolong(qp)) {
                 warn("long line");
                 continue;
+            }
+            if (QIOerror(qp)) {
+                syswarn("cannot read");
+                break;
             }
 
             /* Normal EOF. */
