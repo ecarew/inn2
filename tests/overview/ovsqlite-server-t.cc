@@ -14,6 +14,7 @@
 #include <csignal>
 #include <cstdint>
 #include <cstring>
+#include <ctime>
 #include <fcntl.h>
 #include <poll.h>
 #include <string>
