@@ -354,7 +354,7 @@ tests=(
     overview/api
     overview/buffindexed:overview/overview:-DOVTYPE=buffindexed
     overview/tradindexed:overview/overview:-DOVTYPE=tradindexed
-    overview/ovsqlite overview/ovsqlite-integ.t
+    overview/ovsqlite overview/ovsqlite-integ.t overview/ovsqlite-server
     overview/tdx-group overview/tdx-util.t overview/xref
     storage/caf storage/cancel-tombstone storage/methods
     storage/makehistory.t storage/sm.t storage/archive.t

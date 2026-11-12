@@ -69,6 +69,7 @@ overview/buffindexed
 overview/overchan
 overview/ovsqlite
 overview/ovsqlite-integ
+overview/ovsqlite-server
 overview/tdx-group
 overview/tdx-util
 overview/tradindexed

@@ -1030,6 +1030,7 @@ tests/overview/overchan.t             Tests for backends/overchan
 tests/overview/overview-t.c           Basic tests for overview methods
 tests/overview/ovsqlite-integ.t       Integration test for ovsqlite direct reader
 tests/overview/ovsqlite-read-t.c      Direct reader verification for integration test
+tests/overview/ovsqlite-server-t.cc   Tests for ovsqlite-server's event loop
 tests/overview/ovsqlite-t.c           Unit tests for ovsqlite direct reader
 tests/overview/ovsqlite-write-t.c     Writer helper for ovsqlite integration test
 tests/overview/tdx-group-t.c          Tests for tradindexed group index sizes
