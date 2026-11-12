@@ -268,6 +268,11 @@ $canlock && libs+=("$canlock_lib")
 cflags=(-g -I"$build/include" -I"$root/include" -I"$root/tests" -I"$root/history"
         -I"$root/storage")
 cflags+=("${covcflags[@]}")
+# Boost's headers (lib/asio.cc and its test), from the build's BoostConfig
+# location <prefix>/lib/cmake/Boost-X; the Asio code needs threads.
+boost_dir=$(sed -n 's/^Boost_DIR:PATH=//p' "$build/CMakeCache.txt")
+[ -n "$boost_dir" ] && cflags+=(-I"$boost_dir/../../../include")
+libs+=(-pthread)
 # A build configured with -DINN_SANITIZE=ON needs its test programs built
 # with the same sanitizer flags.
 sanflags=()
@@ -323,7 +328,7 @@ test_obj() {
 # with tests/innd/fakeinnd.c in place of innd.cc, as tests/Makefile does.
 # shellcheck disable=SC2054  # commas separate an entry's extra sources
 tests=(
-    lib/artnumber lib/asprintf:::lib/asprintf lib/bloom lib/bloom-hiswalk
+    lib/artnumber lib/asio:::lib/asio lib/asprintf:::lib/asprintf lib/bloom lib/bloom-hiswalk
     lib/buffer lib/canlock:::@lib/CMakeFiles/inn_canlock.dir/canlock.cc.o lib/concat lib/conffile lib/confparse lib/date
     lib/daemon:::lib/daemon lib/dispatch lib/fdflag
     lib/getaddrinfo:::lib/getaddrinfo lib/getnameinfo:::lib/getnameinfo

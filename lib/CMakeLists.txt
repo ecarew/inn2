@@ -43,6 +43,13 @@ if(HAVE_CANLOCK)
     target_include_directories(inn_canlock PRIVATE ${INN_CANLOCK_INCLUDE})
     target_link_libraries(inn_canlock PUBLIC ${INN_CANLOCK_LIB})
 endif()
+# The Boost.Asio helpers (include/inn/asio.h), a C++ API: kept out of
+# libinn, whose exports stay C linkage, and linked only by the programs
+# that run an event loop (ASIO_PLAN.md), which get Boost and threads with
+# it.
+add_library(inn_asio OBJECT asio.cc)
+target_include_directories(inn_asio PRIVATE ${CMAKE_CURRENT_SOURCE_DIR})
+target_link_libraries(inn_asio PUBLIC Boost::headers Threads::Threads)
 add_library(inn_perl OBJECT perl.cc)
 target_include_directories(inn_perl PRIVATE ${CMAKE_CURRENT_SOURCE_DIR})
 target_compile_options(inn_perl PRIVATE ${INN_PERL_CPPFLAGS})

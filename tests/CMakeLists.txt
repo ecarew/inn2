@@ -138,6 +138,9 @@ inn_tap_test(lib/xwrite EXTRA lib/xwrite tests/lib/fakewrite)
 # Takes libinn's canlock code from its own object library, as programs do,
 # with libcanlock when it was found.
 inn_tap_test(lib/canlock OBJECTS inn_canlock)
+# inn_asio brings its objects and Boost and threads with them.
+inn_tap_test(lib/asio)
+target_link_libraries(test_lib_asio PRIVATE inn_asio)
 
 inn_tap_test(authprogs/ident)
 inn_tap_test(authprogs/identport)

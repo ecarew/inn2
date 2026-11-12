@@ -435,6 +435,7 @@ include/Makefile                      Makefile for header files
 include/conffile.h                    Header file for reading *.conf files
 include/config.h.in                   Template configuration data
 include/inn                           Installed header files (Directory)
+include/inn/asio.h                    Header file for the Boost.Asio helpers
 include/inn/bloom.h                   Header file for Bloom filter
 include/inn/buffer.h                  Header file for reusable counted buffers
 include/inn/concat.h                  Header file for string concatenation
@@ -540,6 +541,7 @@ lib                                   INN library routines (Directory)
 lib/Makefile                          Makefile for library
 lib/argparse.c                        Functions for parsing arguments
 lib/artnumber.c                       Manipulation of article numbers
+lib/asio.cc                           Boost.Asio helpers: line reader, exit signals
 lib/asprintf.c                        asprintf replacement
 lib/bloom.c                           Bloom filter implementation
 lib/buffer.c                          Reusable counted buffer
@@ -966,6 +968,7 @@ tests/innd/chan-t.c                   Tests for CHAN functions in innd
 tests/innd/fakeinnd.c                 Provide symbols defined by innd/innd.c
 tests/lib                             Test suite for libinn (Directory)
 tests/lib/artnumber-t.c               Tests for lib/artnumber.c
+tests/lib/asio-t.cc                   Tests for lib/asio.cc
 tests/lib/asprintf-t.c                Tests for lib/asprintf.c
 tests/lib/bloom-hiswalk-t.c           Integration test for Bloom filter with HISwalk
 tests/lib/bloom-t.c                   Tests for lib/bloom.c
