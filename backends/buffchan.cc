@@ -1,14 +1,31 @@
 /*
 **  Buffered file exploder for innd.
+**
+**  One Boost.Asio io_context runs everything: the read of the funnel on
+**  standard input, a steady_timer per site for the -L and -C time limits,
+**  and the signals that end the program.  See support/doxygen-buffchan.md.
 */
 
 #include "portable/system.h"
 
-#include <ctype.h>
-#include <errno.h>
-#include <signal.h>
+#include <cerrno>
+#include <chrono>
+#include <csignal>
+#include <cstdio>
+#include <cstring>
+#include <memory>
+#include <semaphore>
+#include <string>
 #include <sys/stat.h>
-#include <time.h>
+#include <thread>
+#include <unordered_map>
+#include <vector>
+
+#include <boost/asio/io_context.hpp>
+#include <boost/asio/posix/stream_descriptor.hpp>
+#include <boost/asio/post.hpp>
+#include <boost/asio/signal_set.hpp>
+#include <boost/asio/steady_timer.hpp>
 
 #include "inn/innconf.h"
 #include "inn/libinn.h"
@@ -17,416 +34,530 @@
 #include "inn/paths.h"
 #include "inn/qio.h"
 
-/*
-**  Hash functions for hashing sitenames.
-*/
-#define SITE_HASH(Name, p, j)  \
-    for (p = Name, j = 0; *p;) \
-    j = (j << 5) + j + *p++
-#define SITE_SIZE      128
-#define SITE_BUCKET(j) &SITEtable[j & (SITE_SIZE - 1)]
+namespace asio = boost::asio;
 
+namespace {
 
-/*
-**  For the mapping of site names to file names.
-*/
-typedef struct _PAIR {
-    char First;
-    char *Key;
-    char *Value;
-} PAIR;
-
+/* Closes a site's file; SITEclose reports close errors itself first. */
+struct FileCloser {
+    void operator()(FILE *f) const { fclose(f); }
+};
+using File = std::unique_ptr<FILE, FileCloser>;
 
 /*
-**  Entry for a single active site.
+**  One active site.  Sites live in an unordered_map and are never erased,
+**  so a timer's handler may hold a Site *.
 */
-typedef struct _SITE {
-    bool Dropped;
-    const char *Name;
-    int CloseLines;
-    int FlushLines;
-    time_t LastFlushed;
-    time_t LastClosed;
-    int CloseSeconds;
-    int FlushSeconds;
-    FILE *F;
-    const char *Filename;
-    char *Buffer;
-} SITE;
+struct Site {
+    explicit Site(asio::io_context &io) : flushTimer(io), closeTimer(io) {}
 
+    std::string name;
+    std::string filename;
+    File f;
+    std::unique_ptr<char[]> buffer; /* -b: the stdio buffer */
+    bool dropped = false;
+    int closeLines = 0;
+    int flushLines = 0;
+    asio::steady_timer flushTimer; /* -L */
+    asio::steady_timer closeTimer; /* -C */
+};
 
-/*
-**  Site hashtable bucket.
-*/
-typedef struct _SITEHASH {
-    int Size;
-    int Used;
-    SITE *Sites;
-} SITEHASH;
+/* Options. */
+std::string Format;
+std::string Map;
+int BufferMode;
+int CloseEvery;
+int FlushEvery;
+int CloseSeconds;
+int FlushSeconds;
+int Fields = 1;
 
+/* The site-name map (-m): site name to the name used in the file name.  The
+   first line for a name wins. */
+std::unordered_map<std::string, std::string> MapData;
 
-/* Global variables. */
-static char *Format;
-static const char *Map;
-static PAIR *MAPdata;
-static PAIR *MAPend;
-static int BufferMode;
-static int CloseEvery;
-static int FlushEvery;
-static int CloseSeconds;
-static int FlushSeconds;
-static sig_atomic_t GotInterrupt;
-static SITEHASH SITEtable[SITE_SIZE];
-static time_t Now;
-
-
-/*
-**  Free the map.
-*/
-static void
-MAPfree()
-{
-    PAIR *mp;
-
-    for (mp = MAPdata; mp < MAPend; mp++) {
-        free(mp->Key);
-        free(mp->Value);
-    }
-    free(MAPdata);
-    MAPdata = nullptr;
-}
+std::unordered_map<std::string, Site> Sites;
+asio::io_context *IO;
 
 
 /*
 **  Read the map file.
 */
-static void
-MAPread(const char *name)
+void
+MAPread(const std::string &name)
 {
     FILE *F;
-    int i;
-    PAIR *mp;
-    char *p;
     char buff[BUFSIZ];
 
-    if (MAPdata != nullptr)
-        MAPfree();
-
-    /* Open file, count lines. */
-    if ((F = fopen(name, "r")) == nullptr) {
-        fprintf(stderr, "Can't open %s, %s\n", name, strerror(errno));
+    MapData.clear();
+    if ((F = fopen(name.c_str(), "r")) == nullptr) {
+        fprintf(stderr, "Can't open %s, %s\n", name.c_str(), strerror(errno));
         exit(1);
     }
-    for (i = 0; fgets(buff, sizeof buff, F) != nullptr; i++)
-        continue;
-    mp = MAPdata = xmalloc((i + 1) * sizeof(PAIR));
 
     /* Read each line; ignore blank and comment lines. */
-    fseeko(F, 0, SEEK_SET);
     while (fgets(buff, sizeof buff, F) != nullptr) {
-        if ((p = strchr(buff, '\n')) != nullptr)
-            *p = '\0';
-        if (buff[0] == '\0' || buff[0] == '#'
-            || (p = strchr(buff, ':')) == nullptr)
+        std::string line(buff);
+        if (!line.empty() && line.back() == '\n')
+            line.pop_back();
+        const std::string::size_type colon = line.find(':');
+        if (line.empty() || line[0] == '#' || colon == std::string::npos)
             continue;
-        *p++ = '\0';
-        mp->First = buff[0];
-        mp->Key = xstrdup(buff);
-        mp->Value = xstrdup(p);
-        mp++;
+        MapData.emplace(line.substr(0, colon), line.substr(colon + 1));
     }
     fclose(F);
-    MAPend = mp;
 }
 
 
 /*
-**  Look up a name in the map, return original value if not found.
+**  Close a site's file and stop its time limits.
 */
-static char *
-MAPname(char *p)
+void
+SITEclose(Site &s)
 {
-    PAIR *mp;
-    char c;
-
-    for (c = *p, mp = MAPdata; mp < MAPend; mp++)
-        if (c == mp->First && strcmp(p, mp->Key) == 0)
-            return mp->Value;
-    return p;
-}
-
-
-/*
-**  Set up the site information.  Basically creating empty buckets.
-*/
-static void
-SITEsetup()
-{
-    SITEHASH *shp;
-
-    for (shp = SITEtable; shp < ARRAY_END(SITEtable); shp++) {
-        shp->Size = 3;
-        shp->Sites = xmalloc(shp->Size * sizeof(SITE));
-        shp->Used = 0;
+    s.flushTimer.cancel();
+    s.closeTimer.cancel();
+    if (s.f) {
+        FILE *F = s.f.get();
+        bool bad = fflush(F) == EOF || ferror(F) || fchmod(fileno(F), 0664) < 0;
+        if (fclose(s.f.release()) == EOF)
+            bad = true;
+        if (bad)
+            syswarn("%s cannot close %s", s.name.c_str(), s.filename.c_str());
     }
 }
 
-
-/*
-**  Close a site
-*/
-static void
-SITEclose(SITE *sp)
-{
-    FILE *F;
-
-    if ((F = sp->F) != nullptr) {
-        if (fflush(F) == EOF || ferror(F) || fchmod((int) fileno(F), 0664) < 0
-            || fclose(F) == EOF)
-            syswarn("%s cannot close %s", sp->Name, sp->Filename);
-        sp->F = nullptr;
-    }
-}
-
-/*
-**  Close all open sites.
-*/
-static void
+void
 SITEcloseall()
 {
-    SITEHASH *shp;
-    SITE *sp;
-    int i;
+    for (auto &entry : Sites)
+        SITEclose(entry.second);
+}
 
-    for (shp = SITEtable; shp < ARRAY_END(SITEtable); shp++)
-        for (sp = shp->Sites, i = shp->Used; --i >= 0; sp++)
-            SITEclose(sp);
+void SITEflush(Site &s);
+
+/*
+**  Write out a site's buffered data.
+*/
+void
+SITEfflush(Site &s)
+{
+    if (fflush(s.f.get()) == EOF || ferror(s.f.get()))
+        syswarn("%s cannot flush %s", s.name.c_str(), s.filename.c_str());
+    s.flushLines = 0;
+}
+
+/*
+**  Arm a site's time limits.  Each acts only while the file is open.
+*/
+void
+armFlushTimer(Site &s)
+{
+    if (!FlushSeconds)
+        return;
+    s.flushTimer.expires_after(std::chrono::seconds(FlushSeconds));
+    s.flushTimer.async_wait([sp = &s](const boost::system::error_code &ec) {
+        if (ec || !sp->f)
+            return;
+        SITEfflush(*sp);
+        armFlushTimer(*sp);
+    });
+}
+
+void
+armCloseTimer(Site &s)
+{
+    if (!CloseSeconds)
+        return;
+    s.closeTimer.expires_after(std::chrono::seconds(CloseSeconds));
+    s.closeTimer.async_wait([sp = &s](const boost::system::error_code &ec) {
+        if (ec || !sp->f)
+            return;
+        SITEflush(*sp);
+    });
 }
 
 
 /*
 **  Open the file for a site.
 */
-static void
-SITEopen(SITE *sp)
+void
+SITEopen(Site &s)
 {
-    if ((sp->F = xfopena(sp->Filename)) == nullptr
-        && (errno != EACCES || chmod(sp->Filename, 0644) < 0
-            || (sp->F = xfopena(sp->Filename)) == nullptr)) {
-        syswarn("%s cannot fopen %s", sp->Name, sp->Filename);
-        if ((sp->F = fopen("/dev/null", "w")) == nullptr)
+    const char *path = s.filename.c_str();
+
+    s.f.reset(xfopena(path));
+    if (!s.f && errno == EACCES && chmod(path, 0644) == 0)
+        s.f.reset(xfopena(path));
+    if (!s.f) {
+        syswarn("%s cannot fopen %s", s.name.c_str(), path);
+        s.f.reset(fopen("/dev/null", "w"));
+        if (!s.f)
             /* This really should not happen. */
-            sysdie("%s cannot fopen /dev/null", sp->Name);
-    } else if (fchmod((int) fileno(sp->F), 0444) < 0)
-        syswarn("%s cannot fchmod %s", sp->Name, sp->Filename);
+            sysdie("%s cannot fopen /dev/null", s.name.c_str());
+    } else if (fchmod(fileno(s.f.get()), 0444) < 0)
+        syswarn("%s cannot fchmod %s", s.name.c_str(), path);
 
-    if (BufferMode != '\0')
-        setbuf(sp->F, sp->Buffer);
+    if (BufferMode == 'b')
+        setvbuf(s.f.get(), s.buffer.get(), _IOFBF, BUFSIZ);
+    else if (BufferMode == 'u')
+        setvbuf(s.f.get(), nullptr, _IONBF, 0);
 
-    /* Reset all counters. */
-    sp->FlushLines = 0;
-    sp->CloseLines = 0;
-    sp->LastFlushed = Now;
-    sp->LastClosed = Now;
-    sp->Dropped = false;
+    /* Reset all counters and limits. */
+    s.flushLines = 0;
+    s.closeLines = 0;
+    s.dropped = false;
+    armFlushTimer(s);
+    armCloseTimer(s);
 }
 
 
 /*
-**  Find a site, possibly create if not found.
+**  Find a site, possibly creating it.
 */
-static SITE *
-SITEfind(char *Name, bool CanCreate)
+Site *
+SITEfind(const std::string &name, bool canCreate)
 {
-    char *p;
-    int i;
-    unsigned int j;
-    SITE *sp;
-    SITEHASH *shp;
-    char c;
-    char buff[BUFSIZ];
-
-    /* Look for site in the hash table. */
-    SITE_HASH(Name, p, j);
-    shp = SITE_BUCKET(j);
-    for (c = *Name, sp = shp->Sites, i = shp->Used; --i >= 0; sp++)
-        if (c == sp->Name[0] && strcasecmp(Name, sp->Name) == 0)
-            return sp;
-    if (!CanCreate)
+    auto it = Sites.find(name);
+    if (it != Sites.end())
+        return &it->second;
+    if (!canCreate)
         return nullptr;
 
-    /* Adding a new site -- grow hash bucket if we need to. */
-    if (shp->Used == shp->Size - 1) {
-        shp->Size *= 2;
-        shp->Sites = xrealloc(shp->Sites, shp->Size * sizeof(SITE));
-    }
-    sp = &shp->Sites[shp->Used++];
+    Site &s = Sites.try_emplace(name, *IO).first->second;
+    s.name = name;
 
-    /* Fill in the structure for the new site. */
-    sp->Name = xstrdup(Name);
+    std::string fileSite = name;
+    if (!Map.empty()) {
+        auto m = MapData.find(name);
+        if (m != MapData.end())
+            fileSite = m->second;
+    }
+    char buff[BUFSIZ];
 #if __GNUC__ > 4 || defined(__llvm__) || defined(__clang__)
 #    pragma GCC diagnostic ignored "-Wformat-nonliteral"
 #endif
-    snprintf(buff, sizeof(buff), Format, Map ? MAPname(Name) : sp->Name);
+    snprintf(buff, sizeof(buff), Format.c_str(), fileSite.c_str());
 #if __GNUC__ > 4 || defined(__llvm__) || defined(__clang__)
 #    pragma GCC diagnostic warning "-Wformat-nonliteral"
 #endif
-    sp->Filename = xstrdup(buff);
-    if (BufferMode == 'u')
-        sp->Buffer = nullptr;
-    else if (BufferMode == 'b')
-        sp->Buffer = xmalloc(BUFSIZ);
-    SITEopen(sp);
-
-    return sp;
+    s.filename = buff;
+    if (BufferMode == 'b')
+        s.buffer = std::make_unique<char[]>(BUFSIZ);
+    SITEopen(s);
+    return &s;
 }
 
 
 /*
-**  Flush a site -- close and re-open the file.
+**  Flush a site: close and reopen its file, unless it was dropped.
 */
-static void
-SITEflush(SITE *sp)
+void
+SITEflush(Site &s)
 {
-    FILE *F;
-
-    if ((F = sp->F) != nullptr) {
-        if (fflush(F) == EOF || ferror(F) || fchmod((int) fileno(F), 0664) < 0
-            || fclose(F) == EOF)
-            syswarn("%s cannot close %s", sp->Name, sp->Filename);
-        sp->F = nullptr;
-    }
-    if (!sp->Dropped)
-        SITEopen(sp);
+    SITEclose(s);
+    if (!s.dropped)
+        SITEopen(s);
 }
 
-
-/*
-**  Flush all open sites.
-*/
-static void
+void
 SITEflushall()
 {
-    SITEHASH *shp;
-    SITE *sp;
-    int i;
-
-    for (shp = SITEtable; shp < ARRAY_END(SITEtable); shp++)
-        for (sp = shp->Sites, i = shp->Used; --i >= 0; sp++)
-            SITEflush(sp);
+    for (auto &entry : Sites)
+        SITEflush(entry.second);
 }
 
 
 /*
 **  Write data to a site.
 */
-static void
-SITEwrite(char *name, char *text, size_t len)
+void
+SITEwrite(const std::string &name, const std::string &data)
 {
-    SITE *sp;
+    Site &s = *SITEfind(name, true);
+    if (!s.f)
+        SITEopen(s);
 
-    sp = SITEfind(name, true);
-    if (sp->F == nullptr)
-        SITEopen(sp);
+    if (fwrite(data.data(), 1, data.size(), s.f.get()) != data.size())
+        syswarn("%s cannot write", s.name.c_str());
 
-    if (fwrite(text, 1, len, sp->F) != len)
-        syswarn("%s cannot write", sp->Name);
-
-    /* Bump line count; see if time to close or flush. */
-    if (CloseEvery && ++(sp->CloseLines) >= CloseEvery) {
-        SITEflush(sp);
+    /* Bump line counts; see if time to close or flush. */
+    if (CloseEvery && ++s.closeLines >= CloseEvery) {
+        SITEflush(s);
         return;
     }
-    if (CloseSeconds && sp->LastClosed + CloseSeconds < Now) {
-        SITEflush(sp);
-        return;
-    }
-    if (FlushEvery && ++(sp->FlushLines) >= FlushEvery) {
-        if (fflush(sp->F) == EOF || ferror(sp->F))
-            syswarn("%s cannot flush %s", sp->Name, sp->Filename);
-        sp->LastFlushed = Now;
-        sp->FlushLines = 0;
-    } else if (FlushSeconds && sp->LastFlushed + FlushSeconds < Now) {
-        if (fflush(sp->F) == EOF || ferror(sp->F))
-            syswarn("%s cannot flush %s", sp->Name, sp->Filename);
-        sp->LastFlushed = Now;
-        sp->FlushLines = 0;
+    if (FlushEvery && ++s.flushLines >= FlushEvery) {
+        SITEfflush(s);
+        armFlushTimer(s);
     }
 }
 
 
 /*
+**  The rest of a command after its keyword and any white space.
+*/
+std::string
+argument(const std::string &cmd, std::string::size_type keyword)
+{
+    std::string::size_type i = keyword;
+    while (i < cmd.size() && ISWHITE(cmd[i]))
+        i++;
+    return cmd.substr(i);
+}
+
+/*
 **  Handle a command message.
 */
-static void
-Process(char *p)
+void
+Process(const std::string &cmd)
 {
-    SITE *sp;
-
-    if (*p == 'b' && strncmp(p, "begin", 5) == 0)
+    if (cmd.starts_with("begin"))
         /* No-op. */
         return;
 
-    if (*p == 'f' && strncmp(p, "flush", 5) == 0) {
-        for (p += 5; ISWHITE(*p); p++)
-            continue;
-        if (*p == '\0')
+    if (cmd.starts_with("flush")) {
+        const std::string site = argument(cmd, 5);
+        Site *s;
+        if (site.empty())
             SITEflushall();
-        else if ((sp = SITEfind(p, false)) != nullptr)
-            SITEflush(sp);
-        /*else
-            fprintf(stderr, "buffchan flush %s unknown site\n", p);*/
+        else if ((s = SITEfind(site, false)) != nullptr)
+            SITEflush(*s);
         return;
     }
 
-    if (*p == 'd' && strncmp(p, "drop", 4) == 0) {
-        for (p += 4; ISWHITE(*p); p++)
-            continue;
-        if (*p == '\0')
+    if (cmd.starts_with("drop")) {
+        const std::string site = argument(cmd, 4);
+        Site *s;
+        if (site.empty())
             SITEcloseall();
-        else if ((sp = SITEfind(p, false)) == nullptr)
-            warn("drop %s unknown site", p);
+        else if ((s = SITEfind(site, false)) == nullptr)
+            warn("drop %s unknown site", site.c_str());
         else {
-            SITEclose(sp);
-            sp->Dropped = true;
+            SITEclose(*s);
+            s->dropped = true;
         }
         return;
     }
 
-    if (*p == 'r' && strncmp(p, "readmap", 7) == 0) {
+    if (cmd.starts_with("readmap")) {
         MAPread(Map);
         return;
     }
 
     /* Other command messages -- ignored. */
-    warn("unknown message %s", p);
+    warn("unknown message %s", cmd.c_str());
 }
 
 
 /*
-**  Mark that we got a signal; let two signals kill us.
+**  Handle one input line, without its newline.
 */
-static void
-CATCHinterrupt(int s)
+void
+handleLine(const std::string &line)
 {
-    GotInterrupt = true;
-    xsignal(s, SIG_DFL);
+    /* Command?  "!!" starts a data line that begins with "!". */
+    std::string::size_type start = 0;
+    if (!line.empty() && line[0] == EXP_CONTROL) {
+        if (line.size() < 2 || line[1] != EXP_CONTROL) {
+            Process(line.substr(1));
+            return;
+        }
+        start = 1;
+    }
+
+    /* Skip the right number of leading fields. */
+    std::string::size_type p = start;
+    for (int i = Fields; p < line.size(); p++)
+        if (line[p] == ' ' && --i <= 0)
+            break;
+    if (p >= line.size())
+        /* Nothing to write.  Probably shouldn't happen. */
+        return;
+
+    /* The leading fields, with a newline, go to each site named after
+       them. */
+    static std::string data; /* reused, to save an allocation per line */
+    data.assign(line, start, p - start);
+    data += '\n';
+    for (p++; p < line.size();) {
+        while (p < line.size() && line[p] == ' ')
+            p++;
+        std::string::size_type stop = line.find(' ', p);
+        if (stop == std::string::npos)
+            stop = line.size();
+        if (stop > p)
+            SITEwrite(line.substr(p, stop - p), data);
+        p = stop;
+    }
 }
+
+
+/*
+**  Close everything and end the event loop.
+*/
+void
+finish()
+{
+    SITEcloseall();
+    IO->stop();
+}
+
+
+/*
+**  The reader of standard input.  Splits what it reads into lines as QIO
+**  does: a line of QIO_BUFFERSIZE bytes or more, not counting its newline,
+**  is skipped with a warning, and a partial line at end of file is dropped.
+**
+**  A pipe or socket (innd's channel) is read asynchronously.  Some inputs
+**  cannot be waited on: epoll refuses regular files, and macOS's kqueue
+**  never reports end of file on a named FIFO or a terminal.  Those are read
+**  by a thread with blocking reads; it hands each chunk to the event loop
+**  and waits until the chunk is handled, so timers and signals keep running
+**  and a large file is never held in memory.
+*/
+class Reader {
+public:
+    explicit Reader(asio::io_context &io) : io_(io), in_(io)
+    {
+        if (waitable()) {
+            boost::system::error_code ec;
+            in_.assign(dup(STDIN_FILENO), ec);
+            async_ = !ec;
+        }
+    }
+
+    void start()
+    {
+        if (async_)
+            next();
+        else
+            thread_ = std::thread([this] { readLoop(); });
+    }
+
+    ~Reader()
+    {
+        if (thread_.joinable())
+            thread_.detach();
+    }
+
+private:
+    /* Whether the event loop can wait on standard input. */
+    static bool waitable()
+    {
+        struct stat st;
+        if (fstat(STDIN_FILENO, &st) < 0 || S_ISREG(st.st_mode))
+            return false;
+#if defined(__APPLE__)
+        /* A pipe has no links; a named FIFO has one. */
+        if ((S_ISFIFO(st.st_mode) && st.st_nlink > 0) || S_ISCHR(st.st_mode))
+            return false;
+#endif
+        return true;
+    }
+
+    void next()
+    {
+        in_.async_read_some(asio::buffer(chunk_),
+                            [this](const boost::system::error_code &ec,
+                                   std::size_t n) {
+                                if (got(ec, n))
+                                    next();
+                            });
+    }
+
+    /* The thread's loop, for input the event loop cannot wait on. */
+    void readLoop()
+    {
+        while (true) {
+            ssize_t n;
+            do
+                n = read(STDIN_FILENO, chunk_.data(), chunk_.size());
+            while (n < 0 && errno == EINTR);
+            boost::system::error_code ec;
+            if (n < 0)
+                ec.assign(errno, boost::system::system_category());
+            else if (n == 0)
+                ec = asio::error::eof;
+            /* The chunk is not touched again until the handler is done. */
+            asio::post(io_, [this, ec, n] {
+                more_ = got(ec, ec ? 0 : static_cast<std::size_t>(n));
+                done_.release();
+            });
+            done_.acquire();
+            if (!more_)
+                return;
+        }
+    }
+
+    /* Add text to the line being collected, unless it is already too
+       long. */
+    void collect(const char *text, std::size_t len)
+    {
+        if (long_)
+            return;
+        pending_.append(text, len);
+        if (pending_.size() >= QIO_BUFFERSIZE) {
+            long_ = true;
+            pending_.clear();
+        }
+    }
+
+    /* Handle a chunk of input, or the end of it.  Returns whether to read
+       more. */
+    bool got(const boost::system::error_code &ec, std::size_t n)
+    {
+        if (ec) {
+            if (ec != asio::error::eof) {
+                errno = ec.value();
+                syswarn("cannot read");
+            } else if (long_)
+                warn("long line");
+            finish();
+            return false;
+        }
+        const char *p = chunk_.data();
+        const char *end = p + n;
+        while (p < end) {
+            const char *nl =
+                static_cast<const char *>(memchr(p, '\n', end - p));
+            if (nl == nullptr) {
+                collect(p, end - p);
+                break;
+            }
+            collect(p, nl - p);
+            if (long_)
+                warn("long line");
+            else
+                handleLine(pending_);
+            long_ = false;
+            pending_.clear();
+            p = nl + 1;
+        }
+        return true;
+    }
+
+    asio::io_context &io_;
+    asio::posix::stream_descriptor in_;
+    bool async_ = false;
+    bool long_ = false;
+    std::string pending_;
+    std::vector<char> chunk_ = std::vector<char>(QIO_BUFFERSIZE);
+    std::thread thread_;
+    std::binary_semaphore done_{0}; /* the thread's chunk was handled */
+    bool more_ = true;              /* and whether to read more */
+};
+
+} // namespace
 
 
 int
 main(int ac, char *av[])
 {
-    QIOSTATE *qp;
     int i;
-    int Fields;
-    char *p;
-    char *next;
-    char *line;
-    char *Directory;
+    const char *Directory;
     bool Redirect;
     FILE *F;
-    char *ERRLOG;
+    char *path;
 
     /* First thing, set up our identity. */
     message_program_name = "buffchan";
@@ -435,20 +566,29 @@ main(int ac, char *av[])
     /* Set defaults. */
     if (!innconf_read(nullptr))
         exit(1);
-    ERRLOG = concatpath(innconf->pathlog, INN_PATH_ERRLOG);
+    path = concatpath(innconf->pathlog, INN_PATH_ERRLOG);
+    const std::string ERRLOG = path;
+    free(path);
     Directory = nullptr;
-    Fields = 1;
-    Format = nullptr;
     Redirect = true;
-    GotInterrupt = false;
     umask(NEWSUMASK);
 
-    xsignal(SIGHUP, CATCHinterrupt);
-    xsignal(SIGINT, CATCHinterrupt);
-    xsignal(SIGQUIT, CATCHinterrupt);
-    xsignal(SIGPIPE, CATCHinterrupt);
-    xsignal(SIGTERM, CATCHinterrupt);
-    xsignal(SIGALRM, CATCHinterrupt);
+    asio::io_context io;
+    IO = &io;
+
+    /* The first of these signals closes the files and ends the program.
+       Clearing the set gives them back their default action, so a second
+       one kills it at once. */
+    asio::signal_set signals(io, SIGHUP, SIGINT, SIGQUIT);
+    signals.add(SIGPIPE);
+    signals.add(SIGTERM);
+    signals.add(SIGALRM);
+    signals.async_wait([&](const boost::system::error_code &ec, int) {
+        if (ec)
+            return;
+        signals.clear();
+        finish();
+    });
 
     /* Parse JCL. */
     while ((i = getopt(ac, av, "bc:C:d:f:l:L:m:p:rs:u")) != EOF)
@@ -468,8 +608,8 @@ main(int ac, char *av[])
             break;
         case 'd':
             Directory = optarg;
-            if (Format == nullptr)
-                Format = xstrdup("%s");
+            if (Format.empty())
+                Format = "%s";
             break;
         case 'f':
             Fields = atoi(optarg);
@@ -504,69 +644,21 @@ main(int ac, char *av[])
 
     /* Do some basic set-ups. */
     if (Redirect) {
-        if (freopen(ERRLOG, "a", stderr) == nullptr)
-            sysdie("cannot open %s for error output", ERRLOG);
+        if (freopen(ERRLOG.c_str(), "a", stderr) == nullptr)
+            sysdie("cannot open %s for error output", ERRLOG.c_str());
     }
-    if (Format == nullptr) {
-        Format = concatpath(innconf->pathoutgoing, "%s");
+    if (Format.empty()) {
+        path = concatpath(innconf->pathoutgoing, "%s");
+        Format = path;
+        free(path);
     }
     if (Directory && chdir(Directory) < 0)
         sysdie("cannot chdir to %s", Directory);
-    SITEsetup();
 
-    /* Read input. */
-    for (qp = QIOfdopen((int) fileno(stdin)); !GotInterrupt;) {
-        if ((line = QIOread(qp)) == nullptr) {
-            /* QIOerror is also true for a long line, so test that first. */
-            if (QIOtoolong(qp)) {
-                warn("long line");
-                continue;
-            }
-            if (QIOerror(qp)) {
-                syswarn("cannot read");
-                break;
-            }
-
-            /* Normal EOF. */
-            break;
-        }
-
-        /* Command? */
-        if (*line == EXP_CONTROL && *++line != EXP_CONTROL) {
-            Process(line);
-            continue;
-        }
-
-        /* Skip the right number of leading fields. */
-        for (i = Fields, p = line; *p; p++)
-            if (*p == ' ' && --i <= 0)
-                break;
-        if (*p == '\0')
-            /* Nothing to write.  Probably shouldn't happen. */
-            continue;
-
-        /* Add a newline, get the length of all leading fields. */
-        *p++ = '\n';
-        i = p - line;
-
-        /* Update the current time. */
-        Now = time(nullptr);
-
-        /* Rest of the line is space-separated list of filenames. */
-        for (; *p; p = next) {
-            /* Skip whitespace, get next word. */
-            while (*p == ' ')
-                p++;
-            for (next = p; *next && *next != ' '; next++)
-                continue;
-            if (*next)
-                *next++ = '\0';
-
-            SITEwrite(p, line, i);
-        }
-    }
-
-    SITEcloseall();
+    /* Read input until end of file or a signal. */
+    Reader reader(io);
+    reader.start();
+    io.run();
     exit(0);
     /* NOTREACHED */
 }

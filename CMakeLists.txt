@@ -150,6 +150,8 @@ find_package(SQLite3 REQUIRED)
 set(INN_BOOST_MIN_VERSION 1.92)
 find_package(Boost ${INN_BOOST_MIN_VERSION} REQUIRED CONFIG)
 message(STATUS "Boost ${Boost_VERSION} (need ${INN_BOOST_MIN_VERSION} or newer)")
+# Threads::Threads, for buffchan's reader thread (backends/buffchan.cc).
+find_package(Threads REQUIRED)
 
 # Optional-feature hooks consumed by innd/CMakeLists.txt and the others.
 # Perl and Python come from cmake/InnFilters.cmake (empty unless

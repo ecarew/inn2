@@ -82,7 +82,7 @@ run() {
     status=$?
 }
 
-echo 32
+echo 35
 
 # One file per site, lines in order, the leading field only.
 run 'first siteA
@@ -239,6 +239,18 @@ sleep 2
 send 'two siteA'
 check 'waitfor "[ \"\$(cat $tmp/out/siteA)\" = \"one
 two\" ]"' '-C 1 closes after a second'
+finish
+
+# The time limits act on an idle site too, with no further input: each
+# site has its own timer.
+start -L 1
+send 'one siteA'
+check 'waitfor "[ \"\$(cat $tmp/out/siteA)\" = one ]"' '-L 1 flushes an idle site'
+finish
+start -C 1
+send 'one siteA'
+check 'waitfor "[ \"\$(cat $tmp/out/siteA)\" = one ]"' '-C 1 closes an idle site'
+check '[ "$(mode $tmp/out/siteA)" = 444 ]' '-C reopens the file after closing it'
 finish
 
 # -p: the PID file; SIGTERM closes the files and exits 0.  The stdio

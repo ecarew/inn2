@@ -114,8 +114,15 @@ Behaviour worth knowing
 - innd adds the site name to `!flush` and `!drop` only when the member's
   newsfeeds entry asks for names; a bare `!flush` or `!drop` acts on every
   site.
-- The time limits (`-L`, `-C`) are checked only when a line arrives for the
-  same site, so an idle site keeps unwritten data buffered until its next
-  article, a flush, or exit. `SIGALRM` is just another interrupt.
+- Each site has its own timer for the time limits (`-L`, `-C`), so an idle
+  site's data is written out on time, not held until its next article.
+  (Before the move to Boost.Asio the limits were checked only when a line
+  arrived for the site.) `SIGALRM` is just another interrupt.
+- One Boost.Asio `io_context` runs the program: the read of standard
+  input, the site timers, and the signals. innd's channel, a pipe, is read
+  asynchronously. Input the event loop cannot wait on (a regular file, or
+  on macOS a named FIFO or a terminal) is read by a thread that hands each
+  chunk to the loop and waits for it to be handled.
+- Site names are case-sensitive.
 - `!begin` (sent when a member site is added) is accepted and does nothing.
   A line too long for the input buffer is skipped with a warning.
