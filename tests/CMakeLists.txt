@@ -146,6 +146,8 @@ inn_shell_test(authprogs/auth_krb5)
 inn_shell_test(authprogs/ckpasswd)
 inn_shell_test(authprogs/domain)
 
+inn_shell_test(backends/buffchan)
+
 # contrib/ programs (INN_CONTRIB).  auth_pass is run with a TCP connection as
 # its standard input, by the tcp-stdin helper, and newsresp talks to the
 # fake-nntp server; the tests expect both in contrib/ in the sandbox.

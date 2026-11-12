@@ -3,6 +3,7 @@ authprogs/domain
 authprogs/ident
 authprogs/identport
 authprogs/radius
+backends/buffchan
 clients/getlist
 docs/pod
 expire/tombstone

@@ -339,7 +339,7 @@ tests=(
     lib/strlcat:::lib/strlcat lib/strlcpy:::lib/strlcpy lib/uwildmat
     lib/vector lib/wire lib/xwrite:::lib/xwrite,tests/lib/fakewrite
     authprogs/ident authprogs/identport authprogs/radius authprogs/ckpasswd.t
-    authprogs/domain.t
+    authprogs/domain.t backends/buffchan.t
     nnrpd/auth-ext:::nnrpd/auth-ext
     innd/artparse:::tests/innd/fakeinnd,@lib/CMakeFiles/inn_canlock.dir/canlock.cc.o,@lib/CMakeFiles/inn_perl.dir/perl.cc.o
     innd/chan:::tests/innd/fakeinnd,@lib/CMakeFiles/inn_canlock.dir/canlock.cc.o,@lib/CMakeFiles/inn_perl.dir/perl.cc.o
