@@ -11,7 +11,7 @@ inn_program(nnrpd
             misc.cc newnews.cc nnrpd.cc perl.cc perm.cc post.cc python.cc sasl.cc
             tls.cc track.cc zlib.cc
     LIBS ${INN_CANLOCK_LIBS} ${INN_PERL_LIBS} ${INN_PYTHON_LIBS} ${_sasl}
-         ZLIB::ZLIB)
+         ZLIB::ZLIB Boost::headers Threads::Threads)
 
 set_source_files_properties(perl.cc PROPERTIES
     COMPILE_OPTIONS "${INN_PERL_CPPFLAGS}")

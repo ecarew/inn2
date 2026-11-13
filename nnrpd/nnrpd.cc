@@ -20,6 +20,15 @@
 #endif
 #include <sys/wait.h>
 
+#include <optional>
+#include <vector>
+
+#include <boost/asio/io_context.hpp>
+#include <boost/asio/posix/stream_descriptor.hpp>
+#include <boost/asio/signal_set.hpp>
+
+#include "inn/fdflag.h"
+
 /* Needed on AIX 4.1 to get fd_set and friends. */
 #if HAVE_SYS_SELECT_H
 #    include <sys/select.h>
@@ -911,6 +920,127 @@ WaitChild(int s NO_SIGACTION_UNUSED)
 }
 
 
+namespace {
+
+namespace asio = boost::asio;
+
+/*
+**  The daemon-mode listener: waits on every listening socket through an
+**  Asio io_context and accepts one connection at a time.  The sockets are
+**  borrowed, never closed here.  In the forking listener it also runs the
+**  SIGCHLD and SIGHUP handlers from its loop.
+*/
+class Listener {
+public:
+    Listener(const std::vector<int> &fds, bool with_signals)
+        : io_(1)
+    {
+        for (int fd : fds) {
+            /* A pre-forked child may lose the race for a connection, so
+               accept must not block. */
+            fdflag_nonblocking(fd, true);
+            socks_.emplace_back(io_, fd);
+        }
+        ready_.assign(socks_.size(), false);
+        armed_.assign(socks_.size(), false);
+        if (with_signals) {
+            signals_.emplace(io_, SIGCHLD, SIGHUP);
+            arm_signals();
+        }
+    }
+
+    ~Listener()
+    {
+        boost::system::error_code ec;
+        for (auto &s : socks_) {
+            s.cancel(ec);
+            s.release();
+        }
+    }
+
+    Listener(const Listener &) = delete;
+    Listener &operator=(const Listener &) = delete;
+
+    /* Wait for and accept one connection, returned blocking, as the
+       per-client code expects. */
+    int
+    accept_one()
+    {
+        for (;;) {
+            for (size_t i = 0; i < socks_.size(); i++) {
+                if (!ready_[i])
+                    continue;
+                ready_[i] = false;
+                int fd = accept(socks_[i].native_handle(), nullptr, nullptr);
+                if (fd >= 0) {
+                    fdflag_nonblocking(fd, false);
+                    return fd;
+                }
+                /* EAGAIN (another process took it), ECONNABORTED, EINTR:
+                   wait again. */
+            }
+            arm();
+            io_.run_one();
+            io_.poll();
+        }
+    }
+
+    void
+    prepare_fork()
+    {
+        io_.notify_fork(asio::execution_context::fork_prepare);
+    }
+
+    void
+    after_fork(bool child)
+    {
+        io_.notify_fork(child ? asio::execution_context::fork_child
+                              : asio::execution_context::fork_parent);
+    }
+
+private:
+    void
+    arm()
+    {
+        for (size_t i = 0; i < socks_.size(); i++) {
+            if (armed_[i] || ready_[i])
+                continue;
+            armed_[i] = true;
+            socks_[i].async_wait(
+                asio::posix::stream_descriptor::wait_read,
+                [this, i](const boost::system::error_code &ec) {
+                    armed_[i] = false;
+                    if (!ec)
+                        ready_[i] = true;
+                });
+        }
+    }
+
+    void
+    arm_signals()
+    {
+        signals_->async_wait(
+            [this](const boost::system::error_code &ec, int sig) {
+                if (ec)
+                    return;
+                if (sig == SIGCHLD)
+                    WaitChild(sig);
+                else
+                    ToggleTrace(sig);
+                arm_signals();
+            });
+    }
+
+    asio::io_context io_;
+    std::vector<asio::posix::stream_descriptor> socks_;
+    std::vector<bool> ready_;
+    std::vector<bool> armed_;
+    std::optional<asio::signal_set> signals_;
+};
+
+} // namespace
+
+
 static void
 SetupDaemon()
 {
@@ -980,11 +1110,8 @@ main(int argc, char *argv[])
     char *ListenAddr = nullptr;
     char *ListenAddr6 = nullptr;
     int *lfds;
-    fd_set lfdset, lfdsetread;
     unsigned int lfdcount;
-    int lfdreadcount;
     bool lfdokay;
-    int lfdmax = 0;
     int fd = -1;
     pid_t pid = -1;
     FILE *pidfile;
@@ -1202,61 +1329,31 @@ main(int argc, char *argv[])
         fprintf(pidfile, "%lu\n", (unsigned long) getpid());
         fclose(pidfile);
 
-        /* Set signal handle to care for dead children. */
-        if (!respawn)
-            xsignal(SIGCHLD, WaitChild);
-
-        /* Arrange to toggle tracing. */
-        xsignal(SIGHUP, ToggleTrace);
-
         setproctitle("accepting connections");
 
-        /* Initialize the listener file descriptors set. */
-        FD_ZERO(&lfdset);
-
+        /* The sockets that are listening. */
+        std::vector<int> listening;
         for (j = 0; j < lfdcount; j++) {
             if (listen(lfds[j], innconf->maxlisten) < 0) {
                 if (j != 0 && errno == EADDRINUSE)
                     continue;
                 syslog(L_ERROR, "can't listen to socket");
-            } else {
-                /* Remember the largest descriptor number
-                 * that is to be tested by select(). */
-                FD_SET(lfds[j], &lfdset);
-                if (lfdmax < lfds[j])
-                    lfdmax = lfds[j];
-            }
+            } else
+                listening.push_back(lfds[j]);
         }
 
         if (respawn) {
-            /* Pre-forked mode. */
+            /* Pre-forked mode.  The parent only forks and waits; each child
+               accepts one connection through its own listener (created
+               after the fork, since a kqueue does not survive one). */
+            xsignal(SIGHUP, ToggleTrace);
             for (;;) {
                 if (respawn > 0) {
                     --respawn;
                     pid = fork();
                     if (pid == 0) {
-                        do {
-                            fd = -1;
-
-                            /* Copy the master set because lfdsetread
-                             * will be modified. */
-                            lfdsetread = lfdset;
-                            lfdreadcount = select(lfdmax + 1, &lfdsetread,
-                                                  nullptr, nullptr, nullptr);
-
-                            if (lfdreadcount > 0) {
-                                for (j = 0; j < lfdcount; j++) {
-                                    if (FD_ISSET(lfds[j], &lfdsetread)) {
-                                        fd = accept(lfds[j], nullptr, nullptr);
-                                        /* Only handle the first match.  Future
-                                         * calls to select() will handle
-                                         * possible other matches. */
-                                        if (fd >= 0)
-                                            break;
-                                    }
-                                }
-                            }
-                        } while (fd < 0);
+                        Listener listener(listening, false);
+                        fd = listener.accept_one();
                         break;
                     }
                 }
@@ -1271,30 +1368,14 @@ main(int argc, char *argv[])
                 }
             }
         } else {
-            /* Fork on demand. */
+            /* Fork on demand.  The listener also reaps children (SIGCHLD)
+               and toggles tracing (SIGHUP) from its loop. */
+            std::optional<Listener> listener;
+            listener.emplace(listening, true);
             do {
-                fd = -1;
+                fd = listener->accept_one();
 
-                /* Copy the master set because lfdsetread will be modified. */
-                lfdsetread = lfdset;
-                lfdreadcount =
-                    select(lfdmax + 1, &lfdsetread, nullptr, nullptr, nullptr);
-
-                if (lfdreadcount > 0) {
-                    for (j = 0; j < lfdcount; j++) {
-                        if (FD_ISSET(lfds[j], &lfdsetread)) {
-                            fd = accept(lfds[j], nullptr, nullptr);
-                            /* Only handle the first match.  Future calls
-                             * to select() will handle possible other matches.
-                             */
-                            if (fd >= 0)
-                                break;
-                        }
-                    }
-                }
-                if (fd < 0)
-                    continue;
-
+                listener->prepare_fork();
                 for (j = 0; j <= innconf->maxforks && (pid = fork()) < 0;
                      j++) {
                     if (j == innconf->maxforks) {
@@ -1305,6 +1386,7 @@ main(int argc, char *argv[])
                     syslog(L_NOTICE, "can't fork (waiting): %m");
                     sleep(1);
                 }
+                listener->after_fork(pid == 0);
                 if (ChangeTrace) {
                     Tracing = Tracing ? false : true;
                     syslog(L_TRACE, "trace %sabled", Tracing ? "en" : "dis");
@@ -1313,6 +1395,12 @@ main(int argc, char *argv[])
                 if (pid != 0)
                     close(fd);
             } while (pid != 0);
+
+            /* In the child: drop the listener (its signal set puts SIGCHLD
+               and SIGHUP back to their defaults), then toggle tracing on
+               SIGHUP as the forking listener's children always have. */
+            listener.reset();
+            xsignal(SIGHUP, ToggleTrace);
         }
 
         /* Child process starts here. */
