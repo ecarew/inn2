@@ -105,9 +105,11 @@ mangled=0
 for a in "$build/innd/innd" "$build"/history/libinnhist.a \
          "$build"/storage/libinnstorage.a "$build"/lib/libinn.a; do
     # Header-only Boost (Asio) and the standard library leave their own
-    # instantiations in the binary; only INN's functions must be C-linked.
+    # instantiations in the binary, and on Linux their function-local
+    # statics (_ZZ) and guard variables (_ZGV) as GNU unique objects; only
+    # INN's functions must be C-linked.
     n=$(defined_symbols "$a" 2>/dev/null | awk '$1 == "T" && $2 ~ /^_Z/' \
-        | grep -cvE '^T _Z(N|NK|Thn[0-9]+_N|Tv[0-9_n]+N)?(5boost|St)')
+        | grep -cvE '^T _Z(Z|GV)?(N|NK|Thn[0-9]+_N|Tv[0-9_n]+N)?(5boost|St)')
     mangled=$((mangled + n))
 done
 if [ "$mangled" = 0 ]; then
