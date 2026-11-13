@@ -1624,11 +1624,13 @@ send_art slave-noentries test.live 'Xref: master.test'
 ihave_nul slave-nul@live.test ihave-slavenul.out 'Subject: nul\0here\r\n\r\nBody.\r\n'
 ctl flush ''
 sleep 1
-ov=$("$bin/storage/tdx-util" -o -n test.live 2>/dev/null)
+# Into a file: with the busy feed's articles, test.live's overview is
+# larger than Linux allows for one command-line argument (128 KB).
+"$bin/storage/tdx-util" -o -n test.live >"$tmp/slave-ov.txt" 2>/dev/null
 label="xrefslave files an article under its Xref number"
-ok sh -c "printf '%s\n' \"\$1\" | grep -q '^50000	.*slave-500'" _ "$ov"
+ok grep -q '^50000	.*slave-500' "$tmp/slave-ov.txt"
 label="xrefslave skips a malformed Xref entry, files the rest"
-ok sh -c "printf '%s\n' \"\$1\" | grep -q '^50001	.*slave-501'" _ "$ov"
+ok grep -q '^50001	.*slave-501' "$tmp/slave-ov.txt"
 label="xrefslave rejects an article without Xref"
 ok grep -q 'Xref header field required in xrefslave mode' "$tmp/log/news"
 label="without logipaddr, a refusal is logged under the first Path host"
