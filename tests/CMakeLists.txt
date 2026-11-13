@@ -174,6 +174,7 @@ inn_tap_test(nnrpd/auth-ext EXTRA nnrpd/auth-ext)
 inn_tap_test(innfeed/endpoint EXTRA innfeed/endpoint innfeed/buffer)
 target_include_directories(test_innfeed_endpoint PRIVATE
     ${CMAKE_SOURCE_DIR}/innfeed ${CMAKE_BINARY_DIR}/innfeed)
+target_link_libraries(test_innfeed_endpoint PRIVATE inn_asio)
 
 # innd tests link innd_core with tests/innd/fakeinnd.c in place of innd.cc,
 # as tests/Makefile does.

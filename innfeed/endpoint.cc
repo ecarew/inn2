@@ -4,7 +4,8 @@
 **  Written by James Brister <brister@vix.com>
 **
 **  The EndPoint class is what gives the illusion (sort of, kind of) of
-**  threading.  Basically it controls a select loop and a set of EndPoint
+**  threading.  Basically it controls an event loop (Boost.Asio since
+**  ASIO_PLAN.md phase 3; a select loop before) and a set of EndPoint
 **  objects.  Each EndPoint has a file descriptor it is interested in.  The
 **  users of the EndPoint tell the EndPoints to notify them when a read or
 **  write has been completed (or simple if the file descriptor is read or
@@ -25,16 +26,21 @@
 #include <sys/uio.h>
 #include <syslog.h>
 
-#ifdef HAVE_SYS_SELECT_H
-#    include <sys/select.h>
-#endif
-
 #ifdef HAVE_SYS_TIME_H
 #    include <sys/time.h>
 #endif
 #include <time.h>
 
 #include <algorithm>
+#include <chrono>
+#include <memory>
+#include <optional>
+#include <vector>
+
+#include <boost/asio/io_context.hpp>
+#include <boost/asio/posix/stream_descriptor.hpp>
+#include <boost/asio/signal_set.hpp>
+#include <boost/asio/steady_timer.hpp>
 
 #include "inn/innconf.h"
 #include "inn/libinn.h"
@@ -54,34 +60,51 @@ static const char *const timer_name[] = {"idle",   "blstats", "stsfile",
 #endif
 
 
-/* This is the structure that is the EndPoint */
-struct endpoint_s {
+namespace asio = boost::asio;
+
+/* This is the structure that is the EndPoint.  Each is owned by a
+   shared_ptr in endPoints; a pending wait and the ready list hold more, so
+   an endpoint deleted inside a callback (or with a wait pending) stays
+   valid until those let go, and closed tells them it is gone. */
+struct endpoint_s : std::enable_shared_from_this<endpoint_s> {
     /* fields for managing multiple reads into the inBuffer. */
-    Buffer *inBuffer;         /* list of buffers to read into */
-    unsigned int inBufferIdx; /* where is list we're at. */
-    size_t inIndex;           /* where in current read we're at */
-    size_t inMinLen;          /* minimum amount to read */
-    size_t inAmtRead;         /* amount read so far */
-    EndpRWCB inCbk;           /* callback for when read complete */
-    void *inClientData;       /* callback data */
+    Buffer *inBuffer = nullptr;   /* list of buffers to read into */
+    unsigned int inBufferIdx = 0; /* where is list we're at. */
+    size_t inIndex = 0;           /* unused since doRead's fix */
+    size_t inMinLen = 0;          /* minimum amount to read */
+    size_t inAmtRead = 0;         /* amount read so far */
+    EndpRWCB inCbk = nullptr;     /* callback for when read complete */
+    void *inClientData = nullptr; /* callback data */
 
     /* fields for managing multiple writes from the outBuffer */
-    Buffer *outBuffer;         /* list of buffers to write */
-    unsigned int outBufferIdx; /* index into buffer list to start write */
-    size_t outIndex;           /* where in current buffer we write from */
-    size_t outSize;            /* total of all the buffers */
-    size_t outAmtWritten;      /* amount written so far */
-    EndpRWCB outProgressCbk;   /* callback when done */
-    EndpRWCB outDoneCbk;       /* callback when done */
-    void *outClientData;       /* callback data */
+    Buffer *outBuffer = nullptr;     /* list of buffers to write */
+    unsigned int outBufferIdx = 0;   /* index into buffer list to start write */
+    size_t outIndex = 0;             /* where in current buffer we write from */
+    size_t outSize = 0;              /* total of all the buffers */
+    size_t outAmtWritten = 0;        /* amount written so far */
+    EndpRWCB outProgressCbk = nullptr; /* callback when done */
+    EndpRWCB outDoneCbk = nullptr;     /* callback when done */
+    void *outClientData = nullptr;     /* callback data */
 
-    EndpWorkCbk workCbk; /* callback to run if no I/O to do */
-    void *workData;      /* data for callback */
+    EndpWorkCbk workCbk = nullptr; /* callback to run if no I/O to do */
+    void *workData = nullptr;      /* data for callback */
 
-    int myFd;    /* the file descriptor we're handling */
-    int myErrno; /* the errno when I/O fails */
+    int myFd = -1;   /* the file descriptor we're handling */
+    int myErrno = 0; /* the errno when I/O fails */
 
-    double selectHits; /* indicates how often it's ready */
+    /* The loop's view.  wantRead and wantWrite are what the select() loop's
+       read and write sets held; readArmed and writeArmed say a wait is
+       pending; readReady and writeReady are set by a completed wait and
+       taken by the next pass of Run().  An endpoint that cannot be waited
+       on (a regular file: epoll refuses them) has no stream and is ready
+       whenever it wants to read or write, as select() reported it. */
+    std::optional<asio::posix::stream_descriptor> stream;
+    bool wantRead = false, wantWrite = false;
+    bool readArmed = false, writeArmed = false;
+    bool readReady = false, writeReady = false;
+    bool queued = false;  /* in readyList */
+    bool hitThisPass = false;
+    bool closed = false;
 };
 
 
@@ -95,47 +118,39 @@ typedef struct timerqelem_s {
 } *TimerElem, TimerElemStruct;
 
 static EndPoint mainEndPoint;
-static bool mainEpIsReg = false;
 unsigned int stdioFdMax = MAX_STDIO_FD;
 time_t PrivateTime;
 
 typedef void (*sigfn)(int);
-static sigfn *sigHandlers;
-
-static volatile sig_atomic_t *sigFlags;
+static std::vector<sigfn> sigHandlers; /* indexed by signal number */
 
 
 /* private functions */
 static IoStatus doRead(EndPoint endp);
 static IoStatus doWrite(EndPoint endp);
-static IoStatus doExcept(EndPoint endp);
 static void pipeHandler(int s);
-static void signalHandler(int s);
-static bool hitLess(const struct endpoint_s *e1, const struct endpoint_s *e2);
-static void reorderPriorityList(void);
 static TimerElem newTimerElem(TimeoutId i, time_t w, EndpTCB f, void *d);
 static TimeoutId timerElemAdd(time_t when, EndpTCB func, void *data);
-static struct timeval *getTimeout(struct timeval *tout);
 static void doTimeout(void);
-static void handleSignals(void);
+static void arm(EndPoint ep);
 
 static void endpointCleanup(void);
 
 
-/* Private data */
-static size_t maxEndPoints;
+/* Private data.  The io_context is declared before everything that refers
+   to it, so it is destroyed after them at exit.  It is made on first use,
+   after main() has forked its subprogram (kqueue does not survive a
+   fork). */
+static std::optional<asio::io_context> io;
+static std::optional<asio::steady_timer> wakeTimer; /* the timer queue's head */
+static std::optional<asio::signal_set> signals;     /* setSigHandler's */
+static bool wakeArmed = false;  /* wakeTimer has a wait pending */
+static time_t wakeWhen = 0;     /* ...for this head time */
+static bool timerFired = false; /* the head's time has come */
+static bool signalsArmed = false;
 
-static EndPoint *endPoints;    /* endpoints indexed on fd */
-static EndPoint *priorityList; /* endpoints indexed on priority */
-
-static int absHighestFd = 0; /* never goes down */
-static int highestFd = -1;
-static unsigned int endPointCount = 0;
-static unsigned int priorityCount = 0;
-
-static fd_set rdSet;
-static fd_set wrSet;
-static fd_set exSet;
+static std::vector<std::shared_ptr<endpoint_s>> endPoints; /* live ones */
+static std::vector<std::shared_ptr<endpoint_s>> readyList; /* for next pass */
 
 static int keepSelecting;
 
@@ -143,6 +158,18 @@ static TimerElem timeoutQueue;
 static TimerElem timeoutPool;
 static TimeoutId nextId;
 static int timeoutQueueLength;
+
+
+static asio::io_context &
+ioc(void)
+{
+    if (!io) {
+        io.emplace();
+        wakeTimer.emplace(*io);
+        signals.emplace(*io);
+    }
+    return *io;
+}
 
 
 /* Create a new EndPoint and hook it to the give file descriptor. All
@@ -154,7 +181,7 @@ static bool inited = false;
 EndPoint
 newEndPoint(int fd)
 {
-    EndPoint ep;
+    struct stat st;
 
     if (!inited) {
         inited = true;
@@ -180,71 +207,22 @@ newEndPoint(int fd)
         fd = newfd;
     }
 
-    if ((unsigned int) fd >= maxEndPoints) {
-        unsigned int i = maxEndPoints;
-
-        maxEndPoints =
-            (((fd + 256) / 256) * 256); /* round up to nearest 256 */
-        if (endPoints == NULL) {
-            endPoints = xmalloc(sizeof(EndPoint) * maxEndPoints);
-            priorityList = xmalloc(sizeof(EndPoint) * maxEndPoints);
-        } else {
-            endPoints = xrealloc(endPoints, sizeof(EndPoint) * maxEndPoints);
-            priorityList =
-                xrealloc(priorityList, sizeof(EndPoint) * maxEndPoints);
-        }
-
-        for (; i < maxEndPoints; i++)
-            endPoints[i] = priorityList[i] = NULL;
-    }
-
-    ASSERT(endPoints[fd] == NULL);
-
-    if (fd > absHighestFd) {
-        if (!isvalidfd(fd)) {
-            warn("ME fd (%d) is higher than the system supports (fd_set not "
-                 "large enough; see how to increase FD_SETSIZE in the "
-                 "documentation for rlimitnofile in inn.conf)",
-                 fd);
-            return NULL;
-        }
-        absHighestFd = fd;
-    }
-
-    ep = xcalloc(1, sizeof(struct endpoint_s));
-
-    ep->inBuffer = NULL;
-    ep->inBufferIdx = 0;
-    ep->inIndex = 0;
-    ep->inMinLen = 0;
-    ep->inAmtRead = 0;
-    ep->inCbk = NULL;
-    ep->inClientData = NULL;
-
-    ep->outBuffer = 0;
-    ep->outBufferIdx = 0;
-    ep->outIndex = 0;
-    ep->outSize = 0;
-    ep->outProgressCbk = NULL;
-    ep->outDoneCbk = NULL;
-    ep->outClientData = NULL;
-    ep->outAmtWritten = 0;
-
-    ep->workCbk = NULL;
-    ep->workData = NULL;
+    auto ep = std::make_shared<endpoint_s>();
 
     ep->myFd = fd;
-    ep->myErrno = 0;
+    if (fstat(fd, &st) != 0 || !S_ISREG(st.st_mode)) {
+        boost::system::error_code ec;
 
-    ep->selectHits = 0.0;
-
-    endPoints[fd] = ep;
-    priorityList[priorityCount++] = ep;
-    endPointCount++;
-
-    highestFd = (fd > highestFd ? fd : highestFd);
-
-    return ep;
+        ep->stream.emplace(ioc());
+        ep->stream->assign(fd, ec);
+        if (ec) {
+            warn("ME cannot add fd %d to the event loop: %s", fd,
+                 ec.message().c_str());
+            ep->stream.reset();
+        }
+    }
+    endPoints.push_back(ep);
+    return ep.get();
 }
 
 
@@ -254,12 +232,15 @@ newEndPoint(int fd)
 void
 delEndPoint(EndPoint ep)
 {
-    unsigned int idx;
-
     if (ep == NULL)
         return;
 
-    ASSERT(endPoints[ep->myFd] == ep);
+    auto it = std::find_if(endPoints.begin(), endPoints.end(),
+                           [ep](const auto &p) { return p.get() == ep; });
+
+    ASSERT(it != endPoints.end());
+    auto self = *it;
+    endPoints.erase(it);
 
     if (mainEndPoint == ep)
         mainEndPoint = NULL;
@@ -269,33 +250,17 @@ delEndPoint(EndPoint ep)
 
     if (ep->outBuffer != NULL)
         freeBufferArray(ep->outBuffer);
+    ep->inBuffer = ep->outBuffer = NULL;
 
-    close(ep->myFd);
+    /* Closing the stream closes the descriptor and cancels its waits. */
+    ep->closed = true;
+    ep->wantRead = ep->wantWrite = false;
+    if (ep->stream) {
+        boost::system::error_code ignored;
 
-    /* remove from selectable bits */
-    FD_CLR(ep->myFd, &rdSet);
-    FD_CLR(ep->myFd, &wrSet);
-    FD_CLR(ep->myFd, &exSet);
-
-    /* Adjust the global arrays to account for deleted endpoint. */
-    endPoints[ep->myFd] = NULL;
-    if (ep->myFd == highestFd)
-        while (highestFd >= 0 && endPoints[highestFd] == NULL)
-            highestFd--;
-
-    for (idx = 0; idx < priorityCount; idx++)
-        if (priorityList[idx] == ep)
-            break;
-
-    ASSERT(idx < priorityCount);     /* i.e. was found */
-    ASSERT(priorityList[idx] == ep); /* redundant */
-
-    /* this hole will removed in the reorder routine */
-    priorityList[idx] = NULL;
-
-    endPointCount--;
-
-    free(ep);
+        ep->stream->close(ignored);
+    } else
+        close(ep->myFd);
 }
 
 int
@@ -304,6 +269,54 @@ endPointFd(EndPoint endp)
     ASSERT(endp != NULL);
 
     return endp->myFd;
+}
+
+
+/* Put an endpoint on the ready list for the next pass. */
+static void
+queueReady(const std::shared_ptr<endpoint_s> &ep)
+{
+    if (!ep->queued) {
+        ep->queued = true;
+        readyList.push_back(ep);
+    }
+}
+
+
+/* Wait for the endpoint's descriptor to be readable or writable, if it
+   wants that and no wait is pending.  A completed wait marks it ready for
+   the next pass. */
+static void
+arm(EndPoint ep)
+{
+    if (ep->closed || !ep->stream)
+        return;
+    if (ep->wantRead && !ep->readArmed) {
+        ep->readArmed = true;
+        ep->stream->async_wait(
+            asio::posix::stream_descriptor::wait_read,
+            [self = ep->shared_from_this()](
+                const boost::system::error_code &ec) {
+                self->readArmed = false;
+                if (ec == asio::error::operation_aborted || self->closed)
+                    return;
+                self->readReady = true;
+                queueReady(self);
+            });
+    }
+    if (ep->wantWrite && !ep->writeArmed) {
+        ep->writeArmed = true;
+        ep->stream->async_wait(
+            asio::posix::stream_descriptor::wait_write,
+            [self = ep->shared_from_this()](
+                const boost::system::error_code &ec) {
+                self->writeArmed = false;
+                if (ec == asio::error::operation_aborted || self->closed)
+                    return;
+                self->writeReady = true;
+                queueReady(self);
+            });
+    }
 }
 
 
@@ -332,7 +345,7 @@ prepareRead(EndPoint endp, Buffer *buffers, EndpRWCB func, void *clientData,
 
     ASSERT(endp != NULL);
 
-    if (endp->inBuffer != NULL || FD_ISSET(endp->myFd, &rdSet))
+    if (endp->inBuffer != NULL || endp->wantRead)
         return 0; /* something already there */
 
     for (idx = 0; buffers != NULL && buffers[idx] != NULL; idx++) {
@@ -350,9 +363,8 @@ prepareRead(EndPoint endp, Buffer *buffers, EndpRWCB func, void *clientData,
     endp->inAmtRead = 0;
     endp->inClientData = clientData;
 
-    FD_SET(endp->myFd, &rdSet);
-    if (!InputFile)
-        FD_SET(endp->myFd, &exSet);
+    endp->wantRead = true;
+    arm(endp);
 
     return 1;
 }
@@ -379,7 +391,7 @@ prepareWrite(EndPoint endp, Buffer *buffers, EndpRWCB progress, EndpRWCB done,
 
     ASSERT(endp != NULL);
 
-    if (endp->outBuffer != NULL || FD_ISSET(endp->myFd, &wrSet))
+    if (endp->outBuffer != NULL || endp->wantWrite)
         return 0; /* something already there */
 
     for (idx = 0; buffers != NULL && buffers[idx] != NULL; idx++)
@@ -394,8 +406,8 @@ prepareWrite(EndPoint endp, Buffer *buffers, EndpRWCB progress, EndpRWCB done,
     endp->outSize = bufferSizeTotal;
     endp->outAmtWritten = 0;
 
-    FD_SET(endp->myFd, &wrSet);
-    FD_SET(endp->myFd, &exSet);
+    endp->wantWrite = true;
+    arm(endp);
 
     return 1;
 }
@@ -488,47 +500,90 @@ removeTimeout(TimeoutId tid)
 }
 
 
+/* Fire the timers whose time has passed, and point wakeTimer at the queue's
+   head.  Returns false if the queue is empty; *now0 is set if the head is
+   due in this second (select() was given a zero timeout for that). */
+static bool
+armWakeTimer(bool *now0)
+{
+    time_t now;
+
+    *now0 = false;
+    if (timeoutQueue != NULL) {
+        now = theTime();
+        while (timeoutQueue && now > timeoutQueue->when)
+            doTimeout();
+    }
+    if (timeoutQueue == NULL) {
+        if (wakeArmed)
+            wakeTimer->cancel();
+        wakeArmed = false;
+        timerFired = false;
+        return false;
+    }
+    now = theTime();
+    *now0 = (timeoutQueue->when == now);
+    if (!wakeArmed || wakeWhen != timeoutQueue->when) {
+        timerFired = false;
+        wakeWhen = timeoutQueue->when;
+        wakeArmed = true;
+        wakeTimer->expires_after(std::chrono::seconds(wakeWhen - now));
+        wakeTimer->async_wait([](const boost::system::error_code &ec) {
+            if (ec == asio::error::operation_aborted)
+                return;
+            wakeArmed = false;
+            timerFired = true;
+        });
+    }
+    return true;
+}
+
+
 /* The main routine. This is a near-infinite loop that drives the whole
-   program. */
+   program.
+
+   Each pass is the select() loop's (ASIO_PLAN.md, phase 3): fire overdue
+   timers, sample the backlog statistics, wait (TMR_IDLE) until an endpoint
+   is ready, a timer is due or a signal arrives -- or only poll, while a
+   work callback is registered or an endpoint that cannot be waited on is
+   ready -- then do the ready endpoints' reads and writes and their
+   callbacks, the head timer if nothing else happened, and the work
+   callbacks of the endpoints that were not ready.  Asio does the waiting;
+   the endpoints are served in the order they became ready (the select()
+   loop's priority order by readiness is gone, by the architect's
+   decision). */
 void
 Run(void)
 {
-    fd_set rSet;
-    fd_set wSet;
-    fd_set eSet;
-
     keepSelecting = 1;
     xsignal(SIGPIPE, pipeHandler);
+    ioc();
 
     while (keepSelecting) {
-        struct timeval timeout;
-        struct timeval *twait;
-        int sval;
-        unsigned int idx;
-        bool modifiedTime = false;
+        bool now0, haveTimeout, work = false, poll, modifiedTime;
+        IoStatus rval;
 
-        twait = getTimeout(&timeout);
-
-        memcpy(&rSet, &rdSet, sizeof(rdSet));
-        memcpy(&wSet, &wrSet, sizeof(wrSet));
-        memcpy(&eSet, &exSet, sizeof(exSet));
-
-        if (highestFd < 0 && twait == NULL) /* no fds and no timeout */
+        haveTimeout = armWakeTimer(&now0);
+        if (endPoints.empty() && !haveTimeout) /* no fds and no timeout */
             break;
-        else if (twait != NULL
-                 && (twait->tv_sec != 0 || twait->tv_usec != 0)) {
-            /* if we have any workprocs registered we poll rather than
-               block on the fds */
-            for (idx = 0; idx < priorityCount; idx++)
-                if (priorityList[idx] != NULL
-                    && priorityList[idx]->workCbk != NULL) {
-                    modifiedTime = true;
-                    twait->tv_sec = 0;
-                    twait->tv_usec = 0;
 
-                    break;
-                }
-        }
+        /* Endpoints that cannot be waited on are always ready. */
+        for (auto &ep : endPoints)
+            if (!ep->stream && (ep->wantRead || ep->wantWrite)) {
+                ep->readReady = ep->wantRead;
+                ep->writeReady = ep->wantWrite;
+                queueReady(ep);
+            }
+
+        /* if we have any workprocs registered we poll rather than block on
+           the fds */
+        for (auto &ep : endPoints)
+            if (ep->workCbk != NULL) {
+                work = true;
+                break;
+            }
+        modifiedTime = work && haveTimeout && !now0;
+        poll = work || !readyList.empty();
 
         /* calculate host backlog statistics */
         TMRstart(TMR_BACKLOGSTATS);
@@ -536,7 +591,16 @@ Run(void)
         TMRstop(TMR_BACKLOGSTATS);
 
         TMRstart(TMR_IDLE);
-        sval = select(highestFd + 1, &rSet, &wSet, &eSet, twait);
+        io->restart();
+        if (poll)
+            io->poll();
+        else if (io->run_one() == 0) {
+            /* Nothing to wait for: no wait, timer or signal is pending, so
+               nothing can happen (select() would have blocked forever). */
+            TMRstop(TMR_IDLE);
+            break;
+        } else
+            io->poll();
         TMRstop(TMR_IDLE);
 
         timePasses();
@@ -544,190 +608,87 @@ Run(void)
             TMRsummary("ME", timer_name);
         }
 
-        if (sval == 0 && twait == NULL)
-            die("No fd's ready and no timeouts");
-        else if (sval < 0 && errno == EINTR) {
-            handleSignals();
-        } else if (sval < 0) {
-            syswarn("ME exception: select failed: %d", sval);
-            stopRun();
-        } else if (sval > 0) {
-            IoStatus rval;
-            int readyCount = sval;
-            int endpointsServiced = 1;
+        std::vector<std::shared_ptr<endpoint_s>> ready;
+        ready.swap(readyList);
+        for (auto &ep : ready) {
+            bool readReady = ep->readReady, writeReady = ep->writeReady;
 
-            handleSignals();
+            ep->queued = false;
+            ep->readReady = ep->writeReady = false;
+            ep->hitThisPass = true;
+            if (ep->closed)
+                continue;
 
-            for (idx = 0; idx < priorityCount; idx++) {
-                EndPoint ep = priorityList[idx];
-                bool specialCheck = false;
+            if (readReady && ep->wantRead) {
+                if ((rval = doRead(ep.get())) != IoIncomplete) {
+                    Buffer *buff = ep->inBuffer;
 
-                if (readyCount > 0 && ep != NULL) {
-                    int fd = ep->myFd;
-                    int selectHit = 0, readMiss = 0, writeMiss = 0;
+                    ep->wantRead = false;
 
-                    /* Every SELECT_RATIO times we service an endpoint in this
-                       loop we check to see if the mainEndPoint fd is ready to
-                       read or write. If so we process it and do the current
-                       endpoint next time around. */
-                    if (((endpointsServiced % (SELECT_RATIO + 1)) == 0)
-                        && ep != mainEndPoint && mainEndPoint != NULL
-                        && !mainEpIsReg) {
-                        fd_set trSet, twSet;
-                        struct timeval tw;
-                        int checkRead = FD_ISSET(mainEndPoint->myFd, &rdSet);
-                        int checkWrite = FD_ISSET(mainEndPoint->myFd, &wrSet);
+                    /* in case callback wants to issue read */
+                    ep->inBuffer = NULL;
 
-                        endpointsServiced++;
-
-                        if (checkRead || checkWrite) {
-                            fd = mainEndPoint->myFd;
-
-                            tw.tv_sec = tw.tv_usec = 0;
-                            memset(&trSet, 0, sizeof(trSet));
-                            memset(&twSet, 0, sizeof(twSet));
-
-                            if (checkRead)
-                                FD_SET(fd, &trSet);
-                            if (checkWrite)
-                                FD_SET(fd, &twSet);
-
-                            sval = select(fd + 1, &trSet, &twSet, 0, &tw);
-
-                            if (sval > 0) {
-                                idx--;
-                                ep = mainEndPoint;
-                                specialCheck = true;
-                                if (checkRead && FD_ISSET(fd, &trSet)) {
-                                    FD_SET(fd, &rSet);
-                                    readyCount++;
-                                }
-                                if (checkWrite && FD_ISSET(fd, &twSet)) {
-                                    FD_SET(fd, &wSet);
-                                    readyCount++;
-                                }
-                            } else if (sval < 0) {
-                                syswarn("ME exception: select failed: %d",
-                                        sval);
-                                stopRun();
-                                return;
-                            } else
-                                fd = ep->myFd; /* back to original fd. */
-                        }
-                    }
-
-                    FD_CLR(fd, &exSet);
-
-                    if (FD_ISSET(fd, &rSet)) {
-                        readyCount--;
-                        endpointsServiced++;
-                        selectHit = 1;
-
-                        if ((rval = doRead(ep)) != IoIncomplete) {
-                            Buffer *buff = ep->inBuffer;
-
-                            FD_CLR(fd, &rdSet);
-
-                            /* in case callback wants to issue read */
-                            ep->inBuffer = NULL;
-
-                            if (ep->inCbk != NULL)
-                                (*ep->inCbk)(ep, rval, buff, ep->inClientData);
-                            else
-                                freeBufferArray(buff);
-                        } else {
-                            if (!InputFile)
-                                FD_SET(ep->myFd, &exSet);
-                        }
-                    } else if (FD_ISSET(fd, &rdSet))
-                        readMiss = 1;
-
-                    /* get it again as the read callback may have deleted the
-                     */
-                    /* endpoint */
-                    if (specialCheck)
-                        ep = mainEndPoint;
+                    if (ep->inCbk != NULL)
+                        (*ep->inCbk)(ep.get(), rval, buff, ep->inClientData);
                     else
-                        ep = priorityList[idx];
-
-                    if (readyCount > 0 && ep != NULL && FD_ISSET(fd, &wSet)) {
-                        readyCount--;
-                        endpointsServiced++;
-                        selectHit = 1;
-
-                        if ((rval = doWrite(ep)) != IoIncomplete
-                            && rval != IoProgress) {
-                            Buffer *buff = ep->outBuffer;
-
-                            FD_CLR(fd, &wrSet);
-
-                            /* in case callback wants to issue a write */
-                            ep->outBuffer = NULL;
-
-                            if (ep->outDoneCbk != NULL)
-                                (*ep->outDoneCbk)(ep, rval, buff,
-                                                  ep->outClientData);
-                            else
-                                freeBufferArray(buff);
-                        } else if (rval == IoProgress) {
-                            Buffer *buff = ep->outBuffer;
-
-                            if (ep->outProgressCbk != NULL)
-                                (*ep->outProgressCbk)(ep, rval, buff,
-                                                      ep->outClientData);
-                        } else {
-                            FD_SET(ep->myFd, &exSet);
-                        }
-                    } else if (FD_ISSET(fd, &wrSet))
-                        writeMiss = 1;
-
-                    /* get it again as the write callback may have deleted the
-                     */
-                    /* endpoint */
-                    if (specialCheck)
-                        ep = mainEndPoint;
-                    else
-                        ep = priorityList[idx];
-
-                    if (ep != NULL) {
-                        ep->selectHits *= 0.9;
-                        if (selectHit)
-                            ep->selectHits += 1.0;
-                        else if (readMiss && writeMiss)
-                            ep->selectHits -= 1.0;
-                    }
-
-                    if (readyCount > 0 && ep != NULL && FD_ISSET(fd, &eSet))
-                        doExcept(ep);
+                        freeBufferArray(buff);
                 }
             }
 
-            reorderPriorityList();
-        } else if (sval == 0 && !modifiedTime)
+            /* the read callback may have deleted the endpoint */
+            if (!ep->closed && writeReady && ep->wantWrite) {
+                if ((rval = doWrite(ep.get())) != IoIncomplete
+                    && rval != IoProgress) {
+                    Buffer *buff = ep->outBuffer;
+
+                    ep->wantWrite = false;
+
+                    /* in case callback wants to issue a write */
+                    ep->outBuffer = NULL;
+
+                    if (ep->outDoneCbk != NULL)
+                        (*ep->outDoneCbk)(ep.get(), rval, buff,
+                                          ep->outClientData);
+                    else
+                        freeBufferArray(buff);
+                } else if (rval == IoProgress) {
+                    Buffer *buff = ep->outBuffer;
+
+                    if (ep->outProgressCbk != NULL)
+                        (*ep->outProgressCbk)(ep.get(), rval, buff,
+                                              ep->outClientData);
+                }
+            }
+
+            if (!ep->closed)
+                arm(ep.get());
+        }
+
+        if (ready.empty() && timerFired && !modifiedTime) {
+            timerFired = false;
             doTimeout();
+        }
 
         /* now we're done processing all read fds and/or the
            timeout(s). Next we do the work callbacks for all the endpoints
            whose fds weren't ready. */
-        for (idx = 0; idx < priorityCount; idx++) {
-            EndPoint ep = priorityList[idx];
+        if (work) {
+            std::vector<std::shared_ptr<endpoint_s>> all(endPoints);
 
-            if (ep != NULL) {
-                int fd = ep->myFd;
+            for (auto &ep : all)
+                if (!ep->closed && !ep->hitThisPass && ep->workCbk != NULL) {
+                    EndpWorkCbk func = ep->workCbk;
+                    void *data = ep->workData;
 
-                if (!FD_ISSET(fd, &rSet) && !FD_ISSET(fd, &wSet))
-                    if (ep->workCbk != NULL) {
-                        EndpWorkCbk func = ep->workCbk;
-                        void *data = ep->workData;
-
-                        ep->workCbk = NULL;
-                        ep->workData = NULL;
-                        TMRstart(TMR_CALLBACK);
-                        func(ep, data);
-                        TMRstop(TMR_CALLBACK);
-                    }
-            }
+                    ep->workCbk = NULL;
+                    ep->workData = NULL;
+                    TMRstart(TMR_CALLBACK);
+                    func(ep.get(), data);
+                    TMRstop(TMR_CALLBACK);
+                }
         }
+        for (auto &ep : ready)
+            ep->hitThisPass = false;
     }
 }
 
@@ -778,8 +739,6 @@ setMainEndPoint(EndPoint endp)
         syslog(LOG_ERR, "Can't fstat mainEndPoint fd (%d): %m", endp->myFd);
     else if (endp->myFd < 0)
         syslog(LOG_ERR, "Negative fd for mainEndPoint???");
-    else
-        mainEpIsReg = (S_ISREG(buf.st_mode) ? true : false);
 }
 
 int
@@ -866,7 +825,7 @@ doRead(EndPoint endp)
             endp->myErrno = errno;
             rval = IoFailed;
         } else if (i < 0 && errno == EINTR) {
-            handleSignals();
+            /* incomplete: tried again on the next pass */
         } else if (i == 0)
             rval = IoEOF;
         else /* i < 0 && errno == EAGAIN */
@@ -938,7 +897,7 @@ doWrite(EndPoint endp)
             else
                 rval = IoProgress;
         } else if (i < 0 && errno == EINTR) {
-            handleSignals();
+            /* incomplete: tried again on the next pass */
         } else if (i < 0 && errno == EAGAIN) {
             rval = IoIncomplete;
         } else if (i < 0) {
@@ -956,93 +915,10 @@ doWrite(EndPoint endp)
 }
 
 
-static IoStatus
-doExcept(EndPoint endp)
-{
-    int optval;
-    socklen_t size = sizeof(optval);
-    int fd = endPointFd(endp);
-
-    if (getsockopt(fd, SOL_SOCKET, SO_ERROR, (char *) &optval, &size) != 0)
-        syswarn("ME exception: getsockopt (%d)", fd);
-    else if (optval != 0) {
-        errno = optval;
-        syswarn("ME exception: fd %d", fd);
-    } else
-        syswarn("ME exception: fd %d: Unknown error", fd);
-
-#if defined(INNFEED_DEBUG)
-    sleep(5);
-    abort();
-    /* NOTREACHED */
-#endif
-
-    return IoFailed;
-}
-
-
-static void
-signalHandler(int s)
-{
-    sigFlags[s] = 1;
-#ifndef HAVE_SIGACTION
-    xsignal(s, signalHandler);
-#endif
-}
-
-
 static void
 pipeHandler(int s)
 {
     xsignal(s, pipeHandler);
-}
-
-
-/* std::sort predicate on the hit ratio of two endpoints: the main endpoint
-   first, then the rest by decreasing activity.  An endpoint is never before
-   itself, so the order is a strict weak one (qsort's comparator returned -1
-   for the main endpoint against itself, which std::sort does not allow). */
-static bool
-hitLess(const struct endpoint_s *e1, const struct endpoint_s *e2)
-{
-    if (e1 == e2)
-        return false;
-    if (e1 == mainEndPoint)
-        return true;
-    if (e2 == mainEndPoint)
-        return false;
-    return e1->selectHits > e2->selectHits;
-}
-
-
-/* We maintain the endpoints in order of the percent times they're ready
-   for read/write when they've been selected. This helps us favour the more
-   active endpoints. */
-static void
-reorderPriorityList(void)
-{
-    unsigned int i, j;
-    static int thisTime = 4;
-
-    /* only sort every 4th time since it's so expensive */
-    if (--thisTime > 0)
-        return;
-
-    thisTime = 4;
-
-    for (i = j = 0; i < priorityCount; i++)
-        if (priorityList[i] != NULL) {
-            if (i != j)
-                priorityList[j] = priorityList[i];
-            j++;
-        }
-
-    for (i = j; i < priorityCount; i++)
-        priorityList[i] = NULL;
-
-    priorityCount = j;
-
-    std::sort(priorityList, priorityList + priorityCount, hitLess);
 }
 
 
@@ -1110,37 +986,6 @@ timerElemAdd(time_t when, EndpTCB func, void *data)
     timeoutQueueLength++;
 
     return p->id;
-}
-
-
-/* Fills in TOUT with the timeout to use on the next call to
- * select. Returns TOUT. If there is no timeout, then returns NULL.  If the
- * timeout has already passed, then it calls the timeout handling routine
- * first.
- */
-static struct timeval *
-getTimeout(struct timeval *tout)
-{
-    struct timeval *rval = NULL;
-
-    if (timeoutQueue != NULL) {
-        time_t now = theTime();
-
-        while (timeoutQueue && now > timeoutQueue->when)
-            doTimeout();
-
-        if (timeoutQueue != NULL && now == timeoutQueue->when) {
-            tout->tv_sec = 0;
-            tout->tv_usec = 0;
-            rval = tout;
-        } else if (timeoutQueue != NULL) {
-            tout->tv_sec = timeoutQueue->when - now;
-            tout->tv_usec = 0;
-            rval = tout;
-        }
-    }
-
-    return rval;
 }
 
 
@@ -1388,65 +1233,49 @@ main(int argc, char **argv)
 }
 #endif /* WANT_MAIN */
 
+/* Wait for the next of setSigHandler's signals; its handler runs from the
+   loop, as handleSignals() ran it after select() returned. */
+static void
+armSignals(void)
+{
+    if (signalsArmed)
+        return;
+    signalsArmed = true;
+    signals->async_wait([](const boost::system::error_code &ec, int signo) {
+        signalsArmed = false;
+        if (ec)
+            return;
+        if (signo > 0 && (size_t) signo < sigHandlers.size()) {
+            sigfn h = sigHandlers[signo];
+
+            if (h != NULL && h != SIG_IGN && h != SIG_DFL)
+                h(signo);
+        }
+        armSignals();
+    });
+}
+
 /* Probably doesn't do the right thing for SIGCHLD */
 void
 setSigHandler(int signum, void (*ptr)(int))
 {
-    unsigned int i;
-
-    if (sigHandlers == NULL) {
-        sigHandlers = xmalloc(sizeof(sigfn) * NSIG);
-        sigFlags = xmalloc(sizeof(sig_atomic_t) * NSIG);
-        for (i = 0; i < NSIG; i++) {
-            sigHandlers[i] = NULL;
-            sigFlags[i] = 0;
-        }
-    }
+    boost::system::error_code ec;
 
     if (signum >= NSIG) {
         syslog(LOG_ERR, "ME signal number bigger than NSIG: %d vs %d", signum,
                NSIG);
         return;
     }
+    if (sigHandlers.empty())
+        sigHandlers.assign(NSIG, nullptr);
 
-    if (xsignal(signum, signalHandler) == SIG_ERR)
-        die("signal failed: %s", strerror(errno));
+    ioc();
+    signals->add(signum, ec);
+    if (ec)
+        die("signal failed: %s", ec.message().c_str());
 
     sigHandlers[signum] = ptr;
-}
-
-static void
-handleSignals(void)
-{
-    int i;
-
-    for (i = 1; i < NSIG; i++) {
-        if (sigFlags[i]) {
-#if defined(HAVE_SIGACTION)
-            sigset_t set, oset;
-
-            if (sigemptyset(&set) != 0 || sigaddset(&set, i) != 0)
-                die("sigemptyset or sigaddset failed");
-            if (sigprocmask(SIG_BLOCK, &set, &oset) != 0)
-                die("sigprocmask failed: %s", strerror(errno));
-#else
-            /* hope for the best */
-#endif
-
-            sigFlags[i] = 0;
-
-            if (sigHandlers[i] != NULL && sigHandlers[i] != SIG_IGN
-                && sigHandlers[i] != SIG_DFL)
-                (sigHandlers[i])(i);
-
-#if defined(HAVE_SIGACTION)
-            if (sigprocmask(SIG_SETMASK, &oset, (sigset_t *) NULL) != 0)
-                die("sigprocmask failed: %s", strerror(errno));
-#else
-            /* hope for the best */
-#endif
-        }
-    }
+    armSignals();
 }
 
 
@@ -1493,10 +1322,7 @@ endpointConfigLoadCbk(FILE *fp)
 static void
 endpointCleanup(void)
 {
-    free(endPoints);
-    free(priorityList);
-    free(sigHandlers);
-    endPoints = NULL;
-    priorityList = NULL;
-    sigHandlers = NULL;
+    readyList.clear();
+    endPoints.clear();
+    sigHandlers.clear();
 }

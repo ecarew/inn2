@@ -22,8 +22,10 @@ if(HAVE_SASL)
     set(_sasl ${INN_SASL_LIB})
 endif()
 
-inn_program(innfeed  SOURCES ${INNFEED_COMMON} connection.cc)
-inn_program(imapfeed SOURCES ${INNFEED_COMMON} imap_connection.cc LIBS ${_sasl})
+# endpoint.cc runs the event loop on Boost.Asio (ASIO_PLAN.md, phase 3).
+inn_program(innfeed  SOURCES ${INNFEED_COMMON} connection.cc LIBS inn_asio)
+inn_program(imapfeed SOURCES ${INNFEED_COMMON} imap_connection.cc
+            LIBS inn_asio ${_sasl})
 target_include_directories(innfeed  PRIVATE ${CMAKE_CURRENT_BINARY_DIR})
 target_include_directories(imapfeed PRIVATE ${CMAKE_CURRENT_BINARY_DIR})
 
