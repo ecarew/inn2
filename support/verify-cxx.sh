@@ -104,7 +104,10 @@ fi
 mangled=0
 for a in "$build/innd/innd" "$build"/history/libinnhist.a \
          "$build"/storage/libinnstorage.a "$build"/lib/libinn.a; do
-    n=$(defined_symbols "$a" 2>/dev/null | awk '$1 == "T" && $2 ~ /^_Z/' | wc -l)
+    # Header-only Boost (Asio) and the standard library leave their own
+    # instantiations in the binary; only INN's functions must be C-linked.
+    n=$(defined_symbols "$a" 2>/dev/null | awk '$1 == "T" && $2 ~ /^_Z/' \
+        | grep -cvE '^T _Z(N|NK|Thn[0-9]+_N|Tv[0-9_n]+N)?(5boost|St)')
     mangled=$((mangled + n))
 done
 if [ "$mangled" = 0 ]; then
