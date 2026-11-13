@@ -1408,6 +1408,45 @@ ok rejected 'bad-groups@live.test.* Unwanted character in "Newsgroups"'
 label="innd accepts articles with a valid or an unparsable Expires"
 ok sh -c "inhist() { '$bin/expire/grephistory' \"<\$1@live.test>\" >/dev/null 2>&1; }; inhist good-expires && inhist good-badexpires"
 
+# --- Event loop: control while busy, child exits --------------------------------
+
+# ctlinnd must get an answer while a large feed is being read: the control
+# channel is served on every pass of the main loop.
+busy=$tmp/busybatch
+: >"$busy"
+for i in $(seq 1 3000); do
+    art="Path: live.test!not-for-mail
+From: tester@live.test
+Newsgroups: test.live
+Subject: busy $i
+Message-ID: <busy$i@live.test>
+Date: $(date -u '+%a, %d %b %Y %H:%M:%S +0000')
+
+Busy body $i.
+"
+    printf '#! rnews %d\n%s' "${#art}" "$art" >>"$busy"
+done
+"$bin/frontends/rnews" <"$busy" >>"$tmp/rnews.log" 2>&1 &
+rnews_pid=$!
+sleep 0.2
+label="ctlinnd answers while a feed is busy"
+ok "$bin/frontends/ctlinnd" -s -t 10 mode
+wait "$rnews_pid"
+ctl flush ''
+label="the busy feed is accepted in full"
+ok sh -c "'$bin/expire/grephistory' '<busy1@live.test>' >/dev/null && '$bin/expire/grephistory' '<busy3000@live.test>' >/dev/null"
+
+# An exploder whose program exits is noticed (SIGCHLD, PROCscan) and
+# started again for the next text sent to it.
+pkill -f "$tmp/explode.sh" 2>/dev/null
+sleep 1
+ctl send explode "after child exit"
+sleep 1
+label="an exploder is restarted after its child exits"
+ok grep -q 'after child exit' "$tmp/explode.out"
+label="innd survives the child exit"
+ok "$bin/frontends/ctlinnd" -s -t 10 mode
+
 # --- Shut down ------------------------------------------------------------------
 
 "$bin/frontends/ctlinnd" -s shutdown "live test done" >/dev/null 2>&1
@@ -1574,10 +1613,10 @@ done
 label="innd restarts in xrefslave mode"
 ok sh -c "$up && '$bin/frontends/ctlinnd' mode 2>/dev/null | grep -qi 'slave'"
 
-send_art slave-500 test.live 'Xref: master.test test.live:500'
+send_art slave-500 test.live 'Xref: master.test test.live:50000'
 # A malformed entry second: tradspool takes the article's path from the
 # first entry, and refuses the article if that one is malformed.
-send_art slave-501 test.live 'Xref: master.test test.live:501 bad-entry'
+send_art slave-501 test.live 'Xref: master.test test.live:50001 bad-entry'
 send_art slave-noxref test.live
 send_art slave-nogroup test.live 'Xref: master.test no.such.group:7'
 send_art slave-noentries test.live 'Xref: master.test'
@@ -1587,9 +1626,9 @@ ctl flush ''
 sleep 1
 ov=$("$bin/storage/tdx-util" -o -n test.live 2>/dev/null)
 label="xrefslave files an article under its Xref number"
-ok sh -c "printf '%s\n' \"\$1\" | grep -q '^500	.*slave-500'" _ "$ov"
+ok sh -c "printf '%s\n' \"\$1\" | grep -q '^50000	.*slave-500'" _ "$ov"
 label="xrefslave skips a malformed Xref entry, files the rest"
-ok sh -c "printf '%s\n' \"\$1\" | grep -q '^501	.*slave-501'" _ "$ov"
+ok sh -c "printf '%s\n' \"\$1\" | grep -q '^50001	.*slave-501'" _ "$ov"
 label="xrefslave rejects an article without Xref"
 ok grep -q 'Xref header field required in xrefslave mode' "$tmp/log/news"
 label="without logipaddr, a refusal is logged under the first Path host"
@@ -1597,13 +1636,25 @@ ok grep -q ' - live.test <slave-nul@live.test> 437 Nul character in header' "$tm
 label="xrefslave rejects an Xref with no known group or no entries"
 ok sh -c "[ \$(grep -c 'Xref header field \"master.test[^\"]*\" invalid in xrefslave mode' '$tmp/log/news') -ge 2 ]"
 
-"$bin/frontends/ctlinnd" -s shutdown "live xrefslave done" >/dev/null 2>&1
+# SIGHUP, like SIGTERM, makes innd exit cleanly from its main loop.  The
+# select() loop only looks at the signal after a pass with activity (an
+# interrupted select() goes straight back to waiting), so give it some.
+kill -HUP "$innd_pid"
+sleep 0.5
+"$bin/frontends/ctlinnd" -s -t 5 mode >/dev/null 2>&1
 for _ in $(seq 1 50); do
     kill -0 "$innd_pid" 2>/dev/null || break
     sleep 0.2
 done
-wait "$innd_pid" 2>/dev/null
-innd_pid=
+label="SIGHUP stops innd cleanly"
+if kill -0 "$innd_pid" 2>/dev/null; then
+    res "$label" FAIL
+else
+    wait "$innd_pid" 2>/dev/null
+    status=$?
+    innd_pid=
+    ok test "$status" = 0
+fi
 
 if [ $fail = 0 ]; then
     echo "RESULT: PASS"
