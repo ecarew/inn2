@@ -245,6 +245,24 @@ per-client code is phase 6.
 - Small and low-risk: it removes nnrpd's last `select()` loop and its
   `FD_SETSIZE` limit, and gives the forking parent a clean signal path.
 
+**Done** (d33651867 tests, f0f55f03e conversion). A `Listener` in
+`nnrpd.cc` waits on the listening sockets (borrowed, never closed) and
+accepts one connection at a time. Decisions:
+
+1. Listening sockets are non-blocking, so a pre-forked child that loses
+   the race for a connection goes back to waiting; accepted sockets are
+   made blocking again (macOS inherits the listener's `O_NONBLOCK`).
+2. Fork on demand: the listener's `signal_set` handles `SIGCHLD` and
+   `SIGHUP`, with `notify_fork` around each `fork()`; the child drops
+   the listener.
+3. Pre-forked: the parent only forks and waits, unchanged; each child
+   builds its own listener after the fork (a kqueue does not survive
+   one).
+
+Perf on macOS, 5 alternating rounds: W1 3462 vs 3480 articles/s; W4
+15.93 vs 15.58 s, nnrpd sys 168.8 vs 160.3 s. Leaks unchanged (nnrpd
+session 31 in both). Linux figures from the Linux checks.
+
 ### Phase 6: nnrpd's per-client I/O on `ssl::stream` (optional)
 
 Each nnrpd process serves one client, so an event loop adds no
