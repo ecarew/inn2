@@ -17,6 +17,8 @@
 
 #include "misc.h"
 
+#include <ctime>
+
 BEGIN_DECLS
 
 
