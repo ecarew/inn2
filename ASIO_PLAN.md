@@ -263,6 +263,14 @@ Perf on macOS, 5 alternating rounds: W1 3462 vs 3480 articles/s; W4
 15.93 vs 15.58 s, nnrpd sys 168.8 vs 160.3 s. Leaks unchanged (nnrpd
 session 31 in both). Linux figures from the Linux checks.
 
+The 31 session leaks belong to macOS, not INN: every block that could be
+traced was allocated by system libraries (libnotify's tables, set up by
+`openlog()`), and macOS's fork handlers reset that state in the child,
+orphaning the parent's copies. The same session run inetd style (no
+fork) has 0 leaks, and a 20-line C program that only calls `openlog`,
+`syslog` and `getaddrinfo` before `fork()` shows 33 leaks in its child.
+Left alone by the architect's decision.
+
 ### Phase 6: nnrpd's per-client I/O on `ssl::stream` (optional)
 
 Each nnrpd process serves one client, so an event loop adds no
