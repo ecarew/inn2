@@ -1636,12 +1636,9 @@ ok grep -q ' - live.test <slave-nul@live.test> 437 Nul character in header' "$tm
 label="xrefslave rejects an Xref with no known group or no entries"
 ok sh -c "[ \$(grep -c 'Xref header field \"master.test[^\"]*\" invalid in xrefslave mode' '$tmp/log/news') -ge 2 ]"
 
-# SIGHUP, like SIGTERM, makes innd exit cleanly from its main loop.  The
-# select() loop only looks at the signal after a pass with activity (an
-# interrupted select() goes straight back to waiting), so give it some.
+# SIGHUP, like SIGTERM, makes innd exit cleanly from its main loop, at
+# once, even while idle.
 kill -HUP "$innd_pid"
-sleep 0.5
-"$bin/frontends/ctlinnd" -s -t 5 mode >/dev/null 2>&1
 for _ in $(seq 1 50); do
     kill -0 "$innd_pid" 2>/dev/null || break
     sleep 0.2

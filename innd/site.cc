@@ -86,6 +86,7 @@ SITEspool(SITE *sp, CHANNEL *cp)
             WCHANremove(cp);
             RCHANremove(cp);
             SCHANremove(cp);
+            CHANdropfd(cp->fd);
             close(cp->fd);
         }
         cp->fd = i;

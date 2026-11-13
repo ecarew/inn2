@@ -7,18 +7,27 @@
 **  are all channel operations.
 **
 **  Channels can be in one of three states: reading, writing, or sleeping.
-**  The first two are represented in the select file descriptor sets.  The
-**  last sits there until something else wakes the channel up.  CHANreadloop
-**  is the main I/O loop for innd, calling select and then dispatching control
-**  to whatever channels have work to do.
+**  A reading or writing channel waits on its descriptor through an Asio
+**  io_context; a sleeping one sits there until its wake time or until
+**  something else wakes it up.  CHANreadloop is the main I/O loop for innd:
+**  each pass waits for readiness, then dispatches control to whatever
+**  channels have work to do, at most one read and one write per channel.
 */
 
 #include "portable/system.h"
 
-/* Needed on AIX 4.1 to get fd_set and friends. */
-#ifdef HAVE_SYS_SELECT_H
-#    include <sys/select.h>
-#endif
+#include <sys/stat.h>
+
+#include <chrono>
+#include <memory>
+#include <optional>
+#include <utility>
+#include <vector>
+
+#include <boost/asio/io_context.hpp>
+#include <boost/asio/posix/stream_descriptor.hpp>
+#include <boost/asio/signal_set.hpp>
+#include <boost/asio/steady_timer.hpp>
 
 #include "inn/fdflag.h"
 #include "inn/innconf.h"
@@ -41,11 +50,28 @@ static const char *const timer_name[] = {
     "idle", "artclean", "artwrite", "artcncl",  "sitesend", "overv",
     "perl", "python",   "nntpread", "artparse", "artlog",   "datamove"};
 
+namespace asio = boost::asio;
+
+/* Asio state for one descriptor, indexed by descriptor number.  Wait
+   handlers hold a shared_ptr, so state replaced or dropped while a wait is
+   pending is only written to, never used again.  A regular file cannot be
+   waited on (epoll refuses it); select() always reported one ready, so it
+   is treated as ready whenever it is wanted. */
+struct chan_io {
+    std::optional<asio::posix::stream_descriptor> stream;
+    bool waitable = false;
+    bool want_read = false;
+    bool want_write = false;
+    bool sleeping = false;
+    bool read_armed = false;
+    bool write_armed = false;
+    bool read_ready = false;
+    bool write_ready = false;
+};
+
 /* Global data about the channels. */
 struct channels {
-    fd_set read_set;
-    fd_set sleep_set;
-    fd_set write_set;
+    std::vector<std::shared_ptr<chan_io>> io; /* Indexed by descriptor. */
     int sleep_count;  /* Number of sleeping channels. */
     int max_fd;       /* Max fd in read_set or write_set. */
     int max_sleep_fd; /* Max fd in sleep_set. */
@@ -58,8 +84,185 @@ struct channels {
     int prioritized_size;
 };
 
+/* The io_context is created on first use, after innd has become a daemon
+   (a kqueue does not survive fork), and declared before everything that
+   holds Asio objects so that it is destroyed after them. */
+static std::optional<asio::io_context> io;
+static std::optional<asio::steady_timer> wait_timer;
+static std::optional<asio::signal_set> signals;
+static std::vector<void (*)(int)> signal_handlers(NSIG, nullptr);
+
 /* Eventually this will move into some sort of global INN state structure. */
 static struct channels channels;
+
+static asio::io_context &
+ioc()
+{
+    if (!io) {
+        io.emplace(1);
+        wait_timer.emplace(*io);
+    }
+    return *io;
+}
+
+/* The state for a descriptor, or nullptr if out of range. */
+static chan_io *
+chan_state(int fd)
+{
+    if (fd < 0 || static_cast<size_t>(fd) >= channels.io.size())
+        return nullptr;
+    if (!channels.io[fd])
+        channels.io[fd] = std::make_shared<chan_io>();
+    return channels.io[fd].get();
+}
+
+static bool
+wants_read(int fd)
+{
+    chan_io *s = chan_state(fd);
+    return s != nullptr && s->want_read;
+}
+
+static bool
+wants_write(int fd)
+{
+    chan_io *s = chan_state(fd);
+    return s != nullptr && s->want_write;
+}
+
+static bool
+is_sleeping(int fd)
+{
+    chan_io *s = chan_state(fd);
+    return s != nullptr && s->sleeping;
+}
+
+/* Drop the Asio registration of a descriptor before it is closed or
+   replaced, so that a later descriptor with the same number starts clean.
+   The descriptor itself is left open. */
+void
+CHANdropfd(int fd)
+{
+    if (fd < 0 || static_cast<size_t>(fd) >= channels.io.size()
+        || !channels.io[fd])
+        return;
+    chan_io &s = *channels.io[fd];
+    if (s.stream) {
+        boost::system::error_code ec;
+        s.stream->cancel(ec);
+        s.stream->release();
+    }
+    channels.io[fd].reset();
+}
+
+/* Give a descriptor a stream_descriptor if it can be waited on. */
+static void
+CHANattach(int fd)
+{
+    chan_io *s = chan_state(fd);
+    struct stat st;
+
+    if (s == nullptr || s->stream)
+        return;
+    if (fstat(fd, &st) == 0 && S_ISREG(st.st_mode))
+        return;
+    boost::system::error_code ec;
+    asio::posix::stream_descriptor sd(ioc());
+    sd.assign(fd, ec);
+    if (ec)
+        return;
+    s->stream.emplace(std::move(sd));
+    s->waitable = true;
+}
+
+/* Start a wait for each direction the descriptor wants and is not already
+   waiting or ready for. */
+static void
+CHANarm(int fd)
+{
+    auto &slot = channels.io[fd];
+    if (!slot)
+        return;
+    std::shared_ptr<chan_io> s = slot;
+    if (!s->waitable) {
+        if (s->want_read)
+            s->read_ready = true;
+        if (s->want_write)
+            s->write_ready = true;
+        return;
+    }
+    if (s->want_read && !s->read_armed && !s->read_ready) {
+        s->read_armed = true;
+        s->stream->async_wait(asio::posix::stream_descriptor::wait_read,
+                              [s](const boost::system::error_code &ec) {
+                                  s->read_armed = false;
+                                  if (!ec && s->want_read)
+                                      s->read_ready = true;
+                              });
+    }
+    if (s->want_write && !s->write_armed && !s->write_ready) {
+        s->write_armed = true;
+        s->stream->async_wait(asio::posix::stream_descriptor::wait_write,
+                              [s](const boost::system::error_code &ec) {
+                                  s->write_armed = false;
+                                  if (!ec && s->want_write)
+                                      s->write_ready = true;
+                              });
+    }
+}
+
+
+/*
+**  Run a signal handler from the main loop when the signal arrives.  This
+**  replaces xsignal for innd: the handler runs between passes, never in
+**  the middle of other code, so nothing needs masking.
+*/
+static void
+CHANarmsignals()
+{
+    signals->async_wait([](const boost::system::error_code &ec, int sig) {
+        if (ec)
+            return;
+        if (sig > 0 && sig < NSIG && signal_handlers[sig] != nullptr)
+            signal_handlers[sig](sig);
+        CHANarmsignals();
+    });
+}
+
+void
+CHANsignal(int sig, void (*handler)(int))
+{
+    bool first = !signals;
+
+    if (first)
+        signals.emplace(ioc());
+    if (sig <= 0 || sig >= NSIG)
+        return;
+    if (signal_handlers[sig] == nullptr) {
+        boost::system::error_code ec;
+        signals->add(sig, ec);
+        if (ec)
+            syswarn("%s cant catch signal %d: %s", LogName, sig,
+                    ec.message().c_str());
+    }
+    signal_handlers[sig] = handler;
+    if (first)
+        CHANarmsignals();
+}
+
+
+/*
+**  In a child process about to exec, put the signals innd catches back to
+**  their default disposition, so that none reaches Asio's handler (whose
+**  pipe the child shares with innd).
+*/
+void
+CHANsignalforked(void)
+{
+    for (int sig = 1; sig < NSIG; sig++)
+        if (signal_handlers[sig] != nullptr)
+            signal(sig, SIG_DFL);
+}
 
 /* We want to initialize four elements of CHANnull but let all of the other
    elements be initialized according to the standard rules for a static
@@ -104,9 +307,12 @@ CHANshutdown(void)
     CHANNEL *cp;
     int i;
 
-    FD_ZERO(&channels.read_set);
-    FD_ZERO(&channels.sleep_set);
-    FD_ZERO(&channels.write_set);
+    for (size_t fd = 0; fd < channels.io.size(); fd++)
+        if (channels.io[fd] && channels.io[fd]->stream)
+            CHANdropfd(static_cast<int>(fd));
+    for (auto &s : channels.io)
+        if (s)
+            *s = chan_io();
     channels.sleep_count = 0;
     channels.max_fd = -1;
     channels.max_sleep_fd = -1;
@@ -127,6 +333,7 @@ CHANshutdown(void)
     free(channels.table);
     channels.table = nullptr;
     channels.table_size = 0;
+    channels.io.clear();
     if (channels.prioritized_size > 0) {
         free(channels.prioritized);
         channels.prioritized_size = 0;
@@ -149,6 +356,7 @@ CHANsetup(int count)
     CHANshutdown();
     channels.table_size = count;
     channels.table = xmalloc(count * sizeof(CHANNEL));
+    channels.io.assign(count, nullptr);
 
     /* Finish initializing CHANnull, since we can't do this entirely with a
        static initializer without having to list every element in the
@@ -237,6 +445,11 @@ CHANcreate(int fd, enum channel_type type, enum channel_state state,
     HashClear(&cp->CurrentMessageIDHash);
     ARTprepare(cp);
 
+    /* A descriptor closed without CHANclose (or CHANdropfd) may have left
+       state behind under this number; start from nothing. */
+    CHANdropfd(fd);
+    CHANattach(fd);
+
     fdflag_close_exec(fd, true);
 
 #ifndef _HPUX_SOURCE
@@ -289,14 +502,14 @@ CHANtracing(CHANNEL *cp, bool flag)
                                 (struct sockaddr *) &cp->Address);
         notice("%s trace address %s lastactive %lu nextlog %lu", name, addr,
                (unsigned long) cp->LastActive, (unsigned long) cp->NextLog);
-        if (FD_ISSET(cp->fd, &channels.sleep_set))
+        if (is_sleeping(cp->fd))
             notice("%s trace sleeping %lu %p", name,
                    (unsigned long) cp->Waketime, (void *) cp->Waker);
-        if (FD_ISSET(cp->fd, &channels.read_set))
+        if (wants_read(cp->fd))
             notice("%s trace reading %lu %s", name,
                    (unsigned long) cp->In.used,
                    MaxLength(cp->In.data, cp->In.data));
-        if (FD_ISSET(cp->fd, &channels.write_set))
+        if (wants_write(cp->fd))
             notice("%s trace writing %lu %s", name,
                    (unsigned long) cp->Out.left,
                    MaxLength(cp->Out.data, cp->Out.data));
@@ -397,6 +610,7 @@ CHANclose(CHANNEL *cp, const char *name)
         WCHANremove(cp);
         RCHANremove(cp);
         SCHANremove(cp);
+        CHANdropfd(cp->fd);
         if (cp->fd >= 0 && close(cp->fd) < 0)
             syswarn("%s cant close %s", LogName, name);
         for (i = 0; i < channels.prioritized_size; i++)
@@ -571,8 +785,8 @@ static void
 CHANresetlast(int fd)
 {
     if (fd == channels.max_fd)
-        while (!FD_ISSET(channels.max_fd, &channels.read_set)
-               && !FD_ISSET(channels.max_fd, &channels.write_set)
+        while (!wants_read(channels.max_fd)
+               && !wants_write(channels.max_fd)
                && channels.max_fd > 1)
             channels.max_fd--;
 }
@@ -586,7 +800,7 @@ static void
 CHANresetlastsleeping(int fd)
 {
     if (fd == channels.max_sleep_fd) {
-        while (!FD_ISSET(channels.max_sleep_fd, &channels.sleep_set)
+        while (!is_sleeping(channels.max_sleep_fd)
                && channels.max_sleep_fd > 1)
             channels.max_sleep_fd--;
     }
@@ -599,7 +813,11 @@ CHANresetlastsleeping(int fd)
 void
 RCHANadd(CHANNEL *cp)
 {
-    FD_SET(cp->fd, &channels.read_set);
+    chan_io *s = chan_state(cp->fd);
+    if (s == nullptr)
+        return;
+    s->want_read = true;
+    CHANarm(cp->fd);
     if (cp->fd > channels.max_fd)
         channels.max_fd = cp->fd;
 
@@ -615,8 +833,10 @@ RCHANadd(CHANNEL *cp)
 void
 RCHANremove(CHANNEL *cp)
 {
-    if (FD_ISSET(cp->fd, &channels.read_set)) {
-        FD_CLR(cp->fd, &channels.read_set);
+    if (wants_read(cp->fd)) {
+        chan_io *s = chan_state(cp->fd);
+        s->want_read = false;
+        s->read_ready = false;
         CHANresetlast(cp->fd);
     }
 }
@@ -631,8 +851,11 @@ SCHANadd(CHANNEL *cp, time_t wake, void *event, innd_callback_func waker,
          void *arg)
 {
     if (!CHANsleeping(cp)) {
+        chan_io *s = chan_state(cp->fd);
+        if (s == nullptr)
+            return;
         channels.sleep_count++;
-        FD_SET(cp->fd, &channels.sleep_set);
+        s->sleeping = true;
     }
     if (cp->fd > channels.max_sleep_fd)
         channels.max_sleep_fd = cp->fd;
@@ -654,7 +877,7 @@ SCHANremove(CHANNEL *cp)
 {
     if (!CHANsleeping(cp))
         return;
-    FD_CLR(cp->fd, &channels.sleep_set);
+    chan_state(cp->fd)->sleeping = false;
     channels.sleep_count--;
     cp->Waketime = 0;
 
@@ -669,7 +892,7 @@ SCHANremove(CHANNEL *cp)
 bool
 CHANsleeping(CHANNEL *cp)
 {
-    return FD_ISSET(cp->fd, &channels.sleep_set);
+    return is_sleeping(cp->fd);
 }
 
 
@@ -698,7 +921,11 @@ void
 WCHANadd(CHANNEL *cp)
 {
     if (cp->Out.left > 0) {
-        FD_SET(cp->fd, &channels.write_set);
+        chan_io *s = chan_state(cp->fd);
+        if (s == nullptr)
+            return;
+        s->want_write = true;
+        CHANarm(cp->fd);
         if (cp->fd > channels.max_fd)
             channels.max_fd = cp->fd;
     }
@@ -711,8 +938,10 @@ WCHANadd(CHANNEL *cp)
 void
 WCHANremove(CHANNEL *cp)
 {
-    if (FD_ISSET(cp->fd, &channels.write_set)) {
-        FD_CLR(cp->fd, &channels.write_set);
+    if (wants_write(cp->fd)) {
+        chan_io *s = chan_state(cp->fd);
+        s->want_write = false;
+        s->write_ready = false;
         CHANresetlast(cp->fd);
 
         /* No data left -- reset used so we don't grow the buffer. */
@@ -964,49 +1193,6 @@ CHANwritesleep(CHANNEL *cp, const char *name)
 
 
 /*
-**  We got an unknown error in select.  Find out the culprit.  This is not
-**  enabled yet; it's been disabled for years, and is expensive.
-*/
-static void UNUSED
-CHANdiagnose()
-{
-    fd_set test;
-    int fd;
-    struct timeval tv;
-
-    FD_ZERO(&test);
-    for (fd = channels.max_fd; fd >= 0; fd--) {
-        if (FD_ISSET(fd, &channels.read_set)) {
-            FD_SET(fd, &test);
-            tv.tv_sec = 0;
-            tv.tv_usec = 0;
-            if (select(fd + 1, &test, nullptr, nullptr, &tv) < 0
-                && errno != EINTR) {
-                warn("%s bad read file %d", LogName, fd);
-                FD_CLR(fd, &channels.read_set);
-                /* Probably do something about the file descriptor here; call
-                   CHANclose on it? */
-            }
-            FD_CLR(fd, &test);
-        }
-        if (FD_ISSET(fd, &channels.write_set)) {
-            FD_SET(fd, &test);
-            tv.tv_sec = 0;
-            tv.tv_usec = 0;
-            if (select(fd + 1, nullptr, &test, nullptr, &tv) < 0
-                && errno != EINTR) {
-                warn("%s bad write file %d", LogName, fd);
-                FD_CLR(fd, &channels.write_set);
-                /* Probably do something about the file descriptor here; call
-                   CHANclose on it? */
-            }
-            FD_CLR(fd, &test);
-        }
-    }
-}
-
-
-/*
 **  Count the number of active connections for a given peer.
 **
 **  FIXME: This seems like an overly cumbersome way to do this, and also seems
@@ -1050,6 +1236,7 @@ CHANhandle_read(CHANNEL *cp)
     if (cp->Type == CTfree) {
         warn("%s %d free but was in RMASK", CHANname(cp), cp->fd);
         RCHANremove(cp);
+        CHANdropfd(cp->fd);
         close(cp->fd);
         cp->fd = -1;
         return;
@@ -1087,6 +1274,7 @@ CHANhandle_write(CHANNEL *cp)
     if (cp->Type == CTfree) {
         warn("%s %d free but was in WMASK", CHANname(cp), cp->fd);
         WCHANremove(cp);
+        CHANdropfd(cp->fd);
         close(cp->fd);
         cp->fd = -1;
         return;
@@ -1150,8 +1338,6 @@ CHANreadloop(void)
 {
     int i, startpoint, count, lastfd;
     CHANNEL *cp;
-    fd_set rdfds, wrfds;
-    struct timeval tv;
     unsigned long silence;
     const char *name;
     time_t last_sync;
@@ -1160,43 +1346,77 @@ CHANreadloop(void)
     STATUSinit();
     gettimeofday(&Now, nullptr);
     last_sync = Now.tv_sec;
+    ioc();
 
     while (true) {
         /* See if any processes died. */
         PROCscan();
 
-        /* Wait for data, note the time. */
-        rdfds = channels.read_set;
-        wrfds = channels.write_set;
-        tv = TimeOut;
+        /* How long to wait: the main loop timeout, cut short for the timer
+           summary and for the earliest sleeping channel's wake time. */
+        long wait = TimeOut.tv_sec;
         if (innconf->timer != 0) {
             unsigned long now = TMRnow();
 
             if (now < 1000 * innconf->timer)
-                tv.tv_sec = innconf->timer - now / 1000;
+                wait = innconf->timer - now / 1000;
             else {
                 TMRsummary("ME", timer_name);
                 InndHisLogStats();
-                tv.tv_sec = innconf->timer;
+                wait = innconf->timer;
+            }
+        }
+        if (channels.sleep_count > 0) {
+            int last = channels.max_sleep_fd;
+
+            for (i = 0; i <= last; i++) {
+                if (!is_sleeping(i))
+                    continue;
+                long until = channels.table[i].Waketime - Now.tv_sec;
+                if (until < wait)
+                    wait = until < 0 ? 0 : until;
             }
         }
 
-        /* Mask signals when not in select to prevent a signal handler
-           from accessing data that the main code is mutating. */
+        /* Arm a wait for every channel that wants one; descriptors that
+           cannot be waited on are ready at once. */
+        bool ready = false;
+        for (i = 0; i <= channels.max_fd; i++) {
+            if (!channels.io[i])
+                continue;
+            CHANarm(i);
+            if (channels.io[i]->read_ready || channels.io[i]->write_ready)
+                ready = true;
+        }
+
+        /* Wait for readiness, the timeout or a signal, then collect
+           everything else that is already ready. */
         TMRstart(TMR_IDLE);
-        xsignal_unmask();
-        count = select(channels.max_fd + 1, &rdfds, &wrfds, nullptr, &tv);
-        xsignal_mask();
+        if (!ready && wait > 0) {
+            bool expired = false;
+
+            wait_timer->expires_after(std::chrono::seconds(wait));
+            wait_timer->async_wait([&expired](const boost::system::error_code &ec) {
+                if (!ec)
+                    expired = true;
+            });
+            io->run_one();
+            if (!expired)
+                wait_timer->cancel();
+        }
+        io->poll();
+        if (io->stopped())
+            io->restart();
         TMRstop(TMR_IDLE);
 
-        if (count < 0) {
-            if (errno != EINTR) {
-                syswarn("%s cant select", LogName);
-#ifdef INND_FIND_BAD_FDS
-                CHANdiagnose();
-#endif
-            }
-            continue;
+        count = 0;
+        for (i = 0; i <= channels.max_fd; i++) {
+            if (!channels.io[i])
+                continue;
+            if (channels.io[i]->read_ready)
+                count++;
+            if (channels.io[i]->write_ready)
+                count++;
         }
 
         STATUSmainloophook();
@@ -1237,12 +1457,12 @@ CHANreadloop(void)
             if (channels.prioritized[i] == nullptr)
                 continue;
             pfd = channels.prioritized[i]->fd;
-            if (FD_ISSET(pfd, &channels.read_set) && FD_ISSET(pfd, &rdfds)) {
+            if (wants_read(pfd) && channels.io[pfd]->read_ready) {
+                channels.io[pfd]->read_ready = false;
                 count--;
                 if (count > 4)
                     count = 4; /* might be more requests */
                 (*channels.prioritized[i]->Reader)(channels.prioritized[i]);
-                FD_CLR(pfd, &rdfds);
             }
         }
 
@@ -1281,7 +1501,8 @@ CHANreadloop(void)
             }
 
             /* Anything to read? */
-            if (FD_ISSET(fd, &channels.read_set) && FD_ISSET(fd, &rdfds)) {
+            if (wants_read(fd) && channels.io[fd]->read_ready) {
+                channels.io[fd]->read_ready = false;
                 count--;
                 CHANhandle_read(cp);
             }
@@ -1292,19 +1513,21 @@ CHANreadloop(void)
                 PROCscan();
 
             /* Ready to write? */
-            if (FD_ISSET(fd, &channels.write_set) && FD_ISSET(fd, &wrfds)) {
+            if (wants_write(fd) && channels.io[fd]->write_ready) {
+                channels.io[fd]->write_ready = false;
                 count--;
                 CHANhandle_write(cp);
             }
 
             /* Coming off a sleep? */
-            if (FD_ISSET(fd, &channels.sleep_set)
+            if (is_sleeping(fd)
                 && cp->Waketime <= Now.tv_sec) {
                 if (cp->Type == CTfree) {
                     warn("%s %d free but was in SMASK", CHANname(cp), fd);
-                    FD_CLR(fd, &channels.sleep_set);
+                    chan_state(fd)->sleeping = false;
                     channels.sleep_count--;
                     CHANresetlastsleeping(fd);
+                    CHANdropfd(fd);
                     close(fd);
                     cp->fd = -1;
                 } else {

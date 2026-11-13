@@ -480,6 +480,7 @@ scenario_replace_fd()
     WCHANremove(cp);
     RCHANremove(cp);
     SCHANremove(cp);
+    CHANdropfd(cp->fd);
     close(cp->fd);
     cp->fd = i;
     WCHANset(cp, "spooled\n", strlen("spooled\n"));

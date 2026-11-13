@@ -2180,7 +2180,7 @@ CCsetup(void)
      *  needed (i.e. something has deleted our named socket.
      */
 #if defined(SIGUSR1)
-    xsignal(SIGUSR1, CCresetup);
+    CHANsignal(SIGUSR1, CCresetup);
 #endif /* defined(SIGUSR1) */
 
     CCsdnotify();
@@ -2211,21 +2211,12 @@ CCclose(void)
 }
 
 
-#ifdef HAVE_SIGACTION
-#    define NO_SIGACTION_UNUSED UNUSED
-#else
-#    define NO_SIGACTION_UNUSED
-#endif
-
 /*
 **  Restablish the control channel.
 */
 static void
-CCresetup(int s NO_SIGACTION_UNUSED)
+CCresetup(int s UNUSED)
 {
-#ifndef HAVE_SIGACTION
-    xsignal(s, CCresetup);
-#endif
     CCclose();
     CCsetup();
 }

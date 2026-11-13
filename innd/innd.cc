@@ -237,10 +237,6 @@ catch_terminate(int sig)
 {
     GotTerminate = true;
     killer_signal = sig;
-
-#ifndef HAVE_SIGACTION
-    xsignal(sig, catch_terminate);
-#endif
 }
 
 
@@ -406,8 +402,6 @@ main(int ac, char *av[])
     /* Make sure innd is running as the correct user.  If it is started as
        root, switch to running as the news user. */
     ensure_news_user_grp(true, true);
-
-    xsignal_enable_masking();
 
     /* Handle malloc debugging. */
 #if defined(_DEBUG_MALLOC_INC)
@@ -625,7 +619,7 @@ main(int ac, char *av[])
 
     /* Become a daemon and initialize our log files. */
     if (Debug) {
-        xsignal(SIGINT, catch_terminate);
+        CHANsignal(SIGINT, catch_terminate);
         if (chdir(innconf->patharticles) < 0)
             sysdie("SERVER cant chdir to %s", innconf->patharticles);
     } else {
@@ -725,8 +719,8 @@ main(int ac, char *av[])
 
     /* Set up signal and error handlers. */
     xmalloc_error_handler = xmalloc_abort;
-    xsignal(SIGHUP, catch_terminate);
-    xsignal(SIGTERM, catch_terminate);
+    CHANsignal(SIGHUP, catch_terminate);
+    CHANsignal(SIGTERM, catch_terminate);
 
     /* Set up the various parts of the system.  Channel feeds start processes
        so call PROCsetup before ICDsetup.  NNTP needs to know if it's a slave,

@@ -818,6 +818,9 @@ extern void CHANsetup(int count);
 extern void CHANshutdown(void);
 extern void CHANtracing(CHANNEL *cp, bool flag);
 extern void CHANcount_active(CHANNEL *cp);
+extern void CHANdropfd(int fd);
+extern void CHANsignal(int sig, void (*handler)(int));
+extern void CHANsignalforked(void);
 
 extern void RCHANadd(CHANNEL *cp);
 extern void RCHANremove(CHANNEL *cp);

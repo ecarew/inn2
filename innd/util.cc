@@ -191,8 +191,8 @@ Spawn(int niceval, int fd0, int fd1, int fd2, char *const av[])
         return i;
 
     /* Child. */
-    /* Restore signal disposition and mask. */
-    xsignal_forked();
+    /* Restore the default disposition of the signals innd catches. */
+    CHANsignalforked();
 
     /* Do any I/O redirection. */
     if (fd0 != 0) {

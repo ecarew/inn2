@@ -47,6 +47,8 @@ target_compile_options(innd_core PUBLIC
 )
 
 target_link_libraries(innd_core PUBLIC
+    Boost::headers
+    Threads::Threads
     INN::storage
     INN::hist
     INN::inn
