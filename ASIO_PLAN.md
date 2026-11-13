@@ -208,6 +208,32 @@ run.
 Perf: W1–W6, alternating old and new as run-compare does, plus innd's
 peak RSS and the `timer` summary's numbers.
 
+**Done** (5941c7abc and 6f0856157 tests, ca128aea4 verify check,
+b8c26afee conversion). Decisions approved by the architect:
+
+1. Fairness unchanged: the per-pass structure stays; async waits only
+   mark descriptors ready, and each pass serves the control channels
+   first, then at most one read and one write per channel, round-robin.
+2. The wait ends at the earliest sleeping channel's wake time (it used
+   to wait up to `TimeOut`, 300 s, on a quiet server).
+3. The timer summary and history/active sync stay checks at the start of
+   a pass, with the wait cut short for them.
+4. `CHANdiagnose` is removed.
+
+Findings: Asio state lives in a table indexed by descriptor, because
+`CHANNEL` is copied wholesale; `SITEspool` swaps a channel's descriptor
+in place, so every close drops the registration first (`CHANdropfd`).
+The tests found that an idle innd ignored SIGTERM/SIGHUP until other
+activity (an interrupted `select()` went back to waiting); fixed by the
+`signal_set`. Signals no longer need masking in innd; `lib/xsignal`
+itself goes in the lib-retirement phase.
+
+Perf on macOS, 5 alternating rounds (accepted by the architect: a small
+cost for supportable code): W1 3339 vs 3555 articles/s (−6%), innd CPU
+11.40 vs 11.07 s; W3 13.81 vs 13.23 s (−4%); W2, W4, W5, W6 unchanged
+or faster. Leaks: none new (innd's single 1536-byte libperl leak is out
+of scope). Linux figures from the Linux checks.
+
 ### Phase 5: nnrpd's listener
 
 Convert the daemon-mode listener (`-D`): the `accept` loop in both the
