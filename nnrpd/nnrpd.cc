@@ -21,6 +21,7 @@
 #include <sys/wait.h>
 
 #include <optional>
+#include <string>
 #include <vector>
 
 #include <boost/asio/io_context.hpp>
@@ -398,6 +399,8 @@ CMDcapabilities(int ac, char *av[])
      * Start the string with a space for the strstr() calls afterwards. */
     sasl_listmech(sasl_conn, nullptr, " ", " ", "", &mechlist, nullptr,
                   nullptr);
+    /* A copy: the list belongs to libsasl and is read-only. */
+    std::string mechs = mechlist != nullptr ? mechlist : "";
 #endif
 
     /* The client is not already authenticated. */
@@ -425,20 +428,17 @@ CMDcapabilities(int ac, char *av[])
                 /* Remove insecure PLAIN, LOGIN and EXTERNAL SASL mechanisms,
                  * if compiled with TLS support and a TLS layer is not active.
                  */
-                if (mechlist != NULL) {
-                    char *p;
-
-                    if ((p = strstr(mechlist, " PLAIN")) != NULL
-                        && (p[6] == '\0' || p[6] == ' ')) {
-                        memmove(p, p + 6, strlen(p) - 5);
-                    }
-                    if ((p = strstr(mechlist, " LOGIN")) != NULL
-                        && (p[6] == '\0' || p[6] == ' ')) {
-                        memmove(p, p + 6, strlen(p) - 5);
-                    }
-                    if ((p = strstr(mechlist, " EXTERNAL")) != NULL
-                        && (p[9] == '\0' || p[9] == ' ')) {
-                        memmove(p, p + 9, strlen(p) - 8);
+                for (const char *insecure :
+                     {" PLAIN", " LOGIN", " EXTERNAL"}) {
+                    const std::string mech = insecure;
+                    for (size_t at = mechs.find(mech);
+                         at != std::string::npos; at = mechs.find(mech, at)) {
+                        const size_t after = at + mech.size();
+                        if (after == mechs.size() || mechs[after] == ' ') {
+                            mechs.erase(at, mech.size());
+                            break;
+                        }
+                        at = after;
                     }
                 }
 #    endif /* HAVE_SASL */
@@ -446,7 +446,7 @@ CMDcapabilities(int ac, char *av[])
 #endif /* HAVE_OPENSSL */
 #ifdef HAVE_SASL
             /* Check whether at least one SASL mechanism is available. */
-            if (mechlist != nullptr && strlen(mechlist) > 2) {
+            if (mechs.size() > 2) {
                 Printf(" SASL");
             }
 #endif
@@ -492,8 +492,8 @@ CMDcapabilities(int ac, char *av[])
      * The SASL capability has to be advertised, even after authentication,
      * so that the client can detect a possible active down-negotiation
      * attack. */
-    if (mechlist != nullptr && strlen(mechlist) > 2) {
-        Printf("SASL%s\r\n", mechlist);
+    if (mechs.size() > 2) {
+        Printf("SASL%s\r\n", mechs.c_str());
     }
 #endif /* HAVE_SASL */
 
