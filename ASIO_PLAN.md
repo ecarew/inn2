@@ -163,15 +163,24 @@ so this is mostly one file.
   against dovecot), tapetest.sh, plus endpoint unit tests: timer order,
   `updateSleep`/`removeTimeout`, a work callback, a read and a write
   completing, the priority order of ready endpoints.
-- `Run()` becomes `io_context::run()`. Each `EndPoint` holds a
-  `stream_descriptor` (released, not closed, on `delEndPoint`, since the
-  caller owns the descriptor today). The timer queue becomes one
-  `steady_timer` per `TimeoutId`.
-- `reorderPriorityList` gave the main endpoint first turn when several
-  were ready; Asio has no such order. Check whether anything depends on
-  it before deciding whether to keep a priority (for example by running
-  the main endpoint's handler first from a `post`).
-- Perf: W3 (innfeed), with the leak pass.
+- `Run()` keeps its per-pass structure but waits in the io_context
+  (`run_one()` then `poll()`). Each `EndPoint` holds a
+  `stream_descriptor`, closed on `delEndPoint`, as the old code closed
+  the descriptor (correcting this plan's earlier "released, not
+  closed"; the architect agreed to keep the close). Regular files
+  cannot be waited on and are treated as always ready.
+- Decisions, approved by the architect:
+  1. Ready endpoints are served in the order they became ready;
+     `reorderPriorityList`, `selectHits` and `SELECT_RATIO` go, as
+     nothing depended on the main endpoint going first.
+  2. The sorted timer queue stays; one `steady_timer` is armed at its
+     head, rather than one timer per `TimeoutId`.
+  3. Exception (out-of-band) waits are dropped; nothing asked for them.
+- Signals: `setSigHandler` uses an `asio::signal_set`.
+- Done in 148fa615e. Tests: `tests/innfeed/endpoint-t.cc` (35 checks,
+  which also found and fixed a doRead offset bug, 19e2506dd) and the
+  live checks. Perf, W3 on macOS, 5 alternating runs: 12.86 s new vs
+  13.01 s old, innfeed user/sys unchanged; no innfeed leaks.
 
 ### Phase 4: innd
 
