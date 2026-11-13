@@ -829,29 +829,18 @@ doRead(EndPoint endp)
 
     bCount = (bCount > IOV_MAX ? IOV_MAX : bCount);
 
-    /* now set up the iovecs for the readv */
+    /* now set up the iovecs for the readv: each buffer from inBufferIdx on,
+       from the end of the data it already holds (its data size is the
+       read position; a buffer is left when it is full). */
     if (bCount > 0) {
-        char *bbase;
-        size_t bds, bs;
-
         vp = xcalloc(bCount, sizeof(struct iovec));
 
-        bbase = static_cast<char *>(bufferBase(buffers[currIdx]));
-        bds = bufferDataSize(buffers[currIdx]);
-        bs = bufferSize(buffers[currIdx]);
+        for (idx = 0; idx < bCount; idx++) {
+            Buffer buf = buffers[currIdx + idx];
+            size_t bds = bufferDataSize(buf);
 
-        /* inIndex is an index in the virtual array of the read, not directly
-           into the buffer. */
-        vp[0].iov_base = bbase + bds + endp->inIndex;
-        vp[0].iov_len = bs - bds - endp->inIndex;
-
-        for (idx = currIdx + 1; idx < bCount; idx++) {
-            bbase = static_cast<char *>(bufferBase(buffers[idx]));
-            bds = bufferDataSize(buffers[idx]);
-            bs = bufferSize(buffers[idx]);
-
-            vp[idx].iov_base = bbase;
-            vp[idx].iov_len = bs - bds;
+            vp[idx].iov_base = static_cast<char *>(bufferBase(buf)) + bds;
+            vp[idx].iov_len = bufferSize(buf) - bds;
         }
 
         i = readv(endp->myFd, vp, (int) bCount);
@@ -861,42 +850,18 @@ doRead(EndPoint endp)
 
             endp->inAmtRead += readAmt;
 
-            /* check if we filled the first buffer */
-            if (readAmt >= (size_t) vp[0].iov_len) { /* we did */
-                bufferIncrDataSize(buffers[currIdx], vp[0].iov_len);
-                readAmt -= vp[0].iov_len;
-                endp->inBufferIdx++;
-            } else {
-                endp->inIndex += readAmt;
-                bufferIncrDataSize(buffers[currIdx], readAmt);
-                readAmt = 0;
-            }
+            /* Add what was read to each buffer in turn. */
+            for (idx = 0; readAmt > 0 && idx < bCount; idx++) {
+                size_t take = std::min(readAmt, (size_t) vp[idx].iov_len);
 
-            /* now check the rest of the buffers */
-            for (idx = 1; readAmt > 0; idx++) {
-                ASSERT(idx < bCount);
-
-                bs = bufferSize(buffers[currIdx + idx]);
-                bbase =
-                    static_cast<char *>(bufferBase(buffers[currIdx + idx]));
-                bds = bufferDataSize(buffers[currIdx + idx]);
-
-                if (readAmt >= (bs - bds)) {
-                    bufferSetDataSize(buffers[currIdx + idx], bs);
-                    readAmt -= bs;
+                bufferIncrDataSize(buffers[currIdx + idx], take);
+                readAmt -= take;
+                if (take == vp[idx].iov_len)
                     endp->inBufferIdx++;
-                } else {
-                    endp->inIndex = readAmt;
-                    bufferIncrDataSize(buffers[currIdx + idx], readAmt);
-                    memset(bbase + bds + readAmt, 0, bs - bds - readAmt);
-                    readAmt = 0;
-                }
             }
 
-            if (endp->inAmtRead >= endp->inMinLen) {
-                endp->inIndex = 0;
+            if (endp->inAmtRead >= endp->inMinLen)
                 rval = IoDone;
-            }
         } else if (i < 0 && errno != EINTR && errno != EAGAIN) {
             endp->myErrno = errno;
             rval = IoFailed;

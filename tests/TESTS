@@ -11,6 +11,7 @@ expire/tombstone-e2e
 expire/tombstone-hisexpire
 innd/artparse
 innd/chan
+innfeed/endpoint
 lib/artnumber
 lib/asio
 lib/asprintf

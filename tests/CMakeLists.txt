@@ -169,6 +169,12 @@ endif()
 
 inn_tap_test(nnrpd/auth-ext EXTRA nnrpd/auth-ext)
 
+# innfeed/endpoint.cc and buffer.cc, with the few innfeed symbols they use
+# from elsewhere defined in the test.
+inn_tap_test(innfeed/endpoint EXTRA innfeed/endpoint innfeed/buffer)
+target_include_directories(test_innfeed_endpoint PRIVATE
+    ${CMAKE_SOURCE_DIR}/innfeed ${CMAKE_BINARY_DIR}/innfeed)
+
 # innd tests link innd_core with tests/innd/fakeinnd.c in place of innd.cc,
 # as tests/Makefile does.
 foreach(t artparse chan headers)

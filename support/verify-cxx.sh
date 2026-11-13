@@ -346,6 +346,7 @@ tests=(
     authprogs/ident authprogs/identport authprogs/radius authprogs/ckpasswd.t
     authprogs/domain.t backends/buffchan.t
     nnrpd/auth-ext:::nnrpd/auth-ext
+    innfeed/endpoint::-Iinnfeed:innfeed/endpoint,innfeed/buffer
     innd/artparse:::tests/innd/fakeinnd,@lib/CMakeFiles/inn_canlock.dir/canlock.cc.o,@lib/CMakeFiles/inn_perl.dir/perl.cc.o
     innd/chan:::tests/innd/fakeinnd,@lib/CMakeFiles/inn_canlock.dir/canlock.cc.o,@lib/CMakeFiles/inn_perl.dir/perl.cc.o
     innd/headers:::tests/innd/fakeinnd,@lib/CMakeFiles/inn_canlock.dir/canlock.cc.o,@lib/CMakeFiles/inn_perl.dir/perl.cc.o

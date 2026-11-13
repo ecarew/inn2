@@ -966,6 +966,8 @@ tests/innd                            Test suite for innd (Directory)
 tests/innd/artparse-t.c               Tests for ARTparse in innd
 tests/innd/chan-t.c                   Tests for CHAN functions in innd
 tests/innd/fakeinnd.c                 Provide symbols defined by innd/innd.c
+tests/innfeed                         Test suite for innfeed (Directory)
+tests/innfeed/endpoint-t.cc           Tests for innfeed/endpoint.cc
 tests/lib                             Test suite for libinn (Directory)
 tests/lib/artnumber-t.c               Tests for lib/artnumber.c
 tests/lib/asio-t.cc                   Tests for lib/asio.cc
