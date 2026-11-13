@@ -379,7 +379,7 @@ sed 's/^readertrack:.*/readertrack: true/' "$INNCONF" >"$INNCONF.new" \
 printf 'localhost:tracker@live.test\n127.0.0.1:tracker@live.test\n' >"$tmp/etc/nnrpd.track"
 cat >"$tmp/etc/readers.conf" <<EOF
 auth "localhost" {
-    hosts: "127.0.0.1"
+    hosts: "127.0.0.1, ::1"
     auth: "$bin/authprogs/ckpasswd -f $tmp/etc/passwd"
     default: "<local>"
 }
@@ -666,6 +666,105 @@ ok sh -c "! { printf 'From: tester@live.test\nSubject: no groups\n\nBody.\n' | '
 
 kill "$nnrpd_pid" 2>/dev/null
 wait "$nnrpd_pid" 2>/dev/null
+nnrpd_pid=
+
+# --- nnrpd's daemon-mode listener ---------------------------------------------
+#
+# -D accepts on every listening socket and forks a child per connection;
+# -P keeps a number of pre-forked children and replaces each one that exits.
+
+# children PID: "pid stat" of each child of PID.
+children() { ps ax -o ppid=,pid=,stat= | awk -v p="$1" '$1 == p { print $2, $3 }'; }
+# greet HOST: a session that only reads the greeting and quits.
+greet() { printf 'QUIT\r\n' | nc -w 5 "$@" "$lport" 2>/dev/null | head -1; }
+waitport() {
+    for _ in $(seq 1 25); do
+        nc -z 127.0.0.1 "$lport" 2>/dev/null && return 0
+        sleep 0.2
+    done
+    return 1
+}
+lport=$((rport + 1))
+
+# Fork on demand, listening on IPv4 and IPv6 loopback.
+"$bin/nnrpd/nnrpd" -D -f -p "$lport" -b 127.0.0.1 -6 ::1 >"$tmp/nnrpd-l.out" 2>&1 &
+nnrpd_pid=$!
+waitport
+label="nnrpd -D greets on the IPv4 listener"
+ok sh -c "printf 'QUIT\r\n' | nc -w 5 127.0.0.1 $lport | head -1 | grep -q '^20[01] '"
+if nc -6 -z ::1 "$lport" 2>/dev/null; then
+    label="nnrpd -D greets on the IPv6 listener"
+    ok sh -c "printf 'QUIT\r\n' | nc -6 -w 5 ::1 $lport | head -1 | grep -q '^20[01] '"
+else
+    res "nnrpd -D greets on the IPv6 listener" "SKIP (no IPv6 loopback)"
+fi
+clients=
+for i in 1 2 3 4 5; do
+    ( printf 'MODE READER\r\n'; sleep 1; printf 'QUIT\r\n' ) \
+        | nc -w 5 127.0.0.1 "$lport" >"$tmp/par$i.out" 2>/dev/null &
+    clients="$clients $!"
+done
+for p in $clients; do wait "$p" 2>/dev/null; done
+label="nnrpd -D serves five connections at once"
+ok sh -c "[ \$(cat '$tmp'/par[1-5].out | grep -c '^205 ') = 5 ]"
+sleep 0.5
+if children "$nnrpd_pid" | grep -q ' Z'; then
+    res "nnrpd -D leaves no zombies" FAIL
+else
+    res "nnrpd -D leaves no zombies" PASS
+fi
+kill -TERM "$nnrpd_pid" 2>/dev/null
+for _ in $(seq 1 25); do
+    kill -0 "$nnrpd_pid" 2>/dev/null || break
+    sleep 0.2
+done
+if kill -0 "$nnrpd_pid" 2>/dev/null; then
+    res "SIGTERM stops the nnrpd -D listener" FAIL
+    kill -9 "$nnrpd_pid" 2>/dev/null
+else
+    res "SIGTERM stops the nnrpd -D listener" PASS
+fi
+wait "$nnrpd_pid" 2>/dev/null
+nnrpd_pid=
+
+# Pre-forked: two children waiting; one killed is replaced, and so is one
+# that served a client and exited.
+"$bin/nnrpd/nnrpd" -D -f -P 2 -p "$lport" -b 127.0.0.1 >"$tmp/nnrpd-p.out" 2>&1 &
+nnrpd_pid=$!
+waitport
+nkids() { children "$nnrpd_pid" | grep -vc ' Z'; }
+for _ in $(seq 1 25); do [ "$(nkids)" = 2 ] && break; sleep 0.2; done
+label="nnrpd -P 2 starts two children"
+ok test "$(nkids)" = 2
+victim=$(children "$nnrpd_pid" | awk 'NR == 1 { print $1 }')
+kill -9 "$victim" 2>/dev/null
+for _ in $(seq 1 25); do
+    [ "$(nkids)" = 2 ] && ! children "$nnrpd_pid" | grep -q "^$victim " && break
+    sleep 0.2
+done
+label="nnrpd -P replaces a child that was killed"
+ok sh -c "[ $(nkids) = 2 ] && ! { ps ax -o ppid=,pid= | awk -v p=$nnrpd_pid '\$1 == p { print \$2 }' | grep -qx '$victim'; }"
+label="nnrpd -P greets a client"
+ok sh -c "printf 'QUIT\r\n' | nc -w 5 127.0.0.1 $lport | head -1 | grep -q '^20[01] '"
+for _ in $(seq 1 25); do [ "$(nkids)" = 2 ] && break; sleep 0.2; done
+label="nnrpd -P replaces a child that served a client"
+ok test "$(nkids)" = 2
+kids=$(children "$nnrpd_pid" | awk '{ print $1 }')
+kill -TERM "$nnrpd_pid" 2>/dev/null
+for _ in $(seq 1 25); do
+    kill -0 "$nnrpd_pid" 2>/dev/null || break
+    sleep 0.2
+done
+if kill -0 "$nnrpd_pid" 2>/dev/null; then
+    res "SIGTERM stops the nnrpd -P parent" FAIL
+    kill -9 "$nnrpd_pid" 2>/dev/null
+else
+    res "SIGTERM stops the nnrpd -P parent" PASS
+fi
+wait "$nnrpd_pid" 2>/dev/null
+nnrpd_pid=
+# The waiting children outlive the parent (as they always have); stop them.
+[ -n "$kids" ] && kill $kids 2>/dev/null
 
 # --- frontends ---------------------------------------------------------------
 
