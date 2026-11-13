@@ -58,10 +58,31 @@ if(INN_KEYWORDS)
     set(DO_KEYWORDS 1)
 endif()
 foreach(feature DO_LARGEFILES DO_PERL DO_PYTHON DO_TAGGED_HASH HAVE_BDB
-        HAVE_BDB_NDBM HAVE_BLACKLIST HAVE_BLOCKLIST HAVE_OPENSSL
+        HAVE_BDB_NDBM HAVE_BLACKLIST HAVE_BLOCKLIST
         HAVE_SD_NOTIFY)
     set(${feature} FALSE)
 endforeach()
+
+# TLS for nnrpd (STARTTLS, nnrpd -S) through OpenSSL 1.1.1 or newer.  On
+# by default when OpenSSL is found; -DINN_TLS=OFF builds without it, and
+# -DINN_TLS=ON makes a missing OpenSSL an error.  On macOS, point CMake
+# at Homebrew's copy with -DOPENSSL_ROOT_DIR=$(brew --prefix openssl@3).
+set(INN_TLS AUTO CACHE STRING "TLS support in nnrpd: AUTO, ON or OFF")
+set_property(CACHE INN_TLS PROPERTY STRINGS AUTO ON OFF)
+set(HAVE_OPENSSL FALSE)
+if(NOT INN_TLS STREQUAL "OFF")
+    if(INN_TLS STREQUAL "ON")
+        find_package(OpenSSL 1.1.1 REQUIRED)
+    else()
+        find_package(OpenSSL 1.1.1)
+    endif()
+    if(OPENSSL_FOUND)
+        set(HAVE_OPENSSL TRUE)
+        message(STATUS "TLS: OpenSSL ${OPENSSL_VERSION}")
+    else()
+        message(STATUS "TLS: off (OpenSSL 1.1.1 or newer not found)")
+    endif()
+endif()
 include(${CMAKE_CURRENT_LIST_DIR}/InnFilters.cmake)
 set(HAVE_SQLITE3 TRUE)   # find_package(SQLite3 REQUIRED)
 set(HAVE_ZLIB TRUE)      # find_package(ZLIB REQUIRED)
