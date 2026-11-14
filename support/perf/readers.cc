@@ -1,7 +1,11 @@
 // readers: concurrent NNTP reader sessions for the performance comparison
 // (doc/spec/performance-comparison.md, scenario W4).
 //
-//   readers <host> <port> <sessions> <articles-per-session> <seed> <group>...
+//   readers [-t] <host> <port> <sessions> <articles-per-session> <seed>
+//           <group>...
+//
+// -t speaks TLS from the first byte (nnrpd -S), through OpenSSL, without
+// checking the server's certificate (the runs use a throwaway one).
 //
 // Each session connects, then for every group: GROUP, and OVER over the
 // group's whole range (reading every line); then <articles-per-session>
@@ -14,6 +18,8 @@
 // "seconds S", and exits 0 only if no command failed.
 
 #include <netdb.h>
+#include <openssl/err.h>
+#include <openssl/ssl.h>
 #include <sys/socket.h>
 #include <unistd.h>
 
@@ -50,13 +56,30 @@ int connect_to(const char *host, const char *port)
     return fd;
 }
 
+// The client TLS context for -t, or null for plain NNTP.
+SSL_CTX *tls_ctx = nullptr;
+
 class Conn {
 public:
     explicit Conn(int fd) : fd_(fd) {}
     ~Conn()
     {
+        if (ssl_ != nullptr) {
+            SSL_shutdown(ssl_);
+            SSL_free(ssl_);
+        }
         if (fd_ >= 0)
             close(fd_);
+    }
+
+    // The TLS handshake, when -t is given.
+    bool start_tls()
+    {
+        if (tls_ctx == nullptr)
+            return true;
+        ssl_ = SSL_new(tls_ctx);
+        return ssl_ != nullptr && SSL_set_fd(ssl_, fd_) == 1 &&
+               SSL_connect(ssl_) == 1;
     }
     Conn(const Conn &) = delete;
     Conn &operator=(const Conn &) = delete;
@@ -76,7 +99,9 @@ public:
             buf_.erase(0, pos_);
             pos_ = 0;
             char chunk[65536];
-            const ssize_t n = read(fd_, chunk, sizeof chunk);
+            const ssize_t n = ssl_ != nullptr
+                                  ? SSL_read(ssl_, chunk, sizeof chunk)
+                                  : read(fd_, chunk, sizeof chunk);
             if (n <= 0)
                 return false;
             buf_.append(chunk, static_cast<std::size_t>(n));
@@ -86,7 +111,10 @@ public:
     bool send(std::string_view s)
     {
         while (!s.empty()) {
-            const ssize_t n = write(fd_, s.data(), s.size());
+            const ssize_t n =
+                ssl_ != nullptr
+                    ? SSL_write(ssl_, s.data(), static_cast<int>(s.size()))
+                    : write(fd_, s.data(), s.size());
             if (n <= 0)
                 return false;
             s.remove_prefix(static_cast<std::size_t>(n));
@@ -115,6 +143,7 @@ public:
 
 private:
     int fd_;
+    SSL *ssl_ = nullptr;
     std::string buf_;
     std::size_t pos_ = 0;
 };
@@ -161,7 +190,7 @@ void session(const char *host, const char *port, int id, long narticles,
     }
     Conn c(fd);
     std::string st;
-    if (!c.line(st) || (st.rfind("200", 0) != 0 && st.rfind("201", 0) != 0)) {
+    if (!c.start_tls() || !c.line(st) || (st.rfind("200", 0) != 0 && st.rfind("201", 0) != 0)) {
         res.errors = 1;
         return;
     }
@@ -220,8 +249,18 @@ void session(const char *host, const char *port, int id, long narticles,
 
 int main(int argc, char **argv)
 {
+    if (argc > 1 && std::string_view(argv[1]) == "-t") {
+        tls_ctx = SSL_CTX_new(TLS_client_method());
+        if (tls_ctx == nullptr) {
+            ERR_print_errors_fp(stderr);
+            return 2;
+        }
+        SSL_CTX_set_verify(tls_ctx, SSL_VERIFY_NONE, nullptr);
+        --argc;
+        ++argv;
+    }
     if (argc < 7) {
-        std::fputs("usage: readers <host> <port> <sessions> "
+        std::fputs("usage: readers [-t] <host> <port> <sessions> "
                    "<articles-per-session> <seed> <group>...\n",
                    stderr);
         return 2;
@@ -252,5 +291,7 @@ int main(int argc, char **argv)
         errors += r.errors;
     }
     std::printf("seconds %.3f\n", secs);
+    if (tls_ctx != nullptr)
+        SSL_CTX_free(tls_ctx);
     return errors == 0 ? 0 : 1;
 }

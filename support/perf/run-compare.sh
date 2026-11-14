@@ -11,7 +11,8 @@
 #               directory holding innd/, nnrpd/, innfeed/, frontends/,
 #               expire/ (a CMake build directory, or a Make source tree)
 #    -n reps    repetitions per build (default 5)
-#    -s list    scenarios, comma-separated (default W1,W2,W3,W4,W5,W6)
+#    -s list    scenarios, comma-separated (default W1,W2,W3,W4,W5,W6;
+#               W4T, the readers over TLS, on request)
 #
 #  PERF_TOOLS names the directory with genarticles, feeder and readers.
 #  PERF_KEEP=1 keeps the last scratch installation.
@@ -384,11 +385,29 @@ EOF
 
 # W4: 20 concurrent readers on nnrpd (standalone daemon, one child per
 # connection).  /usr/bin/time on the daemon includes its reaped children.
-w4() {
-    local rport=$((mport + 2)) npid f=$main/w4.out
+# W4T: the same over TLS from the first byte (nnrpd -S, readers -t), with
+# a throwaway certificate; only for builds with TLS (HAVE_OPENSSL).
+w4() { reader_load W4 "" $((mport + 2)); }
+w4t() { reader_load W4T -t $((mport + 3)); }
+
+# reader_load <scenario> <-t or ""> <port>
+reader_load() {
+    local sc=$1 tls=$2 rport=$3 npid f
+    f=$main/$(echo "$1" | tr 'A-Z' 'a-z').out
+    local flags=(-D -f -p "$rport")
+    if [ -n "$tls" ]; then
+        if ! grep -qs '^#define HAVE_OPENSSL 1' "$bin/include/config.h"; then
+            failed "$sc" "built without TLS"; return 0
+        fi
+        openssl req -x509 -newkey rsa:2048 -nodes -days 1 -subj /CN=localhost \
+            -keyout "$main/etc/key.pem" -out "$main/etc/cert.pem" \
+            >"$main/openssl.log" 2>&1 || { failed "$sc" "openssl req failed"; return 0; }
+        chmod 600 "$main/etc/key.pem"
+        flags+=(-S)
+    fi
     env INNCONF=$main/etc/inn.conf ${leaks_mode:+MallocStackLogging=1} \
         /usr/bin/time "$time_flag" -o "$main/nnrpd.time" \
-        "$bin/nnrpd/nnrpd" -D -f -p "$rport" >"$main/nnrpd.out" 2>&1 &
+        "$bin/nnrpd/nnrpd" "${flags[@]}" >"$main/nnrpd.out" 2>&1 &
     npid=$!
     local up=false
     for _ in $(seq 1 50); do
@@ -398,31 +417,31 @@ w4() {
         sleep 0.1
     done
     if ! $up; then
-        failed W4 "nnrpd did not start: $(tail -2 "$main/nnrpd.out" | tr '\n' ' ')"
+        failed "$sc" "nnrpd did not start: $(tail -2 "$main/nnrpd.out" | tr '\n' ' ')"
         kill "$npid" 2>/dev/null; return 1
     fi
     # shellcheck disable=SC2086  # the group list
-    timeout "$limit" "$tools/readers" 127.0.0.1 "$rport" "$readers_n" \
+    timeout "$limit" "$tools/readers" $tls 127.0.0.1 "$rport" "$readers_n" \
         "$readers_articles" "$seed" $groups >"$f" 2>&1
     local rc=$?
     local daemon
     daemon=$(pgrep -P "$npid" || echo "$npid")
-    if [ -n "$leaks_mode" ]; then
+    if [ -n "$leaks_mode" ] && [ -z "$tls" ]; then
         server_leaks nnrpd-daemon W4 "$daemon" "$main/nnrpd.leaks"
         session_leaks "$rport" "$daemon"
     fi
     kill -TERM "$daemon" 2>/dev/null
     wait "$npid" 2>/dev/null
     if [ $rc -ne 0 ]; then
-        failed W4 "readers: $(grep -v ' errors 0$' "$f" | head -2 | tr '\n' ' ')"; return 1
+        failed "$sc" "readers: $(grep -v ' errors 0$' "$f" | head -2 | tr '\n' ' ')"; return 1
     fi
     local bad
     bad=$(awk -v p="$placements" '$1 == "session" && $4 != p' "$f" | head -1)
     if [ -n "$bad" ]; then
-        failed W4 "OVER lines differ from $placements: $bad"; return 1
+        failed "$sc" "OVER lines differ from $placements: $bad"; return 1
     fi
-    out W4 wall_s "$(awk '$1 == "seconds" { print $2 }' "$f")"
-    rusage nnrpd W4 "$main/nnrpd.time"
+    out "$sc" wall_s "$(awk '$1 == "seconds" { print $2 }' "$f")"
+    rusage nnrpd "$sc" "$main/nnrpd.time"
 }
 
 # session_leaks <port> <daemon-pid>: in the leak pass, one reader session
@@ -571,9 +590,9 @@ for rep in $(seq 1 "$reps"); do
             mkdir -p "$PERF_COVDIR/$build"
             export LLVM_PROFILE_FILE=$PERF_COVDIR/$build/%p-%m.profraw
         fi
-        # Three ports per run (innd, its peer, nnrpd), fresh each run so a
-        # run never waits for the last one's sockets to close.
-        mport=$((port_base + runs * 3)); runs=$((runs + 1))
+        # Four ports per run (innd, its peer, nnrpd, nnrpd -S), fresh each
+        # run so a run never waits for the last one's sockets to close.
+        mport=$((port_base + runs * 4)); runs=$((runs + 1))
         if ! setup "$bin" "$main" "$mport" main.perf.test; then
             failed setup "makedbz"; continue
         fi
@@ -585,10 +604,10 @@ for rep in $(seq 1 "$reps"); do
         timepid=$started_pid
         innd=$(innd_child "$timepid")
         ok=true
-        for sc in W1 W2 W3 W4 W5; do
+        for sc in W1 W2 W3 W4 W4T W5; do
             want "$sc" || continue
             $ok || break
-            lc=$(echo "$sc" | tr 'W' 'w')
+            lc=$(echo "$sc" | tr 'WT' 'wt')
             "$lc" || ok=false
         done
         server_leaks innd server "$innd" "$main/innd.leaks"
