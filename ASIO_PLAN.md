@@ -325,6 +325,54 @@ Perf: the reader scenarios in `support/perf` (`readers.cc`), old vs
 new. `readers.cc` speaks plain NNTP only today; a TLS mode is added to
 it first, so TLS is measured too.
 
+**Done.** Step 0, found at the start: the CMake build never compiled TLS
+(`HAVE_OPENSSL` was hard-coded off), so it came first.
+
+1. TLS in the build: `INN_TLS` (AUTO/ON/OFF, 9ff199057), the one compile
+   error fixed (37b6c92bc: the SASL mechanism list was edited inside
+   libsasl's read-only buffer), OpenSSL in the Linux image (809eaf656),
+   which requires it (dd11b13a0).
+2. Tests first (d72c80a3a, 58c398f3f): 13 live TLS checks through
+   `support/nntp-tls.py`; `readers -t` and the W4T scenario (fdd908b6a).
+3. and 4. The conversion (6fa7d028c): `nnrpd/transport.{h,cc}`, one read
+   and one write path for plain and TLS, handshake and close_notify on an
+   `ssl::stream` made from tls.cc's `SSL_CTX`.
+
+Decisions approved by the architect:
+
+- A. nnrpd's own line buffer stays; the transport replaces only the bottom
+  layer, because COMPRESS and the SASL security layer decode below line
+  assembly.
+- B (corrected, 17597a997). Both TLS handshakes (`nnrpd -S` and after
+  STARTTLS) use `initialtimeout`, not `clienttimeout`: a handshake is
+  machine to machine and quick, and before it completes the session has
+  not properly started, the phase `initialtimeout` covers.
+  `clienttimeout` is for a person idle between commands.
+- C. SASL is tested without a security layer only.
+- D. OpenSSL in the Linux image; Homebrew's `openssl@3` on macOS.
+
+Findings:
+
+- A client that connected to `nnrpd -S` and sent nothing held its nnrpd
+  forever (blocking `SSL_accept`, no timeout); after STARTTLS it could
+  hold it for `clienttimeout`. Both now time out (live checks).
+- Writes used to block forever on a client that stopped reading; they
+  now give up after the client timeout. A failed TLS session used to
+  fall back to writing plaintext; it no longer does.
+- Asio makes the client socket non-blocking. The old AUTHINFO GENERIC
+  authenticator inherits it, so the child makes it blocking before
+  `exec` and nnrpd makes it non-blocking again afterwards (no live check
+  covers this path).
+- The perf harness kept `nnrpdloadlimit: 16`, which turned readers away
+  on a busy machine in both builds; it now sets 0 (9a0d433a9).
+
+Perf on macOS, 5 alternating rounds, old = fdd908b6a (TLS built, old
+I/O): W1 3601 vs 3590 articles/s; W4 16.64 vs 16.92 s (+1.7%), W4T
+16.75 vs 17.08 s (+2.0%), nnrpd CPU +1.8% in both; nnrpd peak RSS 12.1
+vs 13.6 MB. Accepted under the architect's macOS rule. Leaks unchanged:
+nnrpd daemon 0, session 31 (the macOS fork artifacts, see phase 5) in
+both. Linux figures from the Linux checks.
+
 ### Not converted: one-connection clients
 
 `innxmit`, `nntpget`, `innxbatch`, `lib/nntp.cc`, `lib/inndcomm.cc`,
