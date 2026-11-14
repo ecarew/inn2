@@ -157,7 +157,8 @@ setup() {
         -e "s|^pathhost:.*|pathhost: $host|" \
         -e "s|^port:.*|port: $port|" \
         -e "s|^noreader:.*|noreader: true|" \
-        -e "s|^artcutoff:.*|artcutoff: 30|" "$sample" >"$d/etc/inn.conf"
+        -e "s|^artcutoff:.*|artcutoff: 30|" \
+        -e "s|^nnrpdloadlimit:.*|nnrpdloadlimit: 0|" "$sample" >"$d/etc/inn.conf"
     cat >>"$d/etc/inn.conf" <<EOF
 runasuser:   $(id -un)
 runasgroup:  $(id -gn)
