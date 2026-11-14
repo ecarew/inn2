@@ -48,7 +48,9 @@ using boost::system::error_code;
 namespace {
 
 struct Transport {
-    asio::io_context io{1};
+    /* One session per process, one thread: no locking in the scheduler or
+       the reactor (it showed in W4T's profile). */
+    asio::io_context io{BOOST_ASIO_CONCURRENCY_HINT_UNSAFE};
     /* The client socket, descriptor 0 (1 is the same socket). */
     asio::posix::stream_descriptor sock{io};
     asio::steady_timer timer{io};
@@ -60,6 +62,10 @@ struct Transport {
     /* False once the TLS session has failed or timed out: no close_notify
        then. */
     bool tls_ok = false;
+    /* transport_write's gather buffer, kept between writes as SSL_writev
+       kept its own: a new one per ARTICLE made glibc consolidate its heap
+       on every large reply. */
+    std::string wbuf;
 #endif
 
     Transport()
@@ -225,13 +231,13 @@ transport_write(const struct iovec *vec, int count)
         }
         /* One TLS record per write rather than one per buffer: gather the
            buffers first, as SSL_writev did. */
-        std::string data;
+        t.wbuf.clear();
         for (int i = 0; i < count; i++)
-            data.append(static_cast<const char *>(vec[i].iov_base),
-                        vec[i].iov_len);
+            t.wbuf.append(static_cast<const char *>(vec[i].iov_base),
+                          vec[i].iov_len);
         ec = run(
             [&](auto handler) {
-                asio::async_write(*t.tls, asio::buffer(data), handler);
+                asio::async_write(*t.tls, asio::buffer(t.wbuf), handler);
             },
             write_timeout());
         if (ec)
