@@ -11,6 +11,7 @@
 #include <sys/uio.h>
 
 #include "cache.h"
+#include "transport.h"
 #include "inn/innconf.h"
 #include "inn/libinn.h"
 #include "inn/messages.h"
@@ -95,30 +96,7 @@ PushIOvHelper(struct iovec *vec, int *countp)
     } else {
 #endif /* HAVE_SASL */
 
-#ifdef HAVE_OPENSSL
-        if (tls_conn) {
-        Again:
-            result = SSL_writev(tls_conn, vec, *countp);
-            switch (SSL_get_error(tls_conn, result)) {
-            case SSL_ERROR_NONE:
-                break;
-            case SSL_ERROR_WANT_WRITE:
-                goto Again;
-                /* NOTREACHED */
-            case SSL_ERROR_ZERO_RETURN:
-                SSL_shutdown(tls_conn);
-                goto fallthrough;
-            case SSL_ERROR_SSL:
-            case SSL_ERROR_SYSCALL:
-            fallthrough:
-                /* SSL_shutdown() must not be called. */
-                tls_conn = NULL;
-                errno = ECONNRESET;
-                break;
-            }
-        } else
-#endif /* HAVE_OPENSSL */
-            result = xwritev(STDOUT_FILENO, vec, *countp);
+        result = transport_write(vec, *countp) ? 0 : -1;
 
 #ifdef HAVE_SASL
     }

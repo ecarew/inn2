@@ -55,6 +55,7 @@
 #include "nnrpd.h"
 
 #include "tls.h"
+#include "transport.h"
 
 #if defined(HAVE_OPENSSL) || defined(HAVE_SASL)
 bool encryption_layer_on = false;
@@ -255,13 +256,8 @@ ExitWithStats(int x, bool readconf)
                Client.host, OVERcount, OVERhit, OVERmiss, OVERtime, OVERsize,
                OVERdbz, OVERseek, OVERget, OVERartcheck);
 
-#ifdef HAVE_OPENSSL
-    if (tls_conn) {
-        SSL_shutdown(tls_conn);
-        SSL_free(tls_conn);
-        tls_conn = NULL;
-    }
-#endif
+    /* TLS close_notify, if a TLS session is up. */
+    transport_close();
 
 #ifdef HAVE_SASL
     if (sasl_conn) {
@@ -766,34 +762,7 @@ write_buffer(const char *buff, ssize_t len)
         len -= n;
         p += n;
 
-#ifdef HAVE_OPENSSL
-        if (tls_conn) {
-            int r;
-
-        Again:
-            r = SSL_write(tls_conn, out, outlen);
-            switch (SSL_get_error(tls_conn, r)) {
-            case SSL_ERROR_NONE:
-                break;
-            case SSL_ERROR_WANT_WRITE:
-                goto Again;
-                /* NOTREACHED */
-            case SSL_ERROR_ZERO_RETURN:
-                SSL_shutdown(tls_conn);
-                goto fallthrough;
-            case SSL_ERROR_SSL:
-            case SSL_ERROR_SYSCALL:
-            fallthrough:
-                /* SSL_shutdown() must not be called. */
-                tls_conn = NULL;
-                errno = ECONNRESET;
-                break;
-            }
-        } else
-#endif /* HAVE_OPENSSL */
-            do {
-                n = write(STDIN_FILENO, out, outlen);
-            } while (n == -1 && errno == EINTR);
+        transport_write(out, outlen);
     }
 
     TMRstop(TMR_NNTPWRITE);
@@ -1444,7 +1413,7 @@ main(int argc, char *argv[])
 #ifdef HAVE_OPENSSL
     if (initialSSL) {
         tls_init();
-        if (tls_start_servertls(0, 1) == -1) {
+        if (tls_start_servertls(innconf->initialtimeout) == -1) {
             GetClientInfo(ListenPort);
             notice("%s failure to negotiate TLS session", Client.host);
             Reply("%d Encrypted TLS connection failed\r\n",

@@ -13,14 +13,11 @@
 #include "portable/system.h"
 
 #include <assert.h>
-#ifdef HAVE_SYS_SELECT_H
-#    include <sys/select.h>
-#endif
 
 #include "inn/messages.h"
 #include "nnrpd.h"
 #include "tls.h"
-#include <signal.h>
+#include "transport.h"
 
 
 /*
@@ -36,24 +33,6 @@ line_free(struct line *line)
         *line = nullline;
     }
 }
-
-#ifdef HAVE_OPENSSL
-/*
-**  Alarm signal handler for client timeout.
-*/
-static void
-alarmHandler(int s UNUSED)
-{
-    /* Send the close_notify shutdown alert to the news reader.
-     * No need to call again SSL_shutdown() to complete the bidirectional
-     * shutdown handshake as we do not expect more data to process.  Just
-     * close the underlying connection without waiting for the response.
-     * Such a unidirectional shutdown is allowed per OpenSSL documentation. */
-    SSL_shutdown(tls_conn);
-    tls_conn = NULL;
-    errno = ECONNRESET;
-}
-#endif
 
 /*
 **  Initialise a new line structure.
@@ -121,84 +100,8 @@ line_doread(void *p, size_t len, int timeout)
         }
 #endif /* HAVE_ZLIB */
 
-        /* It seems that the SSL_read cannot be mixed with select()
-         * as in the current code.  TLS communicates in its own data
-         * blocks and handshaking.  The line_doread using SSL_read
-         * could return, but still with a partial line in the SSL_read
-         * buffer.  Then the server TLS routine would sit there waiting
-         * for completion of that data block while nnrpd sat at the
-         * select() routine waiting for more data from the server.
-         *
-         * Here, we decide to just bypass the select() wait.  Unlike
-         * innd with multiple threads, the select on nnrpd is just
-         * waiting on a single file descriptor, so it is not really
-         * essential with blocked read like SSL_read.  Using an alarm
-         * signal around SSL_read for non active timeout, TLS works
-         * without dead locks.  However, without the select() wait,
-         * the IDLE timer stat won't be collected...
-         */
-#ifdef HAVE_OPENSSL
-        if (tls_conn) {
-            int err;
-            xsignal(SIGALRM, alarmHandler);
-            do {
-                alarm(timeout);
-                n = SSL_read(tls_conn, p, len);
-                alarm(0);
-                if (tls_conn == NULL) {
-                    n = -2; /* timeout */
-                    break;
-                }
-                err = SSL_get_error(tls_conn, n);
-                switch (err) {
-                case SSL_ERROR_ZERO_RETURN:
-                    SSL_shutdown(tls_conn);
-                    goto fallthrough;
-                case SSL_ERROR_SYSCALL:
-                case SSL_ERROR_SSL:
-                fallthrough:
-                    /* SSL_shutdown() must not be called. */
-                    tls_conn = NULL;
-                    errno = ECONNRESET;
-                    n = -1;
-                    break;
-                }
-            } while (err == SSL_ERROR_WANT_READ);
-            xsignal(SIGALRM, SIG_DFL);
-        } else
-#endif /* HAVE_OPENSSL */
-        {
-            fd_set rmask;
-            int i;
-
-            /* Wait for activity on stdin, updating timer stats as we go. */
-            do {
-                struct timeval t;
-
-                FD_ZERO(&rmask);
-                FD_SET(STDIN_FILENO, &rmask);
-                t.tv_sec = timeout;
-                t.tv_usec = 0;
-                TMRstart(TMR_IDLE);
-                i = select(STDIN_FILENO + 1, &rmask, nullptr, nullptr, &t);
-                TMRstop(TMR_IDLE);
-                if (i == -1 && errno != EINTR) {
-                    syswarn("%s can't select", Client.host);
-                    break;
-                }
-            } while (i == -1);
-
-            /* If stdin didn't select, we must have timed out.  select()
-             * failure from above is treated the same way. */
-            if (i <= 0 || !FD_ISSET(STDIN_FILENO, &rmask)) {
-                n = -2; /* timeout */
-                break;
-            }
-
-            do {
-                n = read(STDIN_FILENO, p, len);
-            } while (n == -1 && errno == EINTR);
-        }
+        /* Plain or TLS, with the timeout (transport.cc). */
+        n = transport_read(p, len, timeout);
 
         if (n <= 0)
             break; /* EOF or error. */

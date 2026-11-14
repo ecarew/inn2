@@ -20,6 +20,7 @@
 
 /* Outside the ifdef so that make depend works even ifndef HAVE_OPENSSL. */
 #include "tls.h"
+#include "transport.h"
 
 #ifdef HAVE_OPENSSL
 
@@ -602,12 +603,27 @@ bio_dump_cb(BIO *bio, int cmd, const char *argp, size_t len, int argi UNUSED,
 **  layerbits and authid are filled in on success; authid is only
 **  filled in if the client authenticated.
 */
-int
-tls_start_servertls(int readfd, int writefd)
+/* Debugging for loglevels 3 and 4, set on the new SSL object before the
+   handshake: dump what goes through its read BIO. */
+static void
+tls_prepare(SSL *ssl)
 {
-    int sts;
+    if (tls_loglevel >= 3) {
+        /* In LibreSSL, BIO_set_callback_ex was introduced in version 3.5.0. */
+#    if defined(LIBRESSL_VERSION_NUMBER) \
+        && LIBRESSL_VERSION_NUMBER < 0x030500000L
+        BIO_set_callback(SSL_get_rbio(ssl), bio_dump_cb);
+#    else
+        BIO_set_callback_ex(SSL_get_rbio(ssl), bio_dump_cb);
+#    endif
+        do_dump = 1;
+    }
+}
+
+int
+tls_start_servertls(int timeout)
+{
     int keepalive;
-    SSL_SESSION *session;
     SSL_CIPHER *cipher;
 
     if (!tls_serverengine) {
@@ -618,68 +634,21 @@ tls_start_servertls(int readfd, int writefd)
     if (tls_loglevel >= 1)
         syslog(L_NOTICE, "setting up TLS connection");
 
-    if (tls_conn == NULL) {
-        tls_conn = (SSL *) SSL_new(CTX);
-    }
-    if (tls_conn == NULL) {
-        return (-1);
-    }
-    SSL_clear(tls_conn);
-
 #    if defined(SOL_SOCKET) && defined(SO_KEEPALIVE)
     /* Set KEEPALIVE to catch broken socket connections. */
     keepalive = 1;
-    if (setsockopt(readfd, SOL_SOCKET, SO_KEEPALIVE, &keepalive,
+    if (setsockopt(STDIN_FILENO, SOL_SOCKET, SO_KEEPALIVE, &keepalive,
                    sizeof(keepalive))
         < 0)
-        syslog(L_ERROR, "fd %d can't setsockopt(KEEPALIVE) %m", readfd);
-    if (setsockopt(writefd, SOL_SOCKET, SO_KEEPALIVE, &keepalive,
-                   sizeof(keepalive))
-        < 0)
-        syslog(L_ERROR, "fd %d can't setsockopt(KEEPALIVE) %m", writefd);
+        syslog(L_ERROR, "fd %d can't setsockopt(KEEPALIVE) %m", STDIN_FILENO);
 #    endif /* SOL_SOCKET && SO_KEEPALIVE */
 
-    /* Set the file descriptors for SSL to use. */
-    if (SSL_set_rfd(tls_conn, readfd) == 0) {
+    /* The handshake, on the client socket, with a timeout (transport.cc).
+     * It does all the negotiations and checks the client certificate. */
+    tls_conn = transport_start_tls(CTX, timeout, tls_prepare);
+    if (tls_conn == NULL)
         return (-1);
-    }
 
-    if (SSL_set_wfd(tls_conn, writefd) == 0) {
-        return (-1);
-    }
-
-    /* This is the actual handshake routine.  It will do all the negotiations
-     * and will check the client cert etc. */
-    SSL_set_accept_state(tls_conn);
-
-    /* We do have an SSL_set_fd() and now suddenly a BIO_ routine is called?
-     * Well there is a BIO below the SSL routines that is automatically
-     * created for us, so we can use it for debugging purposes. */
-    if (tls_loglevel >= 3) {
-        /* In LibreSSL, BIO_set_callback_ex was introduced in version 3.5.0. */
-#    if defined(LIBRESSL_VERSION_NUMBER) \
-        && LIBRESSL_VERSION_NUMBER < 0x030500000L
-        BIO_set_callback(SSL_get_rbio(tls_conn), bio_dump_cb);
-#    else
-        BIO_set_callback_ex(SSL_get_rbio(tls_conn), bio_dump_cb);
-#    endif
-    }
-
-    /* Dump the negotiation for loglevels 3 and 4. */
-    if (tls_loglevel >= 3)
-        do_dump = 1;
-
-    if ((sts = SSL_accept(tls_conn)) <= 0) {
-        session = SSL_get_session(tls_conn);
-
-        if (session) {
-            SSL_CTX_remove_session(CTX, session);
-        }
-        if (tls_conn)
-            SSL_free(tls_conn);
-        tls_conn = NULL;
-        return (-1);
-    }
     /* Only loglevel 4 dumps everything. */
     if (tls_loglevel < 4)
         do_dump = 0;
@@ -696,43 +665,6 @@ tls_start_servertls(int readfd, int writefd)
         tls_protocol, tls_cipher_name, tls_cipher_usebits, tls_cipher_algbits);
 
     return (0);
-}
-
-
-ssize_t
-SSL_writev(SSL *ssl, const struct iovec *vector, int count)
-{
-    static char *buffer = NULL;
-    static size_t allocsize = 0;
-    char *bp;
-    size_t bytes, to_copy;
-    int i;
-    /* Find the total number of bytes to be written. */
-    bytes = 0;
-    for (i = 0; i < count; ++i)
-        bytes += vector[i].iov_len;
-    /* Allocate a buffer to hold the data. */
-    if (NULL == buffer) {
-        size_t to_alloc = (bytes > 0 ? bytes : 1);
-        buffer = (char *) xmalloc(to_alloc);
-        allocsize = to_alloc;
-    } else if (bytes > allocsize) {
-        buffer = (char *) xrealloc(buffer, bytes);
-        allocsize = bytes;
-    }
-    /* Copy the data into BUFFER. */
-    to_copy = bytes;
-    bp = buffer;
-    for (i = 0; i < count; ++i) {
-#    define min(a, b) ((a) > (b) ? (b) : (a))
-        size_t copy = min(vector[i].iov_len, to_copy);
-        memcpy(bp, vector[i].iov_base, copy);
-        bp += copy;
-        to_copy -= copy;
-        if (to_copy == 0)
-            break;
-    }
-    return SSL_write(ssl, buffer, bytes);
 }
 
 #endif /* HAVE_OPENSSL */

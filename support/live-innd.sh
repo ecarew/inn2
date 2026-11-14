@@ -785,7 +785,8 @@ nnrpd reads a command split across TLS records
 nnrpd COMPRESS DEFLATE over TLS
 nnrpd drops an idle TLS client after clienttimeout
 nnrpd drops an idle plaintext client after clienttimeout
-nnrpd survives a client that drops mid-handshake"
+nnrpd survives a client that drops mid-handshake
+nnrpd times out a stalled TLS handshake"
 if ! grep -q '^#define HAVE_OPENSSL 1' "$build/include/config.h"; then
     echo "$tls_checks" | while read -r l; do printf '  %-42s %s\n' "$l" "SKIP (built without TLS)"; done
 elif ! command -v openssl >/dev/null || ! command -v python3 >/dev/null; then
@@ -857,6 +858,12 @@ else
     tc implicit "$sport" >"$tmp/tls-after-drop.out" 2>&1
     label="nnrpd survives a client that drops mid-handshake"
     ok sh -c "grep -q '^dropped' '$tmp/tls-drop.out' && grep -q '^205 ' '$tmp/tls-after-drop.out'"
+
+    # A client that connects to nnrpd -S and sends nothing: the handshake
+    # times out after initialtimeout instead of holding nnrpd forever.
+    tc stall "$sport" >"$tmp/tls-stall.out" 2>&1
+    label="nnrpd times out a stalled TLS handshake"
+    ok sh -c "grep -qE '^closed after [2-6] s' '$tmp/tls-stall.out'"
 
     kill "$tls_pid" "$tlss_pid" 2>/dev/null
     wait "$tls_pid" "$tlss_pid" 2>/dev/null

@@ -13,7 +13,7 @@ endif()
 inn_program(nnrpd
     SOURCES article.cc auth-ext.cc cache.cc commands.cc group.cc line.cc list.cc
             misc.cc newnews.cc nnrpd.cc perl.cc perm.cc post.cc python.cc sasl.cc
-            tls.cc track.cc zlib.cc
+            tls.cc track.cc transport.cc zlib.cc
     LIBS ${INN_CANLOCK_LIBS} ${INN_PERL_LIBS} ${INN_PYTHON_LIBS} ${_sasl} ${_tls}
          ZLIB::ZLIB Boost::headers Threads::Threads)
 

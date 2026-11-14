@@ -49,9 +49,8 @@ int tls_init_serverengine(int verifydepth, /* Depth to verify. */
 int tls_init(void);
 
 /* Start TLS negotiation. */
-int tls_start_servertls(int readfd, int writefd);
+int tls_start_servertls(int timeout);
 
-ssize_t SSL_writev(SSL *ssl, const struct iovec *vector, int count);
 
 #endif /* HAVE_OPENSSL */
 

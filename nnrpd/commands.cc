@@ -187,6 +187,10 @@ PERMgeneric(char *av[], char *accesslist, size_t size)
         fdflag_close_exec(STDIN_FILENO, false);
         fdflag_close_exec(STDOUT_FILENO, false);
         fdflag_close_exec(STDERR_FILENO, false);
+        /* The authenticator talks to the client on the socket nnrpd's
+         * transport made non-blocking; give it a blocking one, as it has
+         * always had. */
+        fdflag_nonblocking(STDIN_FILENO, false);
 
         execv(path, av);
         /* RFC 2980 requires 500 if there are unspecified errors during
@@ -201,6 +205,9 @@ PERMgeneric(char *av[], char *accesslist, size_t size)
     count = read(pan[PIPE_READ], path, sizeof(path));
     close(pan[PIPE_READ]);
     waitpid(pid, &status, 0);
+    /* The child made the shared socket blocking; the transport expects it
+     * non-blocking again. */
+    fdflag_nonblocking(STDIN_FILENO, true);
     if (count < 0) {
         syslog(L_FATAL, "can't read %s %m", path);
         return 0;
