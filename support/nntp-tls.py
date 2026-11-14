@@ -21,6 +21,9 @@ test checks.  Scenarios:
   drop       implicit-TLS port: half a ClientHello, then close
   stall      implicit-TLS port: connect and send nothing; prints the
              seconds until nnrpd closes the connection (at most 60)
+  starttls-stall
+             plaintext port: STARTTLS, then no handshake; prints the
+             seconds from the 382 reply until nnrpd closes (at most 60)
 
 Certificates are not verified: the live test makes a throwaway one.
 """
@@ -199,6 +202,21 @@ def stall(port):
     print("closed after %d s" % round(time.monotonic() - start))
 
 
+def starttls_stall(port):
+    c = plain(port)
+    c.sock.settimeout(60)
+    print("plain: " + c.line())
+    if not c.cmd("STARTTLS", prefix="plain: ").startswith("382"):
+        return
+    start = time.monotonic()
+    try:
+        while c.sock.recv(4096):
+            pass
+    except OSError:
+        pass
+    print("closed after %d s" % round(time.monotonic() - start))
+
+
 def main():
     if len(sys.argv) < 3:
         sys.exit(__doc__)
@@ -208,7 +226,7 @@ def main():
         {
             "implicit": implicit, "starttls": starttls, "inject": inject,
             "split": split, "compress": compress, "idle": idle,
-            "drop": drop, "stall": stall,
+            "drop": drop, "stall": stall, "starttls-stall": starttls_stall,
         }[scenario](port, *args)
     except (OSError, EOFError, ssl.SSLError) as e:
         print("error: %s" % e)

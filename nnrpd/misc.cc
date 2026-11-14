@@ -619,7 +619,10 @@ CMDstarttls(int ac UNUSED, char *av[] UNUSED)
 
     /* Must flush our buffers before starting TLS. */
 
-    result = tls_start_servertls(PERMaccessconf->clienttimeout);
+    /* The handshake is machine to machine and quick: initialtimeout, as for
+     * nnrpd -S, not the client timeout meant for a person between
+     * commands. */
+    result = tls_start_servertls(innconf->initialtimeout);
     if (result == -1) {
         /* No reply because we have already sent NNTP_CONT_STARTTLS.
          * We close the connection. */

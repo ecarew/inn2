@@ -786,7 +786,8 @@ nnrpd COMPRESS DEFLATE over TLS
 nnrpd drops an idle TLS client after clienttimeout
 nnrpd drops an idle plaintext client after clienttimeout
 nnrpd survives a client that drops mid-handshake
-nnrpd times out a stalled TLS handshake"
+nnrpd times out a stalled TLS handshake
+nnrpd times out a stalled handshake after STARTTLS"
 if ! grep -q '^#define HAVE_OPENSSL 1' "$build/include/config.h"; then
     echo "$tls_checks" | while read -r l; do printf '  %-42s %s\n' "$l" "SKIP (built without TLS)"; done
 elif ! command -v openssl >/dev/null || ! command -v python3 >/dev/null; then
@@ -864,6 +865,16 @@ else
     tc stall "$sport" >"$tmp/tls-stall.out" 2>&1
     label="nnrpd times out a stalled TLS handshake"
     ok sh -c "grep -qE '^closed after [2-6] s' '$tmp/tls-stall.out'"
+
+    # The same after STARTTLS: initialtimeout (3 s) again, not the client
+    # timeout, which readers.conf raises to 30 s for this check.
+    cp "$tmp/etc/readers.conf" "$tmp/etc/readers.conf.tls-keep"
+    sed 's/^\(    newsgroups: "\*"\)$/\1\
+    clienttimeout: 30/' "$tmp/etc/readers.conf.tls-keep" >"$tmp/etc/readers.conf"
+    tc starttls-stall "$tport" >"$tmp/tls-starttls-stall.out" 2>&1
+    mv "$tmp/etc/readers.conf.tls-keep" "$tmp/etc/readers.conf"
+    label="nnrpd times out a stalled handshake after STARTTLS"
+    ok sh -c "grep -q '^plain: 382 ' '$tmp/tls-starttls-stall.out' && grep -qE '^closed after [2-6] s' '$tmp/tls-starttls-stall.out'"
 
     kill "$tls_pid" "$tlss_pid" 2>/dev/null
     wait "$tls_pid" "$tlss_pid" 2>/dev/null
