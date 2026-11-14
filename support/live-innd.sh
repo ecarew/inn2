@@ -829,7 +829,9 @@ else
     tc starttls "$tport" >"$tmp/tls-reqenc.out" 2>&1
     mv "$tmp/etc/readers.conf.tls-keep" "$tmp/etc/readers.conf"
     label="nnrpd require_encryption offers AUTHINFO USER only over TLS"
-    ok sh -c "! grep -q '^plain: AUTHINFO USER' '$tmp/tls-reqenc.out' && ! grep -qE '^plain: SASL.* (PLAIN|LOGIN)( |\$)' '$tmp/tls-reqenc.out' && grep -q '^AUTHINFO USER' '$tmp/tls-reqenc.out' && grep -qE '^SASL.* PLAIN' '$tmp/tls-reqenc.out'"
+    # PLAIN is checked only where nnrpd offers it (built with Cyrus SASL and
+    # its PLAIN plugin): withheld in plaintext, offered over TLS.
+    ok sh -c "! grep -q '^plain: AUTHINFO USER' '$tmp/tls-reqenc.out' && ! grep -qE '^plain: SASL.* (PLAIN|LOGIN)( |\$)' '$tmp/tls-reqenc.out' && grep -q '^AUTHINFO USER' '$tmp/tls-reqenc.out' && { ! grep -qE '^SASL.* PLAIN' '$tmp/tls-starttls.out' || grep -qE '^SASL.* PLAIN' '$tmp/tls-reqenc.out'; }"
 
     tc inject "$tport" >"$tmp/tls-inject.out" 2>&1
     label="nnrpd discards plaintext pipelined after STARTTLS"
