@@ -371,7 +371,29 @@ I/O): W1 3601 vs 3590 articles/s; W4 16.64 vs 16.92 s (+1.7%), W4T
 16.75 vs 17.08 s (+2.0%), nnrpd CPU +1.8% in both; nnrpd peak RSS 12.1
 vs 13.6 MB. Accepted under the architect's macOS rule. Leaks unchanged:
 nnrpd daemon 0, session 31 (the macOS fork artifacts, see phase 5) in
-both. Linux figures from the Linux checks.
+both.
+
+Perf on Linux (Docker on the same Mac: one linuxkit VM, arm64, OpenSSL
+3.5.7; both builds in the same VM, alternating), 5 rounds against
+fdd908b6a, after fb33d414c: W1 unchanged; W4 11.89 vs 11.69 s (-1.6%),
+nnrpd system time -36%; W4T 12.51 vs 13.01 s (+4.0%), nnrpd user time
++12%, peak RSS +2.6%. A callgrind profile of W4T showed the causes:
+
+- A new gather buffer per write (glibc heap consolidation on large
+  replies) and Asio's scheduler and reactor locks: fixed in fb33d414c
+  (peak RSS was +8.4%), with no change in wall time.
+- What is left is `asio::ssl`'s design: each TLS record is copied
+  through its BIO pair, and the OpenSSL error queue is cleared before
+  every operation.
+
+**Decision (the architect, 2026-11-14):** keep `asio::ssl` despite the
+W4T cost, an exception to the Linux no-slowdown rule: its design is
+more modern and less open to misuse than driving OpenSSL on the socket
+by hand. The exact figure is specific to arm64 in a VM; x86-64 on bare
+metal is unmeasured.
+
+OpenSSL 3.1 is the minimum for TLS (the architect: 3.0 has problems;
+older versions are not tested), 0ea942093.
 
 ### Not converted: one-connection clients
 
