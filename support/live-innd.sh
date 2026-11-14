@@ -38,6 +38,7 @@ res() {
 
 cleanup() {
     [ -n "$nnrpd_pid" ] && kill "$nnrpd_pid" 2>/dev/null
+    [ -n "$tls_pid" ] && kill "$tls_pid" "$tlss_pid" 2>/dev/null
     [ -n "$dv" ] && "$root/support/dovecot-imapfeed.sh" stop "$dv"
     if [ -n "$innd_pid" ] && kill -0 "$innd_pid" 2>/dev/null; then
         kill "$innd_pid" 2>/dev/null
@@ -765,6 +766,101 @@ wait "$nnrpd_pid" 2>/dev/null
 nnrpd_pid=
 # The waiting children outlive the parent (as they always have); stop them.
 [ -n "$kids" ] && kill $kids 2>/dev/null
+
+# --- nnrpd over TLS -------------------------------------------------------------
+#
+# With TLS built in (INN_TLS): a throwaway self-signed certificate where
+# inn.conf looks by default (pathetc/cert.pem and key.pem), one nnrpd -D
+# for STARTTLS and one nnrpd -D -S for TLS from the first byte, talked to
+# with support/nntp-tls.py.  initialtimeout and clienttimeout are cut to
+# 3 seconds for the idle checks; both daemons read inn.conf at startup.
+tls_checks="nnrpd -S greets over TLS and lists AUTHINFO USER
+nnrpd AUTHINFO over TLS accepts a valid password
+nnrpd ARTICLE over TLS
+nnrpd STARTTLS upgrades a plaintext session
+nnrpd offers STARTTLS only before the upgrade
+nnrpd require_encryption offers AUTHINFO USER only over TLS
+nnrpd discards plaintext pipelined after STARTTLS
+nnrpd reads a command split across TLS records
+nnrpd COMPRESS DEFLATE over TLS
+nnrpd drops an idle TLS client after clienttimeout
+nnrpd drops an idle plaintext client after clienttimeout
+nnrpd survives a client that drops mid-handshake"
+if ! grep -q '^#define HAVE_OPENSSL 1' "$build/include/config.h"; then
+    echo "$tls_checks" | while read -r l; do printf '  %-42s %s\n' "$l" "SKIP (built without TLS)"; done
+elif ! command -v openssl >/dev/null || ! command -v python3 >/dev/null; then
+    echo "$tls_checks" | while read -r l; do printf '  %-42s %s\n' "$l" "SKIP (needs openssl and python3)"; done
+else
+    openssl req -x509 -newkey rsa:2048 -nodes -days 1 -subj /CN=localhost \
+        -keyout "$tmp/etc/key.pem" -out "$tmp/etc/cert.pem" >"$tmp/openssl.log" 2>&1
+    chmod 600 "$tmp/etc/key.pem"
+    cp "$INNCONF" "$INNCONF.tls-keep"
+    sed -e 's/^initialtimeout:.*/initialtimeout: 3/' \
+        -e 's/^clienttimeout:.*/clienttimeout: 3/' "$INNCONF" >"$INNCONF.new" \
+        && mv "$INNCONF.new" "$INNCONF"
+    tport=$((port + 5))
+    sport=$((port + 6))
+    "$bin/nnrpd/nnrpd" -D -f -p "$tport" -b 127.0.0.1 >"$tmp/nnrpd-t.out" 2>&1 &
+    tls_pid=$!
+    "$bin/nnrpd/nnrpd" -D -f -S -p "$sport" -b 127.0.0.1 >"$tmp/nnrpd-s.out" 2>&1 &
+    tlss_pid=$!
+    lport=$tport waitport
+    lport=$sport waitport
+    tc() { python3 "$root/support/nntp-tls.py" "$@"; }
+
+    tc implicit "$sport" >"$tmp/tls-implicit.out" 2>&1
+    label="nnrpd -S greets over TLS and lists AUTHINFO USER"
+    ok sh -c "grep -q '^20[01] ' '$tmp/tls-implicit.out' && grep -q '^AUTHINFO USER' '$tmp/tls-implicit.out'"
+    label="nnrpd AUTHINFO over TLS accepts a valid password"
+    ok has tls-implicit.out '^281 '
+    label="nnrpd ARTICLE over TLS"
+    ok sh -c "grep -q '^220 ' '$tmp/tls-implicit.out' && grep -q 'Body of live test article 2' '$tmp/tls-implicit.out' && grep -q '^205 ' '$tmp/tls-implicit.out'"
+
+    tc starttls "$tport" >"$tmp/tls-starttls.out" 2>&1
+    label="nnrpd STARTTLS upgrades a plaintext session"
+    ok sh -c "grep -q '^plain: 382 ' '$tmp/tls-starttls.out' && grep -q '^tls: TLSv1' '$tmp/tls-starttls.out' && grep -qE '^111 [0-9]{14}' '$tmp/tls-starttls.out'"
+    label="nnrpd offers STARTTLS only before the upgrade"
+    ok sh -c "grep -q '^plain: STARTTLS' '$tmp/tls-starttls.out' && ! grep -q '^STARTTLS' '$tmp/tls-starttls.out'"
+
+    # require_encryption: AUTHINFO USER and PLAIN/LOGIN only over TLS.
+    cp "$tmp/etc/readers.conf" "$tmp/etc/readers.conf.tls-keep"
+    sed 's/^\(    default: "<local>"\)$/\1\
+    require_encryption: true/' "$tmp/etc/readers.conf.tls-keep" >"$tmp/etc/readers.conf"
+    tc starttls "$tport" >"$tmp/tls-reqenc.out" 2>&1
+    mv "$tmp/etc/readers.conf.tls-keep" "$tmp/etc/readers.conf"
+    label="nnrpd require_encryption offers AUTHINFO USER only over TLS"
+    ok sh -c "! grep -q '^plain: AUTHINFO USER' '$tmp/tls-reqenc.out' && ! grep -qE '^plain: SASL.* (PLAIN|LOGIN)( |\$)' '$tmp/tls-reqenc.out' && grep -q '^AUTHINFO USER' '$tmp/tls-reqenc.out' && grep -qE '^SASL.* PLAIN' '$tmp/tls-reqenc.out'"
+
+    tc inject "$tport" >"$tmp/tls-inject.out" 2>&1
+    label="nnrpd discards plaintext pipelined after STARTTLS"
+    ok sh -c "grep -q '^plain: 382 ' '$tmp/tls-inject.out' && grep -q '^first: 100 ' '$tmp/tls-inject.out'"
+
+    tc split "$sport" >"$tmp/tls-split.out" 2>&1
+    label="nnrpd reads a command split across TLS records"
+    ok sh -c "grep -qE '^111 [0-9]{14}' '$tmp/tls-split.out'"
+
+    tc compress "$sport" >"$tmp/tls-compress.out" 2>&1
+    label="nnrpd COMPRESS DEFLATE over TLS"
+    ok sh -c "grep -q '^206 ' '$tmp/tls-compress.out' && grep -qE '^inflated: 111 [0-9]{14}' '$tmp/tls-compress.out' && grep -q '^inflated: 205 ' '$tmp/tls-compress.out'"
+
+    tc idle "$sport" tls >"$tmp/tls-idle.out" 2>&1
+    label="nnrpd drops an idle TLS client after clienttimeout"
+    ok sh -c "grep -qE '^closed after [2-6] s' '$tmp/tls-idle.out'"
+    tc idle "$tport" plain >"$tmp/tls-idle-plain.out" 2>&1
+    label="nnrpd drops an idle plaintext client after clienttimeout"
+    ok sh -c "grep -qE '^closed after [2-6] s' '$tmp/tls-idle-plain.out'"
+
+    tc drop "$sport" >"$tmp/tls-drop.out" 2>&1
+    sleep 1
+    tc implicit "$sport" >"$tmp/tls-after-drop.out" 2>&1
+    label="nnrpd survives a client that drops mid-handshake"
+    ok sh -c "grep -q '^dropped' '$tmp/tls-drop.out' && grep -q '^205 ' '$tmp/tls-after-drop.out'"
+
+    kill "$tls_pid" "$tlss_pid" 2>/dev/null
+    wait "$tls_pid" "$tlss_pid" 2>/dev/null
+    tls_pid= tlss_pid=
+    mv "$INNCONF.tls-keep" "$INNCONF"
+fi
 
 # --- frontends ---------------------------------------------------------------
 
