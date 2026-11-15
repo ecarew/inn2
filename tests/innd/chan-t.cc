@@ -267,6 +267,10 @@ scenario_wake_order()
 {
     static const int delay[3] = {3, 1, 1};
 
+    /* Wake times are relative to Now, which main set before the earlier
+       scenarios ran; on a busy machine those can take seconds, and then
+       all three are due at once and wake in table order. */
+    gettimeofday(&Now, nullptr);
     for (int i = 0; i < 3; i++) {
         int p[2];
 
