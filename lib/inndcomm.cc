@@ -16,10 +16,7 @@
 #endif
 #include <time.h>
 
-/* Needed on AIX 4.1 to get fd_set and friends. */
-#ifdef HAVE_SYS_SELECT_H
-#    include <sys/select.h>
-#endif
+#include <poll.h>
 
 #ifdef HAVE_UNIX_DOMAIN_SOCKETS
 #    include "portable/socket-unix.h"
@@ -222,8 +219,7 @@ ICCcommand(char cmd, const char *argv[], char **replyp)
     char *path;
 #endif
     int len;
-    fd_set Rmask;
-    struct timeval T;
+    struct pollfd pfd;
     pid_t pid;
     ICC_MSGLENTYPE rlen;
     ICC_PROTOCOLTYPE protocol;
@@ -310,17 +306,18 @@ ICCcommand(char cmd, const char *argv[], char **replyp)
 
     /* Wait for the reply. */
     for (;;) {
-        FD_ZERO(&Rmask);
-        FD_SET(ICCfd, &Rmask);
-        T.tv_sec = ICCtimeout ? ICCtimeout : 120;
-        T.tv_usec = 0;
-        i = select(ICCfd + 1, &Rmask, nullptr, nullptr, &T);
+        pfd.fd = ICCfd;
+        pfd.events = POLLIN;
+        pfd.revents = 0;
+        i = poll(&pfd, 1, (ICCtimeout ? ICCtimeout : 120) * 1000);
         if (i < 0) {
             free(buff);
-            ICCfailure = "select";
+            ICCfailure = "poll";
             return -1;
         }
-        if (i > 0 && FD_ISSET(ICCfd, &Rmask))
+        /* POLLHUP or POLLERR without POLLIN is ready too: the read below
+           then reports the failure. */
+        if (i > 0)
             /* Server reply is there; go handle it. */
             break;
 
