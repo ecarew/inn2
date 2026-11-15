@@ -138,6 +138,10 @@ Revised 2026-11-12, decided by the architect:
   `frontends/ovdb_server.cc` builds as a stub), so a converted server
   could be neither compiled nor tested.  It moves to the phase after
   Berkeley DB detection is added to CMake, which is its own task.
+  **Retired 2026-11-15 (the architect):** Berkeley DB may not be used
+  going forward, so neither the ovdb_server conversion nor Berkeley DB
+  in CMake is planned.  `frontends/ovdb_server.cc` and
+  `storage/ovdb/ovdb.cc` keep their `select()` code, unbuilt.
 - ovsqlite-server has no idle timeout; its one timer commits the open
   transaction (`transtimelimit`).  The tests check that timer instead
   (`tests/overview/ovsqlite-server-t.cc`, 23 checks, committed before
