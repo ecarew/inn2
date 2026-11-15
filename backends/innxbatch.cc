@@ -43,10 +43,7 @@
 #endif
 #include <time.h>
 
-/* Needed on AIX 4.1 to get fd_set and friends. */
-#ifdef HAVE_SYS_SELECT_H
-#    include <sys/select.h>
-#endif
+#include <poll.h>
 
 #include "inn/innconf.h"
 #include "inn/libinn.h"
@@ -182,16 +179,14 @@ static bool
 REMread(char *start, int size)
 {
     char *p, *h;
-    struct timeval t;
-    fd_set rmask;
+    struct pollfd pfd;
     int i;
 
     for (p = start; size;) {
-        FD_ZERO(&rmask);
-        FD_SET(FromServer, &rmask);
-        t.tv_sec = 10 * 60;
-        t.tv_usec = 0;
-        i = select(FromServer + 1, &rmask, nullptr, nullptr, &t);
+        pfd.fd = FromServer;
+        pfd.events = POLLIN;
+        pfd.revents = 0;
+        i = poll(&pfd, 1, (10 * 60) * 1000);
         if (GotInterrupt)
             return true;
         if (i < 0) {
@@ -200,7 +195,7 @@ REMread(char *start, int size)
             else
                 return false;
         }
-        if (i == 0 || !FD_ISSET(FromServer, &rmask))
+        if (i == 0)
             return false;
         i = read(FromServer, p, size - 1);
         if (GotInterrupt)
