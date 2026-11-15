@@ -140,6 +140,22 @@ include_directories(${CMAKE_SOURCE_DIR}/include)
 
 find_package(ZLIB REQUIRED)
 find_package(SQLite3 REQUIRED)
+# On macOS both are found in the SDK, and their targets then name the SDK's
+# usr/include, which the compiler searches anyway through its sysroot.  CMake
+# drops it as a system directory only while its cached compiler details name
+# the same SDK; after an Xcode or Command Line Tools update they name the old
+# one, the directory becomes an explicit -isystem ahead of libc++'s headers,
+# and every C++ file fails in <cstddef>.  Leave it to the sysroot.
+if(APPLE)
+    foreach(t ZLIB::ZLIB SQLite3::SQLite3)
+        get_target_property(dirs ${t} INTERFACE_INCLUDE_DIRECTORIES)
+        if(dirs)
+            list(FILTER dirs EXCLUDE REGEX "\\.sdk/usr/include/?$")
+            set_target_properties(${t} PROPERTIES
+                                  INTERFACE_INCLUDE_DIRECTORIES "${dirs}")
+        endif()
+    endforeach()
+endif()
 # Boost is required, header-only libraries so far (CLAUDE.md, "Build
 # system"); code that uses it links Boost::headers.  CMake 4 has no
 # FindBoost module: this uses Boost's own BoostConfig.cmake.
