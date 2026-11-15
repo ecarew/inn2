@@ -49,13 +49,10 @@
 #include "portable/socket.h"
 
 #include <errno.h>
-#ifdef HAVE_SYS_SELECT_H
-#    include <sys/select.h>
-#endif
-#ifdef HAVE_SYS_TIME_H
-#    include <sys/time.h>
-#endif
+#include <poll.h>
 #include <time.h>
+
+#include <vector>
 
 #include "inn/fdflag.h"
 #include "inn/innconf.h"
@@ -389,28 +386,22 @@ network_bind_all_free(socket_type *fds)
 socket_type
 network_wait_any(socket_type fds[], unsigned int count)
 {
-    fd_set readfds;
-    socket_type maxfd, fd;
+    std::vector<struct pollfd> pfds(count);
     unsigned int i;
     int status;
 
-    FD_ZERO(&readfds);
-    maxfd = -1;
     for (i = 0; i < count; i++) {
-        FD_SET(fds[i], &readfds);
-        if (fds[i] > maxfd)
-            maxfd = fds[i];
+        pfds[i].fd = fds[i];
+        pfds[i].events = POLLIN;
+        pfds[i].revents = 0;
     }
-    status = select(maxfd + 1, &readfds, nullptr, nullptr, nullptr);
+    status = poll(pfds.data(), count, -1);
     if (status < 0)
         return INVALID_SOCKET;
-    fd = INVALID_SOCKET;
     for (i = 0; i < count; i++)
-        if (FD_ISSET(fds[i], &readfds)) {
-            fd = fds[i];
-            break;
-        }
-    return fd;
+        if (pfds[i].revents != 0)
+            return fds[i];
+    return INVALID_SOCKET;
 }
 
 
@@ -510,31 +501,30 @@ connect_wait(socket_type fd, time_t timeout)
 {
     int status, err;
     socklen_t length;
-    struct timeval tv;
-    fd_set set;
+    struct pollfd pfd;
 
     /*
-     * Use select to poll the file descriptor.  Loop if interrupted by a
+     * Wait for the file descriptor to become writable.  Loop if interrupted by a
      * caught signal.  This means we could wait for longer than the timeout
      * when interrupted, but there's no good way of recovering the elapsed
      * time that's worth the hassle.
      */
     do {
-        tv.tv_sec = timeout;
-        tv.tv_usec = 0;
-        FD_ZERO(&set);
-        FD_SET(fd, &set);
-        status = select(fd + 1, nullptr, &set, nullptr, &tv);
+        pfd.fd = fd;
+        pfd.events = POLLOUT;
+        pfd.revents = 0;
+        status = poll(&pfd, 1, static_cast<int>(timeout) * 1000);
     } while (status < 0 && socket_errno == EINTR);
 
     /*
-     * If we timed out, set errno appropriately.  If the connection completes,
+     * If we timed out, set errno appropriately.  If the connection completes
+     * or fails (a failed connect may report only POLLERR or POLLHUP),
      * retrieve the actual status from the socket.
      */
-    if (status == 0 && !FD_ISSET(fd, &set)) {
+    if (status == 0) {
         status = -1;
         socket_set_errno(ETIMEDOUT);
-    } else if (status > 0 && FD_ISSET(fd, &set)) {
+    } else if (status > 0) {
         length = sizeof(err);
         status = getsockopt(fd, SOL_SOCKET, SO_ERROR, &err, &length);
         if (status == 0) {
@@ -689,7 +679,7 @@ socket_xread(socket_type fd, void *buffer, size_t size)
 
 /*
  * Read the specified number of bytes from the network, enforcing a timeout
- * (in seconds).  We use select to wait for data to become available and then
+ * (in seconds).  We use poll to wait for data to become available and then
  * keep reading until either we time out or we've gotten all the data we're
  * looking for.  timeout may be 0 to never time out.  Return true on success
  * and false (setting socket_errno) on failure.
@@ -697,9 +687,8 @@ socket_xread(socket_type fd, void *buffer, size_t size)
 bool
 network_read(socket_type fd, void *buffer, size_t total, time_t timeout)
 {
-    time_t start, now;
-    fd_set set;
-    struct timeval tv;
+    time_t start, now, wait;
+    struct pollfd pfd;
     size_t got = 0;
     ssize_t status;
 
@@ -709,20 +698,20 @@ network_read(socket_type fd, void *buffer, size_t total, time_t timeout)
 
     /*
      * The hard way.  We try to apply the timeout on the whole read.  If
-     * either select or read fails with EINTR, restart the loop, and rely on
+     * either poll or read fails with EINTR, restart the loop, and rely on
      * the overall timeout to limit how long we wait without forward
      * progress.
      */
     start = time(nullptr);
     now = start;
     do {
-        FD_ZERO(&set);
-        FD_SET(fd, &set);
-        tv.tv_sec = timeout - (now - start);
-        if (tv.tv_sec < 1)
-            tv.tv_sec = 1;
-        tv.tv_usec = 0;
-        status = select(fd + 1, &set, nullptr, nullptr, &tv);
+        pfd.fd = fd;
+        pfd.events = POLLIN;
+        pfd.revents = 0;
+        wait = timeout - (now - start);
+        if (wait < 1)
+            wait = 1;
+        status = poll(&pfd, 1, static_cast<int>(wait) * 1000);
         if (status < 0) {
             if (socket_errno == EINTR)
                 continue;
@@ -752,7 +741,7 @@ network_read(socket_type fd, void *buffer, size_t total, time_t timeout)
 
 /*
  * Write the specified number of bytes from the network, enforcing a timeout
- * (in seconds).  We use select to wait for the socket to become available and
+ * (in seconds).  We use poll to wait for the socket to become available and
  * then keep reading until either we time out or we've sent all the data.
  * timeout may be 0 to never time out.  Return true on success and false
  * (setting socket_errno) on failure.
@@ -760,9 +749,8 @@ network_read(socket_type fd, void *buffer, size_t total, time_t timeout)
 bool
 network_write(socket_type fd, const void *buffer, size_t total, time_t timeout)
 {
-    time_t start, now;
-    fd_set set;
-    struct timeval tv;
+    time_t start, now, wait;
+    struct pollfd pfd;
     size_t sent = 0;
     ssize_t status;
     int err;
@@ -772,20 +760,20 @@ network_write(socket_type fd, const void *buffer, size_t total, time_t timeout)
         return (socket_xwrite(fd, buffer, total) >= 0);
 
     /* The hard way.  We try to apply the timeout on the whole write.  If
-     * either select or read fails with EINTR, restart the loop, and rely on
+     * either poll or read fails with EINTR, restart the loop, and rely on
      * the overall timeout to limit how long we wait without forward progress.
      */
     fdflag_nonblocking(fd, true);
     start = time(nullptr);
     now = start;
     do {
-        FD_ZERO(&set);
-        FD_SET(fd, &set);
-        tv.tv_sec = timeout - (now - start);
-        if (tv.tv_sec < 1)
-            tv.tv_sec = 1;
-        tv.tv_usec = 0;
-        status = select(fd + 1, nullptr, &set, nullptr, &tv);
+        pfd.fd = fd;
+        pfd.events = POLLOUT;
+        pfd.revents = 0;
+        wait = timeout - (now - start);
+        if (wait < 1)
+            wait = 1;
+        status = poll(&pfd, 1, static_cast<int>(wait) * 1000);
         if (status < 0) {
             if (socket_errno == EINTR)
                 continue;
