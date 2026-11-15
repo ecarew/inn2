@@ -89,10 +89,7 @@
 #include "inn/messages.h"
 #include "inn/mmap.h"
 
-/* Needed on AIX 4.1 to get fd_set and friends. */
-#ifdef HAVE_SYS_SELECT_H
-#    include <sys/select.h>
-#endif
+#include <poll.h>
 
 /*
  * "LIA" = "leave it alone unless you know what you're doing".
@@ -1644,13 +1641,10 @@ set(searcher *sp, hash_table *tab, void *value)
     /* write in data */
     while (pwrite(tab->fd, value, tab->reclen, offset) != tab->reclen) {
         if (errno == EAGAIN) {
-            fd_set writeset;
+            struct pollfd pfd = {tab->fd, POLLOUT, 0};
 
-            FD_ZERO(&writeset);
-            FD_SET(tab->fd, &writeset);
-            if (select(tab->fd + 1, nullptr, &writeset, nullptr, nullptr)
-                < 1) {
-                syswarn("dbz: set: select failed");
+            if (poll(&pfd, 1, -1) < 1) {
+                syswarn("dbz: set: poll failed");
                 sp->aborted = 1;
                 return false;
             }
