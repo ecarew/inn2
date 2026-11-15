@@ -16,10 +16,7 @@
 #endif
 #include <time.h>
 
-/* Needed on AIX 4.1 to get fd_set and friends. */
-#ifdef HAVE_SYS_SELECT_H
-#    include <sys/select.h>
-#endif
+#include <poll.h>
 
 #include "inn/history.h"
 #include "inn/innconf.h"
@@ -68,8 +65,7 @@ SITEread(SITE *sp, char *start)
 {
     char *p;
     char *end;
-    struct timeval t;
-    fd_set rmask;
+    struct pollfd pfd;
     int i;
     char c;
 
@@ -77,17 +73,16 @@ SITEread(SITE *sp, char *start)
         if (sp->Count == 0) {
             /* Fill the buffer. */
         Again:
-            FD_ZERO(&rmask);
-            FD_SET(sp->Rfd, &rmask);
-            t.tv_sec = DEFAULT_TIMEOUT;
-            t.tv_usec = 0;
-            i = select(sp->Rfd + 1, &rmask, nullptr, nullptr, &t);
+            pfd.fd = sp->Rfd;
+            pfd.events = POLLIN;
+            pfd.revents = 0;
+            i = poll(&pfd, 1, (DEFAULT_TIMEOUT) * 1000);
             if (i < 0) {
                 if (errno == EINTR)
                     goto Again;
                 return false;
             }
-            if (i == 0 || !FD_ISSET(sp->Rfd, &rmask)
+            if (i == 0
                 || (sp->Count = read(sp->Rfd, sp->Buffer, sizeof sp->Buffer))
                        < 0)
                 return false;
