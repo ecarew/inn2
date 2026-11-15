@@ -343,7 +343,7 @@ tests=(
     lib/md5 lib/messageid lib/messages lib/mkstemp:::lib/mkstemp
     lib/nativemat lib/newsuser
     lib/network/addr-ipv4 lib/network/addr-ipv6 lib/network/client
-    lib/network/server lib/pread:::lib/pread lib/pwrite:::lib/pwrite lib/qio
+    lib/network/server lib/nntp lib/pread:::lib/pread lib/pwrite:::lib/pwrite lib/qio
     lib/readin lib/reallocarray:::lib/reallocarray lib/reservedfd
     lib/setenv:::lib/setenv lib/snprintf:::lib/snprintf
     lib/strlcat:::lib/strlcat lib/strlcpy:::lib/strlcpy lib/uwildmat

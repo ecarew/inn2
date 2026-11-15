@@ -125,7 +125,7 @@ endforeach()
 foreach(t artnumber bloom bloom-hiswalk buffer concat conffile
           confparse date dispatch fdflag hash headers hex hissqlite
           hissqlite-convert innconf logging md5 messageid messages nativemat
-          newsuser network/addr-ipv4 network/addr-ipv6 network/client network/server
+          newsuser network/addr-ipv4 network/addr-ipv6 network/client network/server nntp
           qio readin reservedfd uwildmat vector wire)
     inn_tap_test(lib/${t})
 endforeach()

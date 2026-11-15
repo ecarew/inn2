@@ -20,10 +20,7 @@
 #endif
 #include <time.h>
 
-/* Needed on AIX 4.1 to get fd_set and friends. */
-#if HAVE_SYS_SELECT_H
-#    include <sys/select.h>
-#endif
+#include <poll.h>
 
 #include "inn/buffer.h"
 #include "inn/innconf.h"
@@ -149,14 +146,11 @@ nntp_read_data(struct nntp *nntp)
 
     /* Wait for activity. */
     do {
-        fd_set mask;
-        struct timeval tv;
+        struct pollfd pfd = {nntp->in_fd, POLLIN, 0};
 
-        FD_ZERO(&mask);
-        FD_SET(nntp->in_fd, &mask);
-        tv.tv_sec = nntp->timeout;
-        tv.tv_usec = 0;
-        status = select(nntp->in_fd + 1, &mask, nullptr, nullptr, &tv);
+        status = poll(&pfd, 1,
+                      nntp->timeout > 0 ? static_cast<int>(nntp->timeout) * 1000
+                                        : -1);
         if (status == -1 && errno != EINTR)
             return NNTP_READ_ERROR;
     } while (status == -1);
