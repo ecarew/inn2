@@ -1,21 +1,19 @@
-##  Workflow for GitHub Actions testing.
+##  GitHub Actions: on every push and pull request, run the same Linux
+##  checks as before a push (support/docker-linux-checks.sh -c): the
+##  Debian image from support/docker/Dockerfile.linux, CMake alone, ctest,
+##  support/verify-cxx.sh and the live innd checks, on the pushed commit.
 
 name: build
 
 "on": [push, pull_request]
 
 jobs:
-  build:
+  linux:
     runs-on: ubuntu-latest
-
-    env:
-      AUTHOR_TESTING: 1
-      C_TAP_VERBOSE: 1
+    timeout-minutes: 120
 
     steps:
       - name: checkout
         uses: actions/checkout@v6
-      - name: install
-        run: sudo -E ci/install
-      - name: test
-        run: ci/test
+      - name: linux checks
+        run: support/docker-linux-checks.sh -c
