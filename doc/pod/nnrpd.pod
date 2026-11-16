@@ -82,8 +82,8 @@ Similar to the B<-4> flag.  B<-b> is kept for backward compatibility.
 
 If specified, B<nnrpd> will report login attempts to blocklistd(8)
 for automatic blocking after a number of failed attempts.  To use this
-flag, the blocklist library must have been found at configure time, or
-B<--with-blocklist> specified at configure time.  For more information, see
+flag, the blocklist library must have been found when INN was configured
+(B<INN_BLOCKLIST>; see F<INSTALL>).  For more information, see
 L<BLOCKLISTD SUPPORT> below.
 
 =item B<-c> I<configfile>
@@ -180,8 +180,8 @@ spaces.
 
 If specified, B<nnrpd> will start a negotiation for a TLS session
 as soon as connected.  To use this flag, the OpenSSL SSL and crypto
-libraries must have been found at configure time, or B<--with-openssl>
-specified at configure time.  For more information on running B<nnrpd>
+libraries must have been found when INN was configured (B<INN_TLS>; see
+F<INSTALL>).  For more information on running B<nnrpd>
 with TLS support, see L<TLS SUPPORT>.
 
 =item B<-t>
@@ -195,8 +195,8 @@ is toggled upon receipt of a SIGHUP; see signal(2).
 
 =head1 TLS SUPPORT
 
-If INN is built with B<--with-openssl> or if the OpenSSL SSL and crypto
-libraries are found at configure time, B<nnrpd> will support news reading
+If the OpenSSL SSL and crypto libraries are found when INN is configured
+(B<INN_TLS>, on by default), B<nnrpd> will support news reading
 over TLS (also known as SSL).  For clients that use the STARTTLS command,
 no special configuration is needed beyond creating a TLS/SSL certificate
 for the server.  You should do this in exactly the same way that you
@@ -204,8 +204,9 @@ would generate a certificate for a web server.
 
 If you're happy with a self-signed certificate (which will generate
 warnings with some news reader clients), you can create and install one in
-the default path by running C<make cert> after C<make install> when
-installing INN, or by running the following commands:
+the default path by running C<cmake --build build --target cert> after
+B<cmake --install> when installing INN, or by running the following
+commands:
 
     umask 077
     openssl req -new -x509 -nodes -out <pathetc>/cert.pem \
