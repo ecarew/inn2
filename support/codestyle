@@ -85,25 +85,28 @@ reformat)
     fi
     ;;
 check)
+    # Every tool runs; the target fails at the end if any found a problem.
+    failed=0
     if have codespell; then
         echo "Running codespell to check misspelled words..."
-        codespell
+        git ls-files -z | xargs -0 codespell || failed=1
     else
         skip "misspelled words checking" codespell
     fi
     if have perlcritic; then
         echo "Running perlcritic to check Perl code..."
-        perl_files | xargs perlcritic --quiet
+        perl_files | xargs perlcritic --quiet || failed=1
     else
         skip "Perl code checking" perlcritic
     fi
     if have perltidy; then
         echo "Running perltidy to check Perl code..."
-        perl_files | xargs perltidy -npro -w -se -wlt=1 -wma -wmauc=0 -wmr -wnt -wuk \
-            -wvt='c p r u' -wvxl='*_unused' -st >/dev/null
+        perl_files | xargs -n 1 perltidy -npro -w -se -wlt=1 -wma -wmauc=0 -wmr -wnt -wuk \
+            -wvt='c p r u' -wvxl='*_unused' -st >/dev/null || failed=1
     else
         skip "Perl code checking" perltidy
     fi
+    exit $failed
     ;;
 *)
     echo "codestyle: unknown mode $mode" >&2
