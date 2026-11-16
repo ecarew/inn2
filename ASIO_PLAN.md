@@ -399,14 +399,84 @@ metal is unmeasured.
 OpenSSL 3.1 is the minimum for TLS (the architect: 3.0 has problems;
 older versions are not tested), 0ea942093.
 
-### Not converted: one-connection clients
+### Done: one-connection clients on `poll()` (2026-11-15)
 
 `innxmit`, `nntpget`, `innxbatch`, `lib/nntp.cc`, `lib/inndcomm.cc`,
-`radius`, `auth-ext`, `lib/network.cc` and `lib/dbz.cc` use `select()`
+`radius`, `auth-ext`, `lib/network.cc` and `lib/dbz.cc` used `select()`
 only as a timeout on one blocking read, write or connect. An event loop
-adds nothing there. Proposal: replace those `select()` calls with
-`poll()` so they too lose the `FD_SETSIZE` limit, as a small separate
-cleanup, and otherwise leave them.
+adds nothing there (decision 3), so each now waits with `poll()`, one
+commit per site: a44b202d6, 980d08c5d, 0e0f18308, 2be6c5246, 813908e04,
+9364661c0, 69f1a0e1b, 9adc1d322, 41fa4dad7. Rules kept throughout:
+
+- Any event counts as ready. A pipe or socket at end of file may report
+  only POLLHUP, and a failed connect only POLLERR or POLLHUP; the
+  following read, write or `SO_ERROR` check sees what happened.
+- A timeout of 0 in `lib/nntp.cc` now waits for ever, as documented
+  (`select()` was given a zero timeout and returned at once).
+
+The new tests fill descriptors past `FD_SETSIZE` (dup2 of `/dev/null`,
+raising `RLIMIT_NOFILE` if needed) so the socket or pipe under test
+lands above it. They found two real bugs in the old code:
+
+- **radius** hung for ever, with no timeout, when its socket was above
+  `FD_SETSIZE` and the server was silent: on macOS `select()` returned
+  at once and radius went on to a blocking `recvfrom()`.
+- **auth-ext** aborted nnrpd (exit 134) when the program's pipes were
+  above `FD_SETSIZE`: macOS's checked `FD_SET` kills the process, as
+  glibc's fortified one does.
+
+`select()` is now gone from everything the CMake build compiles. Only
+the retired `frontends/ovdb_server.cc` and `storage/ovdb/ovdb.cc` keep
+it, unbuilt.
+
+Found on the way: after a macOS update, Xcode's SDK `usr/include`
+leaked into the zlib and SQLite imported targets' include directories
+and broke the build; CMake now filters it out (492c11636). A chan-t
+scenario that read a stale `Now` was fixed (3ec42a830).
+
+### Done: no `FD_SETSIZE` limits (2026-11-15)
+
+With no `select()` left, the limits kept for it went (the architect's
+go-ahead, 2026-11-15):
+
+- **innd** sized its channel table from the descriptor limit, but
+  `isvalidfd()` was what kept every descriptor inside it, by refusing
+  anything at or above `FD_SETSIZE`. Now innd lowers its own soft limit
+  to the table size when it trims the table (to the larger of 5000 and
+  maxconnections plus outgoing feeds plus 20), and its checks use
+  `CHANfits()`, which tests against the table itself; `CHANcreate`
+  dies rather than write past the table. This and the `lib/fdlimit.cc`
+  change below are one commit, 0be373866: innd lowers its limit to
+  5000 or more, which the old `setfdlimit()` refused.
+- **innfeed**'s `stdio-fdmax` is no longer clamped to `FD_SETSIZE`
+  (287a06ef2).
+- **`LARGE_FD_SETSIZE`**, the build-time hack that redefined glibc's
+  `__FD_SETSIZE`, is removed with its documentation (82b92b192).
+- **`lib/fdlimit.cc`**: `setfdlimit()` accepts any limit, and
+  `isvalidfd()` checks against the current limit; new test
+  `tests/lib/fdlimit-t.c` (0be373866).
+
+ovsqlite-server still calls `setfdlimit(FD_SETSIZE)` at start-up. That
+sets its soft limit to 1024 (raising it from macOS's 256, lowering it
+on a system that allows more); it is no longer a correctness limit, and
+whether to raise it to the hard limit instead is open.
+
+### ovdb retirement: migration plan (the architect, 2026-11-15)
+
+Berkeley DB is not used going forward. Before ovdb is formally
+deprecated, sites need a way off it. Decided: a migration guide built on
+existing tools, not a converter that reads Berkeley DB files.
+
+- **doc/pod/ovdb-migration.pod**: stop innd, set `ovmethod` to
+  `ovsqlite` (or tradindexed or buffindexed), rebuild overview from the
+  spool with `makehistory -O -x -F`, then check and restart.
+- **support/ovdb-to-ovsqlite**: a small Python checker run before and
+  after, comparing group counts, article ranges and a sample of overview
+  lines, so a site can see the rebuild is complete. If Python proves
+  too slow on large sites, it moves to C++ (the architect).
+- Rehearsed on tradindexed to ovsqlite, since ovdb itself cannot be
+  built.
+- Then ovdb is marked deprecated in the docs and `inn.conf`.
 
 ## Risks
 
