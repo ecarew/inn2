@@ -48,6 +48,14 @@ ok "sample filters installed in bin/filter, news:news 644" test -z "$bad_filters
 [ -n "$bad_filters" ] && echo "$bad_filters" | sed 's/^/    /'
 ok "nnrpd_auth.pl has its #! line filled in" sh -c "head -1 $N/bin/filter/nnrpd_auth.pl | grep -q '^#! */.*perl'"
 
+# Man pages and documents (doc/CMakeLists.txt), built from POD.
+M=$N/share/man
+ok "man pages installed (innd.8, inn.conf.5, inews.1, libinn.3)" test -s $M/man8/innd.8 -a -s $M/man5/inn.conf.5 -a -s $M/man1/inews.1 -a -s $M/man3/libinn.3
+ok "embedded-POD pages installed (pgpverify.1, mailpost.8, 3pm)" test -s $M/man1/pgpverify.1 -a -s $M/man8/mailpost.8 -a -s "$M/man3/INN::Config.3pm"
+ok "at least 120 man pages" test "$(find $M -type f | wc -l)" -ge 120
+ok "man links resolve (hisv6.5, localgroups.5, imapfeed.8)" test -s $M/man5/hisv6.5 -a -s $M/man5/localgroups.5 -a -s $M/man8/imapfeed.8
+ok "documents installed (INSTALL, NEWS, HACKING, hook-perl)" test -s $N/doc/INSTALL -a -s $N/doc/NEWS -a -s $N/doc/HACKING -a -s $N/doc/hook-perl
+
 # The container's host name has no domain; an administrator sets one.
 sed -i 's/^#* *domain:.*/domain: example.test/' $N/etc/inn.conf
 grep -q '^domain: example.test' $N/etc/inn.conf || echo 'domain: example.test' >>$N/etc/inn.conf

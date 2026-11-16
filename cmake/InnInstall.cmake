@@ -21,8 +21,8 @@
 #   absent, never replaced (make install replaced them when the copy in
 #   site/ was newer, keeping the old one as .OLD).
 # - Programs are not backed up as .OLD.
-# - Man pages and the documentation (goal item 6), and the Perl and Python
-#   filter programs (item 8), are not installed yet.
+# - Man pages go to ${prefix}/share/man and the documents to docdir
+#   (doc/CMakeLists.txt).
 # - A build with INN_RUNAS_USER or INN_RUNAS_GROUP (a test build, whose
 #   programs accept the tester as the news user) refuses to install.
 

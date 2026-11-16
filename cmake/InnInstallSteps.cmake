@@ -58,10 +58,11 @@ macro(inn_install_if_absent src dest perms)
     endif()
 endmacro()
 
-# _inn_chown(<owner:group> <path>...)
+# _inn_chown(<owner:group> <path>...): -h, so a symbolic link (the man
+# page links) is chowned itself rather than its target.
 function(_inn_chown who)
     if(ARGN)
-        execute_process(COMMAND chown ${who} ${ARGN}
+        execute_process(COMMAND chown -h ${who} ${ARGN}
                         RESULT_VARIABLE rc)
         if(NOT rc EQUAL 0)
             message(FATAL_ERROR "chown ${who} failed")

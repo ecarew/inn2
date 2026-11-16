@@ -108,6 +108,24 @@ if(TARGET auth_krb5)
          INN_KRB5_CONFIG=${INN_KRB5_CONFIG})
 endif()
 
+# Every POD source the man pages and documents are built from
+# (doc/CMakeLists.txt) passes podchecker: no POD errors.  Warnings are
+# allowed, as pod2man accepts them.
+find_program(INN_PODCHECKER podchecker)
+if(INN_PODCHECKER)
+    file(GLOB inn_pods ${CMAKE_SOURCE_DIR}/doc/pod/*.pod)
+    list(APPEND inn_pods ${CMAKE_SOURCE_DIR}/backends/delayer.in
+         ${CMAKE_SOURCE_DIR}/control/perl-nocem.in
+         ${CMAKE_SOURCE_DIR}/control/pgpverify.in
+         ${CMAKE_SOURCE_DIR}/frontends/mailpost.in
+         ${CMAKE_SOURCE_DIR}/perl/INN/Config.pm.in
+         ${CMAKE_SOURCE_DIR}/perl/INN/Utils/Shlock.pm.in
+         ${CMAKE_SOURCE_DIR}/perl/INN/ovsqlite_client.pm)
+    add_test(NAME doc/podchecker
+             COMMAND sh -c "bad=0; for f in \"$@\"; do podchecker \"$f\" >/dev/null 2>&1 || { echo \"POD errors: $f\"; bad=1; }; done; exit $bad"
+                     podchecker ${inn_pods})
+endif()
+
 # A fresh sandbox before the tests run.  overview/ovsqlite-integ.t also
 # reads ../include/config.h from it.
 add_test(NAME sandbox
