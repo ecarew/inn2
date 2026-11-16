@@ -380,7 +380,7 @@ overriding any access groups in F<readers.conf>.  If and only if a
 successful auth group contains the I<perl_access> parameter, F<readers.conf>
 access groups are ignored and the client's rights are instead determined
 dynamically.  This parameter is only valid if INN is compiled with Perl
-support (B<--with-perl> passed to C<configure>).  More information may be
+support (B<INN_PERL_FILTERS>; see F<INSTALL>).  More information may be
 found in the file F<doc/hook-perl>.
 
 =item I<perl_auth>
@@ -393,7 +393,7 @@ group; each line is tried in the order it appears.  I<perl_auth> has more
 power than I<auth> in that it provides the authentication program with
 additional information about the client and the ability to return an error
 string and a username.  This parameter is only valid if INN is compiled with
-Perl support (B<--with-perl> passed to C<configure>).  More information may be
+Perl support (B<INN_PERL_FILTERS>; see F<INSTALL>).  More information may be
 found in F<doc/hook-perl>.
 
 =item I<python_access>
@@ -410,7 +410,7 @@ parameter, F<readers.conf> access groups are ignored and the client's rights
 are instead determined dynamically.
 
 This parameter is only valid if INN is compiled with Python support
-(B<--with-python> passed to C<configure>).  More information may be found in
+(B<INN_PYTHON_FILTERS>; see F<INSTALL>).  More information may be found in
 the file F<doc/hook-python>.
 
 =item I<python_auth>
@@ -426,7 +426,7 @@ additional information about the client and the ability to return an error
 string and a username.
 
 This parameter is only valid if INN is compiled with Python support
-(B<--with-python> passed to C<configure>).  More information may be found in
+(B<INN_PYTHON_FILTERS>; see F<INSTALL>).  More information may be found in
 F<doc/hook-python>.
 
 =item I<python_dynamic>
@@ -440,7 +440,7 @@ Access rights as determined by I<python_dynamic> override the values of access
 group parameters such as I<newsgroups>, I<read> and I<post>.
 
 This parameter is only valid if INN is compiled with Python support
-(B<--with-python> passed to C<configure>).  More information may be found in
+(B<INN_PYTHON_FILTERS>; see F<INSTALL>).  More information may be found in
 the file F<doc/hook-python>.
 
 =item I<require_encryption>
@@ -451,8 +451,8 @@ B<nnrpd>, or after a successful use of STARTTLS, or after a successful
 authentication using an SASL mechanism which negotiates an encrypted
 layer.  This parameter is only valid if INN is compiled with TLS/SSL
 or SASL support (by default if the OpenSSL SSL and crypto libraries or
-the Cyrus SASL library are found at configure time, otherwise see the
-B<--with-openssl> and B<--with-sasl> flags passed to C<configure>).
+the Cyrus SASL library are found when INN is configured; see the
+B<INN_TLS> option in F<INSTALL>).
 
 =item I<res>
 
