@@ -132,7 +132,8 @@ makes release tarballs (`dist`) and certificates (`cert`), and has
 configure's options: directories, the news account, Perl/Python, TLS,
 systemd with inn.service, blocklist, tagged hash.  install.pod and
 hacking.pod describe the CMake build.  Not carried over: Berkeley DB/ovdb
-(migration guide pending), large files, `make reformat`/`make code-check`.
+(migration guide pending), large files.  `reformat` and `code-check` are
+CMake targets (support/codestyle).
 Remaining items:
 10. Portability: a BSD.  Linux runs everything (verify-cxx.sh,
     live-innd.sh, root checks) via `support/docker-linux-checks.sh` and
