@@ -17,10 +17,7 @@
 #endif
 #include <time.h>
 
-/* Needed on AIX 4.1 to get fd_set and friends. */
-#if HAVE_SYS_SELECT_H
-#    include <sys/select.h>
-#endif
+#include <poll.h>
 
 #include "conffile.h"
 #include "inn/innconf.h"
@@ -247,10 +244,8 @@ rad_auth(rad_config_t *radconfig, const char *uname, const char *pass)
     int sock;
     struct hostent *hent;
     int passlen;
-    time_t now, end;
-    struct timeval tmout;
     int got;
-    fd_set rdfds;
+    struct pollfd pfd;
     uint32_t nvalue;
     socklen_t slen;
     int authtries = 3; /* number of times to try reaching the radius server */
@@ -446,25 +441,19 @@ rad_auth(rad_config_t *radconfig, const char *uname, const char *pass)
                 return (-1);
             }
 
-            /* wait 5 seconds maximum for a radius reply. */
-            now = time(nullptr);
-            end = now + 5;
-            tmout.tv_sec = 6;
-            tmout.tv_usec = 0;
-            FD_ZERO(&rdfds);
+            /* wait 6 seconds maximum for a radius reply. */
             /* store the old vector to verify next checksum */
             memcpy(secbuf + sizeof(req.vector), req.vector,
                    sizeof(req.vector));
-            FD_SET(sock, &rdfds);
-            got = select(sock + 1, &rdfds, nullptr, nullptr, &tmout);
+            pfd.fd = sock;
+            pfd.events = POLLIN;
+            pfd.revents = 0;
+            got = poll(&pfd, 1, 6 * 1000);
             if (got < 0) {
-                syswarn("cannot not select");
+                syswarn("cannot poll");
                 break;
             } else if (got == 0) {
                 /* timer ran out */
-                now = time(nullptr);
-                tmout.tv_sec = end - now + 1;
-                tmout.tv_usec = 0;
                 warn("timeout talking to remote radius server %s:%d",
                      inet_ntoa(sreq->sinr.sin_addr),
                      ntohs(sreq->sinr.sin_port));

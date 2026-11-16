@@ -7,14 +7,20 @@
  * with the correct response authenticator
  * (MD5(code + id + length + request authenticator + attributes + secret)).
  * The uninstalled radius resolver is run against it with -f and a generated
- * configuration file.
+ * configuration file.  Two cases wait: a server that never answers (radius
+ * times out on each of its three tries), and a normal case with radius's
+ * socket above FD_SETSIZE, which a select()-based wait cannot take.
  */
 
 #define LIBTEST_NEW_FORMAT 1
 
 #include "portable/system.h"
 
+#include <fcntl.h>
+#include <signal.h>
+#include <sys/resource.h>
 #include <sys/wait.h>
+#include <time.h>
 
 #include "inn/md5.h"
 #include "inn/messages.h"
@@ -27,7 +33,12 @@ static const char secret[] = "testing123";
 enum reply_mode {
     REPLY_CHECK,    /* accept if name and password match, else reject */
     REPLY_BADSIG,   /* first a reply with a bad authenticator, then CHECK */
+    REPLY_SILENT,   /* read radius's three tries and never answer */
 };
+
+/* When set, run_case fills descriptors up past FD_SETSIZE before running
+   radius, so the socket radius makes lands above it. */
+static bool fill_fds = false;
 
 /* Build and send a reply to the request in req (length reqlen). */
 static void
@@ -60,6 +71,7 @@ serve(socket_type fd, const char *want_name, const char *want_pass,
       enum reply_mode mode)
 {
     unsigned char req[4096], buf[64 + 16];
+    int tries;
     unsigned char digest[MD5_DIGESTSIZE];
     char name[256] = "", pass[256] = "";
     struct sockaddr_in from;
@@ -68,6 +80,17 @@ serve(socket_type fd, const char *want_name, const char *want_pass,
     size_t i, j, alen, len, keylen = strlen(secret);
     bool match;
 
+    if (mode == REPLY_SILENT) {
+        /* radius sends one request per try; count them, never answer. */
+        alarm(60);
+        for (tries = 0; tries < 3; tries++) {
+            n = recvfrom(fd, req, sizeof(req), 0, (struct sockaddr *) &from,
+                         &fromlen);
+            if (n < 20 || req[0] != 1)
+                return 2;
+        }
+        return 0;
+    }
     n = recvfrom(fd, req, sizeof(req), 0, (struct sockaddr *) &from, &fromlen);
     if (n < 20 || req[0] != 1)
         return 2;
@@ -119,7 +142,7 @@ run_case(const char *user, const char *password, const char *want_name,
     FILE *f;
     char cmd[512];
     size_t got;
-    int status, sstatus;
+    int status, sstatus, fd_fill = -1, high = -1;
 
     fd = network_bind_ipv4(SOCK_DGRAM, "127.0.0.1", 0);
     if (fd == INVALID_SOCKET)
@@ -146,9 +169,28 @@ run_case(const char *user, const char *password, const char *want_name,
     fprintf(f, "ClientAuthname: %s\r\nClientPassword: %s\r\n.\r\n", user,
             password);
     fclose(f);
+    /* Under a 60 s alarm: a radius that never times out (as the select()
+       version did with its socket above FD_SETSIZE, a silent server and
+       macOS) fails the case instead of hanging the test. */
     snprintf(cmd, sizeof(cmd),
-             "%s -f radius.conf <radius.in >radius.out 2>&1", radius);
+             "perl -e 'alarm shift; exec @ARGV' 60 %s -f radius.conf "
+             "<radius.in >radius.out 2>&1",
+             radius);
+    if (fill_fds) {
+        /* Inherited by radius: its socket gets the lowest free descriptor,
+           above these. */
+        high = FD_SETSIZE + 10;
+        fd_fill = open("/dev/null", O_RDONLY);
+        if (fd_fill < 0)
+            sysbail("cannot open /dev/null");
+        for (int i = fd_fill + 1; i <= high; i++)
+            if (fcntl(i, F_GETFD) < 0 && dup2(fd_fill, i) < 0)
+                sysbail("cannot fill descriptor %d", i);
+    }
     status = system(cmd);
+    if (fill_fds)
+        for (int i = fd_fill; i <= high; i++)
+            close(i);
 
     out[0] = '\0';
     f = fopen("radius.out", "r");
@@ -170,6 +212,7 @@ main(void)
 {
     char out[1024];
     bool server_ok;
+    time_t started;
     int status;
 
     if (access("../data/etc/passwd", F_OK) == 0) {
@@ -187,7 +230,7 @@ main(void)
     if (setenv("INNCONF", "etc/inn.conf", 1) < 0)
         sysbail("cannot set INNCONF");
 
-    plan(16);
+    plan(23);
 
     status = run_case("alice", "secret1", "alice", "secret1", "", REPLY_CHECK,
                       out, sizeof(out), &server_ok);
@@ -250,6 +293,49 @@ main(void)
         unlink("radius.out");
         ok(status != 0, "empty username: fails");
     }
+
+    status = run_case("frank", "pw", "frank", "pw", "", REPLY_SILENT, out,
+                      sizeof(out), &server_ok);
+    ok(status != 0, "silent server: fails");
+    ok(strstr(out, "timeout talking to remote radius server") != NULL,
+       "silent server: reports the timeout");
+    ok(server_ok, "silent server: radius tried three times");
+
+    /* The normal case again, with radius's socket above FD_SETSIZE. */
+    {
+        struct rlimit rl;
+        rlim_t need = FD_SETSIZE + 20;
+
+        if (getrlimit(RLIMIT_NOFILE, &rl) < 0)
+            sysbail("cannot get RLIMIT_NOFILE");
+        if (rl.rlim_max != RLIM_INFINITY && rl.rlim_max < need) {
+            skip_block(4, "descriptor limit %lu too low",
+                       (unsigned long) rl.rlim_max);
+            return 0;
+        }
+        if (rl.rlim_cur != RLIM_INFINITY && rl.rlim_cur < need) {
+            rl.rlim_cur = need;
+            if (setrlimit(RLIMIT_NOFILE, &rl) < 0)
+                sysbail("cannot raise RLIMIT_NOFILE");
+        }
+    }
+    fill_fds = true;
+    status = run_case("alice", "secret1", "alice", "secret1", "",
+                      REPLY_CHECK, out, sizeof(out), &server_ok);
+    fill_fds = false;
+    is_int(0, status, "socket above FD_SETSIZE: exit status 0");
+    is_string("User:alice\r\n", out,
+              "socket above FD_SETSIZE: reports the user");
+    fill_fds = true;
+    started = time(NULL);
+    status = run_case("frank", "pw", "frank", "pw", "", REPLY_SILENT, out,
+                      sizeof(out), &server_ok);
+    fill_fds = false;
+    /* Three tries of 6 s each; the 60 s alarm means radius hung. */
+    ok(status != 0 && time(NULL) - started < 40,
+       "socket above FD_SETSIZE, silent server: fails in time");
+    ok(strstr(out, "timeout talking to remote radius server") != NULL,
+       "socket above FD_SETSIZE, silent server: reports the timeout");
 
     return 0;
 }
