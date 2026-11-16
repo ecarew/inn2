@@ -246,8 +246,9 @@ documentation)
 
 INN's documentation is in `doc/pod` (the man pages and guides such as
 `install.pod`, from which the man pages are generated), `doc/man`, and the
-other files in `doc`.  Where it describes building with `configure` and
-`make`, INN++ builds with CMake instead; see [BUILDING.md](BUILDING.md).
+other files in `doc`.  Building and installing are described in
+`install.pod` (INSTALL in a release) and, briefly, in
+[BUILDING.md](BUILDING.md).
 
 **INN++'s own documentation** is, at this point, mostly notes on the
 conversion of the original code base to C++ and CMake:
@@ -374,8 +375,8 @@ answer questions about it.
   cleanfeed-ng is an extremely powerful spam filter, probably the most widely
   used spam filter on Usenet currently.  It catches excessive multiposting and a
   host of other things, and is highly configurable.  Note that it requires the
-  MD5 Perl module and that INN be built with Perl support (the **--with-perl**
-  option to configure).
+  MD5 Perl module and that INN be built with Perl support (the
+  **INN_PERL_FILTERS** CMake option).
 
   Since 2026, cleanfeed-ng has continued the historical work of Cleanfeed,
   originally developed by Jeremy Nixon, who maintained it until 1998.
