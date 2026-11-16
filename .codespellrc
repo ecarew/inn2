@@ -5,14 +5,8 @@ builtin = clear,informal,rare
 
 skip =
     CONTRIBUTORS,
-    configure,
-    */doc/man/*,
     */innd/keywords.c,
-    libtool,
-    */m4/libtool.m4,
     NEWS,
-    */support/config.guess,
-    */support/ltmain.sh,
     */control.ctl,
 
 ignore-words-list =

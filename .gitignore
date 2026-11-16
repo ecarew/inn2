@@ -4,29 +4,19 @@
 # build-doxygen, build-graphviz, ...).
 /build*/
 
-/config.cache
-/config.log
-/config.status
-/config.status.lineno
-/configure
-/configure.lineno
 /HACKING
 /inn-*
 /INSTALL
-/libtool
 /LIST.*
-/Makefile.global
 /NEWS
 /README
 /README.*
 !/README.md
-/snapshot.log
 /authprogs/auth_krb5
 /authprogs/ckpasswd
 /authprogs/domain
 /authprogs/ident
 /authprogs/radius
-/autom4te.cache/
 /backends/actmerge
 /backends/actsync
 /backends/actsyncd
@@ -135,7 +125,6 @@
 /history/hissqlite/hissqlite-read.h
 /history/hissqlite/hissqlite-util
 /include/config.h
-/include/config.h.in
 /include/inn/paths.h
 /include/inn/portable-getaddrinfo.h
 /include/inn/portable-getnameinfo.h
@@ -178,8 +167,6 @@
 /scripts/tally.control
 /scripts/writelog
 /site/*
-!/site/Makefile
-!/site/getsafe.sh
 /storage/Make.methods
 /storage/buildconfig
 /storage/methods.cc
@@ -196,8 +183,6 @@
 /storage/ovsqlite/sql-read.cc
 /storage/ovsqlite/sql-read.h
 /storage/tradindexed/tdx-util
-/support/fixconfig
-/support/fixscript
 /tests/runtests
 /tests/authprogs/ident.t
 /tests/clients/server-list
@@ -272,6 +257,4 @@
 **/.libs/
 **/.pure/
 *.a
-*.la
-*.lo
 *.o

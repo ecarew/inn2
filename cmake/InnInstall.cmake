@@ -25,6 +25,9 @@
 #   (doc/CMakeLists.txt).
 # - A build with INN_RUNAS_USER or INN_RUNAS_GROUP (a test build, whose
 #   programs accept the tester as the news user) refuses to install.
+# configure.ac, Makefile.global.in, m4/ and support/fix* named in these
+# comments were the Autoconf build, removed in 2026-11 (AUTOTOOLS_PLAN.md);
+# git history has them.
 
 set(INN_INSTALL_STEPS ${CMAKE_CURRENT_LIST_DIR}/InnInstallSteps.cmake)
 

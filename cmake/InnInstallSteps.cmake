@@ -22,7 +22,7 @@ macro(inn_install_begin)
         set(INN_I_ROOT TRUE)
     endif()
     # Directories that already exist keep their mode and owner, as with
-    # install-sh -d.
+    # install-sh -d did.
     set(INN_I_NEW_DIRS)
     foreach(dir ${INN_I_DIRS} ${INN_I_RUNDIR})
         set(d "$ENV{DESTDIR}${dir}")

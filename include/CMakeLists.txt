@@ -19,7 +19,8 @@ endif()
 file(COPY_FILE ${out}/inn/system.h.new ${out}/inn/system.h ONLY_IF_DIFFERENT)
 file(REMOVE ${out}/inn/system.h.new)
 
-# inn/version.h (support/mkversion).  VERSION_EXTRA is Makefile.global's.
+# inn/version.h (support/mkversion), from project(INN VERSION ...) and
+# INN_VERSION_EXTRA.
 set(INN_VERSION_EXTRA prerelease CACHE STRING
     "Version suffix (\"prerelease\" adds the date of the last commit)")
 execute_process(

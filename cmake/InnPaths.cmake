@@ -4,6 +4,9 @@
 # substitute, with configure's defaults (m4/paths.m4): everything under
 # INN_PREFIX (include/CMakeLists.txt).  The names match the @VAR@ names in
 # the .in files, so configure_file(... @ONLY) can fill them in.
+# configure.ac, Makefile.global.in, m4/ and support/fix* named in these
+# comments were the Autoconf build, removed in 2026-11 (AUTOTOOLS_PLAN.md);
+# git history has them.
 
 set(prefix ${INN_PREFIX})
 set(exec_prefix ${prefix})

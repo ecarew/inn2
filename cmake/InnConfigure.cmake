@@ -4,6 +4,9 @@
 # Run-time tests that configure.ac takes from m4/*.m4 use the same programs,
 # copied into cmake/checks/.  Platform differences are found by testing,
 # never by platform name (CLAUDE.md, "Platforms").
+# configure.ac, Makefile.global.in, m4/ and support/fix* named in these
+# comments were the Autoconf build, removed in 2026-11 (AUTOTOOLS_PLAN.md);
+# git history has them.
 
 include(CheckCSourceCompiles)
 include(CheckCSourceRuns)
