@@ -1,0 +1,33 @@
+#!/bin/sh
+#
+#  Make a self-signed TLS certificate and private key for nnrpd, as make
+#  cert did.  Run by the CMake "cert" target, as root on the news server:
+#
+#      cmake --build build --target cert
+#
+#  Usage: mkcert <openssl> <etc-dir> <news-user> <news-group>
+#
+#  Writes <etc-dir>/cert.pem (mode 640) and <etc-dir>/key.pem (mode 600),
+#  under $DESTDIR if it is set.  openssl asks for the certificate's
+#  details.  As root, both files are given to the news user and group, so
+#  nnrpd can read them after dropping root; as anyone else they keep the
+#  caller as owner.  Existing files are replaced.
+set -eu
+
+[ $# -eq 4 ] || { echo "usage: mkcert openssl etc-dir news-user news-group" >&2; exit 2; }
+openssl=$1
+etc=${DESTDIR:-}$2
+user=$3
+group=$4
+
+[ -d "$etc" ] || { echo "mkcert: $etc does not exist; install INN first" >&2; exit 1; }
+
+umask 077
+"$openssl" req -new -x509 -nodes -days 366 \
+    -out "$etc/cert.pem" -keyout "$etc/key.pem"
+if [ "$(id -u)" = 0 ]; then
+    chown "$user:$group" "$etc/cert.pem" "$etc/key.pem"
+fi
+chmod 640 "$etc/cert.pem"
+chmod 600 "$etc/key.pem"
+echo "mkcert: wrote $etc/cert.pem and $etc/key.pem"

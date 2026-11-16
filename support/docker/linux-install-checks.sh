@@ -100,6 +100,8 @@ ok "FHS layout: inn.service installed root:root 644" test "$(stat -c '%U:%G %a' 
 # No systemd in the image: the unit is only a file here, Type=forking
 # without libsystemd; the Lima VM tests it under systemd.
 ok "FHS layout: inn.service is Type=forking, runs as news" sh -c "grep -qx 'Type=forking' $U && grep -qx 'User=news' $U && grep -qx 'RuntimeDirectory=news' $U && grep -qx 'ProtectHome=true' $U"
+ok "cert target: key and certificate made" sh -c "printf '\\n\\n\\n\\n\\nnews.example.test\\n\\n' | cmake --build build-fhs --target cert >/dev/null 2>&1"
+ok "cert target: cert.pem news:news 640, key.pem news:news 600" test "$(stat -c '%U:%G %a' /etc/news/cert.pem /etc/news/key.pem | tr '\n' ' ')" = "news:news 640 news:news 600 "
 
 # INN_NEWS_USER and INN_NEWS_GROUP: another account, in another prefix.
 getent group usenet >/dev/null || groupadd -r usenet

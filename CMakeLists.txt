@@ -256,3 +256,14 @@ install(FILES ${_inn_headers}
 
 # The last install step (cmake/InnInstallSteps.cmake).
 install(CODE "inn_install_end()")
+
+# make cert: a self-signed certificate and key for nnrpd's TLS in the
+# installed etc directory (support/mkcert), run as root after the install.
+# openssl asks for the certificate's details, hence USES_TERMINAL.
+if(HAVE_OPENSSL)
+    find_program(INN_OPENSSL_BIN openssl REQUIRED)
+    add_custom_target(cert
+        COMMAND sh ${CMAKE_SOURCE_DIR}/support/mkcert ${INN_OPENSSL_BIN}
+                ${sysconfdir} ${INN_NEWS_USER} ${INN_NEWS_GROUP}
+        USES_TERMINAL VERBATIM)
+endif()
