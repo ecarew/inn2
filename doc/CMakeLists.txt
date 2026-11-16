@@ -21,7 +21,6 @@ endif()
 
 set(_inn_man_opts ${INN_POD_GUESSWORK} -c "InterNetNews Documentation"
     -r "INN ${PROJECT_VERSION}")
-set(mandir ${datarootdir}/man)
 set(_inn_man_out ${CMAKE_CURRENT_BINARY_DIR}/man)
 set(_inn_text_out ${CMAKE_CURRENT_BINARY_DIR}/text)
 file(MAKE_DIRECTORY ${_inn_man_out} ${_inn_text_out})

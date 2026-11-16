@@ -81,4 +81,30 @@ cmake --build build-sg -j"$(nproc)" >/dev/null 2>&1
 cmake --install build-sg >/tmp/inst3.log 2>&1
 ok "INN_SETGID_INEWS: inews is news:news 2555" test "$(stat -c '%U:%G %a' /opt/news-sg/bin/inews)" = "news:news 2555"
 
+# The directory options, in the FHS layout a package uses.
+cmake -S . -B build-fhs -G Ninja -DINN_TESTS=OFF -DINN_PREFIX=/usr/lib/news \
+    -DINN_PATH_CONFIG=/etc/news -DINN_DB_DIR=/var/lib/news \
+    -DINN_SPOOL_DIR=/var/spool/news -DINN_LOG_DIR=/var/log/news \
+    -DINN_RUN_DIR=/run/news -DINN_MAN_DIR=/usr/share/man \
+    -DINN_DOC_DIR=/usr/share/doc/inn >/dev/null 2>&1
+cmake --build build-fhs -j"$(nproc)" >/dev/null 2>&1
+ok "FHS layout: cmake --install succeeds" cmake --install build-fhs
+ok "FHS layout: inn.conf points at the directories" sh -c "grep -q '^pathdb: *[/]var/lib/news\$' /etc/news/inn.conf && grep -q '^pathspool: *[/]var/spool/news\$' /etc/news/inn.conf && grep -q '^pathlog: *[/]var/log/news\$' /etc/news/inn.conf && grep -q '^pathrun: *[/]run/news\$' /etc/news/inn.conf"
+ok "FHS layout: directories and data owned by news" test -z "$(find /var/lib/news /var/spool/news /var/log/news /run/news /etc/news ! -user news)"
+ok "FHS layout: history and active created" test -s /var/lib/news/active -a -e /var/lib/news/history
+ok "FHS layout: man pages in /usr/share/man" test -s /usr/share/man/man8/innd.8
+
+# INN_NEWS_USER and INN_NEWS_GROUP: another account, in another prefix.
+getent group usenet >/dev/null || groupadd -r usenet
+getent passwd usenet >/dev/null || useradd -r -g usenet -d /opt/news-usenet -s /bin/sh usenet
+U=/opt/news-usenet
+cmake -S . -B build-usenet -G Ninja -DINN_TESTS=OFF -DINN_PREFIX=$U \
+    -DINN_NEWS_USER=usenet -DINN_NEWS_GROUP=usenet >/dev/null 2>&1
+cmake --build build-usenet -j"$(nproc)" >/dev/null 2>&1
+ok "INN_NEWS_USER=usenet: cmake --install succeeds" cmake --install build-usenet
+ok "INN_NEWS_USER=usenet: everything but innbind owned by usenet" test -z "$(find $U ! -path $U/bin/innbind \( ! -user usenet -o ! -group usenet \))"
+ok "INN_NEWS_USER=usenet: innbind is root:usenet 4550" test "$(stat -c '%U:%G %a' $U/bin/innbind)" = "root:usenet 4550"
+ok "INN_NEWS_USER=usenet: innconfval runasuser is usenet" test "$($U/bin/innconfval runasuser)" = usenet
+ok "INN_NEWS_USER=root is refused" sh -c "! cmake -S . -B build-root-user -DINN_TESTS=OFF -DINN_NEWS_USER=root >/dev/null 2>&1"
+
 [ "$fail" = 0 ] && echo "RESULT: PASS" || { echo "RESULT: FAIL"; tail -30 /tmp/rcnews.log; exit 1; }

@@ -33,18 +33,27 @@ set(INN_NEWSMASTER usenet CACHE STRING
 set(INN_SYSLOG_FACILITY LOG_NEWS CACHE STRING "syslog facility")
 set(INND_PORT "" CACHE STRING "Extra low-numbered port innbind allows")
 # RUNASUSER/RUNASGROUP: the news account (configure's --with-news-user and
-# --with-news-group).  INN_RUNAS_USER/INN_RUNAS_GROUP (root CMakeLists.txt)
-# override them for test builds.
+# --with-news-group), news:news by default; a production build may name
+# another system account, such as usenet.  INN_RUNAS_USER/INN_RUNAS_GROUP
+# (root CMakeLists.txt) are different: they let a test build accept the
+# tester's own account, and such a build refuses to install.
+set(INN_NEWS_USER news CACHE STRING "The account INN runs as")
+set(INN_NEWS_GROUP news CACHE STRING "The group INN runs as")
+if(INN_NEWS_USER STREQUAL "root" OR INN_NEWS_GROUP STREQUAL "root"
+   OR INN_NEWS_GROUP STREQUAL "wheel")
+    message(FATAL_ERROR "INN must not run as root or a root group "
+                        "(INN_NEWS_USER, INN_NEWS_GROUP)")
+endif()
+set(_inn_runas_user ${INN_NEWS_USER})
+set(_inn_runas_group ${INN_NEWS_GROUP})
 if(INN_RUNAS_USER)
-    set(INN_NEWS_USER ${INN_RUNAS_USER})
-else()
-    set(INN_NEWS_USER news)
+    set(_inn_runas_user ${INN_RUNAS_USER})
 endif()
 if(INN_RUNAS_GROUP)
-    set(INN_NEWS_GROUP ${INN_RUNAS_GROUP})
-else()
-    set(INN_NEWS_GROUP news)
+    set(_inn_runas_group ${INN_RUNAS_GROUP})
 endif()
+set(INN_NEWS_USER ${_inn_runas_user})
+set(INN_NEWS_GROUP ${_inn_runas_group})
 
 # --- Optional features (CMake-only goal item 8 adds options for the rest) ----
 

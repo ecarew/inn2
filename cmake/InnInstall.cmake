@@ -32,9 +32,10 @@
 set(INN_INSTALL_STEPS ${CMAKE_CURRENT_LIST_DIR}/InnInstallSteps.cmake)
 
 # Directories not in cmake/InnPaths.cmake (Makefile.global.in, m4/paths.m4).
-set(docdir ${prefix}/doc)
+_inn_dir(docdir INN_DOC_DIR ${prefix}/doc "Documents")
 set(includedir ${prefix}/include)
 set(datarootdir ${prefix}/share)
+_inn_dir(mandir INN_MAN_DIR ${datarootdir}/man "Man pages")
 set(PATHAUTH ${bindir}/auth)
 set(PATHAUTHPASSWD ${PATHAUTH}/passwd)
 set(PATHAUTHRESOLV ${PATHAUTH}/resolv)

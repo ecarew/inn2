@@ -16,15 +16,30 @@ set(libexecdir ${prefix}/libexec)
 set(sbindir ${prefix}/sbin)
 set(sysconfdir ${INN_PATH_CONFIG})
 set(tmpdir ${INN_PATH_TMP})
-set(CONTROLDIR ${bindir}/control)
-set(DBDIR ${prefix}/db)
-set(FILTERDIR ${bindir}/filter)
-set(HISTORYDIR ${prefix}/db)
-set(HTTPDIR ${prefix}/http)
-set(LIBPERLDIR ${libdir}/perl)
-set(LOGDIR ${prefix}/log)
-set(RUNDIR ${prefix}/run)
-set(SPOOLDIR ${prefix}/spool)
+
+# Directories that may live outside the prefix (configure's --with-*-dir),
+# for instance the spool on its own disk, or the FHS layout a package
+# uses (/var/spool/news, /var/log/news, /var/lib/news).  Each is empty by
+# default, meaning its place under INN_PREFIX, so changing INN_PREFIX
+# later still moves it.  They become inn.conf's path* defaults and the
+# directories cmake --install creates.
+macro(_inn_dir var option default doc)
+    set(${option} "" CACHE PATH "${doc} (default: ${default})")
+    if(${option})
+        set(${var} ${${option}})
+    else()
+        set(${var} ${default})
+    endif()
+endmacro()
+_inn_dir(DBDIR INN_DB_DIR ${prefix}/db "Databases: active, newsgroups, history")
+_inn_dir(HISTORYDIR INN_HISTORY_DIR ${DBDIR} "History database")
+_inn_dir(SPOOLDIR INN_SPOOL_DIR ${prefix}/spool "Article spool, overview, batches")
+_inn_dir(LOGDIR INN_LOG_DIR ${prefix}/log "Logs")
+_inn_dir(RUNDIR INN_RUN_DIR ${prefix}/run "PID files and control sockets")
+_inn_dir(HTTPDIR INN_HTTP_DIR ${prefix}/http "innreport's HTML reports")
+_inn_dir(CONTROLDIR INN_CONTROL_DIR ${bindir}/control "Control message programs")
+_inn_dir(FILTERDIR INN_FILTER_DIR ${bindir}/filter "Perl and Python filters")
+_inn_dir(LIBPERLDIR INN_LIBPERL_DIR ${libdir}/perl "INN's Perl modules")
 
 # Programs.  configure requires Perl (INN_PROG_PERL in configure.ac); the
 # root CMakeLists.txt finds it.  Scripts get its full path on their first
