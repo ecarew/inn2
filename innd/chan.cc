@@ -105,6 +105,14 @@ ioc()
     return *io;
 }
 
+/* Whether fd has a slot in the channel table.  innd lowers its descriptor
+   limit to the table size, so this only fails if that went wrong. */
+bool
+CHANfits(int fd)
+{
+    return fd >= 0 && fd < channels.table_size;
+}
+
 /* The state for a descriptor, or nullptr if out of range. */
 static chan_io *
 chan_state(int fd)
@@ -394,17 +402,13 @@ CHANcreate(int fd, enum channel_type type, enum channel_state state,
     struct buffer in = {0, 0, 0, nullptr};
     struct buffer out = {0, 0, 0, nullptr};
 
-    /* Last time to ensure the file descriptor is not too high.  Callers have
-       normally already handled that case before and not called CHANcreate().
-       Note that the channel table, created in CHANsetup(), is known to have
-       enough room. */
-    if (!isvalidfd(fd)) {
-        /* Go on without returning NULL, in case a caller is not prepared to
-           receive such a response. */
-        syswarn("%s file descriptor %d too high in CHANcreate (see "
-                "rlimitnofile in inn.conf)",
-                LogName, fd);
-    }
+    /* Last time to ensure the file descriptor fits the channel table.
+       Callers have normally already handled that case and not called
+       CHANcreate().  Going on would write past the end of the table, and not
+       every caller is prepared for a NULL return, so stop. */
+    if (!CHANfits(fd))
+        die("%s file descriptor %d outside the channel table in CHANcreate",
+            LogName, fd);
 
     /* Currently, we do no dynamic allocation, but instead assume that the
        channel table is sized large enough to hold all possible file

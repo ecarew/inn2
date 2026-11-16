@@ -815,6 +815,7 @@ extern int CHANreadtext(CHANNEL *cp);
 extern void CHANclose(CHANNEL *cp, const char *name);
 extern void CHANreadloop(void) __attribute__((__noreturn__));
 extern void CHANsetup(int count);
+extern bool CHANfits(int fd);
 extern void CHANshutdown(void);
 extern void CHANtracing(CHANNEL *cp, bool flag);
 extern void CHANcount_active(CHANNEL *cp);

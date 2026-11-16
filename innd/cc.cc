@@ -2161,7 +2161,7 @@ CCsetup(void)
     }
 #endif /* defined(HAVE_UNIX_DOMAIN_SOCKETS) */
 
-    if (!isvalidfd(i)) {
+    if (!CHANfits(i)) {
         syslog(L_FATAL,
                "%s cant CHANcreate %s: file descriptor %d too high (see "
                "rlimitnofile in inn.conf)",

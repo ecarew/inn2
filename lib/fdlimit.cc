@@ -9,8 +9,8 @@
 **  minimum of 20).
 **
 **  For setting the limit, only setrlimit is supported; if it isn't
-**  available, return -1 always.  We also refuse to set the limit to
-**  something higher than select can handle, checking against FD_SETSIZE.
+**  available, return -1 always.  No INN program waits with select() any
+**  more, so the limit is not capped at FD_SETSIZE.
 **
 **  Note that on some versions of Linux (2.2.x reported), sysconf may return
 **  the wrong value for the maximum file descriptors.  getrlimit is correct,
@@ -24,9 +24,6 @@
 #include "portable/system.h"
 
 #include <errno.h>
-#if HAVE_SYS_SELECT_H
-#    include <sys/select.h>
-#endif
 
 /* FreeBSD 3.4 RELEASE needs <sys/time.h> before <sys/resource.h>. */
 #if HAVE_GETRLIMIT || HAVE_SETRLIMIT
@@ -45,13 +42,6 @@ int
 setfdlimit(unsigned int limit)
 {
     struct rlimit rl;
-
-#    ifdef FD_SETSIZE
-    if (limit > FD_SETSIZE) {
-        errno = EINVAL;
-        return -1;
-    }
-#    endif
 
     rl.rlim_cur = 0;
     rl.rlim_max = 0;
@@ -138,20 +128,13 @@ getfdlimit(void)
 #endif
 
 /*
- * Return true if fd is not higher than the system supports,
- * and false otherwise.
+ * Return true if fd is below the current limit on open file descriptors,
+ * and false otherwise.  (It used to check against FD_SETSIZE, for select().)
  */
 bool
 isvalidfd(unsigned int fd)
 {
-#if defined(FD_SETSIZE)
-    if (fd >= FD_SETSIZE) {
-        return false;
-    }
-#else
-    if (fd >= (sizeof(fd_set) * CHAR_BIT)) {
-        return false;
-    }
-#endif
-    return true;
+    int limit = getfdlimit();
+
+    return limit < 0 || fd < static_cast<unsigned int>(limit);
 }

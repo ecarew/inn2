@@ -335,7 +335,7 @@ test_obj() {
 tests=(
     lib/artnumber lib/asio:::lib/asio lib/asprintf:::lib/asprintf lib/bloom lib/bloom-hiswalk
     lib/buffer lib/canlock:::@lib/CMakeFiles/inn_canlock.dir/canlock.cc.o lib/concat lib/conffile lib/confparse lib/date
-    lib/daemon:::lib/daemon lib/dispatch lib/fdflag
+    lib/daemon:::lib/daemon lib/dispatch lib/fdflag lib/fdlimit
     lib/getaddrinfo:::lib/getaddrinfo lib/getnameinfo:::lib/getnameinfo
     lib/hash lib/headers lib/hex lib/hissqlite
     lib/hissqlite-convert lib/inet_aton:::lib/inet_aton

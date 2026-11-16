@@ -38,7 +38,7 @@ LCreader(CHANNEL *cp)
         return;
     }
 
-    if (!isvalidfd(fd)) {
+    if (!CHANfits(fd)) {
         syslog(L_ERROR,
                "%s cant accept CCreader: file descriptor %d too high (see "
                "rlimitnofile in inn.conf)",
@@ -104,7 +104,7 @@ LCsetup(void)
         exit(1);
     }
 
-    if (!isvalidfd(i)) {
+    if (!CHANfits(i)) {
         syslog(L_FATAL,
                "%s cant listen %s: file descriptor %d too high (see "
                "rlimitnofile in inn.conf)",

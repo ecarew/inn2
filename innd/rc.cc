@@ -482,7 +482,7 @@ RCreader(CHANNEL *cp)
         return;
     }
 
-    if (!isvalidfd(fd)) {
+    if (!CHANfits(fd)) {
         syslog(L_ERROR,
                "%s cant accept RCreader: file descriptor %d too high (see "
                "rlimitnofile in inn.conf)",
@@ -1795,7 +1795,7 @@ RCsetup(void)
             if (sd_is_socket(i, AF_UNSPEC, SOCK_STREAM, 1) <= 0)
                 die("SERVER can't use socket-activated non-AF_INET socket %u",
                     i);
-            if (!isvalidfd(i))
+            if (!CHANfits(i))
                 die("SERVER can't use socket-activated non-AF_INET socket: "
                     "file descriptor %u too high (see rlimitnofile in "
                     "inn.conf)",
@@ -1860,7 +1860,7 @@ RCsetup(void)
     for (i = 0; i < count; i++) {
         if (fds[i] < 0)
             continue;
-        if (!isvalidfd(fds[i])) {
+        if (!CHANfits(fds[i])) {
             syswarn("SERVER cant listen to socket: file descriptor %d too "
                     "high (see rlimitnofile in inn.conf)",
                     fds[i]);

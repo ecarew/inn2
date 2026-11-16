@@ -387,10 +387,10 @@ POSIX-guaranteed minimum of 20.
 B<setfdlimit> sets the limit on open file descriptors to the given parameter
 I<limit>.  It uses the setrlimit(2) function when available.  It returns
 C<0> on success, and C<-1> on failure (when setrlimit(2) is not available or
-I<limit> is higher than select(2) can handle, checking against C<FD_SETSIZE>).
+fails).
 
-B<isvalidfd> returns true if I<fd> is not higher than the system supports, and
-false otherwise.
+B<isvalidfd> returns true if I<fd> is below the current limit on open file
+descriptors (as returned by B<getfdlimit>), and false otherwise.
 
 =head2 FILE DESCRIPTOR FLAGS
 

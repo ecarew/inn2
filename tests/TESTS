@@ -26,6 +26,7 @@ lib/date
 lib/daemon
 lib/dispatch
 lib/fdflag
+lib/fdlimit
 lib/getaddrinfo
 lib/getnameinfo
 lib/hash

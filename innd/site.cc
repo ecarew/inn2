@@ -72,7 +72,7 @@ SITEspool(SITE *sp, CHANNEL *cp)
     }
     if (togo != nullptr)
         free(togo);
-    if (!isvalidfd(i)) {
+    if (!CHANfits(i)) {
         syslog(L_ERROR,
                "%s cant SITEspool: file descriptor %d too high (see "
                "rlimitnofile in inn.conf)",
@@ -629,7 +629,7 @@ SITEstartprocess(SITE *sp)
     }
 #endif
 
-    if (!isvalidfd(pan[PIPE_WRITE])) {
+    if (!CHANfits(pan[PIPE_WRITE])) {
         syslog(L_ERROR,
                "%s cant pipe: file descriptor %d too high (see rlimitnofile "
                "in inn.conf)",
@@ -759,7 +759,7 @@ SITEsetup(SITE *sp)
                 IOError("site file", oerrno);
                 return false;
             }
-            if (!isvalidfd(fd)) {
+            if (!CHANfits(fd)) {
                 syslog(L_ERROR,
                        "%s cant open %s: file descriptor %d too high (see "
                        "rlimitnofile in inn.conf)",
