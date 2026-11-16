@@ -415,9 +415,12 @@ When modifying or writing new code in C, it should conform to the
 I<Clang-format> style of the project.  Similarly, Perl, Python and shell
 scripts should conform to respectively the I<perltidy>, I<Black> and I<shfmt>
 code styles of the project (F<.clang-format> and F<.perltidyrc> at the top
-of the source tree; B<black> with a line length of 79).  Run those
-formatters on the files you change.  (The former C<make reformat> and
-C<make code-check> targets have not been ported to CMake yet.)
+of the source tree; B<black> with a line length of 79).  Just run
+C<cmake --build build --target reformat> to properly reformat all files.
+Additionally, the conformance of Perl scripts to some policies from
+I<perlcritic> and I<perltidy>, and spelling with I<codespell>, should be
+checked by running C<cmake --build build --target code-check>.  Tools that
+are not installed are skipped.
 
 If you're writing a substantial new piece of code, the prevailing
 "standard" INN coding style is the following:
@@ -678,8 +681,8 @@ test F<inn.service> under systemd in a virtual machine.
 =item 5.
 
 Ensure that the source code is properly formatted with the latest versions
-of reformatting programs (B<clang-format>, B<perltidy>, B<black> and
-B<shfmt>), and check it with B<codespell> and B<perlcritic>.
+of reformatting programs (run the C<reformat> target) and does not violate
+some enforced rules (run the C<code-check> target).
 
 =item 6.
 
