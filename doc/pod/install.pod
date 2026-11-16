@@ -12,41 +12,27 @@ try to update your old installation.  This is particularly true if you're
 upgrading from a version of INN prior to 2.0.
 
 If you are upgrading from S<INN 2.3> or later, you may be able to just update
-the binaries, scripts, and manual pages by running:
+the binaries, scripts, and manual pages by building INN and running:
 
-    make update
+    cmake --install build
 
-after building INN and then comparing the new sample configuration files
-with your current ones to see if anything has changed.  If you take this
-route, the old binaries and scripts will be saved with an extension of
-C<.OLD> so that you can easily back out.  Note that if you do not want
-to have such backup copies, you can deactivate this behaviour with
-C<make BACKUP_OPTION='' update> instead of a mere C<make update>.  Be sure to
-configure INN with the same options that you used previously if you take
-this approach (in particular, INN compiled with B<--enable-largefiles>
-can't read the data structures written by INN compiled without that flag,
-and vice versa).  If you don't remember what options you used but you have
-your old build tree, look at the beginning of F<config.log>.
+and then comparing the new sample configuration files in F<samples> with
+your current ones to see if anything has changed or if there are new
+options of interest to you.  B<cmake --install> never replaces an existing
+configuration file, and it keeps no C<.OLD> backup copies of the programs
+it replaces, so keep your own copy of the old installation if you may want
+to back out.  Be sure to configure INN with the same options that you used
+previously if you take this approach (in particular the directories and
+B<INN_TAGGED_HASH>).  If you still have your old CMake build directory,
+its options are in F<CMakeCache.txt>.
 
-If you are building INN from a Git clone of the development tree rather than
-a snapshot or standard release, you first need to (re)generate the autoconf
-files so as to pick up possible changes since the last pull of the Git tree.
-This can be done by running the following commands:
-
-    make maintclean
-    ./autogen
-
-before building INN with C<./configure> (followed by the wanted configure
-options) and C<make>.  You may then also want to run the test suite with
-C<make tests>.
+Building from a Git clone of the development tree needs no extra step:
+configure it with CMake as described below.  You may then also want to run
+the test suite with C<ctest --test-dir build>.
 
 If you made B<ckpasswd> setuid root so that you could use system passwords,
-you'll have to do that again after C<make update>.  (It's much better to use
-PAM instead if you can.)
-
-If you use C<make update> to upgrade from a previous major release of INN,
-also look at the new sample configuration files in F<samples> to see if
-there are new options of interest to you.
+you'll have to do that again after B<cmake --install>.  (It's much better to
+use PAM instead if you can.)
 
 For more information about recent changes, see F<NEWS>.
 
@@ -98,18 +84,22 @@ functional (or in some cases, to work at all):
 
 =item *
 
-In order to build INN, you will need a C compiler that understands S<ANSI C>.
-If you are trying to install INN on an operating system that doesn't have
-an S<ANSI C> compiler (such as SunOS), installing B<gcc> is recommended.  You
-can get it from L<https://ftp.gnu.org/gnu/gcc/> or its mirrors.  INN is
-tested with B<gcc> more thoroughly than with any other compiler, so even if
-you have another compiler available, you may wish to use B<gcc> instead.
+In order to build INN, you will need a compiler for C++20 and C11, such
+as a recent B<gcc> or B<clang>, and B<CMake> 4.3 or later
+(L<https://cmake.org/download/>; it is also on PyPI, as C<pip install
+cmake>).  B<Ninja> (L<https://ninja-build.org/>) is recommended for
+building.
 
 =item *
 
-Currently, in order to build INN, you will need an implementation of B<yacc>.
-GNU B<bison> (from L<https://ftp.gnu.org/gnu/bison/> or its mirrors) will work
-fine.  We hope to remove this requirement in the future.
+INN needs the header-only libraries of B<Boost> 1.92 or later
+(L<https://www.boost.org/>), and the B<SQLite> (3.24.0 or higher) and
+B<zlib> libraries, including their header files.
+
+=item *
+
+In order to build INN, you will need GNU B<bison> and B<flex> (from
+L<https://ftp.gnu.org/gnu/bison/> and L<https://github.com/westes/flex>).
 
 =item *
 
@@ -129,15 +119,6 @@ Generating all the documentation from POD requires S<B<Perl 5.12.0>> due
 to the use of C<LE<lt>E<gt>> with URL and text in some files but most of the
 documentation can be generated with S<B<Perl 5.8.0>>.  If need be, it can be
 fetched from the release tarball.
-
-=item *
-
-The INN Makefiles use the syntax C<include FILE>, rather than the syntax
-expected by some BSDish systems of C<.include E<lt>FILEE<gt>>.  If your
-system expects the latter syntax, the recommended solution is to install
-GNU B<make> from L<https://ftp.gnu.org/gnu/make/>.  You may have GNU B<make>
-already installed as B<gmake>, in which case using B<gmake> rather than
-B<make> to build INN should be sufficient.
 
 =item *
 
@@ -165,31 +146,26 @@ information.
 
 =item *
 
-If you want to use systemd notifications and socket activation,
-you'll need to have B<pkg-config> and B<libsystemd> (along with its
-F<libsystemd.pc> configuration) installed so that these features are
-enabled at configure time.
+If you want to use systemd notifications, you'll need to have
+B<pkg-config> and B<libsystemd> (along with its F<libsystemd.pc>
+configuration) installed so that it is found when configuring.
 
 =item *
 
 Many of INN's optional features require other packages (primarily
 libraries) be installed.  If you wish to use any of these optional
 features, you will need to install those packages first.  Here is a table
-of configure options enabling optional features and the software and
-versions you'll need:
+of the optional features, the CMake options or libraries enabling them,
+and the software and versions you'll need:
 
-    --with-bdb          Berkeley DB 4.4 or higher, 4.7+ recommended
-    --with-blocklist    blocklistd from FreeBSD 11, NetBSD 7 or higher versions
-    --with-canlock      libcanlock 3.3.0 or higher
-    --with-krb5         MIT Kerberos v5 1.6.1 or higher
-    --with-openssl      OpenSSL 1.1.1 or higher, 3.0.0+ recommended
-                        LibreSSL 2.8.0 or higher, 3.5.0+ recommended
-    --with-perl         Perl 5.004_03 or higher, 5.8.0+ recommended
-    --with-python       Python 2.3.0 or higher, 2.5.0+ recommended
-                        Python 3.3.0 or higher
-    --with-sasl         Cyrus SASL 2.1.0 or higher
-    --with-sqlite3      SQLite 3.24.0 or higher
-    --with-zlib         zlib 1.x or higher
+    INN_BLOCKLIST       blocklistd from FreeBSD 11, NetBSD 7 or higher versions
+    INN_PERL_FILTERS    Perl 5.8.0 or higher, with ExtUtils::Embed
+    INN_PYTHON_FILTERS  Python 3.3.0 or higher
+    INN_SYSTEMD         libsystemd, with pkg-config
+    INN_TLS             OpenSSL 3.1 or higher
+    (found if present)  libcanlock 3.3.0 or higher
+    (found if present)  MIT Kerberos v5 1.6.1 or higher
+    (found if present)  Cyrus SASL 2.1.0 or higher
 
 If any of these libraries (other than Perl or Python) are built shared and
 installed in locations where your system doesn't search for shared
@@ -204,8 +180,7 @@ libraries before building INN will be sufficient.
 If you build your own libraries, make sure to generate them as either
 shared libraries or static libraries built with B<-fPIC> amongst
 the options given to the compiler (to obtain position-independent
-code).  Otherwise, building INN will fail, unless you pass
-B<--disable-hardening-flags> to C<configure>.
+code).  Otherwise, building INN will fail.
 
 =back
 
@@ -245,8 +220,8 @@ where the source resides.
 
 Before beginning installation, you should make sure that there is a user
 on your system named C<news>, and that this user's primary group is set to
-a group called C<news>.  You can change these with the B<--with-news-user>
-and B<--with-news-group> options to C<configure> (see below).  The home
+a group called C<news>.  You can change these with the B<INN_NEWS_USER>
+and B<INN_NEWS_GROUP> options when configuring (see below).  The home
 directory of this user should be set to the directory under which you wish
 to install INN (F</usr/local/news> is the default and is a good choice).
 This location will be set as I<pathnews> in F<inn.conf>.
@@ -257,7 +232,7 @@ a new installation.
 By default, INN sends reports to the user C<usenet>.  This account is
 used for instance by B<controlchan> (notifying any changes as for newsgroups)
 or B<news.daily> (sending Usenet daily reports).  You can change it with the
-B<--with-news-master> option to C<configure> (see below).  There is also
+B<INN_NEWSMASTER> option when configuring (see below).  There is also
 the I<mailto> keyword which can be given to B<news.daily> in order to
 modify the mail address to which these reports are sent.
 
@@ -287,20 +262,28 @@ root, indiscriminate use of C<chown news> is not the solution.  (If you
 don't like to log in to system accounts, careful use of C<chmod g+s> on
 directories and a umask of C<002> or C<007> may suffice.)
 
-INN uses GNU B<autoconf> and a generated C<configure> script to make
-configuration rather painless.  Unless you have a rather abnormal setup,
-C<configure> should be able to completely configure INN for your system.  If
-you want to change the defaults, you can invoke the C<configure> script with
-one or more command line options.  Type:
+INN is configured and built with B<CMake> (4.3 or later), in a build
+directory separate from the source tree.  Unless you have a rather abnormal
+setup, CMake should be able to completely configure INN for your system.
+If you want to change the defaults, give one or more B<-D>I<OPTION>=I<VALUE>
+settings when configuring.  To configure, build and run the test suite:
 
-    ./configure --help
+    cmake -S . -B build -G Ninja
+    cmake --build build
+    ctest --test-dir build
 
-for a full list of supported options.  Some of the most commonly used
-options are:
+B<-G Ninja> is recommended but optional; without it, CMake writes
+Makefiles.  To list every option with its current value, type:
+
+    cmake -LH -N build
+
+Options are remembered in F<build/CMakeCache.txt>, so a later B<cmake> run
+need only name the ones that change; to start again from the defaults,
+remove the build directory.  Some of the most commonly used options are:
 
 =over 4
 
-=item B<--prefix>=PATH
+=item B<INN_PREFIX>=PATH
 
 Sets the installation prefix for INN.  The default is F</usr/local/news>.
 All of INN's programs and support files will be installed under this
@@ -308,11 +291,14 @@ directory.  This should match the home directory of your news user (it
 will make installation and maintenance easier).  It is not recommended to
 set this to F</usr>; if you decide to do that anyway, make sure to point
 INN's temporary directory at a directory that isn't world-writeable (see
-B<--with-tmp-dir> below).
+B<INN_PATH_TMP> below).
 
-=item B<--with-db-dir>=PATH
+The paths are compiled into INN, so they are set here, when configuring;
+B<cmake --install>'s B<--prefix> option has no effect.
 
-Sets the prefix for INN database files.  The default is F<PREFIX/db>,
+=item B<INN_DB_DIR>=PATH
+
+Sets the directory for INN database files.  The default is F<PREFIX/db>,
 where PREFIX is F</usr/local/news> unless overridden with the option above.
 The history database and the F<active> file will be stored in this directory,
 and writes to those files are an appreciable percentage of INN's disk
@@ -322,58 +308,62 @@ the C<hisv6> history storage method, so this is a common portion of INN to
 move to a different file system.  To move only the history database, without
 the other database files, see the I<pathhistory> parameter in inn.conf(5).
 You can also set a dedicated path for the history database with the
-B<--with-history-dir> option given to C<configure>.
+B<INN_HISTORY_DIR> option.
 
-=item B<--with-spool-dir>=PATH
+=item B<INN_SPOOL_DIR>=PATH
 
-Sets the prefix for the news spool (when using any storage method other
+Sets the directory for the news spool (when using any storage method other
 than CNFS) and the overview spool.  The default is F<PREFIX/spool>.  This
 is another common portion of INN to move to a different file system (often
 F</news>).
 
-=item B<--with-tmp-dir>=PATH
+=item B<INN_PATH_TMP>=PATH
 
-Sets the directory in which INN will create temporary files.  This should
-under no circumstances be the same as the system temporary directory or
-otherwise be set to a world-writeable directory, since INN doesn't take
-care to avoid symlink attacks and other security problems possible with a
-world-writeable directory.  This directory should be reserved for the
-exclusive use of INN and only writeable by the news user.  Usage is
-generally light, so this is unlikely to need a separate partition.
+Sets the directory in which INN will create temporary files.  The default
+is F<PREFIX/tmp>.  This should under no circumstances be the same as the
+system temporary directory or otherwise be set to a world-writeable
+directory, since INN doesn't take care to avoid symlink attacks and other
+security problems possible with a world-writeable directory.  This
+directory should be reserved for the exclusive use of INN and only
+writeable by the news user.  Usage is generally light, so this is unlikely
+to need a separate partition.
 
-It's also possible to set the paths for most other sections of the INN
-installation independently; see C<./configure --help> and look for the
-B<--with-*-dir>=PATH options.
+=item Other directories
 
-=item B<--enable-reduced-depends>
+The other parts of the installation can be placed independently too.  Each
+is empty by default, meaning its usual place under the prefix, so changing
+B<INN_PREFIX> later still moves it:
 
-Requests that library probes assume shared libraries are in use and
-dependencies of libraries should not be probed.  It therefore tries to
-minimize the shared library dependencies of the resulting binaries on
-platforms with proper shared library dependencies.  This is not enabled
-by default, and is of interest primarily to people building packages
-for distributions.
+    INN_PATH_CONFIG   configuration files (PREFIX/etc)
+    INN_HISTORY_DIR   history database (INN_DB_DIR)
+    INN_LOG_DIR       logs (PREFIX/log)
+    INN_RUN_DIR       PID files and control sockets (PREFIX/run)
+    INN_HTTP_DIR      innreport's HTML reports (PREFIX/http)
+    INN_CONTROL_DIR   control message programs (PREFIX/bin/control)
+    INN_FILTER_DIR    Perl and Python filters (PREFIX/bin/filter)
+    INN_LIBPERL_DIR   INN's Perl modules (PREFIX/lib/perl)
+    INN_DOC_DIR       documents (PREFIX/doc)
+    INN_MAN_DIR       man pages (PREFIX/share/man)
 
-=item B<--enable-largefiles>
+A package might use, for example:
 
-Enables large file support, arranging for 64-bit file offsets.  This flag
-is only useful for 32-bit platforms and some very rare 64-bit platforms that
-define a 32-bit I<off_t> type.
+    cmake -S . -B build -G Ninja -DINN_PREFIX=/usr/lib/news \
+        -DINN_PATH_CONFIG=/etc/news -DINN_DB_DIR=/var/lib/news \
+        -DINN_SPOOL_DIR=/var/spool/news -DINN_LOG_DIR=/var/log/news \
+        -DINN_RUN_DIR=/run/news -DINN_MAN_DIR=/usr/share/man \
+        -DINN_DOC_DIR=/usr/share/doc/inn
 
-This is not enabled by default (unless of course I<off_t> is already 64-bit
-long), even on platforms that support it, because it changes the format
-of INN's on-disk databases (making it difficult to upgrade an earlier INN
-installation) and can significantly increase the size of some of the C<hisv6>
-history database files.  Large file support is not necessary unless you use
-the C<hisv6> history storage method and your C<hisv6> history database is so
-large that it exceeds S<2 GB> or you want to use CNFS buffers larger than S<2
-GB> on 32-bit platforms.
+=item B<INN_NEWS_USER>=USER, B<INN_NEWS_GROUP>=GROUP
 
-The C<hisv6> history, tradindexed and buffindexed overview, and timecaf
-databases written by an INN built with this option are incompatible with those
-written by an INN without this option.  (CNFS buffers are compatible.)
+The account and group INN runs as and is installed as.  The defaults are
+C<news> and C<news>.  C<root>, and the C<root> and C<wheel> groups, are
+refused.
 
-=item B<--enable-tagged-hash>
+=item B<INN_NEWSMASTER>=ADDRESS
+
+The address to which INN sends its reports.  The default is C<usenet>.
+
+=item B<INN_TAGGED_HASH>=ON
 
 Use tagged hash table for the C<hisv6> history database.  The tagged
 hash format uses much less memory but is somewhat slower.  This option is
@@ -390,161 +380,80 @@ satisfies the following formula:
 If you don't have at least that much RAM, try rebuilding INN with tagged
 hash enabled or switch to the C<hissqlite> history storage method.
 
-NOTE: B<--enable-largefiles> cannot be used with B<--enable-tagged-hash>.
-
-=item B<--with-perl>
+=item B<INN_PERL_FILTERS>=ON
 
 Enables support for embedded Perl, allowing you to install filter scripts
 written in Perl.  Highly recommended, because many really good spam
 filters are written in Perl.  See F<doc/hook-perl> for all the details.
+This needs Perl's C<ExtUtils::Embed> module.
 
 Even if you do not use this option, INN still requires Perl as mentioned
 above.
 
-If the C<$PERL> environment variable is set, it will be used as the path
-to Perl.
-
-=item B<--with-python>
+=item B<INN_PYTHON_FILTERS>=ON
 
 Enables support for Python, allowing you to install filter and
-authentication scripts written in Python.  You will need S<Python
-2.3.0> or later (in the 2.x series), or S<Python 3.3.0> or later
-(in the 3.x series) installed on your system to enable this option.
-See F<doc/hook-python> for all the details.
+authentication scripts written in Python 3 (3.3 or later).  See F<doc/hook-python> for
+all the details.
 
-If the C<$PYTHON> environment variable is set, it will be used as the path
-to Python.
-
-=item B<--with-innd-port>=PORT
+=item B<INND_PORT>=PORT
 
 By default, innbind(8) refuses to bind to any port under 1024 other than
 119, 433 and 563 for security reasons (to prevent attacks on rsh(1)-based
 commands and replacing standard system daemons).  If you want to run B<innd>
-on a different port under 1024, you'll need to tell C<configure> what port
+on a different port under 1024, you'll need to tell CMake what port
 you intend to use.  (You'll also still need to set the port number in
 F<inn.conf> or give it to B<innd> on the command line.)
 
-=item B<--with-syslog-facility>=FACILITY
+=item B<INN_SYSLOG_FACILITY>=FACILITY
 
 Specifies the syslog facility that INN programs should log to.  The
-default is LOG_NEWS unless C<configure> detects that your system doesn't
-understand that facility, in which case it uses LOG_LOCAL1.  This flag
-overrides the automatic detection.  Be sure to specify a facility not used
-by anything else on your system (one of LOG_LOCAL0 through LOG_LOCAL7, for
-example).
+default is LOG_NEWS.  Be sure to specify a facility not used by anything
+else on your system (one of LOG_LOCAL0 through LOG_LOCAL7, for example).
 
-=item B<--enable-setgid-inews>
+=item B<INN_SETGID_INEWS>=ON
 
-If this option is given to C<configure>, B<inews> will be installed setgid
-C<news> and world-executable so that non-privileged users on the news
-server machine can use B<inews> to post articles locally (somewhat faster
-than opening a new network connection).  For standalone news servers, by
-far the most common configuration now, there's no need to use this option;
-even if you have regular login accounts on your news server, INN's B<inews>
-can post fine via a network connection to your running news server and
-doesn't need to use the local socket (which is what setgid enables it to do).
-Installing B<inews> setgid was the default prior to S<INN 2.3>.
+If this option is set, B<inews> will be installed setgid C<news> and
+world-executable so that non-privileged users on the news server machine
+can use B<inews> to post articles locally (somewhat faster than opening a
+new network connection).  For standalone news servers, by far the most
+common configuration now, there's no need to use this option; even if you
+have regular login accounts on your news server, INN's B<inews> can post
+fine via a network connection to your running news server and doesn't need
+to use the local socket (which is what setgid enables it to do).
 
-=item B<--with-bdb>=PATH
+=item B<INN_TLS>=AUTO|ON|OFF
 
-Enables support for S<Berkeley DB> (4.4 or higher), which means that
-it will then be possible to use the ovdb overview method if you wish.
-Enabling this configure option doesn't mean you'll be required to use
-ovdb, but it does require that S<Berkeley DB> be installed on your
-system (including the header files, not just the runtime libraries).
-If a path is given, it sets the installed directory of S<Berkeley DB>
-(C<configure> will search for it in standard locations, but if you have
-it installed elsewhere, you may need this option).  This directory
-is expected to have subdirectories F<include> and F<lib> (F<lib32>
-and F<lib64> are also checked), containing respectively F<db.h>, and
-the library itself.  In case non-standard paths to the S<Berkeley DB>
-libraries are used, one or both of the options B<--with-bdb-include>
-and B<--with-bdb-lib> can be given to C<configure> with a path.
+TLS/SSL for news reading, which means it will be possible to have TLS
+encrypted NNTP connections between your server and newsreaders.  It needs
+OpenSSL 3.1 or later, including the header files, not just the runtime
+libraries.  With the default, AUTO, INN is built with TLS when OpenSSL is
+found; ON makes a missing OpenSSL an error, and OFF builds without it.  If
+OpenSSL is installed somewhere CMake does not search, point it there with
+B<OPENSSL_ROOT_DIR> (on macOS with Homebrew, for instance,
+C<-DOPENSSL_ROOT_DIR=$(brew --prefix openssl@3)>).  After installing INN,
+you'll still need to make a certificate and private key to use TLS.  See
+below for details on how to do that.
 
-If the S<Berkeley DB> library is found at configure time, INN will be
-built with S<Berkeley DB> support unless the B<--without-bdb> flag is
-explicitly passed to C<configure>.
+=item B<INN_SYSTEMD>=AUTO|ON|OFF
 
-=item B<--with-sqlite3>=PATH
+Notifications to systemd: B<innd> tells systemd when it is ready, reloading
+and stopping.  This needs B<pkg-config> and B<libsystemd>.  With the
+default, AUTO, it is used when found; ON makes a missing libsystemd an
+error.  CMake also writes a systemd unit, F<inn.service>, with this
+build's directories and account (C<Type=notify> with libsystemd, otherwise
+C<Type=forking>), and B<cmake --install> installs it into
+B<INN_SYSTEMD_UNIT_DIR>, or systemd's own unit directory when B<pkg-config>
+knows it.  The unit is always owned by root.
 
-Enables support for SQLite (3.24.0 or higher), which means that it
-will then be possible to use the ovsqlite overview method or the hissqlite
-history method if you wish.  Enabling this configure option doesn't mean
-you'll be required to use either method, but it does require that SQLite be
-installed on your system (including the header files, not just the runtime
-libraries).  If a path is given, it sets the installed directory of SQLite.
-In case non-standard paths to the SQLite library are used, one or both of
-the options B<--with-sqlite3-include> and B<--with-sqlite3-lib> can be given
-to C<configure> with a path.
-
-If the SQLite library is found at configure time, INN will be built
-with SQLite support unless the B<--without-sqlite3> flag is explicitly
-passed to C<configure>.
-
-=item B<--with-zlib>=PATH
-
-Enables support for compression for news reading, which means a
-compression layer can be negotiated between your server and newsreaders
-supporting that NNTP extension.
-
-Also enables support for compression with the ovdb and ovsqlite overview
-storage methods.
-
-This option requires that zlib be installed on your system (including the
-header files, not just the runtime libraries).  If a path is given, it
-sets the installed directory of zlib.  In case non-standard paths to the
-zlib library are used, one or both of the options B<--with-zlib-include>
-and B<--with-zlib-lib> can be given to C<configure> with a path.
-
-If the zlib library is found at configure time, INN will be built with
-compression support unless the B<--without-zlib> flag is explicitly
-passed to C<configure>.
-
-=item B<--with-openssl>=PATH
-
-Enables support for TLS/SSL for news reading, which means it will be
-possible to have TLS encrypted NNTP connections between your server and
-newsreaders.  This option requires OpenSSL or LibreSSL be installed on
-your system (including the header files, not just the runtime libraries).
-If a path is given, it sets the installed directory of OpenSSL or LibreSSL.
-After compiling and installing INN with this option, you'll still need to
-make a certificate and private key to use TLS.  See below for details on
-how to do that.
-
-In case non-standard paths to the OpenSSL or LibreSSL libraries are used,
-one or both of the options B<--with-openssl-include> and B<--with-openssl-lib>
-can be given to C<configure> with a path.
-
-If the OpenSSL or LibreSSL SSL and crypto libraries are found at configure
-time, INN will be built with TLS/SSL support unless the B<--without-openssl>
-flag is explicitly passed to C<configure>.
-
-=item B<--with-canlock>=PATH
-
-Enables support for Cancel-Lock, using libcanlock (3.3.0 or higher), which
-provides a mechanism to authenticate article withdrawals.  This option
-requires that libcanlock be installed on your system (including the
-header files, not just the runtime libraries).  If a path is given,
-it sets the installed directory of libcanlock.  In case non-standard
-paths to the libcanlock library are used, one or both of the options
-B<--with-canlock-include> and B<--with-canlock-lib> can be given to
-C<configure> with a path.
-
-After compiling and installing INN with this option, you'll need setting the
-Cancel-Lock secrets in the F<inn-secrets.conf> configuration file.
-
-If the libcanlock library is found at configure time, INN will be built with
-Cancel-Lock support unless the B<--without-canlock> flag is explicitly passed
-to C<configure>.
-
-=item B<--with-blocklist>=PATH
+=item B<INN_BLOCKLIST>=AUTO|ON|OFF
 
 Enables B<nnrpd> integration with FreeBSD's or NetBSD's blocklistd(8)
 for blocking of brute force attacks.  blocklistd and its client library
 libblocklist have been available in the FreeBSD base system since S<FreeBSD
-11> and should be automatically detected if PATH is not given.  They have also
-been in the NetBSD base system since S<NetBSD 7>.  Formerly known as blacklist
-back then, blocklist is the new name in S<FreeBSD 15> and S<NetBSD 10>.
+11> and in the NetBSD base system since S<NetBSD 7>.  Formerly known as
+blacklist, blocklist is the new name in S<FreeBSD 15> and S<NetBSD 10>;
+either is found.
 
 For this feature to have any effect, B<nnrpd> needs to be started with the
 B<-B> flag, and blocklistd needs to be configured and running.  See the
@@ -553,102 +462,123 @@ blocklistd(8) documentation.
 
 =back
 
+Some optional features are used whenever their libraries are found, with
+no option:
+
+=over 4
+
+=item Cancel-Lock
+
+libcanlock (3.3.0 or higher) provides a mechanism to authenticate article
+withdrawals.  After installing INN built with it, you'll need to set the
+Cancel-Lock secrets in the F<inn-secrets.conf> configuration file.
+
+=item SASL and Kerberos
+
+Cyrus SASL (for B<nnrpd>'s AUTHINFO SASL) and MIT Kerberos v5 (found
+through B<krb5-config>, for the B<auth_krb5> authenticator).
+
+=back
+
+SQLite (3.24.0 or higher) and zlib are required, not optional.  SQLite
+provides the ovsqlite overview method and the hissqlite history method;
+zlib provides compression for news reading and for ovsqlite.
+
+Berkeley DB, and with it the ovdb overview method, and large file support
+on 32-bit platforms are not available in this version of INN.
+
 For the most common installation, a standalone news server, a suggested
 set of options is:
 
-    ./configure --with-perl --with-python
+    cmake -S . -B build -G Ninja -DINN_PERL_FILTERS=ON -DINN_PYTHON_FILTERS=ON
 
 provided that you have the necessary versions of Perl and Python installed.
 (Compiling with embedded Perl and Python interpreters will allow you
 to use one of the available excellent spam filters if you so choose.)
 
-If the B<configure> program runs successfully, then you are ready to build
-the distribution.  From the root of the INN source tree, type:
+If B<cmake> runs successfully, then you are ready to build the
+distribution:
 
-    make
+    cmake --build build
 
 At this point you can step away from the computer for a little while and
 have a quick snack while INN compiles.  On a decently fast system it
-should only take five or ten minutes at the most to build.
+should only take a few minutes.  The test suite, which does not need
+root, is then run with:
+
+    ctest --test-dir build
 
 Once the build has completed successfully, you are ready to install INN
 into its final home.  Type:
 
-    make install
+    cmake --install build
 
-Under most circumstances, you will need to run the C<make install>
-command as root, so that INN can create the directories it needs,
-change ownerships (if you did not compile as the news user) and install
-a setuid program needed to raise resource limits and allow B<innd> to
+Under most circumstances, you will need to run B<cmake --install> as root,
+so that INN can create the directories it needs, give what it installs in
+INN's directories to the news user and group, and install innbind(8)
+setuid root, the helper that raises resource limits and allows B<innd> to
 bind to ports under 1024.  This step will install INN under the install
 directory (F</usr/local/news>, known as I<pathnews> in F<inn.conf>,
-unless you specified something else to the configure script).
+unless you set B<INN_PREFIX>).  Man pages and documents placed outside
+INN's directories, such as in F</usr/share/man>, stay owned by root.
 
 Exceptionally, if you are installing INN into a directory writable by
-the news user, you can run C<make install> as the configured news user.
-The resulting INN installation won't be able to use ports below 1024
-(including the default NNTP port of 119) unless you then run C<make
-install-root> as root, which will install only the setuid helper program.
+you, you can run B<cmake --install> as yourself.  The installed files
+then keep you as their owner, and innbind is not made setuid root, so the
+resulting INN installation won't be able to use ports below 1024
+(including the default NNTP port of 119); the install prints what needs
+fixing by root.
 
 If you are building INN on a different system than the one on which it
 will eventually run, and you therefore want INN to install its files
 in a virtual root directory and not into the actual filesystem of the
 build machine, you can pass the virtual root directory to the install
-step via the DESTDIR variable.  You then just need to type:
+step via the DESTDIR environment variable:
 
-    make DESTDIR=/tmp/inn-root install
+    DESTDIR=/tmp/inn-root cmake --install build
 
 In the above example, all of INN's directories and files would
 be installed under the F</tmp/inn-root> directory instead of
-the normal F</> (root) directory.  Just replace C</tmp/inn-root>
-with whatever directory you wish to install INN in (the result
-will be in F</tmp/inn-root/usr/local/news> if the default value of
-F</usr/local/news> for I<pathnews> has not been changed).  This won't
-affect any of the paths compiled into INN; it's used primarily in some
-situations like building a software distribution, where software has to
-be installed into some file system that will later be mounted as F</>
-on the final system.  Using DESTDIR permits building INN, installing
-it into a virtual root directory, and packaging the resulting files
-in a single step, without manual intervention, by a non-root user.
-It is possible to build and install INN in this way, but you must set
-a DESTDIR value for the install step, and additionally, you must tell
-the installation process that it should omit executing C<chown> and
-C<chgrp> commands (which will fail if the installation step is being
-executed by a non-root user).  To do this, type:
+the normal F</> (root) directory (the result will be in
+F</tmp/inn-root/usr/local/news> if B<INN_PREFIX> has not been changed).
+This won't affect any of the paths compiled into INN; it's used primarily
+in some situations like building a software distribution, where software
+has to be installed into some file system that will later be mounted as
+F</> on the final system.  Run as a non-root user, this needs no other
+setting: ownership is simply not changed.
 
-    CHOWNPROG=set CHGRPPROG=set make DESTDIR=/tmp/inn-root install
-
-WARNING: if you install INN in this manner, none of the resulting
-directories and files in the virtual root directory will be owned by
-the correct users and groups.  It is YOUR responsibility to ensure the
-resulting directories and files are packaged with the users, groups,
-and modes which INN wanted them to be installed with!
+WARNING: if you install INN in this manner as a non-root user, none of the
+resulting directories and files in the virtual root directory will be
+owned by the correct users and groups.  It is YOUR responsibility to
+ensure the resulting directories and files are packaged with the users,
+groups, and modes which INN wanted them to be installed with (innbind
+owned by root, group news, mode 4550; everything in INN's directories
+owned by news)!
 
 Please note that INN's shared library interface is not stable and
 may change drastically in future major releases.  Only INN should use
 INN's shared libraries, and you should only use the shared libraries
 corresponding to the version of INN that you're installing.
 
-Also, when updating an existing version of INN, INN tries to save
-backup copies of all files but man pages and shared libraries so that
-you can revert to the previous installed version.  Shared libraries
-are not backed up because this confuses B<ldconfig> on some systems
-(such as Linux) and the symbolic links for the libraries may point to
-the C<.OLD> versions.  Nonetheless, reverting to a previous version of
-INN should work fine for official releases (that is to say releases
-that are not daily snapshots) because a proper versioning is done during
-the release of a new version.
+When updating an existing installation, B<cmake --install> replaces the
+programs, scripts and man pages, but never replaces a configuration file
+that is already there, nor the F<active>, F<newsgroups> and F<history>
+files.  Unlike the former C<make update>, it keeps no C<.OLD> backup
+copies, so keep your own copy of the previous installation if you may
+want to go back to it.
 
 If you are configuring TLS/SSL support for newsreaders, you must make a
 certificate and private key at least once.  Type:
 
-    make cert
+    cmake --build build --target cert
 
-as root in order to do this.
+as root in order to do this.  B<openssl> asks for the certificate's
+details; the certificate and key are written to INN's configuration
+directory and given to the news user.
 
-You can also type C<make DESTDIR=/tmp/inn-root cert> as either root
-(preferred) or a non-root user.  All of the warnings and caveats
-mentioned above apply.
+You can also type C<DESTDIR=/tmp/inn-root cmake --build build --target
+cert> as either root (preferred) or a non-root user.  All of the warnings
+and caveats mentioned above apply.
 
 You are now ready for the really fun part: configuring your copy of INN!
 
@@ -829,7 +759,7 @@ I<extraoverviewadvertised> and I<extraoverviewhidden> parameters.)
 All documentation from this point on assumes that you have set up the news
 user on your system as suggested in L<Installing INN> so that the root of
 your INN installation is F<~news> (I<pathnews> in F<inn.conf>).  If you've
-moved things around by using options with C<configure>, you'll need to adjust
+moved things around with the directory options when configuring, you'll need to adjust
 the instructions to account for that.
 
 All of INN's configuration files are located in I<pathetc> as set in
@@ -1610,7 +1540,7 @@ If I<hismethod> is set to C<hissqlite> in F<inn.conf>, run B<makehistory>
 F<history.sqlite> database in I<pathhistory>.  Do not create the file by hand
 with C<touch>, and no pre-sizing is needed; the database grows by itself.
 
-(Note that if you install INN with C<make install>, you do not need to
+(Note that if you install INN with B<cmake --install>, you do not need to
 run these commands: the installation takes care of creating the
 history database for the configured I<hismethod>.)
 
@@ -1628,16 +1558,11 @@ information via syslog.  INN's nightly report programs know how to roll
 and summarize those syslog log files, but when you first install INN you
 need to set them up.
 
-If your system understands the C<news> syslog facility, INN will use it;
-otherwise, it will log to C<local1>.  Nearly every modern system has a
-C<news> syslog facility so you can safely assume that yours does, but if
-in doubt take a look at the output from running C<configure>.  You should
-see a line that looks like:
-
-    checking log level for news... LOG_NEWS
-
-If that says LOG_LOCAL1 instead, change the below instructions to use
-C<local1> instead of C<news>.
+INN logs to the C<news> syslog facility unless it was configured with
+another one (B<INN_SYSLOG_FACILITY>).  Nearly every modern system has a
+C<news> syslog facility.  If you chose another facility, such as
+LOG_LOCAL1, change the below instructions to use it (C<local1>) instead of
+C<news>.
 
 If you're using syslogd, edit F</etc/syslog.conf> on your system and add lines
 that look like the following:
