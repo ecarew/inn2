@@ -1,7 +1,16 @@
-##  GitHub Actions: on every push and pull request, run the same Linux
-##  checks as before a push (support/docker-linux-checks.sh -c): the
-##  Debian image from support/docker/Dockerfile.linux, CMake alone, ctest,
-##  support/verify-cxx.sh and the live innd checks, on the pushed commit.
+##  GitHub Actions: on every push and pull request, run INN++'s three
+##  Docker check suites on the pushed commit, as separate jobs.  Each uses
+##  the Debian image from support/docker/Dockerfile.linux and CMake alone;
+##  the scripts are the one definition of each check, so a failure here
+##  is reproduced by running the same script locally.
+##
+##  linux:   ctest, support/verify-cxx.sh and the live innd checks, as an
+##           ordinary user (support/docker-linux-checks.sh).
+##  root:    the start-as-root and drop-to-news paths
+##           (support/docker-root-checks.sh).
+##  install: cmake --install as root: ownership, innbind the only
+##           setuid-root file, man pages, a server that starts
+##           (support/docker-install-checks.sh).
 
 name: build
 
@@ -11,9 +20,26 @@ jobs:
   linux:
     runs-on: ubuntu-latest
     timeout-minutes: 120
-
     steps:
       - name: checkout
         uses: actions/checkout@v6
       - name: linux checks
         run: support/docker-linux-checks.sh -c
+
+  root:
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    steps:
+      - name: checkout
+        uses: actions/checkout@v6
+      - name: root checks
+        run: support/docker-root-checks.sh
+
+  install:
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    steps:
+      - name: checkout
+        uses: actions/checkout@v6
+      - name: install checks
+        run: support/docker-install-checks.sh
