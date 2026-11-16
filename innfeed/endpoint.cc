@@ -1287,31 +1287,6 @@ endpointConfigLoadCbk(FILE *fp)
 
     if (getInteger(topScope, "stdio-fdmax", &ival, NO_INHERIT)) {
         stdioFdMax = ival;
-
-#if !defined(FD_SETSIZE)
-
-        if (stdioFdMax > 0) {
-            logOrPrint(LOG_ERR, fp,
-                       "ME config: cannot define stdio-fdmax if FD_SETSIZE is "
-                       "not available");
-            stdioFdMax = 0;
-            rval = 0;
-        }
-
-#else
-
-        if (stdioFdMax > FD_SETSIZE) {
-            logOrPrint(LOG_ERR, fp,
-                       "ME config: value of %s (%ld) in %s is higher"
-                       " than maximum of %ld. Using %ld",
-                       "stdio-fdmax", ival, "global scope", (long) FD_SETSIZE,
-                       (long) FD_SETSIZE);
-            stdioFdMax = FD_SETSIZE;
-            rval = 0;
-        }
-
-#endif
-
     } else
         stdioFdMax = 0;
 
