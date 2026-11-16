@@ -257,6 +257,16 @@ install(FILES ${_inn_headers}
 # The last install step (cmake/InnInstallSteps.cmake).
 install(CODE "inn_install_end()")
 
+# make reformat and make code-check (support/codestyle): maintainers'
+# formatting and style checks, each tool skipped if not installed.
+# reformat rewrites tracked source files in place.
+add_custom_target(reformat
+    COMMAND sh ${CMAKE_SOURCE_DIR}/support/codestyle reformat ${CMAKE_SOURCE_DIR}
+    USES_TERMINAL VERBATIM)
+add_custom_target(code-check
+    COMMAND sh ${CMAKE_SOURCE_DIR}/support/codestyle check ${CMAKE_SOURCE_DIR}
+    USES_TERMINAL VERBATIM)
+
 # make cert: a self-signed certificate and key for nnrpd's TLS in the
 # installed etc directory (support/mkcert), run as root after the install.
 # openssl asks for the certificate's details, hence USES_TERMINAL.

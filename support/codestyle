@@ -1,0 +1,112 @@
+#!/bin/sh
+#
+#  Reformat INN's source or check its style, as make reformat and make
+#  code-check did.  Run by the CMake targets:
+#
+#      cmake --build build --target reformat
+#      cmake --build build --target code-check
+#
+#  Usage: codestyle reformat|check <source-dir>
+#
+#  reformat: black (Python), clang-format (C and C++, with .clang-format),
+#  perltidy (Perl, with .perltidyrc) and shfmt (shell), rewriting files in
+#  place.  check: codespell, perlcritic and perltidy's warnings; nothing
+#  is changed.  Each tool is skipped, with a note, if it is not installed:
+#  these are for maintainers, and the results can depend on the tool's
+#  version.  perltidy reads .perltidyrc when reformatting and ignores it
+#  when checking (it would rewrite files).  Only files tracked by Git are
+#  touched, so build directories and generated files are never included;
+#  the bison and flex sources
+#  (innfeed/configfile.y and .l) mix in parser code and are done by hand.
+set -eu
+
+[ $# -eq 2 ] || { echo "usage: codestyle reformat|check source-dir" >&2; exit 2; }
+mode=$1
+cd "$2"
+
+have() { command -v "$1" >/dev/null 2>&1; }
+skip() { echo "Skipping $1 ($2 not found)"; }
+
+# Files whose first line names an interpreter matching $1, among those
+# matching the patterns that follow.
+first_line() {
+    want=$1
+    shift
+    git ls-files -z -- "$@" | xargs -0 awk -v w="$want" \
+        'FNR == 1 { if ($0 ~ "^#!.*" w) print FILENAME; nextfile }'
+}
+
+perl_files() {
+    {
+        first_line perl '*.in'
+        git ls-files -- '*.pl' '*.pl.in' '*.pm' '*.pm.in'
+        echo tests/data/overview/munge-data
+        echo tests/nnrpd/auth-test
+    } | grep -v -e pgpverify \
+          -e '^perl/INN/Config.pm$' -e '^perl/INN/Utils/Shlock.pm$' \
+          -e '^samples/nnrpd_access.pl$' -e '^samples/nnrpd_auth.pl$' \
+          -e '^scripts/innshellvars.pl$' \
+      | sort -u
+}
+
+case $mode in
+reformat)
+    if have black; then
+        echo "Running black to reformat Python code..."
+        { git ls-files -- '*.py'; echo contrib/mm_ckpasswd; } | sort -u \
+            | xargs black --line-length 79 --quiet
+    else
+        skip "Python code reformatting" black
+    fi
+    if have clang-format; then
+        echo "Running clang-format to reformat C and C++ code..."
+        git ls-files -- '*.c' '*.h' '*.cc' '*.hh' '*.cpp' '*.hpp' \
+                        'include/inn/paths.h.in' \
+            | xargs clang-format --style=file -i
+    else
+        skip "C and C++ code reformatting" clang-format
+    fi
+    if have perltidy; then
+        echo "Running perltidy to reformat Perl code..."
+        perl_files | xargs perltidy
+    else
+        skip "Perl code reformatting" perltidy
+    fi
+    if have shfmt; then
+        echo "Running shfmt to reformat shell code..."
+        {
+            first_line 'sh( |$)' '*.in' '*.t'
+            echo samples/innshellvars.local
+            git ls-files -- support tests/tap | xargs shfmt -f
+        } | grep -v -e '^tests/lib/xmalloc.t$' | sort -u \
+          | xargs shfmt -w -s -ln=posix -i 4 -bn
+    else
+        skip "shell code reformatting" shfmt
+    fi
+    ;;
+check)
+    if have codespell; then
+        echo "Running codespell to check misspelled words..."
+        codespell
+    else
+        skip "misspelled words checking" codespell
+    fi
+    if have perlcritic; then
+        echo "Running perlcritic to check Perl code..."
+        perl_files | xargs perlcritic --quiet
+    else
+        skip "Perl code checking" perlcritic
+    fi
+    if have perltidy; then
+        echo "Running perltidy to check Perl code..."
+        perl_files | xargs perltidy -npro -w -se -wlt=1 -wma -wmauc=0 -wmr -wnt -wuk \
+            -wvt='c p r u' -wvxl='*_unused' -st >/dev/null
+    else
+        skip "Perl code checking" perltidy
+    fi
+    ;;
+*)
+    echo "codestyle: unknown mode $mode" >&2
+    exit 2
+    ;;
+esac
