@@ -30,13 +30,9 @@ support utility (B<hissqlite-util>).  See their manual pages for details.
 
 =head1 INSTALLATION
 
-The configure script will automatically enable SQLite support if it finds
-the SQLite library.  If the library isn't installed in a standard location,
-you may have to specify the B<--with-sqlite3> option to help configure find
-it.  For complicated cases, you can use separate B<--with-sqlite3-include>
-and B<--with-sqlite3-lib> options.  Finally, if you I<don't> want SQLite
-support even when your system has the SQLite library, you can use the
-B<--without-sqlite3> option.
+SQLite is required to build INN, so hissqlite is always available.  If
+the SQLite library isn't installed in a standard location, point CMake at
+it with B<CMAKE_PREFIX_PATH> or B<SQLite3_ROOT> when configuring.
 
 =head1 CONFIGURATION
 
@@ -48,7 +44,7 @@ migrate or rebuild your history (see L</MIGRATION>) and restart INN.
 
 To start with an empty history database on a fresh server, run
 B<makehistory> once: on an empty spool, it simply creates an empty
-F<history.sqlite> (C<make install> does this when I<hismethod> is already
+F<history.sqlite> (B<cmake --install> does this when I<hismethod> is already
 set to C<hissqlite>).  Do not create the file by hand; B<innd> requires an
 initialized database and will refuse to start on an empty file.
 
