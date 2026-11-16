@@ -97,7 +97,8 @@ All in this repository; adapt names and paths.
 - `support/coverage-report.sh`: clang source-based coverage, per file.
 - `support/root-checks.sh`, `support/docker-root-checks.sh`: started-as-root
   behavior, on macOS under sudo and on Linux in Docker.
-- `support/compare-config.sh`: CMake's config.h against configure's.
+- `support/compare-config.sh` (removed with Autoconf; in git history
+  before 78d9ba263): CMake's config.h against configure's.
 - `cmake/InnConfigure.cmake` and `cmake/checks/`: a model for porting
   configure.ac, including Autoconf run tests via `try_run`.
 
