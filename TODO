@@ -614,13 +614,6 @@ Long-Term Projects
   out of the box.  A little interactive Perl script asking some simple
   questions could probably get a lot of cases easily right.
 
-* Support building in a separate directory than the source tree.  It may
-  be best to just support this via lndir rather than try to do it in
-  configure, but it would be ideal to add support for this to the autoconf
-  system.  Unfortunately, the standard method requires letting configure
-  generate all of the makefiles, which would make running configure and
-  config.status take much longer than it does currently.
-
 * Look at adding some kind of support for MODE CANCEL via network sockets
   and fixing up the protocol so that it could possibly be standardized
   (the easiest thing to do would probably be to change it into a CANCEL
