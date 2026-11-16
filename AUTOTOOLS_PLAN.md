@@ -94,9 +94,9 @@ inn.service, INN_BLOCKLIST and INN_TAGGED_HASH (2cb9ef494, so the
 follow-ups below are done); the `cert` target (5d39dfac7).  The GitHub
 workflow runs the CMake checks (afd1bb1fd, 7ef5201c7).
 
-Still not ported: `make reformat` and `make code-check` (clang-format,
-perltidy, black, shfmt, codespell, perlcritic); Berkeley DB/ovdb (its
-migration guide is next); large files.
+`make reformat` and `make code-check` became the `reformat` and
+`code-check` targets (support/codestyle).  Still not ported: Berkeley
+DB/ovdb (its migration guide is next); large files.
 
 ## Not in this phase (follow-ups)
 
