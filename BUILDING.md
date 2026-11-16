@@ -79,6 +79,16 @@ Build options (`-D<option>=<value>` on the first `cmake` command):
 
 - `INN_PREFIX` (default `/usr/local/news`): where INN lives; the other
   directories follow it.
+- Directories outside the prefix, each empty by default (its place under
+  the prefix): `INN_PATH_CONFIG`, `INN_PATH_TMP`, `INN_DB_DIR`,
+  `INN_HISTORY_DIR`, `INN_SPOOL_DIR`, `INN_LOG_DIR`, `INN_RUN_DIR`,
+  `INN_HTTP_DIR`, `INN_CONTROL_DIR`, `INN_FILTER_DIR`, `INN_LIBPERL_DIR`,
+  `INN_DOC_DIR`, `INN_MAN_DIR`.  INSTALL (`doc/pod/install.pod`) has a
+  package layout as an example.
+- `INN_NEWS_USER`, `INN_NEWS_GROUP` (default `news`): the account INN
+  runs as and is installed as; root, and the root and wheel groups, are
+  refused.
+- `INN_NEWSMASTER` (default `usenet`): where INN's reports are mailed.
 - `INN_LOG_COMPRESS` (default `gzip`): how old logs are compressed:
   `gzip`, `bzip2`, `compress` or `cat`.
 - `INN_CONTRIB` (default `OFF`): build the programs in `contrib/`.
@@ -88,6 +98,13 @@ Build options (`-D<option>=<value>` on the first `cmake` command):
 - `INN_SETGID_INEWS` (default `OFF`): install inews setgid news (mode
   2555) so local users can post without nnrpd authentication
   (configure's `--enable-setgid-inews`).
+- `INN_TAGGED_HASH` (default `OFF`): the tagged-hash history format,
+  smaller and slower.
+- `INN_TLS`, `INN_SYSTEMD`, `INN_BLOCKLIST` (each `AUTO`, `ON` or `OFF`;
+  default `AUTO`, used when found): TLS in nnrpd (OpenSSL 3.1), sd_notify
+  in innd (libsystemd, through pkg-config), blocklistd in nnrpd.  With
+  systemd, `inn.service` is written with this build's directories and
+  installed into `INN_SYSTEMD_UNIT_DIR` or systemd's unit directory.
 - `INN_PERL_FILTERS` (default `OFF`): embed Perl in innd and nnrpd for
   innd's and nnrpd's filters and nnrpd's `perl_auth` and `perl_access`
   hooks (configure's `--with-perl`).
@@ -106,8 +123,10 @@ sudo cmake --install build
 ```
 
 installs into `INN_PREFIX` what `make install` does, with the same owners
-and modes: everything owned by `news:news`, and `innbind`, the only setuid
-program, owned by root with mode 4550.  The `news` user and group must
+and modes: everything in INN's directories owned by `news:news`, and
+`innbind`, the only setuid program, owned by root with mode 4550.  Man
+pages and documents placed outside INN's directories (such as
+`/usr/share/man`), and `inn.service`, stay owned by root.  The `news` user and group must
 exist first.  On a first install it also creates the data directories, a
 minimal `active` and `newsgroups`, and an empty history database.
 
@@ -120,7 +139,8 @@ minimal `active` and `newsgroups`, and an empty history database.
   package (the install says what to set).
 - A build configured with `INN_RUNAS_USER`/`INN_RUNAS_GROUP` refuses to
   install.
-- Man pages and the documentation are not installed yet.
+- For TLS, `sudo cmake --build build --target cert` makes a self-signed
+  certificate and key in `etc`, as `make cert` did.
 
 Then set `domain` in `etc/inn.conf` if the host name has no domain part,
 configure INN following its INSTALL, and start the server as news:
