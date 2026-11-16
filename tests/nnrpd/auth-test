@@ -86,6 +86,11 @@ if ($arg eq 'okay') {
     print STDOUT "User:tester";
     print STDERR "This is an error\n";
     exit 1;
+
+} elsif ($arg eq 'hang') {
+    # Never answer: nnrpd gives up after its five-second timeout and kills
+    # us with SIGTERM.  The sleep only bounds a run that goes wrong.
+    sleep(30);
 }
 
 exit 0;

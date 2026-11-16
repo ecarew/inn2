@@ -10,6 +10,10 @@
 
 #include "portable/system.h"
 
+#include <fcntl.h>
+#include <sys/resource.h>
+#include <time.h>
+
 #include "inn/messages.h"
 #include "tap/basic.h"
 #include "tap/messages.h"
@@ -114,13 +118,78 @@ test_external(struct client *client, const char *arg, const char *user,
     test_file_path_free(auth_test_path);
 }
 
+/* Fills every free descriptor up to FD_SETSIZE + 10, so the pipes
+   auth_external makes land above FD_SETSIZE, where a select()-based wait
+   fails.  Returns the first descriptor filled, or -1 if the descriptor
+   limit is too low; fill_end closes them again. */
+static int
+fill_start(void)
+{
+    struct rlimit rl;
+    rlim_t need = FD_SETSIZE + 20;
+    int first, i;
+
+    if (getrlimit(RLIMIT_NOFILE, &rl) < 0)
+        sysbail("cannot get RLIMIT_NOFILE");
+    if (rl.rlim_max != RLIM_INFINITY && rl.rlim_max < need)
+        return -1;
+    if (rl.rlim_cur != RLIM_INFINITY && rl.rlim_cur < need) {
+        rl.rlim_cur = need;
+        if (setrlimit(RLIMIT_NOFILE, &rl) < 0)
+            sysbail("cannot raise RLIMIT_NOFILE");
+    }
+    first = open("/dev/null", O_RDONLY);
+    if (first < 0)
+        sysbail("cannot open /dev/null");
+    for (i = first + 1; i <= FD_SETSIZE + 10; i++)
+        if (fcntl(i, F_GETFD) < 0 && dup2(first, i) < 0)
+            sysbail("cannot fill descriptor %d", i);
+    return first;
+}
+
+static void
+fill_end(int first)
+{
+    for (int i = first; i <= FD_SETSIZE + 10; i++)
+        close(i);
+}
+
+/* A program that never answers: auth_external gives up after five
+   seconds, kills it, and reports the timeout.  Three checks. */
+static void
+test_hang(struct client *client, const char *what)
+{
+    char *auth_test_path, *command, *result;
+    time_t start;
+
+    auth_test_path = test_file_path("nnrpd/auth-test");
+    if (auth_test_path == nullptr)
+        bail("cannot find nnrpd/auth-test helper");
+    basprintf(&command, "%s hang", auth_test_path);
+    start = time(nullptr);
+    errors_capture();
+    result = auth_external(client, command, ".", nullptr, nullptr);
+    errors_uncapture();
+    unlink("input");
+    is_string(nullptr, result, "%s: silent program returns no user", what);
+    ok(errors != nullptr && strstr(errors, "program timeout") != nullptr,
+       "%s: silent program reports the timeout", what);
+    ok(time(nullptr) - start < 15, "%s: after the timeout, not later",
+       what);
+    free(errors);
+    errors = nullptr;
+    free(command);
+    test_file_path_free(auth_test_path);
+}
+
 int
 main(void)
 {
     struct client *client;
     char *result;
+    int first;
 
-    plan(12 * 6 + 2);
+    plan(14 * 6 + 2 + 2 * 3);
 
     client = client_new();
 
@@ -151,6 +220,20 @@ main(void)
               "empty external command is reported");
     free(errors);
     errors = nullptr;
+
+    test_hang(client, "low descriptors");
+
+    /* Output and error pipes above FD_SETSIZE. */
+    first = fill_start();
+    if (first < 0)
+        skip_block(2 * 6 + 3, "descriptor limit too low");
+    else {
+        test_external(client, "okay", "tester", nullptr);
+        test_external(client, "interspersed", "tester",
+                      "example.com auth: program error: This is an error\n");
+        test_hang(client, "descriptors above FD_SETSIZE");
+        fill_end(first);
+    }
 
     free(client);
     return 0;

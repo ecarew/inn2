@@ -17,10 +17,7 @@
 #include <signal.h>
 #include <sys/wait.h>
 
-/* Needed on AIX 4.1 to get fd_set and friends. */
-#if HAVE_SYS_SELECT_H
-#    include <sys/select.h>
-#endif
+#include <poll.h>
 
 #include "inn/buffer.h"
 #include "inn/messages.h"
@@ -216,9 +213,10 @@ output(struct client *client, int fd, struct buffer *buffer,
 static char *
 handle_output(struct client *client, struct process *process)
 {
-    fd_set fds, rfds;
-    struct timeval tv;
-    int maxfd, status, fd;
+    /* The output pipe, then the error pipe; the error pipe's fd becomes -1
+       (ignored by poll) once it reaches end of file. */
+    struct pollfd pfds[2];
+    int status, fd;
     ssize_t count;
     pid_t result;
     struct buffer *readbuf;
@@ -230,11 +228,9 @@ handle_output(struct client *client, struct process *process)
     bool errored = false;
     char *user = nullptr;
 
-    FD_ZERO(&fds);
-    FD_SET(process->read_fd, &fds);
-    FD_SET(process->error_fd, &fds);
-    maxfd = process->read_fd > process->error_fd ? process->read_fd
-                                                 : process->error_fd;
+    pfds[0].fd = process->read_fd;
+    pfds[1].fd = process->error_fd;
+    pfds[0].events = pfds[1].events = POLLIN;
     readbuf = buffer_new();
     buffer_resize(readbuf, 1024);
     errorbuf = buffer_new();
@@ -242,22 +238,20 @@ handle_output(struct client *client, struct process *process)
 
     /* Loop until we get an error or end of file. */
     while (true) {
-        tv.tv_sec = 5;
-        tv.tv_usec = 0;
-        rfds = fds;
+        pfds[0].revents = pfds[1].revents = 0;
         start = TMRnow_double();
-        status = select(maxfd + 1, &rfds, nullptr, nullptr, &tv);
+        status = poll(pfds, 2, 5 * 1000);
         end = TMRnow_double();
         IDLEtime += end - start;
 
-        /* Check for select timeout or errors. */
+        /* Check for poll timeout or errors. */
         if (status <= 0) {
             if (status == 0)
                 syswarn("%s auth: program timeout", client->host);
             else {
                 if (errno == EINTR)
                     continue;
-                syswarn("%s auth: select failed", client->host);
+                syswarn("%s auth: poll failed", client->host);
             }
             killed = true;
             kill(process->pid, SIGTERM);
@@ -270,19 +264,20 @@ handle_output(struct client *client, struct process *process)
          * continue waiting for output from the read file descriptor .*/
         done = false;
         count = 0;
-        if (FD_ISSET(process->read_fd, &rfds)) {
+        /* Any event counts as readable: at end of file a pipe may report
+           only POLLHUP, and the read then sees the end. */
+        if (pfds[0].revents != 0) {
             fd = process->read_fd;
             count = output(client, fd, readbuf, handle_result, &user);
             if (count <= 0)
                 done = true;
         }
-        if (!error_done && FD_ISSET(process->error_fd, &rfds)) {
+        if (!error_done && pfds[1].revents != 0) {
             fd = process->error_fd;
             count = output(client, fd, errorbuf, handle_error, &user);
             if (count <= 0) {
                 error_done = true;
-                FD_CLR(fd, &fds);
-                maxfd = process->read_fd;
+                pfds[1].fd = -1;
             }
             if (count > 0)
                 errored = true;
