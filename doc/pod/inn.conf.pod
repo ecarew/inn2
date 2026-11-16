@@ -1903,11 +1903,11 @@ versions prior to 11.0.  See the L<Solaris documentation about file
 descriptors|https://support.oracle.com/knowledge/Sun%20Microsystems/1005979_1.html>
 for more details.
 
-Note for expert users building INN from sources: if you need to use more than
-C<FD_SETSIZE> file descriptors (as defined in the F<sys/select.h> system
-header, usually defaulting to 1024), you can increase this value for instance
-to C<4096> by rebuilding INN with the C<-DLARGE_FD_SETSIZE=4096> option given
-to the compiler.
+INN no longer waits with select(2), so it is not limited to C<FD_SETSIZE>
+(usually 1024) file descriptors, and the old C<LARGE_FD_SETSIZE> build
+option is gone.  B<innd> sizes its channel table from this limit, up to the
+larger of 5000 and I<maxconnections> plus the number of outgoing feeds plus
+20; above that it lowers its own limit to match.
 
 =back
 
