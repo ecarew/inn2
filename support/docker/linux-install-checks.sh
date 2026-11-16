@@ -86,13 +86,20 @@ cmake -S . -B build-fhs -G Ninja -DINN_TESTS=OFF -DINN_PREFIX=/usr/lib/news \
     -DINN_PATH_CONFIG=/etc/news -DINN_DB_DIR=/var/lib/news \
     -DINN_SPOOL_DIR=/var/spool/news -DINN_LOG_DIR=/var/log/news \
     -DINN_RUN_DIR=/run/news -DINN_MAN_DIR=/usr/share/man \
-    -DINN_DOC_DIR=/usr/share/doc/inn >/dev/null 2>&1
+    -DINN_DOC_DIR=/usr/share/doc/inn \
+    -DINN_SYSTEMD_UNIT_DIR=/usr/lib/systemd/system >/dev/null 2>&1
 cmake --build build-fhs -j"$(nproc)" >/dev/null 2>&1
 ok "FHS layout: cmake --install succeeds" cmake --install build-fhs
 ok "FHS layout: inn.conf points at the directories" sh -c "grep -q '^pathdb: *[/]var/lib/news\$' /etc/news/inn.conf && grep -q '^pathspool: *[/]var/spool/news\$' /etc/news/inn.conf && grep -q '^pathlog: *[/]var/log/news\$' /etc/news/inn.conf && grep -q '^pathrun: *[/]run/news\$' /etc/news/inn.conf"
 ok "FHS layout: directories and data owned by news" test -z "$(find /var/lib/news /var/spool/news /var/log/news /run/news /etc/news ! -user news)"
 ok "FHS layout: history and active created" test -s /var/lib/news/active -a -e /var/lib/news/history
 ok "FHS layout: man pages in /usr/share/man" test -s /usr/share/man/man8/innd.8
+ok "FHS layout: man pages outside INN's directories stay root's" test -z "$(find /usr/share/man /usr/share/doc/inn ! -user root)"
+U=/usr/lib/systemd/system/inn.service
+ok "FHS layout: inn.service installed root:root 644" test "$(stat -c '%U:%G %a' $U)" = "root:root 644"
+# No systemd in the image: the unit is only a file here, Type=forking
+# without libsystemd; the Lima VM tests it under systemd.
+ok "FHS layout: inn.service is Type=forking, runs as news" sh -c "grep -qx 'Type=forking' $U && grep -qx 'User=news' $U && grep -qx 'RuntimeDirectory=news' $U && grep -qx 'ProtectHome=true' $U"
 
 # INN_NEWS_USER and INN_NEWS_GROUP: another account, in another prefix.
 getent group usenet >/dev/null || groupadd -r usenet

@@ -75,6 +75,69 @@ foreach(feature DO_LARGEFILES DO_PERL DO_PYTHON DO_TAGGED_HASH HAVE_BDB
     set(${feature} FALSE)
 endforeach()
 
+# _inn_feature_mode(<option> <doc>): an AUTO/ON/OFF cache option.
+macro(_inn_feature_mode option doc)
+    set(${option} AUTO CACHE STRING "${doc}: AUTO, ON or OFF")
+    set_property(CACHE ${option} PROPERTY STRINGS AUTO ON OFF)
+endmacro()
+
+# Tagged-hash history (configure's --enable-tagged-hash): the older dbz
+# format that stores offsets in the hash table, using less memory and
+# more time; off by default, as there.
+option(INN_TAGGED_HASH "Use the tagged-hash history format" OFF)
+if(INN_TAGGED_HASH)
+    set(DO_TAGGED_HASH TRUE)
+endif()
+
+# systemd (configure's libsystemd check): innd tells systemd when it is
+# ready, reloading and stopping (sd_notify).  Found through pkg-config.
+find_package(PkgConfig QUIET)
+_inn_feature_mode(INN_SYSTEMD "sd_notify support in innd (libsystemd)")
+if(NOT INN_SYSTEMD STREQUAL "OFF" AND PKG_CONFIG_FOUND)
+    pkg_check_modules(INN_LIBSYSTEMD QUIET IMPORTED_TARGET libsystemd)
+endif()
+if(INN_LIBSYSTEMD_FOUND)
+    set(HAVE_SD_NOTIFY TRUE)
+    message(STATUS "systemd: libsystemd ${INN_LIBSYSTEMD_VERSION}")
+elseif(INN_SYSTEMD STREQUAL "ON")
+    message(FATAL_ERROR "INN_SYSTEMD=ON but libsystemd was not found")
+endif()
+# Where cmake --install puts inn.service (configure's
+# --with-systemdsystemunitdir): systemd's own unit directory when
+# pkg-config knows it, else nowhere unless given.
+set(INN_SYSTEMD_UNIT_DIR "" CACHE PATH
+    "Directory for inn.service (default: systemd's, if found)")
+set(INN_UNIT_DIR ${INN_SYSTEMD_UNIT_DIR})
+if(NOT INN_UNIT_DIR AND HAVE_SD_NOTIFY)
+    pkg_get_variable(INN_UNIT_DIR systemd systemdsystemunitdir)
+endif()
+
+# blocklistd (configure's --with-blocklist): nnrpd -B reports
+# authentication results to it.  The library was called blacklist
+# before FreeBSD 15 and NetBSD 10, so that is found too.
+_inn_feature_mode(INN_BLOCKLIST "blocklistd support in nnrpd (libblocklist)")
+set(INN_BLOCKLIST_LIB "")
+if(NOT INN_BLOCKLIST STREQUAL "OFF")
+    check_include_file(blocklist.h INN_HAVE_BLOCKLIST_H)
+    find_library(INN_LIBBLOCKLIST blocklist)
+    if(INN_HAVE_BLOCKLIST_H AND INN_LIBBLOCKLIST)
+        set(HAVE_BLOCKLIST TRUE)
+        set(INN_BLOCKLIST_LIB ${INN_LIBBLOCKLIST})
+    else()
+        check_include_file(blacklist.h INN_HAVE_BLACKLIST_H)
+        find_library(INN_LIBBLACKLIST blacklist)
+        if(INN_HAVE_BLACKLIST_H AND INN_LIBBLACKLIST)
+            set(HAVE_BLACKLIST TRUE)
+            set(INN_BLOCKLIST_LIB ${INN_LIBBLACKLIST})
+        endif()
+    endif()
+    if(INN_BLOCKLIST_LIB)
+        message(STATUS "blocklist: ${INN_BLOCKLIST_LIB}")
+    elseif(INN_BLOCKLIST STREQUAL "ON")
+        message(FATAL_ERROR "INN_BLOCKLIST=ON but libblocklist was not found")
+    endif()
+endif()
+
 # TLS for nnrpd (STARTTLS, nnrpd -S) through OpenSSL 3.1 or newer.  On
 # by default when OpenSSL is found; -DINN_TLS=OFF builds without it, and
 # -DINN_TLS=ON makes a missing OpenSSL an error.  On macOS, point CMake

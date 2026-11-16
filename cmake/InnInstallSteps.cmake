@@ -70,6 +70,34 @@ function(_inn_chown who)
     endif()
 endfunction()
 
+# _inn_news_owned(<out> <path>...): the paths news should own: those in
+# or under INN's own directories (INN_I_NEWS_DIRS), but never the systemd
+# unit (INN_I_ROOT_DIRS): a unit news could edit would let news run
+# anything as root.  Man pages and documents in shared system directories
+# such as /usr/share are outside INN's and stay root's too.
+function(_inn_news_owned out)
+    set(owned)
+    foreach(p ${ARGN})
+        set(keep FALSE)
+        foreach(dir ${INN_I_NEWS_DIRS})
+            string(FIND "${p}/" "$ENV{DESTDIR}${dir}/" at)
+            if(dir AND at EQUAL 0)
+                set(keep TRUE)
+            endif()
+        endforeach()
+        foreach(dir ${INN_I_ROOT_DIRS})
+            string(FIND "${p}/" "$ENV{DESTDIR}${dir}/" at)
+            if(dir AND at EQUAL 0)
+                set(keep FALSE)
+            endif()
+        endforeach()
+        if(keep)
+            list(APPEND owned "${p}")
+        endif()
+    endforeach()
+    set(${out} ${owned} PARENT_SCOPE)
+endfunction()
+
 # _inn_new_data(<dest> [<src>]): first-install data that must never be
 # overwritten (site/Makefile's SPECIAL): copied from <src>, or empty.
 function(_inn_new_data dest)
@@ -95,11 +123,13 @@ macro(inn_install_end)
     set(innbind "$ENV{DESTDIR}${INN_I_BINDIR}/innbind")
     set(inews "$ENV{DESTDIR}${INN_I_BINDIR}/inews")
     if(INN_I_ROOT)
-        # Everything installed is owned by news (make install's OWNER),
-        # then innbind by root (LI_SPRI).  chown clears the setuid and
-        # setgid bits, so the special modes are set after it.
-        _inn_chown(${INN_I_USER}:${INN_I_GROUP}
-                   ${CMAKE_INSTALL_MANIFEST_FILES} ${INN_I_NEW_DIRS})
+        # What is installed in INN's directories is owned by news (make
+        # install's OWNER), then innbind by root (LI_SPRI).  chown clears
+        # the setuid and setgid bits, so the special modes are set after
+        # it.  The unit, and what lies outside INN's directories, stay root's.
+        _inn_news_owned(_inn_owned
+                        ${CMAKE_INSTALL_MANIFEST_FILES} ${INN_I_NEW_DIRS})
+        _inn_chown(${INN_I_USER}:${INN_I_GROUP} ${_inn_owned})
         _inn_chown(root:${INN_I_GROUP} "${innbind}")
         execute_process(COMMAND chmod 4550 "${innbind}")
         if(INN_I_SETGID_INEWS)

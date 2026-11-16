@@ -128,6 +128,8 @@ set(INN_I_HISTORYDIR \"${HISTORYDIR}\")
 set(INN_I_RUNDIR \"${RUNDIR}\")
 set(INN_I_DIRS \"${prefix};${bindir};${PATHAUTH};${PATHAUTHRESOLV};${PATHAUTHPASSWD};${CONTROLDIR};${FILTERDIR};${PATHRNEWS};${DBDIR};${docdir};${sysconfdir};${HTTPDIR};${libdir};${LIBPERLDIR};${LIBPERLDIR}/INN;${LIBPERLDIR}/INN/Utils;${datarootdir};${mandir};${mandir}/man1;${mandir}/man3;${mandir}/man5;${mandir}/man8;${SPOOLDIR};${tmpdir};${SPOOLDIR}/archive;${SPOOLDIR}/articles;${SPOOLDIR}/incoming;${SPOOLDIR}/incoming/bad;${SPOOLDIR}/innfeed;${SPOOLDIR}/overview;${SPOOLDIR}/outgoing;${LOGDIR};${LOGDIR}/OLD;${includedir};${includedir}/inn\")
 set(INN_I_DATA_MODE \"${INN_MODE_DATA}\")
+set(INN_I_NEWS_DIRS \"${prefix};${sysconfdir};${bindir};${libdir};${PATHAUTH};${PATHRNEWS};${CONTROLDIR};${FILTERDIR};${LIBPERLDIR};${DBDIR};${HISTORYDIR};${SPOOLDIR};${LOGDIR};${RUNDIR};${tmpdir};${HTTPDIR}\")
+set(INN_I_ROOT_DIRS \"${INN_UNIT_DIR}\")
 set(INN_I_SETGID_INEWS ${INN_SETGID_INEWS})
 set(INN_I_ACTIVE_MINIMAL \"${CMAKE_SOURCE_DIR}/samples/active.minimal\")
 set(INN_I_NEWSGROUPS_MINIMAL \"${CMAKE_SOURCE_DIR}/samples/newsgroups.minimal\")
@@ -171,13 +173,17 @@ find_package(Threads REQUIRED)
 
 # Optional-feature hooks consumed by innd/CMakeLists.txt and the others.
 # Perl and Python come from cmake/InnFilters.cmake (empty unless
-# INN_PERL_FILTERS or INN_PYTHON_FILTERS); systemd is not wired in yet.
+# INN_PERL_FILTERS or INN_PYTHON_FILTERS); systemd from
+# cmake/InnConfigure.cmake (INN_SYSTEMD).
 set(INN_PERL_CPPFLAGS ${INN_FILTER_PERL_CPPFLAGS})
 set(INN_PERL_LIBS inn_perl ${INN_FILTER_PERL_LIBS})
 set(INN_PYTHON_CPPFLAGS ${INN_FILTER_PYTHON_CPPFLAGS})
 set(INN_PYTHON_LIBS ${INN_FILTER_PYTHON_LIBS})
 set(INN_SYSTEMD_CFLAGS "")
 set(INN_SYSTEMD_LIBS "")
+if(HAVE_SD_NOTIFY)
+    set(INN_SYSTEMD_LIBS PkgConfig::INN_LIBSYSTEMD)
+endif()
 set(INN_CANLOCK_LDFLAGS "")
 set(INN_CANLOCK_LIBS inn_canlock)
 set(INN_REGEX_LIBS "")

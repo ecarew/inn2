@@ -15,6 +15,7 @@ inn_program(nnrpd
             misc.cc newnews.cc nnrpd.cc perl.cc perm.cc post.cc python.cc sasl.cc
             tls.cc track.cc transport.cc zlib.cc
     LIBS ${INN_CANLOCK_LIBS} ${INN_PERL_LIBS} ${INN_PYTHON_LIBS} ${_sasl} ${_tls}
+         ${INN_BLOCKLIST_LIB}
          ZLIB::ZLIB Boost::headers Threads::Threads)
 
 set_source_files_properties(perl.cc PROPERTIES

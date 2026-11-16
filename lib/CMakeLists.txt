@@ -2,8 +2,8 @@
 
 # Replacement functions, compiled only where the system lacks the original
 # (configure's AC_REPLACE_FUNCS and LIBOBJS; the checks are in
-# cmake/InnConfigure.cmake).  sd-daemon.cc stands in for libsystemd, which
-# the CMake build does not use yet (HAVE_SD_NOTIFY).
+# cmake/InnConfigure.cmake).  sd-daemon.cc stands in for libsystemd when
+# it is not used (HAVE_SD_NOTIFY, INN_SYSTEMD).
 set(replacements)
 foreach(func asprintf daemon getaddrinfo getnameinfo getpagesize inet_aton
         inet_ntoa inet_ntop mkstemp pread pwrite reallocarray setenv seteuid

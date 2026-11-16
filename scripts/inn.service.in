@@ -1,0 +1,41 @@
+# systemd unit for INN, made by CMake from scripts/inn.service.in with this
+# build's directories and account; installed into INN_SYSTEMD_UNIT_DIR.
+# Based on contrib/sample.init.systemd.  innd tells systemd it is ready
+# (sd_notify) when built with libsystemd (INN_SYSTEMD); rc.news starts it,
+# so the notification comes from a child of the main process.
+
+[Unit]
+Description=InterNetNews News Server
+Documentation=man:innd(8) man:rc.news(8)
+After=network-online.target
+Wants=network-online.target
+ConditionPathExists=@sysconfdir@/inn.conf
+
+[Service]
+Type=@INN_UNIT_TYPE@
+NotifyAccess=all
+Restart=on-abort
+ExecStart=@bindir@/rc.news
+ExecReload=@bindir@/ctlinnd -t 20 reload '' 'systemd unit reload'
+ExecStop=@bindir@/rc.news stop
+PIDFile=@RUNDIR@/innd.pid
+User=@INN_NEWS_USER@
+Group=@INN_NEWS_GROUP@
+# innd binds port 119 through the setuid-root innbind; this lets it bind
+# directly as well.
+AmbientCapabilities=CAP_NET_BIND_SERVICE
+PrivateTmp=true
+ProtectControlGroups=true
+ProtectHome=@INN_UNIT_PROTECT_HOME@
+ProtectSystem=full
+@INN_UNIT_RUNTIME_DIRECTORY@
+LimitNOFILE=infinity
+# ProtectSystem=full makes /usr, /boot and /etc read-only; these are the
+# directories INN writes.
+ReadWritePaths=@DBDIR@ @HISTORYDIR@ @SPOOLDIR@ @LOGDIR@ @RUNDIR@ @tmpdir@ @HTTPDIR@
+# Setting NoNewPrivileges would stop innbind (setuid root) and most local
+# sendmail implementations (setuid or setgid) from working.
+#NoNewPrivileges=true
+
+[Install]
+WantedBy=multi-user.target
