@@ -1,0 +1,42 @@
+#!/bin/sh
+#
+#  Make a release tarball: git archive of HEAD plus the text documents
+#  built from POD (doc/CMakeLists.txt), which are not in git.  Run by the
+#  CMake "dist" target:
+#
+#      cmake --build build --target dist
+#
+#  Usage: mkdist <version> <source-dir> <text-dir> <output-dir>
+#
+#  Writes <output-dir>/inn-<version>.tar.gz.  HACKING, INSTALL and NEWS go
+#  at the top, the other documents in doc/, where make dist put them.  The
+#  tree must be committed: uncommitted changes are not in the tarball, so
+#  a dirty tree is refused.
+set -eu
+
+[ $# -eq 4 ] || { echo "usage: mkdist version source-dir text-dir output-dir" >&2; exit 2; }
+version=$1
+src=$2
+text=$3
+out=$4
+name=inn-$version
+
+cd "$src"
+if [ -n "$(git status --porcelain --untracked-files=no)" ]; then
+    echo "mkdist: uncommitted changes; commit them first" >&2
+    exit 1
+fi
+
+work=$(mktemp -d "${TMPDIR:-/tmp}/mkdist.XXXXXX")
+trap 'rm -rf "$work"' EXIT
+git archive --format=tar --prefix="$name/" HEAD | (cd "$work" && tar xf -)
+for f in HACKING INSTALL NEWS; do
+    cp "$text/$f" "$work/$name/$f"
+done
+for f in checklist external-auth hook-perl hook-python; do
+    cp "$text/$f" "$work/$name/doc/$f"
+done
+
+mkdir -p "$out"
+(cd "$work" && tar cf - "$name") | gzip -9 > "$out/$name.tar.gz"
+echo "$out/$name.tar.gz"

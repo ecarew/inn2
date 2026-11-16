@@ -157,3 +157,11 @@ install(FILES ${INN_TEXT_FILES}
         GPL config-design config-semantics config-syntax history
         history-innfeed sample-control
         DESTINATION ${docdir} PERMISSIONS ${INN_MODE_RPUB})
+
+# Release tarball (support/mkdist): git archive of HEAD plus the text
+# documents above.  cmake --build build --target dist
+add_custom_target(dist
+    COMMAND sh ${CMAKE_SOURCE_DIR}/support/mkdist ${PROJECT_VERSION}
+            ${CMAKE_SOURCE_DIR} ${_inn_text_out} ${CMAKE_BINARY_DIR}
+    DEPENDS ${INN_TEXT_FILES}
+    COMMENT "Making inn-${PROJECT_VERSION}.tar.gz" VERBATIM)
