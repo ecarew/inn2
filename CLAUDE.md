@@ -85,8 +85,6 @@ commits only if they pass; it refuses if unstaged changes remain.
 - Root paths: `sudo support/root-checks.sh` (the user runs it on macOS;
   output goes in the commit), and `support/docker-root-checks.sh` on Linux
   (Debian trixie in Docker; archives tracked files only).
-- `support/compare-config.sh` compares CMake's config.h with a configure
-  one, symbol by symbol.
 - Doxygen call graphs: `doxygen support/Doxyfile` → `build-doxygen/html/`.
 - Add tests for any area a change touches.  clang-tidy uses Homebrew LLVM
   (`/opt/homebrew/opt/llvm/bin`) and `build/compile_commands.json`.
@@ -126,29 +124,24 @@ design approach".  In order:
 
 ## Open items
 
-**CMake-only goal: no Autoconf/Make left (decided 2026-10-28)**
-Items 1 (native configuration), 2 (generated sources), 3 (samples), 4
-(scripts), 5 (install rules, 2026-11-04) and 9 (CTest: `ctest --test-dir build`, tests/CMakeLists.txt) are
-done.  Generated files come from cmake/InnPaths.cmake (directories,
-configure's substitutions, inn_fixscript/inn_scripts); support/fixconfig
-and support/fixscript are Make-only now.
-5. Install: done.  Left: man pages, docs and filter samples (with item 6
-   and 8); support/docker-install-checks.sh must keep passing (innbind the
-   only setuid file).
-6. Man pages from `doc/pod`.
-7. Perl module `perl/INN/` (INN::Config, ovsqlite_client).  `contrib/` done
-   (2026-11-03): converted, improved, tested, built with `-DINN_CONTRIB=ON`
-   (off by default).
-8. Optional features as CMake options: Perl and Python hooks, Berkeley DB
-   (ovdb), OpenSSL/TLS, systemd, blocklist (libcanlock done 2026-11-01:
-   found when present).  Before ovdb can be
-   on, fix `storage/ovdb/ovdb.cc` (fails a `-DHAVE_BDB` syntax check).
+**CMake-only goal: done (2026-11-16)**
+Autoconf and Make are removed (78d9ba263, AUTOTOOLS_PLAN.md).  CMake
+builds, tests (`ctest --test-dir build`), installs with INN's modes and
+ownership, builds the man pages and text documents (doc/CMakeLists.txt),
+makes release tarballs (`dist`) and certificates (`cert`), and has
+configure's options: directories, the news account, Perl/Python, TLS,
+systemd with inn.service, blocklist, tagged hash.  install.pod and
+hacking.pod describe the CMake build.  Not carried over: Berkeley DB/ovdb
+(migration guide pending), large files, `make reformat`/`make code-check`.
+Remaining items:
 10. Portability: a BSD.  Linux runs everything (verify-cxx.sh,
     live-innd.sh, root checks) via `support/docker-linux-checks.sh` and
     `support/docker-root-checks.sh` (2026-10-30).
 11. Install checks on local VMs (decided 2026-11-04 with the user: local,
-    not AWS): Lima for Linux (systemd unit, cron news.daily, restart after
-    reboot), QEMU with the FreeBSD arm64 cloud image for item 10.  Needs
+    not AWS): Lima for Linux (VM `inn-systemd`, Debian 13: systemd unit
+    tested 2026-11-16; left: cron news.daily, restart after reboot); no
+    systemd in the Docker image (architect, 2026-11-16); QEMU with the
+    FreeBSD arm64 cloud image for item 10.  Needs
     `brew install lima qemu` (the user runs it).  Docker stays a target.
 12. Docker Hub image, after a round or two of refactoring (user,
     2026-11-04): a production image (innd as news, not a test build);
