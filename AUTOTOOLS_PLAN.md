@@ -82,6 +82,22 @@ checks and the Linux install checks before the push.
    `make install` or `make check` are updated; the CLAUDE.md goal is
    closed.
 
+## Done (2026-11-16)
+
+All four steps are done: man pages and documents (7bb7ec3ab), `dist`
+(b9f7a0518), the Autoconf build removed (78d9ba263), and the
+documentation (install.pod 65aef6b59, then checklist, hissqlite,
+inn.conf, nnrpd, readers.conf, hacking.pod, BUILDING.md, README.md,
+TODO, CLAUDE.md).  Added on the way, at the architect's request: the
+directory options and INN_NEWS_USER/GROUP (3ea348028); INN_SYSTEMD with
+inn.service, INN_BLOCKLIST and INN_TAGGED_HASH (2cb9ef494, so the
+follow-ups below are done); the `cert` target (5d39dfac7).  The GitHub
+workflow runs the CMake checks (afd1bb1fd, 7ef5201c7).
+
+Still not ported: `make reformat` and `make code-check` (clang-format,
+perltidy, black, shfmt, codespell, perlcritic); Berkeley DB/ovdb (its
+migration guide is next); large files.
+
 ## Not in this phase (follow-ups)
 
 configure had two optional features that the CMake build leaves off
