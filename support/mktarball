@@ -1,0 +1,98 @@
+#!/bin/sh
+#
+#  Build the generic Linux tarball of INN++: /usr/local/news staged with
+#  DESTDIR, plus packaging/tarball/install.sh, which a root user runs to
+#  install it.  Built in a Debian testing container (CMake 4.3, Boost
+#  1.92), so it needs glibc as new as Debian testing's, and SQLite 3,
+#  zstd and PAM at run time.  OpenSSL and libcanlock are linked
+#  statically (the architect, 2026-11-17): distributions ship OpenSSL 3
+#  and 4 under different sonames.  An OpenSSL security fix therefore
+#  means a new tarball.
+#  The Perl and Python filters are left out: they tie the programs to
+#  one Perl and one Python version (use the .deb, or build from source).
+#
+#      support/mktarball [output-dir]
+#
+#  Writes inn2-cxx-<version>-linux-<arch>.tar.gz and its .sha256 to
+#  output-dir (default: build-tarball).  <version> is git describe's,
+#  without the leading v.  The source is the tracked files with their
+#  working-tree contents, as support/mkdeb streams them.  Set
+#  TARBALL_PLATFORM (e.g. linux/arm64) to build for another architecture
+#  under emulation.  The archive is reproducible: sorted, numeric root
+#  owners, and every time stamp the last commit's (SOURCE_DATE_EPOCH).
+set -eu
+
+top=$(git rev-parse --show-toplevel)
+out=${1:-$top/build-tarball}
+mkdir -p "$out"
+out=$(cd "$out" && pwd)
+cd "$top"
+
+version=$(git describe --tags --always | sed 's/^v//')
+epoch=$(git log -1 --format=%ct)
+
+idx=$(mktemp)
+trap 'rm -f "$idx"' EXIT
+cp "$(git rev-parse --git-path index)" "$idx"
+tree=$(GIT_INDEX_FILE=$idx git add -u && GIT_INDEX_FILE=$idx git write-tree)
+
+platform=${TARBALL_PLATFORM:+--platform=$TARBALL_PLATFORM}
+git archive --format=tar "$tree" \
+    | docker run --rm -i $platform -v "$out:/out" \
+        -e VERSION="$version" -e SOURCE_DATE_EPOCH="$epoch" \
+        -e OWNER="$(id -u):$(id -g)" debian:testing sh -c '
+        set -e
+        export DEBIAN_FRONTEND=noninteractive
+        apt-get update -qq
+        apt-get install -y -qq --no-install-recommends \
+            build-essential cmake ninja-build pkgconf bison flex perl \
+            libboost-dev libsqlite3-dev zlib1g-dev libssl-dev \
+            libcanlock-dev libpam0g-dev libcrypt-dev libzstd-dev ca-certificates >/dev/null
+        mkdir /src && tar -x -C /src && cd /src
+        arch=$(dpkg --print-architecture)
+        name=inn2-cxx-$VERSION-linux-$arch
+        prefix=/usr/local/news
+        canlock=$(find /usr/lib -name libcanlock.a | head -1)
+        cmake -S . -B /b -G Ninja -DCMAKE_BUILD_TYPE=RelWithDebInfo \
+            -DINN_TESTS=OFF -DINN_CCACHE=OFF \
+            -DINN_PREFIX=$prefix \
+            -DINN_SYSTEMD_UNIT_DIR=$prefix/share/systemd \
+            -DINN_PERL_FILTERS=OFF -DINN_PYTHON_FILTERS=OFF \
+            -DINN_TLS=ON -DOPENSSL_USE_STATIC_LIBS=TRUE \
+            -DINN_SYSTEMD=OFF -DINN_BLOCKLIST=OFF \
+            ${canlock:+-DINN_CANLOCK_LIB=$canlock} \
+            -DINN_PATHHOST=@PATHHOST@ >/b.log
+        grep -E "HAVE_CANLOCK 1" /b/include/config.h >/dev/null \
+            || { echo "libcanlock not found"; exit 1; }
+        cmake --build /b >>/b.log 2>&1 || { tail -30 /b.log; exit 1; }
+        stage=/stage/$name
+        root=$stage/root
+        DESTDIR=$root cmake --install /b --strip >>/b.log 2>&1 \
+            || { tail -30 /b.log; exit 1; }
+        p=$root$prefix
+        # Configuration and site data are made by install.sh only when
+        # absent, from these defaults, so a reinstall keeps the site'"'"'s.
+        mkdir -p $p/share/inn2-cxx
+        mv $p/etc $p/share/inn2-cxx/etc
+        mv $p/share/inn2-cxx/etc/inn.conf $p/share/inn2-cxx/inn.conf
+        cp samples/active.minimal samples/newsgroups.minimal $p/share/inn2-cxx/
+        rm -f $p/db/active $p/db/active.times $p/db/newsgroups $p/db/history
+        # Headers and static libraries are for building INN only.
+        rm -rf $p/include $p/lib/*.a
+        install -m 755 packaging/tarball/install.sh $stage/install.sh
+        install -m 644 packaging/tarball/README $stage/README
+        install -m 644 LICENSE $stage/LICENSE
+        cd /stage
+        tar --sort=name --mtime=@$SOURCE_DATE_EPOCH --owner=0 --group=0 \
+            --numeric-owner --format=gnu -cf - $name | gzip -9n >/out/$name.tar.gz
+        cd /out && sha256sum $name.tar.gz >$name.tar.gz.sha256
+        chown $OWNER /out/$name.tar.gz /out/$name.tar.gz.sha256
+        for f in $p/bin/* $p/bin/*/*; do
+            [ -f "$f" ] && ldd "$f" 2>/dev/null | grep -qE "libssl|libcrypto|libcanlock" \
+                && { echo "linked dynamically to OpenSSL or libcanlock: $f"; exit 1; }
+        done
+        echo "--- run-time libraries"
+        for f in $p/bin/innd $p/bin/nnrpd; do ldd $f; done \
+            | awk "{print \$1}" | sort -u
+    '
+ls -l "$out"/inn2-cxx-*.tar.gz

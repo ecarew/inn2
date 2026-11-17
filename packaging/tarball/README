@@ -1,0 +1,46 @@
+INN++ generic Linux tarball
+===========================
+
+INN++ is a C++20/CMake conversion of INN 2.8.0, the InterNetNews server.
+This tarball holds a prebuilt /usr/local/news for glibc Linux systems
+without a native package (Debian and Ubuntu: use the .deb instead).
+
+Requirements
+------------
+
+- glibc as new as Debian testing's at build time, and the run-time
+  libraries SQLite 3, zstd and PAM (installed on most systems).
+- OpenSSL is built in (nnrpd's TLS), so the system's OpenSSL updates do
+  not reach it: install a newer INN++ tarball after an OpenSSL security
+  release.
+- Built without the Perl and Python filters, which tie the programs to
+  one Perl and one Python version; build from source for those.
+
+Install
+-------
+
+    tar -xzf inn2-cxx-<version>-linux-<arch>.tar.gz
+    cd inn2-cxx-<version>-linux-<arch>
+    sudo ./install.sh
+
+install.sh creates the news group and user when absent, installs into
+/usr/local/news with INN's owners (news), and makes innbind setuid root,
+the only setuid-root file.  inn.conf (with this host as pathhost), the
+other configuration files, active, newsgroups and the history database
+are created only when absent, so running a newer install.sh upgrades the
+programs and keeps the site's files.  On a systemd host the unit is
+installed in /etc/systemd/system but not enabled:
+
+    sudo systemctl enable --now inn
+
+Then configure INN in /usr/local/news/etc; see the documents in
+/usr/local/news/doc and the man pages (inn.conf(5), readers.conf(5),
+incoming.conf(5), newsfeeds(5)).
+
+Remove
+------
+
+    sudo systemctl disable --now inn; sudo rm /etc/systemd/system/inn.service
+    sudo rm -rf /usr/local/news       # also removes the spool and history
+
+Source, license and issues: https://github.com/ecarew/inn2 (LICENSE here).
