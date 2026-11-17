@@ -270,4 +270,5 @@ check '[ $status = 0 ] && [ "$(cat $tmp/out/siteA)" = one ] && [ "$(mode $tmp/ou
 
 # A bad option is a usage error.
 "$buffchan" -r -Z </dev/null 2>"$tmp/err"
-check '[ $? != 0 ] && grep -q "usage error" $tmp/err' 'a bad option is a usage error'
+status=$?
+check '[ $status != 0 ] && grep -q "usage error" $tmp/err' 'a bad option is a usage error'

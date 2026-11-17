@@ -1,4 +1,4 @@
-#!/usr/bin/perl
+#!/usr/bin/env perl
 #
 # Test resolver and authenticator, used for testing nnrpd external auth.
 # Saves all of its input into a file named input in the current directory, as
