@@ -55,7 +55,7 @@ set(INN_MODE_WXPUB OWNER_READ OWNER_WRITE OWNER_EXECUTE GROUP_READ
 # _inn_mode_list(<out> <octal>): an octal mode such as 0664 as CMake's
 # permission keywords (the special bits are not needed here).
 function(_inn_mode_list out octal)
-    string(REGEX REPLACE "^0*" "" octal "${octal}")
+    string(REGEX REPLACE "^0+" "" octal "${octal}")
     string(LENGTH "${octal}" n)
     while(n LESS 3)
         string(PREPEND octal 0)

@@ -1,4 +1,4 @@
-cmake_minimum_required(VERSION 4.3)
+cmake_minimum_required(VERSION 3.31...4.3)
 
 project(INN VERSION 2.8.0 LANGUAGES C CXX)
 
@@ -142,6 +142,11 @@ include_directories(${CMAKE_SOURCE_DIR}/include)
 
 find_package(ZLIB REQUIRED)
 find_package(SQLite3 REQUIRED)
+# CMake 4.3 renamed FindSQLite3's target from SQLite::SQLite3; 3.31 (FreeBSD,
+# Debian 13) has only the old name.
+if(NOT TARGET SQLite3::SQLite3 AND TARGET SQLite::SQLite3)
+    add_library(SQLite3::SQLite3 ALIAS SQLite::SQLite3)
+endif()
 # On macOS both are found in the SDK, and their targets then name the SDK's
 # usr/include, which the compiler searches anyway through its sysroot.  CMake
 # drops it as a system directory only while its cached compiler details name

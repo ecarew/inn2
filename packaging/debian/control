@@ -3,7 +3,7 @@ Section: news
 Priority: optional
 Maintainer: INN++ <noreply@users.noreply.github.com>
 Build-Depends: debhelper-compat (= 13),
-               cmake (>= 4.3),
+               cmake (>= 3.31),
                ninja-build,
                pkgconf,
                bison,
