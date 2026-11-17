@@ -13,9 +13,10 @@
 #  Stages the given paths (plus all modified tracked files with -u if none are
 #  given), refuses if any change is left unstaged (restoring the index as it
 #  was before the run whenever it does not commit), runs support/verify-cxx.sh
-#  on build/ and, if configured, build-asan/, plus support/live-innd.sh on
-#  build-live/ if configured (with the Perl and Python filters, so their
-#  checks run), and commits with a Tested: section for each.
+#  on build/ (with LIVE=1, also support/live-innd.sh on build-live/, which
+#  must have the Perl and Python filters), and commits with a Tested:
+#  section naming what ran.  The full check is support/prepush.sh, run
+#  before a push.
 #  A documentation-only commit (*.md, doc/ but not doc/pod or doc/man,
 #  ChangeLog) skips the checks and says "Tested: none (documentation only)".
 #  Uses your normal git identity; set COMMIT_TRAILER to add a trailer line
@@ -87,8 +88,11 @@ if $docs_only; then
 fi
 
 tmp=$(mktemp -d "${TMPDIR:-/tmp}/commit-verified.XXXXXX")
+# Each commit runs verify-cxx.sh on build only; the live innd test runs
+# before a push (support/prepush.sh), and build-asan for memory-handling
+# changes by hand (the architect, 2026-11-17: refactor and maintenance
+# stage).  LIVE=1 runs the live test here too.
 builds=(build)
-[ -f build-asan/CMakeCache.txt ] && builds+=(build-asan)
 for b in "${builds[@]}"; do
     if ! support/verify-cxx.sh "$b" >"$tmp/$b.txt" 2>&1; then
         echo "VERIFY FAILED ($b); not committing"
@@ -97,7 +101,7 @@ for b in "${builds[@]}"; do
     fi
 done
 live=false
-if [ -f build-live/CMakeCache.txt ]; then
+if [ -n "$LIVE" ] && [ -f build-live/CMakeCache.txt ]; then
     live=true
     # live-innd.sh skips the Perl and Python filter and hook checks on a
     # build without them, so insist on a build-live that has both.
