@@ -1,0 +1,16 @@
+INN++ (the inn2-cxx package) is a C++20/CMake conversion of INN 2.8.0.
+Source: https://github.com/ecarew/inn2
+
+This file is support/mkdeb's assembly of INN++'s LICENSE, below, which
+lists the files under licenses other than INN's own, following the form
+of Debian's inn2 package (debian/copyright, maintained by Marco d'Itri).
+Files added by INN++ are under INN's license at the top of LICENSE.
+
+On Debian systems, the complete text of the GNU General Public License
+version 2 can be found in `/usr/share/common-licenses/GPL-2'.
+
+The Debian packaging (packaging/debian/) is under the same license as
+INN.
+
+----------------------------------------------------------------------
+

@@ -1,0 +1,49 @@
+#!/bin/sh
+# First-install site data for INN++, created only when absent, as
+# cmake --install does for a real install: never replaced on upgrade.
+set -e
+
+if [ "$1" = configure ]; then
+    db=/var/lib/news
+    share=/usr/share/inn2-cxx
+    bin=/usr/lib/news/bin
+    created=false
+    # inn.conf, with this server's name as pathhost.  A configuration
+    # file the site edits, so never replaced once it exists.
+    if [ ! -e /etc/news/inn.conf ]; then
+        host=$(hostname -f 2>/dev/null || hostname)
+        sed "s/@PATHHOST@/$host/" "$share/inn.conf" > /etc/news/inn.conf
+        chown news:news /etc/news/inn.conf
+        chmod 644 /etc/news/inn.conf
+        created=true
+    fi
+    for f in active newsgroups; do
+        if [ ! -e "$db/$f" ]; then
+            install -o news -g news -m 664 "$share/$f.minimal" "$db/$f"
+            created=true
+        fi
+    done
+    if [ ! -e "$db/active.times" ]; then
+        install -o news -g news -m 664 /dev/null "$db/active.times"
+    fi
+    hismethod=$(runuser -u news -- "$bin/innconfval" hismethod)
+    histdir=$(runuser -u news -- "$bin/innconfval" pathhistory)
+    if [ "$hismethod" = hissqlite ]; then
+        if [ ! -e "$histdir/history.sqlite" ]; then
+            runuser -u news -- "$bin/makehistory"
+        fi
+    elif [ ! -e "$histdir/history" ]; then
+        install -o news -g news -m 664 /dev/null "$histdir/history"
+        (cd "$histdir" && runuser -u news -- "$bin/makedbz" -i -o)
+    fi
+    systemd-tmpfiles --create inn2-cxx.conf >/dev/null 2>&1 || true
+    if $created; then
+        echo "INN++: a minimal active file and history database were created."
+        echo "Configure INN (/etc/news, see /usr/share/doc/inn2-cxx), then"
+        echo "start it with: systemctl enable --now inn"
+    fi
+fi
+
+#DEBHELPER#
+
+exit 0

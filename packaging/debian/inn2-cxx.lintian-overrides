@@ -1,0 +1,27 @@
+# INN's install modes, kept as make install set them (cmake/InnInstall.cmake).
+
+# innbind is INN's one setuid-root helper: it binds ports below 1024 for
+# innd and nnrpd, which run as news.  Executable by root and news only.
+inn2-cxx: non-standard-setuid-executable-perm 4550 [usr/lib/news/bin/innbind]
+inn2-cxx: elevated-privileges 4550 root/news [usr/lib/news/bin/innbind]
+
+# Programs are 0555; those only the news account should run (innd's
+# helpers, the storage tools, rnews's backends) are 0550 or 0500, owned
+# by news.
+inn2-cxx: non-standard-executable-perm 0555 != 0755 [usr/lib/news/bin/*]
+inn2-cxx: non-standard-executable-perm 0550 != 0755 [usr/lib/news/bin/*]
+inn2-cxx: non-standard-executable-perm 0500 != 0755 [usr/lib/news/bin/*]
+inn2-cxx: executable-is-not-world-readable * [usr/lib/news/bin/*]
+
+# Files holding passwords or secrets are readable by news only.
+inn2-cxx: non-standard-file-perm 0640 != 0644 [etc/news/*]
+
+# Site hooks sourced by innshellvars, and the innshellvars library itself:
+# sourced by INN's scripts, never run.  The sample filters are templates
+# copied into place by the site.
+inn2-cxx: executable-not-elf-or-script [etc/news/innshellvars*.local]
+inn2-cxx: script-not-executable [usr/lib/news/lib/innshellvars]
+inn2-cxx: script-not-executable [usr/lib/news/bin/filter/nnrpd_*.pl]
+
+# INSTALL documents building INN++ from source, kept for reference.
+inn2-cxx: package-contains-upstream-installation-documentation [usr/share/doc/inn2-cxx/INSTALL.gz]

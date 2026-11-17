@@ -1,0 +1,63 @@
+#!/usr/bin/make -f
+# INN++ for Debian: the FHS layout of install.pod, built with CMake.
+# The install runs under fakeroot (Rules-Requires-Root: binary-targets),
+# so cmake --install gives INN's directories to news (uid 9, static in
+# base-passwd) and makes innbind setuid root, as a root install does.
+
+export DEB_BUILD_MAINT_OPTIONS = hardening=+all
+
+%:
+	dh $@ --buildsystem=cmake+ninja
+
+override_dh_auto_configure:
+	dh_auto_configure -- \
+	    -DINN_TESTS=OFF \
+	    -DINN_PREFIX=/usr/lib/news \
+	    -DINN_PATH_CONFIG=/etc/news \
+	    -DINN_DB_DIR=/var/lib/news \
+	    -DINN_SPOOL_DIR=/var/spool/news \
+	    -DINN_LOG_DIR=/var/log/news \
+	    -DINN_RUN_DIR=/run/news \
+	    -DINN_PATH_TMP=/var/spool/news/incoming/tmp \
+	    -DINN_HTTP_DIR=/var/lib/news/http \
+	    -DINN_MAN_DIR=/usr/share/man \
+	    -DINN_DOC_DIR=/usr/share/doc/inn2-cxx \
+	    -DINN_SYSTEMD_UNIT_DIR=/usr/lib/systemd/system \
+	    -DINN_PERL_FILTERS=ON \
+	    -DINN_PYTHON_FILTERS=ON \
+	    -DINN_TLS=ON \
+	    -DINN_SYSTEMD=ON \
+	    -DINN_CCACHE=OFF \
+	    -DINN_PATHHOST=@PATHHOST@
+
+D = debian/inn2-cxx
+
+override_dh_auto_install:
+	dh_auto_install
+	# Site data is never a package file, or an upgrade would replace it:
+	# postinst creates it when absent, from these samples.
+	install -d $(D)/usr/share/inn2-cxx
+	install -m 644 samples/active.minimal samples/newsgroups.minimal \
+	    $(D)/usr/share/inn2-cxx/
+	# inn.conf names this server (pathhost), so it is made by postinst
+	# from this template on first install, not shipped as a conffile.
+	mv $(D)/etc/news/inn.conf $(D)/usr/share/inn2-cxx/inn.conf
+	rm -f $(D)/var/lib/news/active $(D)/var/lib/news/active.times \
+	    $(D)/var/lib/news/newsgroups $(D)/var/lib/news/history
+	# /run is a tmpfs: systemd's RuntimeDirectory= and tmpfiles.d make it.
+	rm -rf $(D)/run
+	# Headers and static libraries are for building INN only.
+	rm -rf $(D)/usr/lib/news/include $(D)/usr/lib/news/lib/*.a
+
+override_dh_installsystemd:
+	dh_installsystemd --no-start --no-enable
+
+# innbind must stay setuid root (4550, group news), and the news-owned
+# trees must keep their owners: dh_fixperms would reset both.
+override_dh_fixperms:
+	dh_fixperms -X/usr/lib/news -X/var/lib/news -X/var/spool/news \
+	    -X/var/log/news -X/etc/news
+
+# The test suite runs in CI (support/docker-linux-checks.sh); it needs a
+# sandbox and live daemons, not a package build.
+override_dh_auto_test:

@@ -1,0 +1,78 @@
+#!/bin/sh
+#
+#  Build the inn2-cxx .deb (packaging/debian/) in a Debian testing
+#  container, which has CMake 4.3 and Boost 1.92, and check it with
+#  lintian.  Run from anywhere in the source tree:
+#
+#      support/mkdeb [output-dir]
+#      support/mkdeb --reprotest [output-dir]
+#
+#  With --reprotest, nothing is kept but the verdict: reprotest builds the
+#  package twice under different conditions (time, time zone, locale,
+#  umask, build path, environment, number of CPUs, kernel name) and runs
+#  diffoscope on the two; any difference is a reproducibility bug.  The
+#  file order, account and host name variations need privileges Docker
+#  does not give and are left out.
+#
+#  The source is the tracked files with their working-tree contents, as
+#  support/docker-linux-checks.sh streams them; packaging/debian/ becomes
+#  debian/, and debian/copyright is packaging/debian/copyright.in followed
+#  by LICENSE.  The .deb, its .buildinfo and
+#  .changes, and lintian's report go to output-dir (default: build-deb).
+#  Set DEB_PLATFORM (e.g. linux/arm64) to build for another architecture
+#  under emulation.
+set -eu
+
+mode=build
+image=debian:testing
+if [ "${1:-}" = --reprotest ]; then
+    mode=reprotest
+    image=debian:unstable   # reprotest is not in testing at the moment
+    shift
+fi
+top=$(git rev-parse --show-toplevel)
+out=${1:-$top/build-deb}
+mkdir -p "$out"
+out=$(cd "$out" && pwd)
+cd "$top"
+
+idx=$(mktemp)
+trap 'rm -f "$idx"' EXIT
+cp "$(git rev-parse --git-path index)" "$idx"
+tree=$(GIT_INDEX_FILE=$idx git add -u && GIT_INDEX_FILE=$idx git write-tree)
+
+platform=${DEB_PLATFORM:+--platform=$DEB_PLATFORM}
+git archive --format=tar "$tree" \
+    | docker run --rm -i $platform -v "$out:/out" -e MODE=$mode \
+        $image sh -c '
+        set -e
+        export DEBIAN_FRONTEND=noninteractive
+        apt-get update -qq
+        apt-get install -y -qq --no-install-recommends \
+            build-essential devscripts equivs lintian fakeroot >/dev/null
+        mkdir /src && tar -x -C /src && cd /src
+        cp -r packaging/debian debian
+        cat debian/copyright.in LICENSE > debian/copyright
+        rm debian/copyright.in
+        mk-build-deps -i -r -t "apt-get -y -qq --no-install-recommends" \
+            debian/control >/dev/null
+        if [ "$MODE" = reprotest ]; then
+            apt-get install -y -qq --no-install-recommends reprotest \
+                diffoscope-minimal faketime locales-all >/dev/null
+            rc=0
+            reprotest --store-dir=/out/reprotest \
+                --vary=-fileordering,-user_group,-domain_host . || rc=$?
+            chown -R '"$(id -u):$(id -g)"' /out
+            [ $rc = 0 ] && echo "REPRODUCIBLE" || echo "NOT REPRODUCIBLE (see /out/reprotest)"
+            exit $rc
+        fi
+        dpkg-buildpackage -b -us -uc
+        cp ../*.deb ../*.buildinfo ../*.changes /out/
+        lintian --info --display-info ../*.changes > /out/lintian.txt 2>&1 || true
+        chown -R "'"$(id -u):$(id -g)"'" /out
+        echo "--- lintian (errors and warnings)"
+        grep -E "^[EW]:" /out/lintian.txt || echo "none"
+    '
+if [ $mode = build ]; then
+    ls -l "$out"/*.deb
+fi

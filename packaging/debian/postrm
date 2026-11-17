@@ -1,0 +1,12 @@
+#!/bin/sh
+# inn.conf is made by postinst, not shipped, so dpkg does not remove it on
+# purge.  The site's articles, history and logs are left alone.
+set -e
+
+if [ "$1" = purge ]; then
+    rm -f /etc/news/inn.conf
+fi
+
+#DEBHELPER#
+
+exit 0

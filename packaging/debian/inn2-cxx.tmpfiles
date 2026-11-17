@@ -1,0 +1,2 @@
+# innd's PID files and control sockets (inn.conf pathrun).
+d /run/news 0755 news news -

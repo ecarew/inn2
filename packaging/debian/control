@@ -1,0 +1,45 @@
+Source: inn2-cxx
+Section: news
+Priority: optional
+Maintainer: INN++ <noreply@users.noreply.github.com>
+Build-Depends: debhelper-compat (= 13),
+               cmake (>= 4.3),
+               ninja-build,
+               pkgconf,
+               bison,
+               flex,
+               perl,
+               libperl-dev,
+               python3-dev,
+               libboost-dev (>= 1.92),
+               libsqlite3-dev,
+               zlib1g-dev,
+               libssl-dev,
+               libsystemd-dev,
+               systemd-dev,
+               libcanlock-dev,
+               libkrb5-dev,
+               libsasl2-dev,
+               libpam0g-dev
+Standards-Version: 4.7.2
+Homepage: https://github.com/ecarew/inn2
+Rules-Requires-Root: binary-targets
+
+Package: inn2-cxx
+Architecture: any
+Depends: ${shlibs:Depends}, ${misc:Depends}, ${perl:Depends},
+         libmime-tools-perl,
+         cron | cron-daemon,
+         default-mta | mail-transport-agent
+Recommends: gpgv1 | gpgv
+Suggests: libgd-perl
+Conflicts: inn, inn2, cnews
+Replaces: inn, inn2
+Provides: news-transport-system
+Description: InterNetNews news server, C++20/CMake conversion (alpha)
+ INN++ is a conversion of INN 2.8, the InterNetNews Usenet server, to
+ C++20 and CMake.  It includes innd (the transit server), nnrpd (the
+ reader server, with TLS), innfeed, the storage and overview methods,
+ and embedded Perl and Python filters.
+ .
+ This is an alpha release, not for production use.
