@@ -34,6 +34,12 @@ function(_inn_man source page section)
     set(name)
     if(ARGC GREATER 3)
         set(name -n ${ARGV3})
+    elseif(section STREQUAL "3")
+        # For section 3, pod2man takes the title from the source's path as
+        # a module name (Users::...::doc::pod::libinn), which leaked the
+        # build directory into the page and made builds differ by path;
+        # the Makefile ran it inside doc/pod.  The page name is the title.
+        set(name -n ${page})
     endif()
     add_custom_command(OUTPUT ${out}
         COMMAND ${INN_POD2MAN} ${_inn_man_opts} -s ${section} ${name}
