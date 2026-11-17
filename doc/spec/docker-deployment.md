@@ -52,7 +52,7 @@ R11. The result is machine-readable: one line per check, then
   SQLite, zlib, and procps/netcat for the checks.  Kerberos, Dovecot
   and libcanlock are also installed for the other Docker check scripts,
   which share this image.
-- CMake 4.3 or later from PyPI, in a private venv at `/opt/cmake`,
+- CMake 3.31 or later from PyPI, in a private venv at `/opt/cmake`,
   because Debian's CMake is too old.
 - Boost 1.92 headers, built from the official release tarball. The
   tarball is verified against a SHA-256 pinned in the Dockerfile

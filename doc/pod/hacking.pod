@@ -17,7 +17,7 @@ or browse the current development source on Github at:
 
     <https://github.com/InterNetNews/inn>
 
-You will need S<CMake 4.3> or later and a C++20 compiler to use the
+You will need S<CMake 3.31> or later and a C++20 compiler to use the
 development tree; see F<INSTALL> for the other requirements.  Configure and
 build it in a separate build directory:
 

@@ -22,10 +22,11 @@ Status: started 2026-11-16, after the CMake-only phase
 - Security rules hold in every package: innbind is the only setuid-root
   file; no INN program runs as root; packages never set INN_RUNAS_*;
   the unit and anything in system directories is owned by root.
-- Toolchain: CMake 4.3+ and Boost 1.92+.  Debian testing and unstable
-  have both; Debian 13 (stable) has neither, so the `.deb` is built in
-  Debian testing and declares that.  Homebrew and FreeBSD ports have
-  current versions.
+- Toolchain: CMake 3.31+ (lowered from 4.3 by the architect on
+  2026-11-17: FreeBSD's ports have 3.31) and Boost 1.92+.  Debian
+  testing and unstable have both; Debian 13 (stable) has CMake 3.31 but
+  Boost 1.83, so the `.deb` is built in Debian testing and declares
+  that.  Homebrew and FreeBSD ports have both.
 - Release builds come from the `dist` tarball, not a Git checkout.
 
 ## Steps

@@ -27,7 +27,7 @@ reports are welcome and encouraged.
   library comes first, then Boost (header-only), then INN's own code;
   legacy C functions with standard C++ replacements are removed once
   nothing uses them.
-- **CMake only.**  CMake 4.3 or later builds, tests and installs INN++, and
+- **CMake only.**  CMake 3.31 or later builds, tests and installs INN++, and
   generates everything `configure` used to.  Autoconf and Make are removed
   once CMake covers all of it.
 - **Portable by feature tests.**  macOS and Linux both build and pass the
@@ -144,7 +144,7 @@ any compiler with good C++20 support should work.  The Boost libraries,
 against no Boost library.  Compiling INN++ also requires **bison** and
 **flex** for the **innfeed** configuration parser.
 
-INN++ is built with **CMake** 4.3 or later, which probes the capabilities
+INN++ is built with **CMake** 3.31 or later, which probes the capabilities
 of your system in place of the GNU **autoconf** `configure` script of the
 original INN.  A typical build is:
 

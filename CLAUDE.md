@@ -9,7 +9,8 @@ behind them, and the history of the work, are in
 
 ## Build system
 
-- CMake minimum version 4.3.  C++20 for every C++ target, set once in the
+- CMake minimum version 3.31 (the architect, 2026-11-17: FreeBSD ports and
+  Debian 13 have 3.31), up to 4.3 policies.  C++20 for every C++ target, set once in the
   root CMakeLists.txt (`CMAKE_CXX_STANDARD 20`, `..._REQUIRED ON`,
   `CMAKE_CXX_EXTENSIONS OFF`).  Don't use C++23-only features, or the C++20
   features libc++ lists as incomplete (modules, chrono time zones,

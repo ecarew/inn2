@@ -85,7 +85,7 @@ functional (or in some cases, to work at all):
 =item *
 
 In order to build INN, you will need a compiler for C++20 and C11, such
-as a recent B<gcc> or B<clang>, and B<CMake> 4.3 or later
+as a recent B<gcc> or B<clang>, and B<CMake> 3.31 or later
 (L<https://cmake.org/download/>; it is also on PyPI, as C<pip install
 cmake>).  B<Ninja> (L<https://ninja-build.org/>) is recommended for
 building.
@@ -262,7 +262,7 @@ root, indiscriminate use of C<chown news> is not the solution.  (If you
 don't like to log in to system accounts, careful use of C<chmod g+s> on
 directories and a umask of C<002> or C<007> may suffice.)
 
-INN is configured and built with B<CMake> (4.3 or later), in a build
+INN is configured and built with B<CMake> (3.31 or later), in a build
 directory separate from the source tree.  Unless you have a rather abnormal
 setup, CMake should be able to completely configure INN for your system.
 If you want to change the defaults, give one or more B<-D>I<OPTION>=I<VALUE>

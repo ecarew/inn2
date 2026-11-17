@@ -85,7 +85,7 @@ Lima's `template:debian-13`:
 4. **provision**: the Dockerfile's toolchain, so the two targets build
    alike:
    - the same Debian packages, plus cron
-   - CMake 4.3 or later from PyPI
+   - CMake 3.31 or later from PyPI
    - Boost 1.92 headers, verified against the Dockerfile's pinned
      SHA-256 (read from the Dockerfile, so there's one source of truth)
 5. Run the Docker install checks unchanged:
@@ -137,7 +137,7 @@ unable to write its own database.
   firmware is edk2, and a NoCloud seed ISO sets up the user and SSH key.
 - Networking: QEMU user-mode networking, with only SSH forwarded, and
   only to the host's 127.0.0.1 on a random port (V2).
-- Provision: `pkg install` for the toolchain. Boost 1.92 and CMake 4.3
+- Provision: `pkg install` for the toolchain. Boost 1.92 and CMake 3.31
   come from pkg if the ports are new enough, otherwise from the same
   pinned sources.
 - Accounts: FreeBSD's base system has `news` (uid 8). Use it.
