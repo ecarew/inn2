@@ -49,6 +49,12 @@ Status: started 2026-11-16, after the CMake-only phase
    - Checks: `lintian`; install the `.deb` in a clean container (owners,
      innbind the only setuid file, inn.conf paths); in the Lima VM,
      install and `systemctl start inn`.
+   - *Done* (2026-11-17): lintian has only initial-upload-closes-no-bugs;
+     `support/pkgtest/run.sh deb` passes; in the Lima VM `inn-testing`
+     (a clone of `inn-systemd` upgraded to Debian testing, which the
+     .deb needs) the install leaves the unit disabled, and enable --now,
+     NNTP on 119 as news, /run/news, reload, stop, restart and purge all
+     pass.
 3. **Generic tarball:** the `/usr/local/news` tree staged with DESTDIR,
    with an install script that creates the news user, sets owners and
    innbind's mode, and refuses to run as anyone but root.  Built on the
@@ -62,7 +68,9 @@ Status: started 2026-11-16, after the CMake-only phase
 4. **Release workflow** (`.github/workflows/release.yaml`): on a `v*`
    tag, build the `dist` tarball, the `.deb` and the generic tarball for
    amd64 and arm64, run the package checks, and attach everything to the
-   GitHub release with SHA-256 sums.
+   GitHub release with SHA-256 sums.  *Written* (2026-11-17): its steps
+   pass locally on arm64; the first real run is the alpha 5 tag.  The
+   tag must match packaging/debian/changelog.
 5. **Homebrew tap:** a formula building from the release tarball, with
    `-DINN_PREFIX=$(brew --prefix)/var/inn` style paths kept out of the
    Cellar; caveats print the root steps (news user, innbind setuid),
