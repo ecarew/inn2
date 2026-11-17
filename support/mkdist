@@ -8,6 +8,10 @@
 #
 #  Usage: mkdist <version> <source-dir> <text-dir> <output-dir>
 #
+#  <text-dir> may be --pod: the documents are then made here with
+#  pod2text, as doc/CMakeLists.txt makes them, so no configured build is
+#  needed (the release workflow).
+#
 #  Writes <output-dir>/inn-<version>.tar.gz.  HACKING, INSTALL and NEWS go
 #  at the top, the other documents in doc/, where make dist put them.  The
 #  tree must be committed: uncommitted changes are not in the tarball, so
@@ -30,6 +34,17 @@ fi
 work=$(mktemp -d "${TMPDIR:-/tmp}/mkdist.XXXXXX")
 trap 'rm -rf "$work"' EXIT
 git archive --format=tar --prefix="$name/" HEAD | (cd "$work" && tar xf -)
+if [ "$text" = --pod ]; then
+    text=$work/text
+    mkdir "$text"
+    gw=
+    pod2text --guesswork=none /dev/null >/dev/null 2>&1 && gw=--guesswork=none
+    for pair in hacking:HACKING install:INSTALL news:NEWS checklist:checklist \
+                external-auth:external-auth hook-perl:hook-perl \
+                hook-python:hook-python; do
+        pod2text $gw -s -l "doc/pod/${pair%%:*}.pod" "$text/${pair#*:}"
+    done
+fi
 for f in HACKING INSTALL NEWS; do
     cp "$text/$f" "$work/$name/$f"
 done
@@ -38,5 +53,5 @@ for f in checklist external-auth hook-perl hook-python; do
 done
 
 mkdir -p "$out"
-(cd "$work" && tar cf - "$name") | gzip -9 > "$out/$name.tar.gz"
+(cd "$work" && tar cf - "$name") | gzip -9n > "$out/$name.tar.gz"
 echo "$out/$name.tar.gz"
