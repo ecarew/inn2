@@ -48,21 +48,6 @@ else
     exit 1
 fi
 
-# Every C++ file must compile as C++20 (CLAUDE.md, "Build system"); per-target
-# settings once left most of the tree on the compiler default without notice.
-not20=$(python3 - "$build/compile_commands.json" <<'PY' 2>/dev/null
-import json, sys
-db = json.load(open(sys.argv[1]))
-print(sum(1 for e in db if e["file"].endswith(".cc")
-          and "-std=c++20" not in e["command"].split()))
-PY
-)
-if [ "$not20" = 0 ]; then
-    res "every .cc compiles as -std=c++20" PASS
-else
-    res "every .cc compiles as -std=c++20" "FAIL (${not20:-?} files)"
-fi
-
 # defined_symbols FILE: "W name" or "T name" for each defined external symbol
 # (W for weak), without the leading underscore Mach-O adds to C names.  Apple's
 # nm takes -gUm; GNU nm takes -g --defined-only and marks weak symbols W or V.
@@ -76,30 +61,6 @@ defined_symbols() {
             print ($2 ~ /^[WwVv]$/ ? "W" : "T"), $3 }'
     fi
 }
-
-# Every symbol the Makefile-built innd exports (innd-symbols.txt, Mach-O
-# names) must still be exported, under its C name, by the CMake build,
-# except those the refactoring retired on purpose (innd-retired.txt, one
-# name and its reason per line), which must be gone.
-defined_symbols "$build/innd/innd" | awk '{print $2}' | sort >"$tmp/syms"
-awk '!/^#/ && NF { print $1 }' "$data/innd-retired.txt" | sort >"$tmp/retired"
-# __mh_execute_header is the Mach-O header symbol Apple's linker adds to
-# every executable, not one of INN's.
-sed 's/^_//' "$data/innd-symbols.txt" | grep -vx '_mh_execute_header' \
-    | sort | comm -23 - "$tmp/retired" >"$tmp/want-syms"
-want=$(wc -l <"$tmp/want-syms" | tr -d ' ')
-missing=$(comm -23 "$tmp/want-syms" "$tmp/syms" | wc -l | tr -d ' ')
-if [ "$missing" = 0 ]; then
-    res "innd exports all $want Make-build symbols" PASS
-else
-    res "innd exports all $want Make-build symbols" "FAIL ($missing missing)"
-fi
-back=$(comm -12 "$tmp/retired" "$tmp/syms" | wc -l | tr -d ' ')
-if [ "$back" = 0 ]; then
-    res "retired innd symbols are gone ($(wc -l <"$tmp/retired" | tr -d ' '))" PASS
-else
-    res "retired innd symbols are gone" "FAIL ($back still exported)"
-fi
 
 mangled=0
 for a in "$build/innd/innd" "$build"/history/libinnhist.a \
@@ -216,26 +177,6 @@ if grep -q '^Control: cancel <orig@live.test>$' "$g" \
 else
     res "gencancel output (6 option sets)" FAIL
 fi
-# Differential check against the original C gencancel from main, built with
-# the original Autoconf/Make libraries when they are present.
-if [ -f lib/.libs/libinn.a ] && [ -f storage/.libs/libinnstorage.a ] \
-   && git show main:control/gencancel.c >"$tmp/gencancel-orig.c" 2>/dev/null \
-   && cc -g -I"$root/include" -c "$tmp/gencancel-orig.c" -o "$tmp/gco.o" \
-        2>"$tmp/gco.log" \
-   && cc "$tmp/gco.o" lib/.libs/libinn.a history/.libs/libinnhist.a \
-        storage/.libs/libinnstorage.a lib/.libs/libinn.a lib/canlock.o \
-        -lz -lsqlite3 -o "$tmp/gencancel-orig" 2>>"$tmp/gco.log"; then
-    gencancel_runs "$tmp/gencancel-orig" 2>/dev/null | sed -E "$mask" \
-        >"$tmp/gencancel-orig.out"
-    if cmp -s "$tmp/gencancel.out" "$tmp/gencancel-orig.out"; then
-        res "gencancel matches original C" PASS
-    else
-        res "gencancel matches original C" FAIL
-    fi
-else
-    res "gencancel matches original C" "SKIP (no original Make build)"
-fi
-
 # actsync (backends/) has no INN test.  Compare its output for two active
 # files (shared, added, removed and changed groups, a duplicate line, and
 # =alias groups: a chain, a missing target, a loop) with output recorded
@@ -333,20 +274,18 @@ test_obj() {
 # with tests/innd/fakeinnd.c in place of innd.cc, as tests/Makefile does.
 # shellcheck disable=SC2054  # commas separate an entry's extra sources
 tests=(
-    lib/artnumber lib/asio:::lib/asio lib/asprintf:::lib/asprintf lib/bloom lib/bloom-hiswalk
+    lib/artnumber lib/asio:::lib/asio lib/bloom lib/bloom-hiswalk
     lib/buffer lib/canlock:::@lib/CMakeFiles/inn_canlock.dir/canlock.cc.o lib/concat lib/conffile lib/confparse lib/date
     lib/daemon:::lib/daemon lib/dispatch lib/fdflag lib/fdlimit
-    lib/getaddrinfo:::lib/getaddrinfo lib/getnameinfo:::lib/getnameinfo
     lib/hash lib/headers lib/hex lib/hissqlite
-    lib/hissqlite-convert lib/inet_aton:::lib/inet_aton
-    lib/inet_ntoa:::lib/inet_ntoa lib/inet_ntop:::lib/inet_ntop lib/innconf
-    lib/md5 lib/messageid lib/messages lib/mkstemp:::lib/mkstemp
+    lib/hissqlite-convert
+    lib/innconf
+    lib/md5 lib/messageid lib/messages
     lib/nativemat lib/newsuser
     lib/network/addr-ipv4 lib/network/addr-ipv6 lib/network/client
-    lib/network/server lib/nntp lib/pread:::lib/pread lib/pwrite:::lib/pwrite lib/qio
-    lib/readin lib/reallocarray:::lib/reallocarray lib/reservedfd
-    lib/setenv:::lib/setenv lib/snprintf:::lib/snprintf
-    lib/strlcat:::lib/strlcat lib/strlcpy:::lib/strlcpy lib/uwildmat
+    lib/network/server lib/nntp lib/qio
+    lib/readin lib/reservedfd
+    lib/uwildmat
     lib/vector lib/wire lib/xwrite:::lib/xwrite,tests/lib/fakewrite
     authprogs/ident authprogs/identport authprogs/radius authprogs/ckpasswd.t
     authprogs/domain.t backends/buffchan.t

@@ -147,11 +147,19 @@ foreach(t artnumber bloom bloom-hiswalk buffer concat conffile
           qio readin reservedfd uwildmat vector wire)
     inn_tap_test(lib/${t})
 endforeach()
-foreach(t asprintf daemon getaddrinfo getnameinfo inet_aton inet_ntoa
-          inet_ntop mkstemp pread pwrite reallocarray setenv snprintf
-          strlcat strlcpy)
-    inn_tap_test(lib/${t} EXTRA lib/${t})
-endforeach()
+inn_tap_test(lib/daemon EXTRA lib/daemon)
+# The libc replacements' tests check libc's behaviour, not INN's: on ice
+# since the conversion stage ended (the architect, 2026-11-17).  Configure
+# with -DINN_ICED_TESTS=ON to build them, then ctest -L iced runs them.
+option(INN_ICED_TESTS "Build the iced libc-replacement tests" OFF)
+if(INN_ICED_TESTS)
+    foreach(t asprintf getaddrinfo getnameinfo inet_aton inet_ntoa
+              inet_ntop mkstemp pread pwrite reallocarray setenv snprintf
+              strlcat strlcpy)
+        inn_tap_test(lib/${t} EXTRA lib/${t})
+        set_tests_properties(lib/${t} PROPERTIES LABELS iced)
+    endforeach()
+endif()
 inn_tap_test(lib/xwrite EXTRA lib/xwrite tests/lib/fakewrite)
 # Takes libinn's canlock code from its own object library, as programs do,
 # with libcanlock when it was found.
@@ -234,7 +242,7 @@ endforeach()
 # macOS's gethostbyname() returns hostent data at misaligned addresses,
 # which UBSan flags in these two tests (in the test and in the unconverted C
 # fallback); turn off only the alignment check for them.
-if(INN_SANITIZE)
+if(INN_SANITIZE AND INN_ICED_TESTS)
     foreach(t getaddrinfo getnameinfo)
         target_compile_options(test_lib_${t} PRIVATE -fno-sanitize=alignment)
     endforeach()
