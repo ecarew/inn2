@@ -28,6 +28,18 @@ Last modified on 2026-07-14.
 
 Would be nice to have in the current major version of INN:
 
+* INN++ refactor: use libxcrypt for password hashes on every platform
+  (the architect, 2026-11-17).  ckpasswd and contrib/auth_pass call the
+  old crypt(), found in libc on macOS and the BSDs and in libcrypt on
+  glibc systems.  On current Debian, Ubuntu and Fedora libcrypt.so.1 is
+  already libxcrypt; macOS's libc crypt() knows only DES.  Find it with
+  pkg-config (libxcrypt; Homebrew libxcrypt, FreeBSD security/libxcrypt),
+  call crypt_rn() (reentrant, fails with NULL rather than a "*" string),
+  and use crypt_checksalt() to log a warning for weak hashes (DES, MD5)
+  in passwd.nntp.  Document yescrypt (libxcrypt's default) as the hash
+  to use in passwd.nntp(5) and ckpasswd(8).  The Perl samples
+  (nnrpd_auth.pl, contrib/authmysql) call Perl's crypt, which is libc's.
+
 * Rework and clean up the overview API.  The major change is that the
   initialization function should return a pointer to an opaque struct
   which stores all of the state of the overview subsystem, rather than all
