@@ -1,0 +1,96 @@
+##  GitHub Actions: on a v* tag, build INN++'s release files and attach
+##  them to the tag's GitHub release (PACKAGING_PLAN.md, step 4).
+##
+##  packages: on native amd64 and arm64 runners, the .deb (support/mkdeb,
+##            with lintian) and the generic Linux tarball
+##            (support/mktarball), each install-checked in clean
+##            containers (support/pkgtest/run.sh).
+##  source:   the source tarball (support/mkdist --pod).
+##  release:  SHA256SUMS over everything, and a GitHub release for the
+##            tag (a prerelease when the tag names an alpha, beta or rc).
+##
+##  The tag must match packaging/debian/changelog: v2.8.0-cxx.alpha.5 is
+##  2.8.0~cxx.alpha5-1.
+
+name: release
+
+"on":
+  push:
+    tags: ["v*"]
+
+permissions:
+  contents: write
+
+jobs:
+  packages:
+    strategy:
+      matrix:
+        runner: [ubuntu-latest, ubuntu-24.04-arm]
+    runs-on: ${{ matrix.runner }}
+    timeout-minutes: 90
+    steps:
+      - name: checkout
+        uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+      - name: tag matches the Debian changelog
+        run: |
+          tag=${GITHUB_REF_NAME#v}
+          want=$(echo "$tag" | sed -E 's/-cxx\.([a-z]+)\.([0-9]+)$/~cxx.\1\2/')-1
+          have=$(sed -n '1s/.*(\(.*\)).*/\1/p' packaging/debian/changelog)
+          echo "tag $GITHUB_REF_NAME -> $want; changelog $have"
+          test "$want" = "$have"
+      - name: .deb
+        run: support/mkdeb out
+      - name: lintian has no errors
+        run: "! grep -E '^E:' out/lintian.txt"
+      - name: generic tarball
+        run: support/mktarball out
+      - name: install-check the .deb
+        run: support/pkgtest/run.sh deb out
+      - name: install-check the tarball
+        run: support/pkgtest/run.sh tarball out
+      - name: upload
+        uses: actions/upload-artifact@v4
+        with:
+          name: packages-${{ matrix.runner }}
+          path: |
+            out/*.deb
+            out/inn2-cxx-*-linux-*.tar.gz
+
+  source:
+    runs-on: ubuntu-latest
+    steps:
+      - name: checkout
+        uses: actions/checkout@v6
+      - name: source tarball
+        run: support/mkdist "${GITHUB_REF_NAME#v}" . --pod "$PWD/out"
+      - name: upload
+        uses: actions/upload-artifact@v4
+        with:
+          name: source
+          path: out/*.tar.gz
+
+  release:
+    needs: [packages, source]
+    runs-on: ubuntu-latest
+    steps:
+      - name: download
+        uses: actions/download-artifact@v4
+        with:
+          path: files
+          merge-multiple: true
+      - name: checksums
+        run: cd files && sha256sum * > SHA256SUMS && cat SHA256SUMS
+      - name: release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          pre=
+          case $GITHUB_REF_NAME in *alpha*|*beta*|*rc*) pre=--prerelease ;; esac
+          if gh release view "$GITHUB_REF_NAME" -R "$GITHUB_REPOSITORY" >/dev/null 2>&1; then
+            gh release upload "$GITHUB_REF_NAME" files/* --clobber -R "$GITHUB_REPOSITORY"
+          else
+            gh release create "$GITHUB_REF_NAME" files/* $pre --verify-tag \
+              --title "INN++ $GITHUB_REF_NAME" --generate-notes -R "$GITHUB_REPOSITORY"
+          fi
