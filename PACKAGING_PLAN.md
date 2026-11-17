@@ -53,6 +53,12 @@ Status: started 2026-11-16, after the CMake-only phase
    with an install script that creates the news user, sets owners and
    innbind's mode, and refuses to run as anyone but root.  Built on the
    oldest glibc in use (Debian testing for now; noted as a limit).
+   *Done:* `support/mktarball`, `packaging/tarball/`.  OpenSSL and
+   libcanlock are linked statically (the architect, 2026-11-17), since
+   Fedora already ships OpenSSL 4 under a new soname; an OpenSSL security
+   release means a new tarball.  No Perl or Python filters.  Install
+   tested on Debian testing, Ubuntu devel and Fedora rawhide (install,
+   rerun as upgrade keeping site files); two builds are identical.
 4. **Release workflow** (`.github/workflows/release.yaml`): on a `v*`
    tag, build the `dist` tarball, the `.deb` and the generic tarball for
    amd64 and arm64, run the package checks, and attach everything to the
