@@ -62,19 +62,33 @@ than wrapping its `#include`.
   OVctl) become C++ as those APIs are refactored to typed C++ (architect,
   2026-11-09; CONVERSION_NOTES, "Typed containers and storage controls").
 
-## Testing before commit
+## Testing
 
-Run the verification *before* every commit and record it in the commit
-message as a `Tested:` section listing each check and its result, only for
-checks that ran on the exact tree committed.
-`support/cxx-tools/commit-verified.sh <subject> <body-file> [paths]` (with
-`COMMIT_TRAILER` set) runs `support/verify-cxx.sh` and the live test, and
-commits only if they pass; it refuses if unstaged changes remain.
+INN++ is past the conversion stage and in refactor and maintenance (the
+architect, 2026-11-17).  Tests cover input and output (the wire protocols,
+the tools' output) and the product: what is saved to the spool, history,
+overview and caches.  Tests of internals written to prove the conversion
+are on ice: kept, run by hand to debug or to answer old compatibility
+questions, never a gate.
+
+Tiers:
+
+- **Each commit:** `support/cxx-tools/commit-verified.sh <subject>
+  <body-file> [paths]` (with `COMMIT_TRAILER` set) runs
+  `support/verify-cxx.sh` on build/ and commits only if it passes, with a
+  `Tested:` section naming what ran; it refuses if unstaged changes remain.
+  `LIVE=1` adds the live test.
+- **Before a push:** `support/prepush.sh` (verify-cxx.sh plus
+  `support/live-innd.sh build-live`).  CI runs the same on Linux.
+- **On ice:** `support/compat-checks.sh` (C++20 everywhere, innd's
+  Make-build symbols, gencancel against the original C), the libc
+  replacements' tests (`-DINN_ICED_TESTS=ON`, then `ctest -L iced`), and
+  `live-innd.sh --iced` (innd's status, stathist and timer reports).
 
 | Build | Configure | Run |
 |---|---|---|
 | build | `cmake -S . -B build -G Ninja` | `support/verify-cxx.sh` |
-| build-live | `-DINN_RUNAS_USER=$(id -un) -DINN_RUNAS_GROUP=$(id -gn)` | `support/live-innd.sh build-live` (commit-verified.sh runs it) |
+| build-live | `-DINN_RUNAS_USER=$(id -un) -DINN_RUNAS_GROUP=$(id -gn) -DINN_PERL_FILTERS=ON -DINN_PYTHON_FILTERS=ON` | `support/live-innd.sh build-live` (prepush.sh runs it) |
 | build-asan | `-DINN_SANITIZE=ON -DCMAKE_BUILD_TYPE=Debug` | `support/verify-cxx.sh build-asan`, for memory-handling changes |
 | build-cov | `-DINN_COVERAGE=ON -DCMAKE_BUILD_TYPE=Debug` | `verify-cxx.sh build-cov`, then `live-innd.sh build-cov`, then `support/coverage-report.sh build-cov [--html]` |
 
