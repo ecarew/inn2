@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/usr/bin/env bash
 #
 #  Runs inside the container started by support/docker-root-checks.sh, as
 #  the container's root, in a fresh copy of the source in the current

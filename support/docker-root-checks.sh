@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/usr/bin/env bash
 #
 #  Run support/root-checks.sh on Linux, as root inside a Docker container:
 #  no sudo on the host, and nothing from the host is mounted.  The tracked

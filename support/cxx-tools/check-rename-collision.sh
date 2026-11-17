@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/usr/bin/env bash
 #
 #  Before renaming an identifier, report any function that already uses the
 #  new name, where the rename would collide or silently shadow.

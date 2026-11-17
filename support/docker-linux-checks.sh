@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/usr/bin/env bash
 #
 #  Build INN++ and run its checks on Linux, as an ordinary user inside a
 #  Docker container (Debian trixie): support/verify-cxx.sh and

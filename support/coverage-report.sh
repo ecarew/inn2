@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/usr/bin/env bash
 #
 #  Code coverage report for the INN++ C++ conversion.  Build with coverage and
 #  run the verification checks first:

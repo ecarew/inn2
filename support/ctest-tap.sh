@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/usr/bin/env bash
 #
 #  Run one INN test for CTest (tests/CMakeLists.txt) and turn its TAP output
 #  into an exit status, by the rules support/verify-cxx.sh uses: pass when it

@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/usr/bin/env bash
 #
 #  Rename one C source to C++ and build it: the first step of converting a
 #  file (CLAUDE.md, "Conversion workflow").  Does not commit.

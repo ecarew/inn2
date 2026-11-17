@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/usr/bin/env bash
 #
 #  The full check before a push (the architect, 2026-11-17): what each
 #  commit runs (support/verify-cxx.sh), plus the live innd test, which

@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/usr/bin/env bash
 #
 #  Checks of what INN does when started as root, which the normal checks
 #  (run as the tester) cannot reach.  Run by hand with sudo after the normal

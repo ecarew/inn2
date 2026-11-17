@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/usr/bin/env bash
 #
 #  Verification checks for the INN++ C++ conversion.  Run from anywhere after
 #  "cmake -S . -B build" has been configured; prints one line per check and a

@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/usr/bin/env bash
 #
 #  Build and run support/bench/header-lookup.cc: innd's header-name lookup,
 #  today's tree against a sorted array.  The table is innd's ARTheaders[]

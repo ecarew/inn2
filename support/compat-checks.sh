@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/usr/bin/env bash
 #
 #  Conversion-era compatibility checks, put on ice when INN++ left the
 #  conversion stage (the architect, 2026-11-17).  Nothing runs them

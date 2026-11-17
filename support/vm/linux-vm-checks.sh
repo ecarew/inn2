@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/usr/bin/env bash
 # linux-vm-checks.sh provision|before-reboot|after-reboot: run as root in
 # the Linux VM by support/vm-linux-install-checks.sh.
 #   provision      the toolchain support/docker/Dockerfile.linux installs:

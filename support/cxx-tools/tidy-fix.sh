@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/usr/bin/env bash
 #
 #  Apply one clang-tidy check's automatic fixes to .cc files only, then
 #  clang-format the files it changed.  Does not commit.

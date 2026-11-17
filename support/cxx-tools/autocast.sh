@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/usr/bin/env bash
 #
 #  Add static_casts for the compiler's "void * to T" errors in one file.
 #

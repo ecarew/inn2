@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/usr/bin/env bash
 # vm-linux-install-checks.sh [-c] [-k]: install INN++ as root in a fresh
 # Linux VM (Lima, Debian 13) and check what a container cannot: the
 # install checks of support/docker/linux-install-checks.sh, then innd

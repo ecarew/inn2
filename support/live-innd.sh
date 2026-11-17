@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/usr/bin/env bash
 #
 #  Run a real innd in a scratch installation, as the current user, and drive
 #  it with INN's own clients.  Exercises the parts of innd that only run in a

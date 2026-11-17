@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/usr/bin/env bash
 #
 #  Performance comparison of two revisions on Linux, in the Docker image of
 #  support/docker-linux-checks.sh: builds both (RelWithDebInfo, TLS on, for

@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/usr/bin/env bash
 #
 #  A throwaway dovecot for imapfeed's live checks (support/live-innd.sh):
 #  IMAP on 127.0.0.1:143 and LMTP on 127.0.0.1:2003, the ports imapfeed is

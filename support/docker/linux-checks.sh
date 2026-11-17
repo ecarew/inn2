@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/usr/bin/env bash
 #
 #  Runs inside the container started by support/docker-linux-checks.sh, as
 #  the ordinary user "tester" (not the news user), in a fresh copy of the

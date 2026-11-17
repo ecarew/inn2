@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/usr/bin/env bash
 #
 #  Commit only after the verification checks pass, with their results in the
 #  message (CLAUDE.md, "Testing before commit").

@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/usr/bin/env bash
 #
 #  Performance comparison (doc/spec/performance-comparison.md): run the
 #  day's workload W1-W6 on several builds, alternating, and print one line

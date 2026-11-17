@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/usr/bin/env bash
 #
 #  Install INN with cmake --install as root inside a Docker container, on
 #  Linux, and check the result (support/docker/linux-install-checks.sh):
