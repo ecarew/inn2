@@ -19,6 +19,13 @@ if(NOT INN_CRYPT_IN_LIBC)
     check_library_exists(crypt crypt "" INN_HAVE_LIBCRYPT)
     if(INN_HAVE_LIBCRYPT)
         set(_crypt crypt)
+    else()
+        # Without this, ckpasswd failed only at link time.  glibc systems
+        # ship libcrypt.so.1 at run time but the link name only with the
+        # development package.
+        message(FATAL_ERROR "crypt() not found for ckpasswd: install "
+                "libcrypt's development files (libcrypt-dev on Debian, "
+                "libxcrypt-devel on Fedora)")
     endif()
 endif()
 
