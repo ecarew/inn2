@@ -4,7 +4,11 @@
 #  it with INN's own clients.  Exercises the parts of innd that only run in a
 #  live server (nc.cc, rc.cc, cc.cc, site.cc, ...).
 #
-#  Usage: support/live-innd.sh [build-dir]     (default: build)
+#  Usage: support/live-innd.sh [--iced] [build-dir]     (default: build)
+#
+#  --iced also runs the checks put on ice when INN++ left the conversion
+#  stage (the architect, 2026-11-17): innd's diagnostic reports (status,
+#  stathist, timer), which write nothing to the spool, history or overview.
 #
 #  Everything lives in a temporary directory: inn.conf points every path
 #  there, runasuser/runasgroup are the current user and group (innd requires
@@ -13,6 +17,11 @@
 #  RESULT line, like support/verify-cxx.sh.  Set KEEP=1 to keep the directory.
 
 root=$(cd "$(dirname "$0")/.." && pwd)
+iced=false
+if [ "$1" = --iced ]; then
+    iced=true
+    shift
+fi
 build=$root/${1:-build}
 bin=$build
 
@@ -329,7 +338,8 @@ ok sh -c "'$bin/frontends/ctlinnd' feedinfo newfeed | grep -q newfeed"
 label="ctlinnd param changes a setting"
 ok ctl param c 14
 
-# Status reporting.
+# Status reporting (iced).
+if $iced; then
 label="ctlinnd status writes a status file"
 # innd writes the status file from its main loop (STATUSmainloophook, run
 # when select() returns) once the interval has passed, so wait past the
@@ -349,6 +359,7 @@ label="ctlinnd stathist logs history statistics"
 ok sh -c "'$bin/frontends/ctlinnd' -s stathist '$tmp/stathist.out' && '$bin/expire/grephistory' '<live2@live.test>' >/dev/null; '$bin/frontends/ctlinnd' -s stathist off; test -e '$tmp/stathist.out'"
 label="ctlinnd timer on and off"
 ok sh -c "'$bin/frontends/ctlinnd' -s timer 1 && '$bin/frontends/ctlinnd' -s timer off"
+fi
 
 # Connections.
 ctl reject "live reject"
