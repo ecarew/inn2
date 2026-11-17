@@ -7,8 +7,16 @@
 # fixconfig also substitutes the host name, sendmail and whether a PGP
 # verifier exists, with configure's defaults.
 
-# configure uses `hostname`, which is gethostname().
-cmake_host_system_information(RESULT HOSTNAME QUERY HOSTNAME)
+# inn.conf's pathhost: INN_PATHHOST, or the build host's name as configure
+# had it (`hostname`, gethostname()).  A package sets INN_PATHHOST, so the
+# build does not depend on the machine it ran on.
+set(INN_PATHHOST "" CACHE STRING
+    "inn.conf's pathhost (default: this machine's host name)")
+if(INN_PATHHOST)
+    set(HOSTNAME ${INN_PATHHOST})
+else()
+    cmake_host_system_information(RESULT HOSTNAME QUERY HOSTNAME)
+endif()
 
 # configure looks in /usr/sbin and /usr/lib and stops if sendmail is not
 # there; inn.conf only records the path (mta), so a missing one is a warning.
