@@ -24,7 +24,14 @@ macro(inn_install_begin)
     # Directories that already exist keep their mode and owner, as with
     # install-sh -d did.
     set(INN_I_NEW_DIRS)
-    foreach(dir ${INN_I_DIRS} ${INN_I_RUNDIR})
+    # Sorted, so a parent is made (and counted as new) before its
+    # children: otherwise making e.g. spool/incoming/tmp first creates
+    # spool/incoming as a side effect, which is then taken as existing
+    # and never given to news.
+    set(_inn_dirs ${INN_I_DIRS} ${INN_I_RUNDIR})
+    list(REMOVE_DUPLICATES _inn_dirs)
+    list(SORT _inn_dirs)
+    foreach(dir ${_inn_dirs})
         set(d "$ENV{DESTDIR}${dir}")
         if(NOT IS_DIRECTORY "${d}")
             file(MAKE_DIRECTORY "${d}")
@@ -127,8 +134,15 @@ macro(inn_install_end)
         # install's OWNER), then innbind by root (LI_SPRI).  chown clears
         # the setuid and setgid bits, so the special modes are set after
         # it.  The unit, and what lies outside INN's directories, stay root's.
-        _inn_news_owned(_inn_owned
-                        ${CMAKE_INSTALL_MANIFEST_FILES} ${INN_I_NEW_DIRS})
+        # The manifest lists installed files without DESTDIR (the new
+        # directories already have it), so prefix it: otherwise a staged
+        # install as root would chown the live files instead of the
+        # staged ones.
+        set(_inn_files)
+        foreach(f ${CMAKE_INSTALL_MANIFEST_FILES})
+            list(APPEND _inn_files "$ENV{DESTDIR}${f}")
+        endforeach()
+        _inn_news_owned(_inn_owned ${_inn_files} ${INN_I_NEW_DIRS})
         _inn_chown(${INN_I_USER}:${INN_I_GROUP} ${_inn_owned})
         _inn_chown(root:${INN_I_GROUP} "${innbind}")
         execute_process(COMMAND chmod 4550 "${innbind}")

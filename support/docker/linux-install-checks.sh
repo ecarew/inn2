@@ -102,6 +102,15 @@ ok "FHS layout: inn.service installed root:root 644" test "$(stat -c '%U:%G %a' 
 ok "FHS layout: inn.service is Type=forking, runs as news" sh -c "grep -qx 'Type=forking' $U && grep -qx 'User=news' $U && grep -qx 'RuntimeDirectory=news' $U && grep -qx 'ProtectHome=true' $U"
 ok "cert target: key and certificate made" sh -c "printf '\\n\\n\\n\\n\\nnews.example.test\\n\\n' | cmake --build build-fhs --target cert >/dev/null 2>&1"
 ok "cert target: cert.pem news:news 640, key.pem news:news 600" test "$(stat -c '%U:%G %a' /etc/news/cert.pem /etc/news/key.pem | tr '\n' ' ')" = "news:news 640 news:news 600 "
+# DESTDIR as root (as a package build under fakeroot does): the staged
+# files go to news, and the live installation is not touched.
+ST=/tmp/inn-stage
+chown root /usr/lib/news/bin/makedbz   # a live file news must not regain
+ok "DESTDIR as root: cmake --install succeeds" sh -c "DESTDIR=$ST cmake --install build-fhs >/dev/null 2>&1"
+ok "DESTDIR as root: staged programs owned by news" test "$(stat -c %U $ST/usr/lib/news/bin/makedbz)" = news
+ok "DESTDIR as root: staged innbind root:news 4550" test "$(stat -c '%U:%G %a' $ST/usr/lib/news/bin/innbind)" = "root:news 4550"
+ok "DESTDIR as root: the live installation is not chowned" test "$(stat -c %U /usr/lib/news/bin/makedbz)" = root
+chown news /usr/lib/news/bin/makedbz
 
 # INN_NEWS_USER and INN_NEWS_GROUP: another account, in another prefix.
 getent group usenet >/dev/null || groupadd -r usenet
