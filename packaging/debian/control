@@ -20,7 +20,8 @@ Build-Depends: debhelper-compat (= 13),
                libcanlock-dev,
                libkrb5-dev,
                libsasl2-dev,
-               libpam0g-dev
+               libpam0g-dev,
+               libcrypt-dev
 Standards-Version: 4.7.2
 Homepage: https://github.com/ecarew/inn2
 Rules-Requires-Root: binary-targets
