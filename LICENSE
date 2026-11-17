@@ -30,12 +30,12 @@ files.  Specifically (but possibly not comprehensively):
    version 2 or later.  See doc/GPL for a copy of
    the GPL v2.
 
-   backends/shrinkfile.c, frontends/scanspool.in, lib/concat.c,
-   lib/inet_aton.c, lib/inet_ntoa.c, lib/pread.c, lib/pwrite.c,
-   lib/setenv.c, lib/seteuid.c, lib/strlcat.c and lib/strlcpy.c are in
+   backends/shrinkfile.cc, frontends/scanspool.in, lib/concat.cc,
+   lib/inet_aton.cc, lib/inet_ntoa.cc, lib/pread.cc, lib/pwrite.cc,
+   lib/setenv.cc, lib/seteuid.cc, lib/strlcat.cc and lib/strlcpy.cc are in
    the public domain.
 
-   lib/snprintf.c may be used for any purpose as long as the author's
+   lib/snprintf.cc may be used for any purpose as long as the author's
    notice remains intact in all source code distributions.
 
    control/pgpverify.in is under a BSD-style license (with the advertising
@@ -46,11 +46,11 @@ files.  Specifically (but possibly not comprehensively):
    two-clause BSD-style license (no advertising clause).  See the
    beginning of those files for details.
 
-   lib/strcasecmp.c, lib/strspn.c, and lib/strtok.c are taken from BSD
+   lib/strcasecmp.cc, lib/strspn.cc, and lib/strtok.cc are taken from BSD
    sources and are covered by the standard BSD license.  See those files
    for more details.
 
-   lib/md5.c is covered under the standard free MD5 license from RSA Data
+   lib/md5.cc is covered under the standard free MD5 license from RSA Data
    Security.  See the file for more details.  A clarification is also
    provided here: <https://datatracker.ietf.org/ipr/157/>.
 
@@ -59,7 +59,7 @@ files.  Specifically (but possibly not comprehensively):
       RFC-1320, and RFC-1321, may be made, used, and sold without
       license from RSA for any purpose."
 
-   history/his.c and history/hisv6/hisv6.c are under a license very
+   history/his.cc and history/hisv6/hisv6.cc are under a license very
    similar to the new BSD license (no advertising clause) but with Thus
    plc as the copyright holder.  See those files for details.
 
