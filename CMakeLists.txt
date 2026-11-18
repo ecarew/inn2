@@ -93,6 +93,17 @@ endif()
 add_compile_definitions($<$<NOT:$<CONFIG:Debug>>:_FORTIFY_SOURCE=2>)
 add_compile_options(-fstack-protector-strong)
 add_link_options(-fstack-protector-strong)
+# Standard-library bounds checks on every platform, as FreeBSD's libc++
+# already does by default: an out-of-range vector operator[] traps instead
+# of reading past the end (two innd/site.cc bugs showed only on FreeBSD).
+# "fast" checks are cheap enough for release builds; sanitizer builds get
+# libc++'s full debug checks.  Each macro is ignored by the other library.
+if(INN_SANITIZE)
+    add_compile_definitions(_LIBCPP_HARDENING_MODE=_LIBCPP_HARDENING_MODE_DEBUG)
+else()
+    add_compile_definitions(_LIBCPP_HARDENING_MODE=_LIBCPP_HARDENING_MODE_FAST)
+endif()
+add_compile_definitions(_GLIBCXX_ASSERTIONS)
 
 # config.h, inn/system.h, inn/paths.h, inn/version.h and inn/portable-*.h
 # are generated into the build tree's include directory, first on the
