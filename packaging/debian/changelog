@@ -1,3 +1,12 @@
+inn2-cxx (2.8.0~cxx.alpha5-1) unstable; urgency=medium
+
+  * Alpha 5 of the C++20/CMake conversion of INN 2.8.0.
+  * First packaged release: .deb, generic Linux tarball, FreeBSD port.
+  * CMake 3.31 or newer; standard-library bounds checks in every build.
+  * innd: fix two out-of-range site table reads at start and reload.
+
+ -- INN++ <noreply@users.noreply.github.com>  Wed, 18 Nov 2026 12:00:00 -0500
+
 inn2-cxx (2.8.0~cxx.alpha4-1) unstable; urgency=medium
 
   * Alpha 4 of the C++20/CMake conversion of INN 2.8.0.
