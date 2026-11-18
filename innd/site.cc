@@ -1045,7 +1045,9 @@ SITEfindnext(const char *p, SITE *sp)
 {
     SITE *end;
 
-    for (sp++, end = &Sites[nSites]; sp < end; sp++)
+    /* Sites.data() + nSites, not &Sites[nSites]: indexing a vector at its
+       size is out of range, and a hardened libc++ (FreeBSD's) traps on it. */
+    for (sp++, end = Sites.data() + nSites; sp < end; sp++)
         if (sp->Name && strcasecmp(p, sp->Name) == 0)
             return sp;
     return nullptr;
@@ -1120,7 +1122,9 @@ SITEfree(SITE *sp)
     /* If this site was a master, find a new one. */
     if (sp->IsMaster) {
         for (newmaster = NOSITE, s = Sites.data(), i = nSites; --i >= 0; s++)
-            if (&Sites[s->Master] == sp) {
+            /* Compare indexes: &Sites[NOSITE] indexes the vector at -1,
+               which a hardened libc++ (FreeBSD's) traps on. */
+            if (s->Master != NOSITE && s->Master == sp - Sites.data()) {
                 if (newmaster == NOSITE) {
                     s->Master = NOSITE;
                     s->IsMaster = true;
