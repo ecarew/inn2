@@ -170,13 +170,19 @@ function(inn_fixscript input output)
     endif()
     file(READ ${input} body)
     # Drop the lines fixscript replaces (one, or two with the library line).
+    # Not with string(REGEX REPLACE "^..."): before CMake 4.1 (CMP0186) ^
+    # matched again at each later search, and dropped every line pair.
+    set(drop 2)
+    set(head "#! ${path}\n${lib}\n")
     if(F_NOLIB)
-        string(REGEX REPLACE "^[^\n]*\n" "" body "${body}")
+        set(drop 1)
         set(head "#! ${path}\n")
-    else()
-        string(REGEX REPLACE "^[^\n]*\n[^\n]*\n" "" body "${body}")
-        set(head "#! ${path}\n${lib}\n")
     endif()
+    foreach(_ RANGE 1 ${drop})
+        string(FIND "${body}" "\n" nl)
+        math(EXPR nl "${nl} + 1")
+        string(SUBSTRING "${body}" ${nl} -1 body)
+    endforeach()
     # The rest is copied as is: fixscript substitutes nothing in it.
     file(WRITE ${output}.tmp "${head}${body}")
     file(COPY_FILE ${output}.tmp ${output} ONLY_IF_DIFFERENT)
