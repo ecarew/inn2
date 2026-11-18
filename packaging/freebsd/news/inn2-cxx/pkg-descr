@@ -1,0 +1,6 @@
+INN++ is a conversion of INN 2.8, the InterNetNews Usenet server, to
+C++20 and CMake.  It includes innd (the transit server), nnrpd (the
+reader server, with TLS), innfeed, the storage and overview methods,
+and embedded Perl and Python filters.
+
+This is an alpha release, not for production use.

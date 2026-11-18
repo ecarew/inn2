@@ -1,0 +1,44 @@
+#!/bin/sh
+
+# PROVIDE: innd
+# REQUIRE: DAEMON
+# KEYWORD: shutdown
+#
+# Add to /etc/rc.conf to start INN at boot:
+#   innd_enable="YES"
+
+. /etc/rc.subr
+
+name=innd
+rcvar=innd_enable
+
+load_rc_config ${name}
+
+: ${innd_enable:="NO"}
+: ${innd_user:="news"}
+
+required_files="%%CONFDIR%%/inn.conf %%DBDIR%%/history.dir"
+pidfile="/var/run/news/innd.pid"
+command="%%NEWSBASE%%/bin/rc.news"
+
+start_cmd="innd_start"
+stop_cmd="innd_stop"
+reload_cmd="innd_reload"
+extra_commands="reload"
+
+# rc.news drops nothing itself: run it as news, as INN expects.  /var/run
+# is cleared at boot, so the run directory is made here.
+innd_start() {
+	install -d -o news -g news -m 755 /var/run/news
+	su -m ${innd_user} -c "${command} start"
+}
+
+innd_stop() {
+	su -m ${innd_user} -c "${command} stop"
+}
+
+innd_reload() {
+	su -m ${innd_user} -c "%%NEWSBASE%%/bin/ctlinnd -t 20 reload '' 'rc.d reload'"
+}
+
+run_rc_command "$1"

@@ -1,0 +1,17 @@
+[
+{ type: install
+  message: <<EOM
+INN++ is installed in %%NEWSBASE%%, with its configuration in
+%%CONFDIR%%.  A minimal active file and an empty history database
+were made in %%DBDIR%% if none were there.
+
+Configure INN (inn.conf, readers.conf, incoming.conf, newsfeeds), then
+start it:
+
+  sysrc innd_enable=YES
+  service innd start
+
+This is an alpha release, not for production use.
+EOM
+}
+]

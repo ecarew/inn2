@@ -1,0 +1,39 @@
+#!/bin/sh
+#
+# First-install site data for INN++, made only when absent, as
+# cmake --install does for a real install: never replaced on upgrade.
+
+case $2 in
+POST-INSTALL)
+	conf=%%CONFDIR%%
+	db=%%DBDIR%%
+	share=%%DATADIR%%
+	bin=%%NEWSBASE%%/bin
+	# pkg makes parent directories as root while it extracts, before
+	# their @dir lines can give them an owner, so set INN's here (not
+	# innbind, which stays root's).
+	find %%NEWSBASE%% ${conf} ${db} /var/spool/news /var/log/news -type d -exec chown news:news {} +
+	if [ ! -e ${conf}/inn.conf ]; then
+		host=$(hostname)
+		sed "s/@PATHHOST@/${host}/" ${share}/inn.conf > ${conf}/inn.conf
+		chown news:news ${conf}/inn.conf
+		chmod 644 ${conf}/inn.conf
+	fi
+	for f in active newsgroups; do
+		[ -e ${db}/${f} ] || install -o news -g news -m 664 \
+		    ${share}/${f}.minimal ${db}/${f}
+	done
+	[ -e ${db}/active.times ] || \
+	    install -o news -g news -m 664 /dev/null ${db}/active.times
+	hismethod=$(su -m news -c "${bin}/innconfval hismethod")
+	histdir=$(su -m news -c "${bin}/innconfval pathhistory")
+	if [ "${hismethod}" = hissqlite ]; then
+		[ -e ${histdir}/history.sqlite ] || \
+		    su -m news -c "${bin}/makehistory"
+	elif [ ! -e ${histdir}/history ]; then
+		install -o news -g news -m 664 /dev/null ${histdir}/history
+		(cd ${histdir} && su -m news -c "${bin}/makedbz -i -o")
+	fi
+	;;
+esac
+exit 0
