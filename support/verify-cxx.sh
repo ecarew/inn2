@@ -227,7 +227,13 @@ if grep -q '^INN_SANITIZE:BOOL=ON' "$build/CMakeCache.txt" 2>/dev/null; then
     sanflags=(-fsanitize=address,undefined -fno-omit-frame-pointer
               -fno-sanitize-recover=undefined)
     cflags+=("${sanflags[@]}")
+    cflags+=(-D_LIBCPP_HARDENING_MODE=_LIBCPP_HARDENING_MODE_DEBUG)
+else
+    cflags+=(-D_LIBCPP_HARDENING_MODE=_LIBCPP_HARDENING_MODE_FAST)
 fi
+# The standard-library checks CMakeLists.txt turns on: tests link objects
+# built by CMake, so they must be compiled alike.
+cflags+=(-D_GLIBCXX_ASSERTIONS)
 tap=()
 for h in basic float messages process string; do
     cc "${cflags[@]}" -c "tests/tap/$h.c" -o "$tmp/tap-$h.o" 2>>"$tmp/tap.log"
