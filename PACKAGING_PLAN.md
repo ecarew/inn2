@@ -82,6 +82,45 @@ Status: started 2026-11-16, after the CMake-only phase
    rc.d script and the news user (FreeBSD's `news` uid 8); blocklist
    tested there; `poudriere testport` or `make stage check-plist
    package`.  Also closes the "a BSD" item.
+   *Done* (2026-11-18): `packaging/freebsd/news/inn2-cxx` (named
+   `news/` after the ports category INN is in).  On FreeBSD 15.1,
+   check-plist is clean, and pkg add, owners, innbind 4550 the only
+   setuid-root file, `service innd start` as news, NNTP on 119,
+   blocklistd fed by `nnrpd -B`, reload, stop, reinstall keeping site
+   files, and delete all pass.  Found two out-of-range `Sites[]` reads
+   in innd that FreeBSD's hardened libc++ traps; every build now enables
+   the standard library's bounds checks.  distinfo is redone from the
+   real tag archive after the alpha 5 tag.
+
+## Next release: OS service facilities (the architect, 2026-11-18)
+
+Alpha 5 ships the traditional model as an interim: each package's start
+script (systemd unit, FreeBSD rc.d) starts as root and runs rc.news as
+news, and innbind is the setuid-root helper that binds port 119.  For
+the next release the services move to each OS's own facility for
+starting daemons with only the privileges they need:
+
+- **systemd (Linux):** the unit's own controls instead of root plus
+  innbind: socket activation (`inn.socket` holding port 119 and 563,
+  handed to innd and nnrpd), or `AmbientCapabilities=CAP_NET_BIND_SERVICE`
+  alone, so innbind can be left out of systemd installs; `User=news`
+  from the first process; the sandboxing options (`ProtectSystem=strict`,
+  `ReadWritePaths=`, `PrivateTmp=`, `NoNewPrivileges=yes` once innbind
+  is gone, `SystemCallFilter=`, `CapabilityBoundingSet=`).
+- **OpenBSD:** an rc.d script (rc.subr, `daemon_user=news`); `pledge(2)`
+  and `unveil(2)` in innd, nnrpd and the other daemons, limiting each to
+  the system calls and paths it needs after start-up; `doas` for
+  administrative commands instead of setuid helpers.
+- **macOS:** a launchd daemon plist (`/Library/LaunchDaemons`) with
+  `UserName` news and launchd `Sockets` for port 119, handed to innd
+  through `launch_activate_socket`, so no setuid-root file is needed.
+
+Each needs innd and nnrpd to accept listening sockets they did not open
+(systemd's `sd_listen_fds`, launchd's `launch_activate_socket`), which
+innbind's file-descriptor passing already half provides.  The security
+rules still hold throughout: no INN program runs as root after start-up.
+FreeBSD's equivalent (Capsicum, `mac_portacl` for port 119) can be
+considered alongside.
 
 ## Open questions
 
