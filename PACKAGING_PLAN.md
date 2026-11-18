@@ -78,6 +78,17 @@ Status: started 2026-11-16, after the CMake-only phase
    since Homebrew does not run as root.  Test: `brew install --build-from-source`,
    `brew test`, `brew audit --strict`.  Then a real sudo install on
    macOS to `~/news` (still owed from the install phase).
+   *Done* (2026-11-18): https://github.com/ecarew/homebrew-inn2,
+   formula `inn2-cxx` from the alpha 5 release tarball.  Programs in
+   `opt/inn2-cxx/libexec` (kept out of Homebrew's bin), configuration in
+   `etc/news`, data in `var/news`, compiled-in paths through the opt
+   link.  `post_install_steps` copies configuration and data only on a
+   first install, so a later release's new configuration files are not
+   added on upgrade.  The news user, owners, innbind's mode, pathhost
+   and the history database are root steps the caveats print.  `brew
+   test` and `brew audit --strict` pass; the root steps and the real
+   sudo install are still to be tried.  Each release needs the
+   formula's url and sha256 updated by hand for now.
 6. **FreeBSD port** in the QEMU VM: the port Makefile, pkg-plist, the
    rc.d script and the news user (FreeBSD's `news` uid 8); blocklist
    tested there; `poudriere testport` or `make stage check-plist
